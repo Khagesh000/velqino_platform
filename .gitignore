@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+venv.bak/
+env.bak/
+velqino_platform/venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+server/velqino_backend/.env
+
+# Logs
+logs/
+server/logs/
+server/velqino_backend/logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database
+*.sqlite3
+
+# Uploads
+uploads/
+media/
+
+# Celery
+celerybeat.pid
+*.pid
+
+# Redis
+dump.rdb
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.coverage.*
+*.cover
+.hypothesis/
