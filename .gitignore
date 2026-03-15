@@ -1,3 +1,5 @@
+# Create new .gitignore file
+@"
 # Python
 __pycache__/
 *.py[cod]
@@ -49,27 +51,11 @@ server/velqino_backend/logs/
 uploads/
 media/
 
-# Celery
-celerybeat.pid
-*.pid
-
-# Redis
-dump.rdb
-
-# Testing
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-.coverage.*
-*.cover
-.hypothesis/
-
-# Frontend
+# Frontend - NO node_modules
 velqino_frontend/node_modules/
 velqino_frontend/.next/
 velqino_frontend/out/
 velqino_frontend/build/
 velqino_frontend/dist/
 velqino_frontend/.env.local
-velqino_frontend/package-lock.json
+"@ | Out-File -FilePath .gitignore -Encoding utf8
