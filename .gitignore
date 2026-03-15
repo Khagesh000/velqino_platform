@@ -64,3 +64,12 @@ htmlcov/
 .coverage.*
 *.cover
 .hypothesis/
+
+# Frontend
+velqino_frontend/node_modules/
+velqino_frontend/.next/
+velqino_frontend/out/
+velqino_frontend/build/
+velqino_frontend/dist/
+velqino_frontend/.env.local
+velqino_frontend/package-lock.json
