@@ -1,0 +1,105 @@
+$primary-950: #3D2A1F;
+$primary-900: #5A3E2E;
+$primary-800: #77523D;
+$primary-700: #94664C;
+$primary-600: #B17A5B;
+$primary-500: #CE8E6A;  /* Primary Brand - Warm Terracotta */
+$primary-400: #D8A581;
+$primary-300: #E2BB99;
+$primary-200: #ECD2B2;
+$primary-100: #F5E8CB;
+$primary-50: #FAF4E5;
+
+/* --------------------------------
+   SECONDARY BRAND - Deep Aubergine
+   Rich, Luxurious, Sophisticated
+-------------------------------- */
+$secondary-950: #2D1F2C;
+$secondary-900: #452A40;
+$secondary-800: #5C3554;
+$secondary-700: #744068;
+$secondary-600: #8B4B7C;
+$secondary-500: #A25690;  /* Secondary - Rich Purple */
+$secondary-400: #B572A6;
+$secondary-300: #C78EBC;
+$secondary-200: #DAAAD2;
+$secondary-100: #EDC6E8;
+$secondary-50: #F6E2F3;
+
+/* --------------------------------
+   ACCENT - Mustard Gold
+   Energy, Optimism, Warmth
+-------------------------------- */
+$accent-950: #4D3F1F;
+$accent-900: #6B5729;
+$accent-800: #896F33;
+$accent-700: #A7873D;
+$accent-600: #C59F47;
+$accent-500: #E3B751;  /* Accent - Warm Gold */
+$accent-400: #E9C66D;
+$accent-300: #EED589;
+$accent-200: #F4E3A5;
+$accent-100: #FAF2C1;
+$accent-50: #FDF8E0;
+
+/* --------------------------------
+   SEMANTIC - Status Colors
+-------------------------------- */
+$success-600: #2F6B4A;
+$success-500: #3F8B5F;
+$success-400: #5FAB7F;
+$success-100: #E8F3E8;
+
+$warning-600: #B86A1A;
+$warning-500: #E08A2C;
+$warning-400: #F5AA50;
+$warning-100: #FFF0E0;
+
+$error-600: #A84A3A;
+$error-500: #D45A45;
+$error-400: #F07A65;
+$error-100: #FEE8E3;
+
+$info-600: #4F6D7A;
+$info-500: #6A8D9C;
+$info-400: #8AADBC;
+$info-100: #E8F0F5;
+
+/* --------------------------------
+   BACKGROUNDS - Warm & Natural
+-------------------------------- */
+$bg-primary: #FDF7F0;      /* Main - Warm Ivory */
+$bg-secondary: #F7EFE5;     /* Soft - Cream */
+$bg-tertiary: #EFE5D8;      /* Tertiary - Warm Beige */
+$bg-card: #FFFFFF;          /* Card - Pure White */
+$bg-card-alt: #FCF7F0;      /* Alternative - Warm White */
+$bg-overlay: rgba(45, 31, 44, 0.7);
+$bg-overlay-light: rgba(45, 31, 44, 0.4);
+$bg-overlay-dark: rgba(45, 31, 44, 0.9);
+
+/* --------------------------------
+   SURFACES - Elevated Elements
+-------------------------------- */
+$surface-1: #FFFFFF;
+$surface-2: #FDF7F0;
+$surface-3: #F7EFE5;
+$surface-inverse: #2D1F2C;
+
+/* --------------------------------
+   BORDERS - Warm & Subtle
+-------------------------------- */
+$border-light: #E8DDD2;
+$border-medium: #D4C6B8;
+$border-strong: #B8A797;
+$border-focus: #CE8E6A;      /* Using primary-500 value */
+$border-accent: #E3B751;      /* Using accent-500 value */
+
+/* --------------------------------
+   TEXT - Warm Neutral Palette
+-------------------------------- */
+$text-primary: #2D1F2C;      /* Headings - Deep Aubergine */
+$text-secondary: #5A4A4A;    /* Body - Warm Gray */
+$text-tertiary: #7F6E6E;     /* Meta - Medium Warm Gray */
+$text-disabled: #B0A0A0;     /* Disabled - Light Warm Gray */
+$text-inverse: #FFFFFF;      /* White */
+$text-accent: #C59F47;        /* Gold - Using accent-600 value */

@@ -1,0 +1,447 @@
+
+
+@import '../styles/reusables/variables.scss';
+@import '../styles/reusables/mixins.scss';
+
+
+
+/* ================================
+   Global Styles
+================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: $bg-primary;
+  color: $text-primary;
+  font-family: $font-primary;
+  font-size: $text-md;
+  font-weight: $font-regular;
+  line-height: $line-normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ================================
+   Layout & Container Classes
+================================ */
+.container {
+  max-width: $container-width;
+  margin: 0 auto;
+  padding: 0 $space-4;
+}
+
+.container-large {
+  max-width: $container-large;
+  margin: 0 auto;
+}
+
+.container-full {
+  width: $container-full;
+}
+
+/* ================================
+   Spacing Utilities
+================================ */
+.space-1 { padding: $space-1; }
+.space-2 { padding: $space-2; }
+.space-3 { padding: $space-3; }
+.space-4 { padding: $space-4; }
+.space-5 { padding: $space-5; }
+.space-6 { padding: $space-6; }
+.space-8 { padding: $space-8; }
+.space-10 { padding: $space-10; }
+.space-12 { padding: $space-12; }
+.space-16 { padding: $space-16; }
+.space-20 { padding: $space-20; }
+.space-24 { padding: $space-24; }
+
+.mt-1 { margin-top: $space-1; }
+.mt-2 { margin-top: $space-2; }
+.mt-3 { margin-top: $space-3; }
+.mt-4 { margin-top: $space-4; }
+.mt-5 { margin-top: $space-5; }
+.mt-6 { margin-top: $space-6; }
+.mt-8 { margin-top: $space-8; }
+.mt-10 { margin-top: $space-10; }
+.mt-12 { margin-top: $space-12; }
+
+.mb-1 { margin-bottom: $space-1; }
+.mb-2 { margin-bottom: $space-2; }
+.mb-3 { margin-bottom: $space-3; }
+.mb-4 { margin-bottom: $space-4; }
+.mb-5 { margin-bottom: $space-5; }
+.mb-6 { margin-bottom: $space-6; }
+.mb-8 { margin-bottom: $space-8; }
+.mb-10 { margin-bottom: $space-10; }
+.mb-12 { margin-bottom: $space-12; }
+
+.ml-1 { margin-left: $space-1; }
+.ml-2 { margin-left: $space-2; }
+.ml-3 { margin-left: $space-3; }
+.ml-4 { margin-left: $space-4; }
+
+.mr-1 { margin-right: $space-1; }
+.mr-2 { margin-right: $space-2; }
+.mr-3 { margin-right: $space-3; }
+.mr-4 { margin-right: $space-4; }
+
+/* ================================
+   Border Radius Utilities
+================================ */
+.radius-micro { border-radius: $radius-micro; }
+.radius-small { border-radius: $radius-small; }
+.radius-medium { border-radius: $radius-medium; }
+.radius-large { border-radius: $radius-large; }
+.radius-xl { border-radius: $radius-xl; }
+.radius-2xl { border-radius: $radius-2xl; }
+.radius-full { border-radius: $radius-full; }
+
+/* ================================
+   Typography Utilities
+================================ */
+.text-xs { font-size: $text-xs; }
+.text-sm { font-size: $text-sm; }
+.text-md { font-size: $text-md; }
+.text-lg { font-size: $text-lg; }
+.text-xl { font-size: $text-xl; }
+.text-2xl { font-size: $text-2xl; }
+.text-3xl { font-size: $text-3xl; }
+.text-4xl { font-size: $text-4xl; }
+.text-5xl { font-size: $text-5xl; }
+.text-6xl { font-size: $text-6xl; }
+.text-7xl { font-size: $text-7xl; }
+
+
+
+/* ================================
+   Background Color Utilities
+================================ */
+.bg-primary { background: $bg-primary; }
+.bg-secondary { background: $bg-secondary; }
+.bg-tertiary { background: $bg-tertiary; }
+.bg-card { background: $bg-card; }
+.bg-card-alt { background: $bg-card-alt; }
+
+.bg-primary-950 { background: $primary-950; }
+.bg-primary-900 { background: $primary-900; }
+.bg-primary-800 { background: $primary-800; }
+.bg-primary-700 { background: $primary-700; }
+.bg-primary-600 { background: $primary-600; }
+.bg-primary-500 { background: $primary-500; }
+.bg-primary-400 { background: $primary-400; }
+.bg-primary-300 { background: $primary-300; }
+.bg-primary-200 { background: $primary-200; }
+.bg-primary-100 { background: $primary-100; }
+.bg-primary-50 { background: $primary-50; }
+
+.bg-secondary-950 { background: $secondary-950; }
+.bg-secondary-900 { background: $secondary-900; }
+.bg-secondary-800 { background: $secondary-800; }
+.bg-secondary-700 { background: $secondary-700; }
+.bg-secondary-600 { background: $secondary-600; }
+.bg-secondary-500 { background: $secondary-500; }
+.bg-secondary-400 { background: $secondary-400; }
+.bg-secondary-300 { background: $secondary-300; }
+.bg-secondary-200 { background: $secondary-200; }
+.bg-secondary-100 { background: $secondary-100; }
+.bg-secondary-50 { background: $secondary-50; }
+
+.bg-accent-950 { background: $accent-950; }
+.bg-accent-900 { background: $accent-900; }
+.bg-accent-800 { background: $accent-800; }
+.bg-accent-700 { background: $accent-700; }
+.bg-accent-600 { background: $accent-600; }
+.bg-accent-500 { background: $accent-500; }
+.bg-accent-400 { background: $accent-400; }
+.bg-accent-300 { background: $accent-300; }
+.bg-accent-200 { background: $accent-200; }
+.bg-accent-100 { background: $accent-100; }
+.bg-accent-50 { background: $accent-50; }
+
+.bg-success-600 { background: $success-600; }
+.bg-success-500 { background: $success-500; }
+.bg-success-400 { background: $success-400; }
+.bg-success-100 { background: $success-100; }
+
+.bg-warning-600 { background: $warning-600; }
+.bg-warning-500 { background: $warning-500; }
+.bg-warning-400 { background: $warning-400; }
+.bg-warning-100 { background: $warning-100; }
+
+.bg-error-600 { background: $error-600; }
+.bg-error-500 { background: $error-500; }
+.bg-error-400 { background: $error-400; }
+.bg-error-100 { background: $error-100; }
+
+.bg-info-600 { background: $info-600; }
+.bg-info-500 { background: $info-500; }
+.bg-info-400 { background: $info-400; }
+.bg-info-100 { background: $info-100; }
+
+.bg-surface-1 { background: $surface-1; }
+.bg-surface-2 { background: $surface-2; }
+.bg-surface-3 { background: $surface-3; }
+.bg-surface-inverse { background: $surface-inverse; }
+
+.bg-overlay { background: $bg-overlay; }
+.bg-overlay-light { background: $bg-overlay-light; }
+.bg-overlay-dark { background: $bg-overlay-dark; }
+
+/* ================================
+   Border Utilities
+================================ */
+.border-light { border: 1px solid $border-light; }
+.border-medium { border: 1px solid $border-medium; }
+.border-strong { border: 1px solid $border-strong; }
+.border-focus { border: 2px solid $border-focus; }
+.border-accent { border: 2px solid $border-accent; }
+
+/* ================================
+   Shadow Utilities
+================================ */
+.shadow-xs { box-shadow: $shadow-xs; }
+.shadow-sm { box-shadow: $shadow-sm; }
+.shadow-md { box-shadow: $shadow-md; }
+.shadow-lg { box-shadow: $shadow-lg; }
+.shadow-xl { box-shadow: $shadow-xl; }
+.shadow-primary { box-shadow: $shadow-primary; }
+.shadow-ai { box-shadow: $shadow-ai; }
+.shadow-wholesale { box-shadow: $shadow-wholesale; }
+
+/* ================================
+   Gradient Utilities
+================================ */
+.gradient-primary { background: $gradient-primary; }
+.gradient-secondary { background: $gradient-secondary; }
+.gradient-accent { background: $gradient-accent; }
+.gradient-sunset { background: $gradient-sunset; }
+.gradient-earth { background: $gradient-earth; }
+.gradient-luxury { background: $gradient-luxury; }
+.gradient-warm { background: $gradient-warm; }
+
+/* ================================
+   Glass Effect Utilities
+================================ */
+.glass-light { 
+  background: $glass-light;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid $glass-border;
+}
+
+.glass-medium { 
+  background: $glass-medium;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid $glass-border;
+}
+
+.glass-dark { 
+  background: $glass-dark;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid $glass-border;
+}
+
+
+/* ================================
+   Text Color Utilities
+================================ */
+.text-primary { color: $text-primary; }
+.text-secondary { color: $text-secondary; }
+.text-tertiary { color: $text-tertiary; }
+.text-disabled { color: $text-disabled; }
+.text-inverse { color: $text-inverse; }
+.text-accent { color: $text-accent; }
+
+/* Add these missing text color utilities */
+.text-success-500 { color: $success-500; }
+.text-success-600 { color: $success-600; }
+.text-success-400 { color: $success-400; }
+.text-success-100 { color: $success-100; }
+
+.text-warning-500 { color: $warning-500; }
+.text-warning-600 { color: $warning-600; }
+.text-warning-400 { color: $warning-400; }
+.text-warning-100 { color: $warning-100; }
+
+.text-error-500 { color: $error-500; }
+.text-error-600 { color: $error-600; }
+.text-error-400 { color: $error-400; }
+.text-error-100 { color: $error-100; }
+
+.text-info-500 { color: $info-500; }
+.text-info-600 { color: $info-600; }
+.text-info-400 { color: $info-400; }
+.text-info-100 { color: $info-100; }
+
+
+/* ================================
+   Z-Index Utilities
+================================ */
+.z-negative { z-index: $z-negative; }
+.z-elevate { z-index: $z-elevate; }
+.z-dropdown { z-index: $z-dropdown; }
+.z-sticky { z-index: $z-sticky; }
+.z-navbar { z-index: $z-navbar; }
+.z-modal { z-index: $z-modal; }
+.z-popover { z-index: $z-popover; }
+.z-tooltip { z-index: $z-tooltip; }
+.z-toast { z-index: $z-toast; }
+
+/* ================================
+   Transition Utilities
+================================ */
+.transition-instant { transition: all $transition-instant; }
+.transition-fast { transition: all $transition-fast; }
+.transition-medium { transition: all $transition-medium; }
+.transition-slow { transition: all $transition-slow; }
+.transition-extra-slow { transition: all $transition-extra-slow; }
+
+/* ================================
+   Grid Utilities
+================================ */
+.grid-gap { gap: $grid-gap; }
+.grid-gap-sm { gap: $grid-gap-sm; }
+.grid-gap-lg { gap: $grid-gap-lg; }
+
+/* ================================
+   Component Specific Classes
+================================ */
+.veltrix-card {
+  background: $bg-card;
+  border-radius: $radius-large;
+  padding: $space-6;
+  box-shadow: $shadow-lg;
+  color: $text-primary;
+  border: 1px solid $border-light;
+}
+
+.veltrix-btn {
+  background: $primary-500;
+  color: $text-inverse;
+  padding: $space-3 $space-6;
+  border-radius: $radius-small;
+  font-size: $text-md;
+  font-weight: $font-medium;
+  transition: all $transition-fast;
+  border: none;
+  cursor: pointer;
+  
+  &:hover {
+    background: $primary-600;
+    transform: translateY(-1px);
+    box-shadow: $shadow-md;
+  }
+}
+
+.veltrix-btn-ai {
+  background: $secondary-500;
+  color: $text-inverse;
+  padding: $space-3 $space-6;
+  border-radius: $radius-small;
+  font-size: $text-md;
+  font-weight: $font-medium;
+  transition: all $transition-fast;
+  border: none;
+  cursor: pointer;
+  
+  &:hover {
+    background: $secondary-600;
+    transform: translateY(-1px);
+    box-shadow: $shadow-ai;
+  }
+}
+
+/* ================================
+   Typography Headings
+================================ */
+h1, .h1 { 
+  font-size: $text-5xl; 
+  font-weight: $font-bold; 
+  line-height: $line-tight; 
+  margin-bottom: $space-4; 
+}
+
+h2, .h2 { 
+  font-size: $text-4xl; 
+  font-weight: $font-semibold; 
+  line-height: $line-tight; 
+  margin-bottom: $space-3; 
+}
+
+h3, .h3 { 
+  font-size: $text-3xl; 
+  font-weight: $font-semibold; 
+  line-height: $line-tight; 
+  margin-bottom: $space-3; 
+}
+
+h4, .h4 { 
+  font-size: $text-2xl; 
+  font-weight: $font-medium; 
+  line-height: $line-normal; 
+  margin-bottom: $space-2; 
+}
+
+h5, .h5 { 
+  font-size: $text-xl; 
+  font-weight: $font-medium; 
+  line-height: $line-normal; 
+  margin-bottom: $space-2; 
+}
+
+h6, .h6 { 
+  font-size: $text-lg; 
+  font-weight: $font-medium; 
+  text-transform: uppercase; 
+  letter-spacing: $tracking-wide; 
+  margin-bottom: $space-2; 
+}
+
+p { 
+  margin-bottom: $space-4; 
+}
+
+a {
+  color: $primary-500;
+  text-decoration: none;
+  transition: color $transition-fast;
+  
+  &:hover {
+    color: $primary-600;
+  }
+}
+
+/* ================================
+   Utility Classes
+================================ */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
+
+.overflow-hidden { overflow: hidden; }
+.overflow-auto { overflow: auto; }
+
+.cursor-pointer { cursor: pointer; }
+.cursor-not-allowed { cursor: not-allowed; }
+
+.hidden { display: none; }
+.block { display: block; }
+
