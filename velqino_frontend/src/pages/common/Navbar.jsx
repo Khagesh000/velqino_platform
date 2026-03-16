@@ -200,7 +200,7 @@ export default function Navbar() {
                     </button>
                     
                     <button 
-                      onClick={() => handleNavigation('/wholesale/dashboard')}
+                      onClick={() => handleNavigation('/wholesaler/wholesalerdashboard')}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-secondary hover:bg-primary-100 hover:text-primary-600 transition-fast border-b border-light"
                     >
                       <Store size={16} className="text-accent-500" />

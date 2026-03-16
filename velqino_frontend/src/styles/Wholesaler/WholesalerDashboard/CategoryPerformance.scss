@@ -1,0 +1,184 @@
+@import '../../reusables/variables.scss';
+@import '../../reusables/mixins.scss';
+
+/* ================================
+   Category Performance - Only Animations
+================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes growWidth {
+  from { width: 0; }
+  to { width: var(--percent); }
+}
+
+@keyframes rotateDonut {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Donut Chart Animations */
+.donut-chart {
+  animation: rotateDonut 1s ease-out;
+}
+
+.donut-segment {
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+}
+
+/* Category Items Animation */
+.category-item {
+  animation: fadeIn 0.4s ease-out forwards;
+  opacity: 0;
+  transition: all 0.2s ease;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+  
+  &:hover {
+    transform: translateX(4px);
+  }
+  
+  &.hovered {
+    background-color: rgba($primary-500, 0.02);
+    border-radius: 8px;
+  }
+}
+
+/* Progress Bar Animation */
+.category-progress-bar {
+  animation: growWidth 1s ease-out forwards;
+  transform-origin: left;
+  transition: width 0.3s ease;
+  
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+/* Category Dot Animation */
+.category-dot {
+  transition: all 0.2s ease;
+  
+  .category-item:hover & {
+    transform: scale(1.3);
+    box-shadow: 0 0 0 2px rgba($primary-500, 0.2);
+  }
+}
+
+/* Amount Tooltip Animation */
+.category-amount {
+  animation: fadeIn 0.2s ease-out;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: $text-tertiary;
+  background: $bg-card;  /* or $surface-1 */
+  padding: 2px 6px;
+  border-radius: 12px;
+  border: 1px solid $border-light;
+  box-shadow: $shadow-sm;
+}
+
+/* Hover Effects */
+.category-item {
+  position: relative;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.category-progress {
+  height: 4px;
+  background: $surface-2;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.category-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  
+  &-primary { background: $primary-500; }
+  &-success { background: $success-500; }
+  &-accent { background: $accent-500; }
+  &-warning { background: $warning-500; }
+  &-info { background: $info-500; }
+}
+
+.category-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  
+  &-primary { background: $primary-500; }
+  &-success { background: $success-500; }
+  &-accent { background: $accent-500; }
+  &-warning { background: $warning-500; }
+  &-info { background: $info-500; }
+}
+
+/* Donut Chart Base (needed for structure) */
+.donut-chart {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: $surface-2;
+  overflow: hidden;
+}
+
+.donut-segment {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  clip: rect(0, 100px, 200px, 0);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    clip: rect(0, 100px, 200px, 0);
+    background: currentColor;
+    transform: rotate(calc(360deg * var(--percent) / 100));
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .donut-chart,
+  .donut-segment,
+  .category-item,
+  .category-progress-bar,
+  .category-amount {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .category-item:hover {
+    transform: none;
+  }
+}

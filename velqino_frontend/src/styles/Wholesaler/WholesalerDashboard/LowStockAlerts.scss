@@ -1,0 +1,124 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Low Stock Alerts - Only Animations
+================================ */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseWarning {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Card Entrance Animation */
+.grid > div {
+  animation: slideUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@for $i from 1 through 12 {
+  .grid > div:nth-child(#{$i}) {
+    animation-delay: $i * 0.05s;
+  }
+}
+
+/* Pulse Animation for Critical Stock */
+.bg-error-500.animate-pulse {
+  animation: pulseWarning 1.5s infinite;
+}
+
+/* Progress Bar Animation */
+.group:hover .h-full {
+  transition: width 0.5s ease;
+}
+
+/* Hover Effects */
+.group {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    
+    .h-full {
+      filter: brightness(1.1);
+    }
+  }
+}
+
+/* Button Hover Animation */
+button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: translateX(2px);
+    }
+  }
+}
+
+/* Icon Animation */
+button svg {
+  transition: transform 0.2s ease;
+}
+
+/* View All Link Animation */
+.mt-4 button {
+  &:hover {
+    gap: 0.75rem;
+    
+    svg {
+      transform: translateX(4px);
+    }
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .grid > div,
+  .group,
+  button,
+  svg,
+  .bg-error-500.animate-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .group:hover {
+    transform: none;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}
