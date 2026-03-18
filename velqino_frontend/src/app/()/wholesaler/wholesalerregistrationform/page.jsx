@@ -1,5 +1,5 @@
 import React from 'react'
-import RegistrationForm from '@/pages/Wholesaler/WholesalerRegistration/RegistrationForm'
+import RegistrationForm from '@/features/Wholesaler/WholesalerRegistration/RegistrationForm'
 
 export default function page() {
   return (

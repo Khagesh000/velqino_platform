@@ -2,30 +2,16 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { 
-  ChevronDown, 
-  Bell, 
-  User, 
-  HelpCircle, 
-  Search,
-  Menu,
-  X,
-  Home,
-  Package,
-  Grid,
-  BarChart3,
-  Users,
-  Wallet,
-  Settings,
-  PlusCircle
-} from 'lucide-react'
+import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, Package, Grid, BarChart3, Users, Wallet, Settings, PlusCircle } from '../../../../utils/icons';
+import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
 
 export default function WholesaleNavbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  
+  const [lastScrollTop, setLastScrollTop] = useState(0);
+  const navbarRef = useRef(null);
   const profileDropdownRef = useRef(null)
   const notificationsRef = useRef(null)
   const mobileMenuRef = useRef(null)
@@ -44,6 +30,32 @@ export default function WholesaleNavbar() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+  const handleScroll = () => {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    
+    if (navbarRef.current) {
+      if (scrollTop > lastScrollTop && scrollTop > 80) {
+        // Scrolling down - hide navbar
+        navbarRef.current.classList.add('navbar-hidden');
+        navbarRef.current.classList.remove('navbar-visible');
+      } else {
+        // Scrolling up - show navbar
+        navbarRef.current.classList.add('navbar-visible');
+        navbarRef.current.classList.remove('navbar-hidden');
+      }
+    }
+    
+    setLastScrollTop(scrollTop <= 0 ? 0 : scrollTop);
+  };
+
+  window.addEventListener('scroll', handleScroll);
+  
+  return () => {
+    window.removeEventListener('scroll', handleScroll);
+  };
+}, [lastScrollTop]);
 
   // Notification data
   const notifications = [
@@ -69,7 +81,9 @@ export default function WholesaleNavbar() {
   return (
     <>
       {/* Top Navigation Bar */}
-      <nav className="bg-card border-b border-light sticky top-0 z-navbar shadow-sm">
+      <nav
+      ref={navbarRef}
+      className="bg-card border-b border-light sticky top-0 z-navbar shadow-sm">
         <div className="px-4 lg:px-6">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Left Section: Logo & Mobile Menu Toggle */}

@@ -1,9 +1,10 @@
 import React from 'react'
-import Dashboard from '@/features/Wholesaler/WholesalerDashboard/Dashboard'
+import Managment from '@/features/Wholesaler/OrdersManagment/Managment'
+
 export default function page() {
   return (
     <div>
-      <Dashboard />
+      <Managment />
     </div>
   )
 }

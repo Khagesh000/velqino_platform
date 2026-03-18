@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { PieChart, Grid, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { PieChart, Grid, TrendingUp, ArrowUpRight } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/CategoryPerformance.scss'
 
 export default function CategoryPerformance() {

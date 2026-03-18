@@ -1,4 +1,4 @@
-import Navbar from "@/pages/common/Navbar";
+import Navbar from "@/features/common/Navbar";
 
 export const viewport = {
   width: "device-width",

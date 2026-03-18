@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Eye, MoreHorizontal, ChevronRight, Package, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Eye, MoreHorizontal, ChevronRight, Package, Clock, CheckCircle, XCircle } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/RecentOrdersTable.scss'
 
 export default function RecentOrdersTable() {

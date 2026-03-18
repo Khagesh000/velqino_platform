@@ -1,0 +1,296 @@
+@import '../../../styles/reusables/variables.scss';
+
+/* ================================
+   Quick Insights - Only Animations
+================================ */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes growBar {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--target-height);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseValue {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+    color: $primary-600;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Card Entrance Animation - Scoped to component */
+.quick-insights .grid > div {
+  animation: slideInUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@for $i from 1 through 8 {
+  .quick-insights .grid > div:nth-child(#{$i}) {
+    animation-delay: $i * 0.05s;
+  }
+}
+
+/* Sparkline Bar Animation - Scoped */
+.quick-insights .flex.items-end.h-8 .flex-1 div {
+  animation: growBar 0.5s ease-out forwards;
+  transform-origin: bottom;
+}
+
+@for $i from 1 through 7 {
+  .quick-insights .flex.items-end.h-8 .flex-1:nth-child(#{$i}) div {
+    animation-delay: $i * 0.02s;
+  }
+}
+
+/* Hover Effects - Scoped */
+.quick-insights .group {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+  
+  &:hover .text-lg {
+    animation: pulseValue 0.5s ease-out;
+  }
+  
+  &:hover .flex.items-end.h-8 .flex-1 div {
+    filter: brightness(1.1);
+    transform: scaleY(1.05);
+  }
+}
+
+/* Icon Animation - Scoped */
+.quick-insights .w-8.h-8 {
+  transition: all 0.2s ease;
+}
+
+.quick-insights .group:hover .w-8.h-8 {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Change Badge Animation - Scoped */
+.quick-insights span.flex.items-center.gap-0\.5 {
+  transition: all 0.2s ease;
+}
+
+.quick-insights span.flex.items-center.gap-0\.5:hover {
+  transform: scale(1.05);
+}
+
+.quick-insights span.flex.items-center.gap-0\.5 svg {
+  animation: float 2s ease-in-out infinite;
+}
+
+/* Sparkline Bar Hover - Scoped */
+.quick-insights .group\/chart {
+  transition: all 0.2s ease;
+}
+
+.quick-insights .group\/chart:hover div {
+  transform: scaleY(1.2);
+  filter: brightness(1.2);
+}
+
+/* Comparison Dots Animation - Scoped */
+.quick-insights .w-2.h-2 {
+  transition: all 0.2s ease;
+}
+
+.quick-insights .group:hover .w-2.h-2 {
+  transform: scale(1.2);
+}
+
+/* Tooltip Animation - Scoped */
+.quick-insights .absolute.-top-2 {
+  animation: slideInUp 0.2s ease-out;
+}
+
+.quick-insights .absolute.-top-2 .flex.items-center.gap-3 {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Footer Items Animation - Scoped */
+.quick-insights .grid-cols-2 > div {
+  animation: slideInUp 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+@for $i from 1 through 4 {
+  .quick-insights .grid-cols-2 > div:nth-child(#{$i}) {
+    animation-delay: $i * 0.1s;
+  }
+}
+
+.quick-insights .grid-cols-2 > div p:last-child {
+  transition: all 0.2s ease;
+}
+
+.quick-insights .grid-cols-2 > div p:last-child:hover {
+  transform: scale(1.1);
+}
+
+/* Calendar Icon Animation - Scoped */
+.quick-insights .flex.items-center.gap-1.px-2 {
+  transition: all 0.2s ease;
+}
+
+.quick-insights .flex.items-center.gap-1.px-2:hover {
+  background: $surface-2;
+}
+
+.quick-insights .flex.items-center.gap-1.px-2:hover svg {
+  transform: rotate(10deg);
+}
+
+.quick-insights .flex.items-center.gap-1.px-2 svg {
+  transition: transform 0.2s ease;
+}
+
+/* Value Text Animation - Scoped */
+.quick-insights .text-lg {
+  transition: color 0.2s ease;
+}
+
+.quick-insights .group:hover .text-lg {
+  color: $primary-600;
+}
+
+@media (min-width: 1024px) {
+  .quick-insights .lg\:text-xl {
+    transition: color 0.2s ease;
+  }
+  
+  .quick-insights .group:hover .lg\:text-xl {
+    color: $primary-600;
+  }
+}
+
+/* Sparkline Container Effect - Scoped */
+.quick-insights .flex.items-end.h-8 {
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-insights .flex.items-end.h-8::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba($bg-card, 0.1), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.quick-insights .group:hover .flex.items-end.h-8::after {
+  left: 100%;
+}
+
+/* Comparison Text Animation - Scoped */
+.quick-insights .text-xs.flex.items-center.justify-between .text-primary {
+  transition: color 0.2s ease;
+}
+
+.quick-insights .text-xs.flex.items-center.justify-between .text-tertiary {
+  transition: color 0.2s ease;
+}
+
+.quick-insights .group:hover .text-xs.flex.items-center.justify-between .text-primary {
+  color: $primary-600;
+}
+
+/* Border Animation - Scoped */
+.quick-insights .border-t {
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-insights .border-t::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, $primary-400, transparent);
+  transition: left 0.5s ease;
+}
+
+.quick-insights .border-t:hover::before {
+  left: 100%;
+}
+
+/* Reduced Motion - Scoped */
+@media (prefers-reduced-motion: reduce) {
+  .quick-insights .grid > div,
+  .quick-insights .flex.items-end.h-8 .flex-1 div,
+  .quick-insights .group,
+  .quick-insights .w-8.h-8,
+  .quick-insights span.flex.items-center.gap-0\.5,
+  .quick-insights .group\/chart,
+  .quick-insights .grid-cols-2 > div,
+  .quick-insights .absolute.-top-2,
+  .quick-insights .flex.items-center.gap-1.px-2,
+  .quick-insights .border-t::before,
+  .quick-insights .flex.items-end.h-8::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .quick-insights .group:hover,
+  .quick-insights .group:hover .text-lg,
+  .quick-insights .group:hover .lg\:text-xl,
+  .quick-insights .group:hover .w-8.h-8,
+  .quick-insights span.flex.items-center.gap-0\.5:hover,
+  .quick-insights .group\/chart:hover div,
+  .quick-insights .grid-cols-2 > div p:last-child:hover,
+  .quick-insights .flex.items-center.gap-1.px-2:hover,
+  .quick-insights .border-t:hover::before {
+    transform: none;
+    filter: none;
+    background: none;
+  }
+  
+  .quick-insights .flex.items-end.h-8::after,
+  .quick-insights .border-t::before {
+    display: none;
+  }
+}

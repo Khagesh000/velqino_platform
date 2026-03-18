@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react'
-import { TrendingUp, Calendar, Download, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { TrendingUp, Calendar, Download, ArrowUpRight, ArrowDownRight } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/SalesAnalyticsChart.scss'
 
 export default function SalesAnalyticsChart() {

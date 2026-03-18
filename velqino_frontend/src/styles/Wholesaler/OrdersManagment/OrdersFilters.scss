@@ -1,0 +1,484 @@
+@import '../../../styles/reusables/variables.scss';
+
+/* ================================
+   Orders Filters - Only Animations
+================================ */
+
+/* Slide Down Animation for Expanded Section */
+.orderfilters-expanded {
+  animation: slideDown 0.3s ease-out forwards;
+  transform-origin: top;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* Chevron Rotation */
+.orderfilters-toggle-chevron {
+  transition: transform 0.3s ease;
+}
+
+.orderfilters-chevron-rotated {
+  transform: rotate(180deg);
+}
+
+/* Search Input Focus Animation */
+.orderfilters-search-wrapper {
+  transition: all 0.2s ease;
+  
+  &:focus-within {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.orderfilters-search-input {
+  transition: all 0.2s ease;
+  
+  &::placeholder {
+    transition: opacity 0.2s ease;
+  }
+  
+  &:focus::placeholder {
+    opacity: 0.5;
+  }
+}
+
+/* Clear Search Button Animation */
+.orderfilters-search-clear {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+    background-color: rgba(239, 68, 68, 0.1);
+    
+    svg {
+      color: #EF4444;
+    }
+  }
+  
+  svg {
+    transition: all 0.2s ease;
+  }
+}
+
+/* Filter Toggle Button */
+.orderfilters-toggle {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    background-color: var(--primary-50);
+    
+    svg:first-child {
+      transform: rotate(90deg);
+    }
+  }
+  
+  svg:first-child {
+    transition: transform 0.3s ease;
+  }
+}
+
+.orderfilters-toggle-badge {
+  animation: badgePop 0.3s ease-out;
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Select Dropdown Animations */
+.orderfilters-select-wrapper {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary-300);
+  }
+  
+  &:focus-within {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+}
+
+.orderfilters-select {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  option {
+    animation: slideIn 0.2s ease-out;
+    padding: 8px;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.orderfilters-select-chevron {
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.orderfilters-select-wrapper:hover .orderfilters-select-chevron {
+  transform: translateY(2px);
+}
+
+/* Amount Input Animations */
+.orderfilters-amount-input {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+  
+  &[type="number"] {
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    &:hover::-webkit-inner-spin-button,
+    &:hover::-webkit-outer-spin-button {
+      opacity: 0.5;
+    }
+  }
+}
+
+.orderfilters-amount-separator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Quick Filter Buttons */
+.orderfilters-quick-btn {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  
+  &:hover::after {
+    width: 150px;
+    height: 150px;
+  }
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.orderfilters-quick-btn-active {
+  animation: activePulse 2s infinite;
+}
+
+@keyframes activePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--primary-200);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--primary-100);
+  }
+}
+
+/* Filter Actions */
+.orderfilters-apply-btn {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--primary-200);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.orderfilters-cancel-btn {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    background-color: var(--error-50);
+    color: var(--error-600);
+    border-color: var(--error-200);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.orderfilters-clear-btn {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+    
+    svg {
+      transform: rotate(90deg);
+    }
+  }
+  
+  svg {
+    transition: transform 0.3s ease;
+  }
+}
+
+/* Filter Chips */
+.orderfilters-chips {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.orderfilters-chip {
+  animation: chipEnter 0.3s ease-out;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    
+    button {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+  
+  button {
+    transition: all 0.2s ease;
+    opacity: 0.7;
+    
+    &:hover {
+      opacity: 1;
+      background-color: var(--error-100);
+      color: var(--error-600);
+      transform: scale(1.2) rotate(90deg);
+    }
+    
+    svg {
+      transition: transform 0.2s ease;
+    }
+  }
+}
+
+@keyframes chipEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+/* Staggered Animation for Filter Groups */
+.orderfilters-group {
+  animation: fadeIn 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@for $i from 1 through 12 {
+  .orderfilters-group:nth-child(#{$i}) {
+    animation-delay: $i * 0.05s;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Label Animation */
+.orderfilters-label {
+  transition: all 0.2s ease;
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+.orderfilters-group:hover .orderfilters-label {
+  color: var(--primary-600);
+  
+  svg {
+    transform: scale(1.1);
+  }
+}
+
+/* Active Filters Count Animation */
+.orderfilters-active-count {
+  animation: countPulse 0.3s ease-out;
+}
+
+@keyframes countPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    color: var(--primary-600);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Loading State Animation (if needed) */
+.orderfilters-loading {
+  animation: shimmer 1.5s infinite;
+  background: linear-gradient(
+    90deg,
+    var(--surface-1) 0%,
+    var(--surface-2) 50%,
+    var(--surface-1) 100%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .orderfilters-expanded,
+  .orderfilters-toggle-chevron,
+  .orderfilters-search-wrapper,
+  .orderfilters-search-input,
+  .orderfilters-search-clear,
+  .orderfilters-toggle,
+  .orderfilters-toggle-badge,
+  .orderfilters-select-wrapper,
+  .orderfilters-select,
+  .orderfilters-select-chevron,
+  .orderfilters-amount-input,
+  .orderfilters-amount-separator,
+  .orderfilters-quick-btn,
+  .orderfilters-quick-btn-active,
+  .orderfilters-apply-btn,
+  .orderfilters-cancel-btn,
+  .orderfilters-clear-btn,
+  .orderfilters-chip,
+  .orderfilters-label,
+  .orderfilters-group {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  
+  .orderfilters-toggle:hover,
+  .orderfilters-quick-btn:hover,
+  .orderfilters-apply-btn:hover,
+  .orderfilters-cancel-btn:hover,
+  .orderfilters-clear-btn:hover,
+  .orderfilters-chip:hover {
+    transform: none !important;
+  }
+  
+  .orderfilters-quick-btn::after {
+    display: none;
+  }
+  
+  .orderfilters-apply-btn::before {
+    display: none;
+  }
+}

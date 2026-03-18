@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Bell, Package, Wallet, MessageCircle, ShoppingBag, ChevronRight, Clock } from 'lucide-react'
+import { Bell, Package, Wallet, MessageCircle, ShoppingBag, ChevronRight, Clock } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/RecentActivityFeed.scss'
 
 export default function RecentActivityFeed() {

@@ -1,7 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import './globals.scss'
 import './tailwind.css'
-import { ReduxProvider } from "@/redux/wholesaler/Provider";
+import  ReduxProvider  from "@/redux/wholesaler/Provider";
+import ClientOnly from "./ClientOnly";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,7 +45,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ReduxProvider>
-          {children}
+          <ClientOnly> {/* ✅ ALL children now protected */}
+            {children}
+          </ClientOnly>
         </ReduxProvider>
       </body>
     </html>

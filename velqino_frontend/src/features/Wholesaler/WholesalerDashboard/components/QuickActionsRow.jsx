@@ -1,13 +1,6 @@
 "use client"
 import React, { useState } from 'react'
-import { 
-  PlusCircle, 
-  PackageCheck, 
-  BarChart3, 
-  Wallet,
-  ArrowRight,
-  Sparkles
-} from 'lucide-react'
+import { PlusCircle, PackageCheck, BarChart3, Wallet, ArrowRight, Sparkles } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/QuickActions.scss'
 
 export default function QuickActionsRow() {

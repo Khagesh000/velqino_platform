@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Package, AlertTriangle, RefreshCw, ChevronRight } from 'lucide-react'
+import { Package, AlertTriangle, RefreshCw, ChevronRight } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/LowStockAlerts.scss'
 
 export default function LowStockAlerts() {

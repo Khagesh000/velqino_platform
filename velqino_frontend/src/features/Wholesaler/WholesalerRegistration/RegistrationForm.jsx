@@ -1,14 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Building, User, MapPin, Package, CreditCard, Check, Upload } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Building, User, MapPin, Package, CreditCard, Check, Upload } from '../../../utils/icons';
 import { useRegisterWholesalerMutation } from '@/redux/wholesaler/slices/wholesalerSlice';
+import ClientOnly from '@/app/ClientOnly';
 
-export default function RegistrationForm() {
-  
+function RegistrationFormContent() {
+
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // ✅ HOOK IS NOW HERE - UNCONDITIONAL
   const [registerWholesaler, { isLoading, error, isSuccess }] = useRegisterWholesalerMutation();
   
-  const [currentStep, setCurrentStep] = useState(1);
+
+
+
   const [formData, setFormData] = useState({
     // Personal Info (matches backend: first_name, last_name)
     first_name: '',  // changed from firstName
@@ -753,5 +759,15 @@ export default function RegistrationForm() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+// Main component with ClientOnly wrapper
+export default function RegistrationForm() {
+  return (
+    <ClientOnly>
+      <RegistrationFormContent />
+    </ClientOnly>
   );
 }

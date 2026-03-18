@@ -2,19 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import '../../../../styles/Wholesaler/WholesalerDashboard/KPIstatscards.scss'
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Package, 
-  ShoppingBag, 
-  Wallet,
-  Clock,
-  Eye,
-  MoreHorizontal,
-  ArrowUpRight,
-  ArrowDownRight,
-  Info
-} from 'lucide-react'
+import { TrendingUp,  Package,  Wallet, Clock,  MoreHorizontal, ArrowUpRight, ArrowDownRight, Info } from '../../../../utils/icons';
 
 export default function KPIStatsCards() {
   const [mounted, setMounted] = useState(false)
@@ -136,11 +124,11 @@ export default function KPIStatsCards() {
   {/* Section Header */}
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
   {/* Left Section */}
-  <div>
-  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
+  <div className="w-full text-center sm:text-left">
+  <h2 className="text-2xl sm:text-xl lg:text-2xl font-bold text-gray-900">
     Dashboard Overview
-  </h2>
-  <p className="text-xs sm:text-sm text-tertiary mt-0.5 sm:mt-1">
+</h2>
+  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
     Welcome back! Here's your business performance
   </p>
 </div>

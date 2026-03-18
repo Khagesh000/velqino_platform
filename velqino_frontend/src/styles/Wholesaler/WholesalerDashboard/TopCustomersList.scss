@@ -1,0 +1,181 @@
+@import '../../../styles/reusables/variables.scss';
+
+/* ================================
+   Top Customers List - Only Animations
+================================ */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulseRank {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba($primary-500, 0.5);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba($primary-500, 0.2);
+  }
+}
+
+/* Customer Card Entrance Animation */
+.grid > div {
+  animation: slideInUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@for $i from 1 through 10 {
+  .grid > div:nth-child(#{$i}) {
+    animation-delay: $i * 0.07s;
+  }
+}
+
+/* Rank Badge Animation */
+.absolute.-top-1.-left-1 {
+  animation: pulseRank 2s ease-in-out infinite;
+  
+  .group:hover & {
+    animation: none;
+    transform: scale(1.1);
+  }
+}
+
+/* Hover Effects */
+.group {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    
+    .opacity-0 {
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+    
+    .w-10.h-10 {
+      transform: scale(1.05);
+    }
+  }
+}
+
+/* Avatar Animation */
+.w-10.h-10 {
+  transition: all 0.2s ease;
+}
+
+/* Status Dot Animation */
+.absolute.-top-1.-right-1 {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Contact Icons Animation */
+.flex.items-center.gap-2 a {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+}
+
+/* Icon Hover Effect */
+svg {
+  transition: all 0.2s ease;
+}
+
+/* Type Badge Animation */
+span.px-2.py-1 {
+  transition: all 0.2s ease;
+  
+  .group:hover & {
+    transform: scale(1.05);
+  }
+}
+
+/* Stats Number Animation */
+.text-sm.font-semibold {
+  transition: color 0.2s ease;
+  
+  .group:hover & {
+    color: $primary-600;
+  }
+}
+
+/* Footer Link Animation */
+.mt-4 button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    gap: 0.75rem;
+    
+    svg {
+      transform: translateX(4px);
+    }
+  }
+}
+
+/* Trending Up Icon Animation */
+.text-success-500 {
+  animation: fadeIn 1s ease-in-out infinite;
+}
+
+/* Customer Since Text */
+.text-tertiary.ml-auto {
+  transition: color 0.2s ease;
+  
+  .group:hover & {
+    color: $primary-500;
+  }
+}
+
+/* Grid Layout Adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .grid > div,
+  .group,
+  .absolute.-top-1.-left-1,
+  .flex.items-center.gap-2 a,
+  svg,
+  .mt-4 button,
+  .text-success-500 {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .group:hover {
+    transform: none;
+    
+    .opacity-0 {
+      opacity: 1;
+    }
+  }
+  
+  .absolute.-top-1.-left-1 {
+    animation: none;
+  }
+}
