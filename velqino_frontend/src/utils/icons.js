@@ -81,6 +81,42 @@ import {
   Edit,
   Send,
 
+  List,
+  Filter,
+  Trash2,
+  Copy,
+  Plus,
+
+  Edit3,
+  FolderTree,
+
+  Box,
+  ImageIcon,
+  Save,
+  Globe,
+  ToggleLeft,
+  ToggleRight,
+
+  Folder,
+  File,
+  GripVertical,
+
+  Percent,
+  ArrowUp,
+  ArrowDown,
+
+  Maximize2,
+  FileSpreadsheet,
+  FilePieChart,
+  FileBarChart,
+
+  BookOpen,
+  Ban,
+  DownloadCloud,
+  FileJson,
+  FileImage,
+  EyeOff,
+
 } from 'lucide-react';
 
 // Then export them
@@ -149,4 +185,40 @@ export {
   FileText,
   Edit,
   Send,
+
+  List,
+  Filter,
+  Trash2,
+  Copy,
+  Plus,
+
+  Edit3,
+  FolderTree,
+
+  Box,
+  Save,
+  Globe,
+  ToggleLeft,
+  ToggleRight,
+  ImageIcon,
+
+  Folder,
+  File,
+  GripVertical,
+
+  Percent,
+  ArrowUp,
+  ArrowDown,
+
+  Maximize2,
+  FileSpreadsheet,
+  FilePieChart,
+  FileBarChart,
+
+  BookOpen,
+  Ban,
+  DownloadCloud,
+  FileJson,
+  FileImage,
+  EyeOff,
 };

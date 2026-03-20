@@ -1,0 +1,99 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Quick Actions - Only Animations
+================================ */
+
+
+.quick-action-card {
+  animation: cardSlideUp 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@for $i from 1 through 5 {
+  .quick-action-card:nth-child(#{$i}) {
+    animation-delay: $i * 0.05s;
+  }
+}
+
+@keyframes cardSlideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Hover Effect */
+.quick-action-card {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+/* Modal Animation */
+.fixed.inset-0.z-50 {
+  animation: fadeIn 0.2s ease-out;
+  
+  .bg-white {
+    animation: modalPop 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .quick-action-card,
+  .fixed.inset-0.z-50,
+  .fixed.inset-0.z-50 .bg-white {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .quick-action-card:hover:not(:disabled) {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

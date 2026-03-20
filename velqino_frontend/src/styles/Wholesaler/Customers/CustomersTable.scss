@@ -1,0 +1,215 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Customers Table - Only Animations
+================================ */
+
+/* Row Enter Animation */
+.customers-table-row {
+  animation: slideInRow 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@for $i from 1 through 20 {
+  .customers-table-row:nth-child(#{$i}) {
+    animation-delay: $i * 0.03s;
+  }
+}
+
+@keyframes slideInRow {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Row Hover Effect */
+.customers-table-row-hover {
+  background-color: var(--primary-50);
+  transition: background-color 0.2s ease;
+  
+  td:first-child {
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background-color: var(--primary-500);
+      animation: slideInLeft 0.2s ease-out;
+    }
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Checkbox Animation */
+input[type="checkbox"] {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:checked {
+    animation: checkboxPop 0.2s ease-out;
+  }
+}
+
+@keyframes checkboxPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Action Buttons */
+.customers-table button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Status Badge Animation */
+.customers-table .inline-block {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+    filter: brightness(1.05);
+  }
+}
+
+/* Avatar Hover */
+.customers-table .w-8.h-8 {
+  transition: all 0.2s ease;
+}
+
+.customers-table-row:hover .w-8.h-8 {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Contact Icons */
+.customers-table .flex.items-center.gap-1 {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(2px);
+    
+    svg {
+      color: var(--primary-500);
+    }
+  }
+}
+
+/* Loyalty Badge */
+.customers-table .flex.items-center.gap-1:has(.award) {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+    
+    .award {
+      animation: spin 0.3s ease-out;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Table Header Sort */
+th.cursor-pointer {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--primary-600);
+    background-color: var(--primary-50);
+  }
+}
+
+/* Pagination Buttons */
+.pagination-btn {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .customers-table-container {
+    .min-w-\[1200px\] {
+      min-width: 1200px;
+    }
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .customers-table-row,
+  .customers-table-row-hover td:first-child::before,
+  input[type="checkbox"],
+  .customers-table button,
+  .customers-table .inline-block,
+  .customers-table .w-8.h-8,
+  .customers-table .flex.items-center.gap-1,
+  .customers-table .flex.items-center.gap-1:has(.award),
+  th.cursor-pointer,
+  .pagination-btn {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .customers-table-row:hover .w-8.h-8 {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .customers-table .flex.items-center.gap-1:hover {
+    transform: none;
+    
+    svg {
+      color: inherit;
+    }
+  }
+  
+  .customers-table .flex.items-center.gap-1:has(.award):hover .award {
+    animation: none;
+  }
+}

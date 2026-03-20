@@ -1,0 +1,350 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Customer Details Panel - Only Animations
+================================ */
+
+/* Panel Slide In */
+.customer-details-panel {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Tab Indicator */
+.panel-tab {
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary-500);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+  }
+  
+  &.border-primary-500::after {
+    transform: scaleX(1);
+  }
+  
+  &:hover {
+    color: var(--primary-600);
+  }
+}
+
+/* Profile Header Animation */
+.profile-header {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Avatar Pulse */
+.w-16.h-16 {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Stats Card Animation */
+.grid-cols-3 .bg-gray-50 {
+  animation: cardPop 0.3s ease-out forwards;
+  opacity: 0;
+  transform: scale(0.9);
+  
+  @for $i from 1 through 3 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes cardPop {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Order Item Animation */
+.order-item {
+  animation: slideIn 0.2s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+  
+  @for $i from 1 through 4 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Order Item Hover */
+.order-item {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    background-color: var(--primary-50);
+  }
+}
+
+/* Payment Method Item */
+.payment-item {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Address Item */
+.address-item {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    
+    .px-2.py-0\.5 {
+      transform: scale(1.05);
+    }
+  }
+}
+
+/* Note Item */
+.note-item {
+  animation: fadeInUp 0.2s ease-out forwards;
+  opacity: 0;
+  transform: translateY(10px);
+  
+  @for $i from 1 through 3 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-item {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    background-color: var(--primary-50);
+  }
+}
+
+/* Timeline Animation */
+.timeline-item {
+  animation: timelineFade 0.3s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes timelineFade {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.timeline-dot {
+  animation: dotPulse 2s infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.timeline-line {
+  transform-origin: top;
+  animation: lineGrow 0.3s ease-out forwards;
+}
+
+@keyframes lineGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Footer Buttons */
+.panel-footer button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Close Button Rotation */
+button:has(.x) {
+  &:hover svg {
+    transform: rotate(90deg);
+  }
+}
+
+/* Actions Dropdown Animation */
+.absolute.top-16.right-8 {
+  animation: dropdownSlide 0.2s ease-out;
+  transform-origin: top;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* Add Note Input */
+input[type="text"] {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Scrollbar Styling */
+.panel-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-200) var(--gray-100);
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--gray-100);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--primary-200);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--primary-300);
+    }
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .customer-details-panel,
+  .panel-tab::after,
+  .w-16.h-16,
+  .grid-cols-3 .bg-gray-50,
+  .order-item,
+  .payment-item,
+  .address-item,
+  .note-item,
+  .timeline-item,
+  .timeline-dot,
+  .timeline-line,
+  .panel-footer button,
+  button:has(.x) svg,
+  .absolute.top-16.right-8,
+  input[type="text"] {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .order-item:hover {
+    transform: none;
+  }
+  
+  .payment-item:hover {
+    transform: none;
+  }
+  
+  .address-item:hover {
+    transform: none;
+  }
+  
+  .note-item:hover {
+    transform: none;
+  }
+  
+  .panel-footer button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

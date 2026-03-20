@@ -1,0 +1,277 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Bulk Edit Tool - Only Animations
+================================ */
+
+/* Modal Slide In */
+.bulk-edit-tool {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  
+  .step-number {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--gray-200);
+    color: var(--gray-600);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+  
+  .step-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-500);
+    transition: all 0.2s ease;
+  }
+  
+  &.active {
+    .step-number {
+      background-color: var(--primary-500);
+      color: white;
+      transform: scale(1.1);
+    }
+    
+    .step-label {
+      color: var(--primary-700);
+    }
+  }
+  
+  &.completed {
+    .step-number {
+      background-color: var(--success-500);
+      color: white;
+    }
+  }
+}
+
+.step-line {
+  width: 40px;
+  height: 2px;
+  background-color: var(--gray-200);
+  margin: 0 4px;
+}
+
+/* Edit Type Cards */
+.edit-type-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardFadeIn 0.3s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 4 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Preview Table */
+.preview-table {
+  animation: slideDown 0.3s ease-out;
+  transform-origin: top;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.preview-row {
+  animation: rowFadeIn 0.2s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 10 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+}
+
+@keyframes rowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Summary Box */
+.bg-primary-50 {
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--primary-100);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--primary-100);
+  }
+}
+
+/* Input Focus Effects */
+input, select {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+  }
+}
+
+/* Footer Buttons */
+.modal-footer button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Rotate animation for chevron */
+.rotate-270 {
+  transform: rotate(270deg);
+}
+
+/* Loading Spinner */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Filter Section */
+.grid-cols-2 > div {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Success State (can be triggered via JS) */
+.bulk-edit-success {
+  animation: successPulse 0.5s ease-out;
+}
+
+@keyframes successPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--success-200);
+  }
+  50% {
+    box-shadow: 0 0 0 10px var(--success-100);
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--success-200);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .bulk-edit-tool,
+  .step-indicator,
+  .step-number,
+  .step-label,
+  .edit-type-card,
+  .preview-table,
+  .preview-row,
+  .bg-primary-50,
+  input,
+  select,
+  .modal-footer button,
+  .animate-spin {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .edit-type-card:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+  
+  .modal-footer button:hover {
+    transform: none;
+  }
+  
+  .step-indicator.active .step-number {
+    transform: none;
+  }
+}

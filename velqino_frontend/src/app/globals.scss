@@ -1,5 +1,4 @@
 
-
 @import '../styles/reusables/variables.scss';
 @import '../styles/reusables/mixins.scss';
 
@@ -444,4 +443,93 @@ a {
 
 .hidden { display: none; }
 .block { display: block; }
+
+/* ================================
+   MOBILE RESPONSIVE OVERRIDES
+   Using your existing mixins
+================================ */
+
+/* ================================
+   MOBILE RESPONSIVE OVERRIDES
+================================ */
+
+@media (max-width: 768px) {
+  // Padding overrides
+  .p-3 { padding: 8px !important; }
+  .p-4 { padding: 12px !important; }
+  .p-5 { padding: 14px !important; }
+  .p-6 { padding: 16px !important; }
+  
+  // Horizontal padding
+  .px-3 { padding-left: 8px !important; padding-right: 8px !important; }
+  .px-4 { padding-left: 12px !important; padding-right: 12px !important; }
+  .px-5 { padding-left: 14px !important; padding-right: 14px !important; }
+  .px-6 { padding-left: 16px !important; padding-right: 16px !important; }
+  
+  // Vertical padding
+  .py-2 { padding-top: 6px !important; padding-bottom: 6px !important; }
+  .py-3 { padding-top: 8px !important; padding-bottom: 8px !important; }
+  .py-4 { padding-top: 12px !important; padding-bottom: 12px !important; }
+  
+  // Gap overrides
+  .gap-1 { gap: 2px !important; }
+  .gap-2 { gap: 6px !important; }
+  .gap-3 { gap: 8px !important; }
+  .gap-4 { gap: 12px !important; }
+  
+  // Font size overrides
+  .text-xxs { font-size: 10px !important; }
+  .text-xs { font-size: 11px !important; }
+  .text-sm { font-size: 12px !important; }
+  .text-base { font-size: 14px !important; }
+  .text-lg { font-size: 16px !important; }
+  .text-xl { font-size: 18px !important; }
+  
+  // Margin top
+  .mt-2 { margin-top: 6px !important; }
+  .mt-3 { margin-top: 8px !important; }
+  .mt-4 { margin-top: 12px !important; }
+  .mt-5 { margin-top: 14px !important; }
+  .mt-6 { margin-top: 16px !important; }
+  
+  // Margin bottom
+  .mb-2 { margin-bottom: 6px !important; }
+  .mb-3 { margin-bottom: 8px !important; }
+  .mb-4 { margin-bottom: 12px !important; }
+  .mb-5 { margin-bottom: 14px !important; }
+  .mb-6 { margin-bottom: 16px !important; }
+  
+  // Border radius
+  .rounded-lg { border-radius: 8px !important; }
+  .rounded-xl { border-radius: 12px !important; }
+  .rounded-2xl { border-radius: 16px !important; }
+  
+  // Inputs - preserve colors
+  input, select, textarea {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    font-size: 12px !important;
+    color: inherit !important;
+  }
+  
+  // Buttons - preserve colors
+  button, .btn {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    font-size: 12px !important;
+    color: inherit !important;
+  }
+  
+  // Labels - preserve colors
+  label {
+    color: inherit !important;
+  }
+  
+  // Table cells - preserve colors
+  td, th {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    color: inherit !important;
+  }
+}
 

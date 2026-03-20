@@ -1,0 +1,253 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Quick Actions Bar - Only Animations
+================================ */
+
+/* Bar Entrance Animation */
+.quick-actions-bar {
+  animation: slideDown 0.4s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Entrance Animation */
+.quick-action-card {
+  animation: cardFadeIn 0.3s ease-out forwards;
+  opacity: 0;
+  transform: scale(0.95);
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes cardFadeIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Card Hover Effects */
+.quick-action-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+    
+    svg {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+  
+  svg {
+    transition: transform 0.3s ease;
+  }
+  
+  &:active {
+    transform: translateY(-2px);
+  }
+}
+
+/* Icon Animation */
+.quick-action-card svg {
+  transition: all 0.3s ease;
+}
+
+/* Badge Animation */
+.quick-action-badge {
+  animation: badgePop 0.3s ease-out;
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Dropdown Menu Animation */
+.quick-actions-dropdown {
+  animation: dropdownSlide 0.2s ease-out forwards;
+  transform-origin: top;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* Dropdown Item Animation */
+.quick-actions-dropdown button {
+  animation: itemFadeIn 0.2s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+}
+
+@keyframes itemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Dropdown Item Hover */
+.quick-actions-dropdown button {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  
+  &:hover::after {
+    width: 300px;
+    height: 300px;
+  }
+  
+  &:hover {
+    transform: translateX(4px);
+  }
+}
+
+/* Chevron Rotation */
+.quick-action-card .chevron {
+  transition: transform 0.3s ease;
+}
+
+/* Recent Actions Hover */
+.mt-4 button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Ripple Effect for Main Cards */
+.quick-action-card {
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+    opacity: 0;
+  }
+  
+  &:hover::after {
+    width: 200px;
+    height: 200px;
+    opacity: 1;
+  }
+}
+
+/* Glow Effect */
+.quick-action-card .absolute {
+  transition: opacity 0.3s ease;
+}
+
+/* Loading State (if needed) */
+.quick-actions-loading {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions-bar,
+  .quick-action-card,
+  .quick-action-badge,
+  .quick-actions-dropdown,
+  .quick-actions-dropdown button,
+  .mt-4 button,
+  .quick-action-card::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .quick-action-card:hover {
+    transform: none;
+    box-shadow: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+  
+  .quick-actions-dropdown button:hover {
+    transform: none;
+  }
+  
+  .quick-action-card::after {
+    display: none;
+  }
+}

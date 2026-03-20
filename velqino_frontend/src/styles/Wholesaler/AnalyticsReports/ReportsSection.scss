@@ -1,0 +1,320 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Reports Section - Only Animations
+================================ */
+
+/* Report Card Entrance */
+.report-card {
+  animation: cardSlideUp 0.4s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@for $i from 1 through 6 {
+  .report-card:nth-child(#{$i}) {
+    animation-delay: $i * 0.1s;
+  }
+}
+
+@keyframes cardSlideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Report Card Hover */
+.report-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+    
+    svg {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+  
+  svg {
+    transition: transform 0.3s ease;
+  }
+}
+
+/* Preview Section Entrance */
+.report-preview {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Table Row Animation */
+.report-row {
+  animation: rowSlide 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+  
+  @for $i from 1 through 10 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+}
+
+@keyframes rowSlide {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Table Row Hover */
+.report-row {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: var(--gray-50);
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Column Selector Buttons */
+.column-selector button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* Export Dropdown Animation */
+.export-dropdown {
+  animation: dropdownSlide 0.2s ease-out;
+  transform-origin: top;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* Export Button States */
+.bg-primary-500 {
+  transition: all 0.2s ease;
+  
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Success Check Animation */
+.text-success-600 {
+  animation: checkPop 0.3s ease-out;
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Summary Cards */
+.summary-card {
+  transition: all 0.2s ease;
+  animation: cardFade 0.3s ease-out;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-200);
+  }
+}
+
+@keyframes cardFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Export History Items */
+.export-history .flex.items-center {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    
+    svg {
+      transform: scale(1.1);
+      color: var(--primary-600);
+    }
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Loading Skeleton */
+.reports-loading {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Print Button Hover */
+button:has(.printer) {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: rotate(-10deg);
+  }
+}
+
+/* Mail Button Hover */
+button:has(.mail) {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+    
+    svg {
+      animation: wobble 0.3s ease-out;
+    }
+  }
+}
+
+@keyframes wobble {
+  0%, 100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+/* Filter Button Animation */
+button:has(.filter) {
+  transition: all 0.2s ease;
+  
+  &:hover svg {
+    animation: shake 0.3s ease-out;
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+/* Rotate Utility */
+.rotate-270 {
+  transform: rotate(270deg);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .report-card,
+  .report-preview,
+  .report-row,
+  .column-selector button,
+  .export-dropdown,
+  .bg-primary-500 .animate-spin,
+  .text-success-600,
+  .summary-card,
+  .export-history .flex.items-center,
+  .reports-loading,
+  button:has(.printer),
+  button:has(.mail),
+  button:has(.filter) {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .report-card:hover {
+    transform: none;
+    box-shadow: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+  
+  .report-row:hover {
+    transform: none;
+  }
+  
+  .summary-card:hover {
+    transform: none;
+  }
+  
+  .export-history .flex.items-center:hover {
+    transform: none;
+  }
+  
+  button:hover {
+    transform: none !important;
+    
+    svg {
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+}

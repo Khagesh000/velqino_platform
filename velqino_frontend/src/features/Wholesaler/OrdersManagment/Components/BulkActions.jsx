@@ -1,264 +1,183 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
-import { 
-  CheckCircle,
-  XCircle,
-  Download,
-  Printer,
-  Truck,
-  Package,
-  AlertCircle,
-  ChevronDown,
-  Check,
-  FileText,
-  Send,
+import React, { useState } from "react";
+import {
+  Wallet,
   Clock,
-  RefreshCw
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/OrdersManagment/BulkActions.scss'
+  TrendingUp,
+  Calendar,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  EyeOff,
+  Info,
+  ChevronRight,
+} from "../../../../utils/icons";
+import "../../../../styles/Wholesaler/PaymentsPayouts/BalanceCards.scss";
 
-export default function BulkActions({ selectedCount = 3, onActionComplete }) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [selectedAction, setSelectedAction] = useState(null)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const [statusFilter, setStatusFilter] = useState('all')
+export default function BalanceCards() {
+  const [showBalance, setShowBalance] = useState(true);
+  const [hoveredCard, setHoveredCard] = useState(null);
 
-  const bulkActions = [
+  const balances = [
     {
-      id: 'update-status',
-      label: 'Update Status',
-      icon: RefreshCw,
-      color: 'primary',
-      options: ['Processing', 'Shipped', 'Delivered', 'Cancelled']
+      id: "current",
+      title: "Current Balance",
+      value: 1245750,
+      change: 12.5,
+      trend: "up",
+      icon: Wallet,
+      color: "primary",
+      description: "Available for withdrawal",
     },
     {
-      id: 'print-invoices',
-      label: 'Print Invoices',
-      icon: Printer,
-      color: 'info',
-      count: selectedCount
+      id: "pending",
+      title: "Pending Clearance",
+      value: 245000,
+      change: 8.2,
+      trend: "up",
+      icon: Clock,
+      color: "warning",
+      description: "Will clear in 3-5 days",
     },
     {
-      id: 'export-orders',
-      label: 'Export Orders',
-      icon: Download,
-      color: 'success',
-      formats: ['CSV', 'Excel', 'PDF']
+      id: "lifetime",
+      title: "Lifetime Earnings",
+      value: 8750000,
+      change: 24.3,
+      trend: "up",
+      icon: TrendingUp,
+      color: "success",
+      description: "Total earnings to date",
     },
     {
-      id: 'cancel-selected',
-      label: 'Cancel Selected',
-      icon: XCircle,
-      color: 'error',
-      warning: 'This action cannot be undone'
-    }
-  ]
+      id: "nextPayout",
+      title: "Next Payout",
+      value: 324500,
+      change: null,
+      trend: null,
+      icon: Calendar,
+      color: "info",
+      description: "Expected on Mar 25, 2024",
+    },
+  ];
 
-  const handleActionClick = (action) => {
-    if (action.id === 'cancel-selected') {
-      setSelectedAction(action)
-      setShowConfirmModal(true)
-    } else if (action.id === 'update-status') {
-      setSelectedAction(action)
-      setIsExpanded(true)
-    } else {
-      executeAction(action)
-    }
-  }
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
-  const executeAction = (action) => {
-    setProcessing(true)
-    console.log(`Executing: ${action.label} for ${selectedCount} orders`)
-    
-    setTimeout(() => {
-      setProcessing(false)
-      setSelectedAction(null)
-      setIsExpanded(false)
-      if (onActionComplete) {
-        onActionComplete({
-          action: action.id,
-          count: selectedCount,
-          status: 'success'
-        })
-      }
-    }, 1500)
-  }
-
-  const getActionColor = (color) => {
+  const getCardColor = (color) => {
     const colors = {
-      primary: 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100',
-      success: 'bg-success-50 text-success-700 border-success-200 hover:bg-success-100',
-      error: 'bg-error-50 text-error-700 border-error-200 hover:bg-error-100',
-      info: 'bg-info-50 text-info-700 border-info-200 hover:bg-info-100',
-      warning: 'bg-warning-50 text-warning-700 border-warning-200 hover:bg-warning-100'
-    }
-    return colors[color] || colors.primary
-  }
+      primary: "bg-primary-500",
+      warning: "bg-warning-500",
+      success: "bg-success-500",
+      info: "bg-info-500",
+    };
+    return colors[color] || colors.primary;
+  };
 
   return (
-    <>
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 w-full">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
-              <Package size={20} className="sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Bulk Actions</h3>
-              <p className="text-xs sm:text-sm text-gray-500">
-                <span className="font-medium text-primary-600">{selectedCount}</span> orders selected
-              </p>
-            </div>
+    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 w-full">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
+            <Wallet size={20} className="sm:w-6 sm:h-6" />
           </div>
-          {selectedCount > 0 && (
-            <button 
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all w-full sm:w-auto"
-              onClick={() => window.location.reload()}
-            >
-              Clear Selection
-            </button>
-          )}
-        </div>
-
-        {/* Actions Grid - Fixed grid with proper gaps */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {bulkActions.map((action) => {
-            const Icon = action.icon
-            return (
-              <button
-                key={action.id}
-                className={`relative p-4 sm:p-5 rounded-xl border-2 transition-all ${getActionColor(action.color)} ${
-                  selectedAction?.id === action.id ? 'ring-2 ring-offset-2 ring-' + action.color + '-500' : ''
-                } hover:shadow-lg w-full text-left`}
-                onClick={() => handleActionClick(action)}
-                disabled={processing}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <Icon size={24} className="sm:w-7 sm:h-7" />
-                  {action.count && (
-                    <span className="px-2 py-1 bg-white rounded-full text-xs font-medium">
-                      {action.count}
-                    </span>
-                  )}
-                </div>
-                <h4 className="text-sm sm:text-base font-semibold mb-1">{action.label}</h4>
-                <p className="text-xs opacity-75 line-clamp-2">
-                  {action.id === 'update-status' && 'Change order status in bulk'}
-                  {action.id === 'print-invoices' && `Print ${action.count} invoices`}
-                  {action.id === 'export-orders' && 'CSV, Excel, or PDF'}
-                  {action.id === 'cancel-selected' && 'Cancel all selected orders'}
-                </p>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Expanded Section for Status Update */}
-        {isExpanded && selectedAction?.id === 'update-status' && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h4 className="text-sm font-medium text-gray-700 mb-4">Select New Status</h4>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selectedAction.options.map((status) => (
-                <button
-                  key={status}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
-                    statusFilter === status.toLowerCase()
-                      ? 'bg-primary-500 text-white border-primary-500'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300 hover:bg-primary-50'
-                  }`}
-                  onClick={() => setStatusFilter(status.toLowerCase())}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
-              <button
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 order-2 sm:order-1"
-                onClick={() => setIsExpanded(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 flex items-center justify-center gap-2 order-1 sm:order-2"
-                onClick={() => executeAction(selectedAction)}
-                disabled={!statusFilter || processing}
-              >
-                {processing ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Check size={16} />
-                    Update {selectedCount} Orders
-                  </>
-                )}
-              </button>
-            </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Financial Overview</h3>
+            <p className="text-xs sm:text-sm text-gray-500">Your earnings and balance summary</p>
           </div>
-        )}
+        </div>
+        <button 
+          onClick={() => setShowBalance(!showBalance)}
+          className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all w-full sm:w-auto flex items-center justify-center gap-2"
+        >
+          {showBalance ? <EyeOff size={16} /> : <Eye size={16} />}
+          <span>{showBalance ? "Hide Balance" : "Show Balance"}</span>
+        </button>
       </div>
 
-      {/* Confirmation Modal for Cancel Action */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowConfirmModal(false)}
-          />
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        {balances.map((card, index) => {
+          const Icon = card.icon;
+          const cardColor = getCardColor(card.color);
           
-          <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-error-100 flex items-center justify-center text-error-600 flex-shrink-0">
-                <AlertCircle size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Cancel Orders</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone</p>
-              </div>
-            </div>
-
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to cancel <span className="font-semibold text-error-600">{selectedCount} orders</span>? 
-              This will permanently cancel these orders and notify the customers.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-stretch gap-3">
-              <button
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
-                onClick={() => setShowConfirmModal(false)}
-              >
-                No, Keep Orders
-              </button>
-              <button
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-error-500 rounded-lg hover:bg-error-600 transition-all flex items-center justify-center gap-2"
-                onClick={() => {
-                  setShowConfirmModal(false)
-                  executeAction(selectedAction)
-                }}
-                disabled={processing}
-              >
-                {processing ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    Cancelling...
-                  </>
-                ) : (
-                  <>
-                    <XCircle size={16} />
-                    Yes, Cancel
-                  </>
+          return (
+            <div
+              key={card.id}
+              className={`relative ${cardColor} rounded-xl p-4 sm:p-5 transition-all hover:shadow-lg cursor-pointer balance-card`}
+              onMouseEnter={() => setHoveredCard(card.id)}
+              onMouseLeave={() => setHoveredCard(null)}
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Icon size={18} className="sm:w-5 sm:h-5 text-white" />
+                </div>
+                {card.change && (
+                  <div className={`flex items-center gap-1 px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
+                    card.trend === 'up' ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'
+                  }`}>
+                    {card.trend === "up" ? <ArrowUp size={10} className="sm:w-3 sm:h-3" /> : <ArrowDown size={10} className="sm:w-3 sm:h-3" />}
+                    <span>{card.change}%</span>
+                  </div>
                 )}
-              </button>
+              </div>
+
+              <div className="mb-2 sm:mb-3">
+                <p className="text-xs sm:text-sm text-white/80 mb-0.5 sm:mb-1">{card.title}</p>
+                <p className="text-lg sm:text-2xl font-bold text-white">
+                  {showBalance ? formatCurrency(card.value) : "••••••"}
+                </p>
+              </div>
+
+              <p className="text-xs text-white/70 flex items-center gap-1">
+                <Info size={10} className="sm:w-3 sm:h-3" />
+                <span>{card.description}</span>
+              </p>
+
+              {hoveredCard === card.id && (
+                <div className={`absolute inset-0 ${cardColor} opacity-30 blur-xl pointer-events-none rounded-xl card-glow`} />
+              )}
             </div>
-          </div>
+          );
+        })}
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
+          <p className="text-xs text-gray-500 mb-1">This Month</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">₹2,45,000</p>
         </div>
-      )}
-    </>
-  )
+        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
+          <p className="text-xs text-gray-500 mb-1">Last Month</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">₹1,98,000</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
+          <p className="text-xs text-gray-500 mb-1">Avg Monthly</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">₹2,10,000</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
+          <p className="text-xs text-gray-500 mb-1">Total Orders</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">1,245</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="pt-3 border-t border-gray-200 flex justify-end">
+        <button className="flex items-center gap-1 text-xs sm:text-sm text-primary-600 hover:text-primary-700 transition-all analytics-link">
+          <span>View detailed analytics</span>
+          <ChevronRight size={14} className="sm:w-4 sm:h-4" />
+        </button>
+      </div>
+    </div>
+  );
 }

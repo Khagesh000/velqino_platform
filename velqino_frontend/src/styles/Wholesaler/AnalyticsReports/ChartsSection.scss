@@ -1,0 +1,335 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Charts Section - Only Animations
+================================ */
+
+/* Chart Tab Animation */
+.chart-tab {
+  transition: all 0.2s ease;
+  animation: slideIn 0.3s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 7 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Main Chart Entrance */
+.chart-main {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Chart Line Animation */
+.chart-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 1.5s ease-out forwards;
+}
+
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Chart Point Animation */
+.chart-point {
+  opacity: 0;
+  animation: pointPop 0.3s ease-out forwards;
+  animation-delay: 1s;
+}
+
+@keyframes pointPop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Bar Chart Animation */
+.chart-bar {
+  transform-origin: bottom;
+  animation: barGrow 1s ease-out forwards;
+  transform: scaleY(0);
+}
+
+@keyframes barGrow {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Pie/Donut Chart Segment Animation */
+.chart-segment {
+  stroke-dasharray: 251.2;
+  stroke-dashoffset: 251.2;
+  animation: fillSegment 1s ease-out forwards;
+}
+
+@keyframes fillSegment {
+  to {
+    stroke-dashoffset: var(--dashoffset);
+  }
+}
+
+/* Area Chart Animation */
+.chart-area {
+  animation: fadeInArea 1s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInArea {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.2;
+  }
+}
+
+/* Map Region Animation */
+.chart-region {
+  transform-origin: center;
+  animation: pulseRegion 2s infinite;
+}
+
+@keyframes pulseRegion {
+  0%, 100% {
+    transform: scale(1);
+    opacity: var(--opacity);
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: calc(var(--opacity) + 0.1);
+  }
+}
+
+/* Heatmap Cell Animation */
+.chart-heat-cell {
+  animation: heatPulse 2s infinite;
+  animation-delay: calc(var(--index) * 0.1s);
+}
+
+@keyframes heatPulse {
+  0%, 100% {
+    opacity: var(--opacity);
+  }
+  50% {
+    opacity: calc(var(--opacity) + 0.1);
+  }
+}
+
+/* Chart Preview Cards */
+.chart-preview {
+  transition: all 0.2s ease;
+  animation: previewSlide 0.3s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 6 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+  
+  &:hover svg {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes previewSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tooltip Animation (if needed) */
+.chart-tooltip {
+  animation: tooltipFade 0.2s ease-out;
+}
+
+@keyframes tooltipFade {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Legend Item Animation */
+.chart-header .flex.items-center.gap-1 {
+  animation: legendFade 0.5s ease-out;
+}
+
+@keyframes legendFade {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Loading State */
+.charts-loading {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Chart Switch Transition */
+.chart-wrapper {
+  transition: opacity 0.3s ease;
+  
+  &.changing {
+    opacity: 0;
+  }
+}
+
+/* Hover Effects for Interactive Elements */
+.chart-container {
+  .chart-line:hover {
+    stroke-width: 4;
+  }
+  
+  .chart-point:hover {
+    r: 6;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+  
+  .chart-bar:hover {
+    filter: brightness(1.1);
+    transform: scaleX(1.05);
+  }
+  
+  .chart-region:hover {
+    filter: brightness(1.2);
+    transform: scale(1.02);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .chart-tab {
+    animation-duration: 0.2s;
+  }
+  
+  .chart-preview {
+    animation-duration: 0.2s;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .chart-tab,
+  .chart-main,
+  .chart-line,
+  .chart-point,
+  .chart-bar,
+  .chart-segment,
+  .chart-area,
+  .chart-region,
+  .chart-heat-cell,
+  .chart-preview,
+  .chart-tooltip,
+  .chart-header .flex.items-center.gap-1,
+  .charts-loading,
+  .chart-wrapper,
+  .chart-container .chart-line:hover,
+  .chart-container .chart-point:hover,
+  .chart-container .chart-bar:hover,
+  .chart-container .chart-region:hover {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .chart-line {
+    stroke-dashoffset: 0;
+  }
+  
+  .chart-point {
+    opacity: 1;
+  }
+  
+  .chart-bar {
+    transform: scaleY(1);
+  }
+  
+  .chart-segment {
+    stroke-dashoffset: 0;
+  }
+  
+  .chart-area {
+    opacity: 0.2;
+  }
+  
+  .chart-preview:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

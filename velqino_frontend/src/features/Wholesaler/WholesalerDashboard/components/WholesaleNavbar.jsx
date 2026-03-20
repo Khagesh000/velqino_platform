@@ -15,6 +15,7 @@ export default function WholesaleNavbar() {
   const profileDropdownRef = useRef(null)
   const notificationsRef = useRef(null)
   const mobileMenuRef = useRef(null)
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
 
   // Handle click outside for dropdowns
   useEffect(() => {
@@ -69,12 +70,12 @@ export default function WholesaleNavbar() {
 
   // Navigation items for sidebar
   const navItems = [
-    { icon: <Home size={20} />, label: 'Home Dashboard', href: '/wholesale', badge: null },
-    { icon: <Package size={20} />, label: 'Orders Management', href: '/wholesale/orders', badge: '12' },
-    { icon: <Grid size={20} />, label: 'Products Catalog', href: '/wholesale/products', badge: null },
-    { icon: <BarChart3 size={20} />, label: 'Analytics & Reports', href: '/wholesale/analytics', badge: null },
-    { icon: <Users size={20} />, label: 'Customers', href: '/wholesale/customers', badge: '3' },
-    { icon: <Wallet size={20} />, label: 'Payments & Payouts', href: '/wholesale/payments', badge: null },
+    { icon: <Home size={20} />, label: 'Home Dashboard', href: '/wholesaler/wholesalerdashboard', badge: null },
+    { icon: <Package size={20} />, label: 'Orders Management', href: '/wholesaler/ordermanagment', badge: '12' },
+    { icon: <Grid size={20} />, label: 'Products Catalog', href: '/wholesaler/productcatalog', badge: null },
+    { icon: <BarChart3 size={20} />, label: 'Analytics & Reports', href: '/wholesaler/analyticsreports', badge: null },
+    { icon: <Users size={20} />, label: 'Customers', href: '/wholesaler/customers', badge: '3' },
+    { icon: <Wallet size={20} />, label: 'Payments & Payouts', href: '/wholesaler/paymentsandpayouts', badge: null },
     { icon: <Settings size={20} />, label: 'Settings', href: '/wholesale/settings', badge: null },
   ]
 
@@ -121,11 +122,21 @@ export default function WholesaleNavbar() {
 
             {/* Right Section: Icons & Profile */}
             <div className="flex items-center gap-2 lg:gap-3">
-              {/* Quick Add Product Button - Desktop */}
-              <button className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-inverse px-4 py-2 rounded-xl text-sm font-medium transition-fast shadow-sm hover:shadow-md">
-                <PlusCircle size={18} />
-                <span>Add Product</span>
-              </button>
+  {/* Mobile Search Icon */}
+  <div className="md:hidden">
+    <button
+      onClick={() => setIsMobileSearchOpen(true)}
+      className="p-2.5 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-fast"
+    >
+      <Search size={20} />
+    </button>
+  </div>
+
+  {/* Quick Add Product Button - Desktop */}
+  <button className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-inverse px-4 py-2 rounded-xl text-sm font-medium transition-fast shadow-sm hover:shadow-md">
+    <PlusCircle size={18} />
+    <span>Add Product</span>
+  </button>
 
               {/* Notifications */}
               <div className="relative" ref={notificationsRef}>
@@ -141,7 +152,7 @@ export default function WholesaleNavbar() {
 
                 {/* Notifications Dropdown */}
                 {isNotificationsOpen && (
-                  <div className="absolute right-0 top-12 w-80 bg-card border-2 border-medium rounded-xl shadow-xl py-2 z-dropdown slide-down">
+                  <div className="absolute top-12 w-80 max-w-[calc(100vw-32px)] bg-card border-2 border-medium rounded-xl shadow-xl py-2 z-dropdown slide-down notifications-dropdown">
                     <div className="px-4 py-3 border-b border-light flex items-center justify-between">
                       <span className="font-semibold text-primary-600">Notifications</span>
                       {unreadCount > 0 && (
@@ -236,19 +247,32 @@ export default function WholesaleNavbar() {
             </div>
           </div>
 
-          {/* Mobile Search Bar */}
-          <div className="md:hidden py-3 border-t border-light">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2.5 bg-surface-1 border border-medium rounded-xl text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-fast"
-              />
-              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" />
-            </div>
-          </div>
+          
         </div>
       </nav>
+
+      {/* Mobile Search Overlay */}
+{isMobileSearchOpen && (
+  <div className="md:hidden fixed inset-x-0 top-16 z-[100] bg-card border-b border-light px-4 py-3 animate-slide-down">
+    <div className="flex items-center gap-2">
+      <div className="flex-1 relative">
+        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" />
+        <input
+          type="text"
+          placeholder="Search orders, products, customers..."
+          className="w-full pl-10 pr-4 py-2.5 bg-surface-1 border border-medium rounded-xl text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+          autoFocus
+        />
+      </div>
+      <button
+        onClick={() => setIsMobileSearchOpen(false)}
+        className="p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
+      >
+        <X size={20} />
+      </button>
+    </div>
+  </div>
+)}
 
       {/* Sidebar & Main Content Wrapper */}
       <div className="flex">

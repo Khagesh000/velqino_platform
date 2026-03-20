@@ -1,3 +1,4 @@
+@import '../../reusables/variables.scss';
 /* Add this to your global CSS file */
 .navbar-hidden {
   transform: translateY(-100%);
@@ -7,4 +8,31 @@
 .navbar-visible {
   transform: translateY(0);
   transition: transform 0.3s ease;
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out forwards;
+}
+
+@media (max-width: 768px) {
+  .notifications-dropdown {
+    position: fixed !important;
+    top: 56px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    width: 90% !important;
+    max-width: 320px !important;
+  }
 }

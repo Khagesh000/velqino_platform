@@ -1,0 +1,262 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Comparison Tool - Only Animations
+================================ */
+
+/* Tool Entrance */
+.comparison-tool {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Entrance Animation */
+.comparison-card {
+  animation: cardFade 0.4s ease-out forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@for $i from 1 through 6 {
+  .comparison-card:nth-child(#{$i}) {
+    animation-delay: $i * 0.1s;
+  }
+}
+
+@keyframes cardFade {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Hover Effects */
+.comparison-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    .w-10.h-10 {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+  
+  .w-10.h-10 {
+    transition: transform 0.3s ease;
+  }
+}
+
+/* Trend Badge Animation */
+.comparison-card .text-xs.font-medium {
+  animation: badgePop 0.3s ease-out;
+  
+  svg {
+    animation: bounce 2s infinite;
+  }
+}
+
+@keyframes badgePop {
+  from {
+    transform: scale(0.8);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Progress Bar Animation */
+.comparison-card .h-full {
+  transition: width 0.5s ease;
+  transform-origin: left;
+}
+
+/* Value Animation */
+.comparison-card .text-xl {
+  animation: countUp 0.6s ease-out;
+  position: relative;
+  display: inline-block;
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Details Table Animation */
+.details-table {
+  animation: expandTable 0.3s ease-out;
+  transform-origin: top;
+}
+
+@keyframes expandTable {
+  from {
+    opacity: 0;
+    transform: scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* Table Row Hover */
+.details-table tbody tr {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Period Selector Animation */
+select {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary-300);
+  }
+  
+  &:focus {
+    transform: translateY(-1px);
+  }
+}
+
+/* Action Buttons */
+.comparison-header button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Expand/Collapse Button */
+button:has(.chevron-down) {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+  }
+  
+  svg {
+    transition: transform 0.3s ease;
+  }
+}
+
+/* Glow Effect on Hover */
+.comparison-card .absolute {
+  transition: opacity 0.3s ease;
+}
+
+/* Loading State */
+.comparison-loading {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .comparison-card {
+    animation-duration: 0.3s;
+  }
+  
+  .details-table {
+    margin: 0 -8px;
+    padding: 0 8px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .comparison-tool,
+  .comparison-card,
+  .comparison-card .w-10.h-10,
+  .comparison-card .text-xs.font-medium,
+  .comparison-card .h-full,
+  .comparison-card .text-xl,
+  .details-table,
+  .details-table tbody tr,
+  select,
+  .comparison-header button,
+  button:has(.chevron-down),
+  .comparison-card .absolute,
+  .comparison-loading {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .comparison-card:hover {
+    transform: none;
+    
+    .w-10.h-10 {
+      transform: none;
+    }
+  }
+  
+  .details-table tbody tr:hover {
+    transform: none;
+  }
+  
+  select:hover {
+    transform: none;
+  }
+  
+  .comparison-header button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

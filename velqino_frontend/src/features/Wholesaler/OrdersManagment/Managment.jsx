@@ -69,30 +69,30 @@ export default function Management() {
 
       {/* Order Details Panel - Right Sidebar - ONLY SHOW WHEN ORDER SELECTED */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-            onClick={() => {
-              console.log('🟡 Backdrop clicked')
-              setSelectedOrder(null)
-            }}
-          />
-          
-          {/* Panel */}
-          <div className="absolute inset-y-0 right-0 w-full sm:w-[480px] md:w-[560px] lg:w-[640px] xl:w-[720px]">
-            <Suspense fallback={<DetailsPanelPlaceholder />}>
-              <OrderDetailsPanel 
-                order={selectedOrder} 
-                onClose={() => {
-                  console.log('🟢 onClose called from panel')
-                  setSelectedOrder(null)
-                }}
-              />
-            </Suspense>
-          </div>
-        </div>
-      )}
+  <div className="fixed inset-0 z-50 overflow-hidden">
+    {/* Backdrop */}
+    <div 
+      className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+      onClick={() => {
+        console.log('🟡 Backdrop clicked')
+        setSelectedOrder(null)
+      }}
+    />
+    
+    {/* Panel - Mobile optimized with padding for navbar and bottom nav */}
+    <div className="absolute inset-y-0 right-0 w-full sm:w-[480px] md:w-[560px] lg:w-[640px] xl:w-[720px] pt-[56px] pb-[70px] sm:pt-0 sm:pb-0">
+      <Suspense fallback={<DetailsPanelPlaceholder />}>
+        <OrderDetailsPanel 
+          order={selectedOrder} 
+          onClose={() => {
+            console.log('🟢 onClose called from panel')
+            setSelectedOrder(null)
+          }}
+        />
+      </Suspense>
+    </div>
+  </div>
+)}
     </div>
   )
 }

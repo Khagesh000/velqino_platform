@@ -1,0 +1,295 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Date Range Selector - Only Animations
+================================ */
+
+/* Selector Button Animation */
+.selector-button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Dropdown Panel Entrance */
+.dropdown-panel {
+  animation: slideDown 0.2s ease-out;
+  transform-origin: top;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* Preset Items Animation */
+.preset-item {
+  animation: slideIn 0.2s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@for $i from 1 through 10 {
+  .preset-item:nth-child(#{$i}) {
+    animation-delay: $i * 0.03s;
+  }
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Preset Item Hover */
+.preset-item {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  
+  &:hover::after {
+    width: 200px;
+    height: 200px;
+  }
+  
+  &:hover {
+    transform: translateX(4px);
+  }
+}
+
+/* Tab Indicator */
+.flex.border-b .flex-1 {
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary-500);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+  }
+  
+  &.text-primary-600::after {
+    transform: scaleX(1);
+  }
+}
+
+/* Custom Range Input Focus */
+input[type="date"] {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+  }
+}
+
+/* Quick Select Buttons */
+.flex.items-center.gap-2 button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    background-color: var(--primary-100);
+    color: var(--primary-700);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* Apply Button Animation */
+button:has(.bg-primary-500) {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--primary-200);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* Comparison Buttons */
+.comparison-section button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* Close Button Rotation */
+button:has(.x) {
+  transition: all 0.2s ease;
+  
+  &:hover svg {
+    transform: rotate(90deg);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Chevron Animation */
+.selector-button svg:last-child {
+  transition: transform 0.3s ease;
+}
+
+/* Date Display Animation */
+.text-xs.text-gray-500 {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Selected Checkmark Animation */
+.preset-item .text-primary-500 {
+  animation: checkPop 0.2s ease-out;
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Loading State (if needed) */
+.selector-loading {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .selector-button,
+  .dropdown-panel,
+  .preset-item,
+  .preset-item::after,
+  .flex.border-b .flex-1::after,
+  input[type="date"],
+  .flex.items-center.gap-2 button,
+  button:has(.bg-primary-500),
+  button:has(.bg-primary-500)::before,
+  .comparison-section button,
+  button:has(.x) svg,
+  .selector-button svg:last-child,
+  .text-xs.text-gray-500,
+  .preset-item .text-primary-500,
+  .selector-loading {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .selector-button:hover {
+    transform: none;
+  }
+  
+  .preset-item:hover {
+    transform: none;
+    
+    &::after {
+      display: none;
+    }
+  }
+  
+  button:has(.bg-primary-500):hover {
+    transform: none;
+    box-shadow: none;
+    
+    &::before {
+      display: none;
+    }
+  }
+  
+  button:has(.x):hover svg {
+    transform: none;
+  }
+}
