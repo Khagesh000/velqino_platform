@@ -117,6 +117,42 @@ import {
   FileImage,
   EyeOff,
 
+  Banknote,
+  History,
+  FileCheck,
+  Shield,
+  Camera,
+  Smartphone,
+  Laptop,
+  Lock,
+  UserPlus,
+  Crown,
+  Activity,
+  Key,
+  Webhook,
+  Code,
+  ExternalLink,
+  ArrowLeftRight,
+  Zap,
+
+  Palette,
+  Image,
+  Layout,
+  Type,
+
+  Video,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+
+  Ticket,
+  Paperclip,
+
+  Server,
+  Database,
+  Cloud,
+
+
 } from 'lucide-react';
 
 // Then export them
@@ -221,4 +257,41 @@ export {
   FileJson,
   FileImage,
   EyeOff,
+
+  Banknote,
+  History,
+  FileCheck,
+  Shield,
+
+  Camera,
+  Smartphone,
+  Laptop,
+  Lock,
+  UserPlus,
+  Crown,
+  Activity,
+  Key,
+  Webhook,
+  Code,
+  ExternalLink,
+  ArrowLeftRight,
+  Zap,
+
+  Palette,
+  Image,
+  Layout,
+  Type,
+
+  Video,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+
+  Ticket,
+  Paperclip,
+
+  Server,
+  Database,
+  Cloud,
+
 };

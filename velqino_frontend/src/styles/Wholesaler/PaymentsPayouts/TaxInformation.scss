@@ -1,0 +1,228 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Tax Information - Only Animations
+================================ */
+
+/* Section Entrance */
+.tax-information {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tab Animation */
+.flex.gap-1 button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--primary-600);
+  }
+}
+
+/* Table Row Animation */
+tbody tr {
+  animation: rowFade 0.2s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 10 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+}
+
+@keyframes rowFade {
+  to {
+    opacity: 1;
+  }
+}
+
+tbody tr:hover {
+  transform: translateX(4px);
+  transition: transform 0.2s ease;
+}
+
+/* Document Item */
+.flex.items-center.justify-between.p-3 {
+  transition: all 0.2s ease;
+  animation: slideIn 0.2s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.flex.items-center.justify-between.p-3:hover {
+  transform: translateX(4px);
+  background-color: var(--primary-50);
+}
+
+/* Upload Area */
+.border-2.border-dashed {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.01);
+    border-color: var(--primary-400);
+    background-color: var(--primary-50);
+  }
+}
+
+/* Buttons */
+button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Summary Cards */
+.grid-cols-3 .bg-gray-50 {
+  transition: all 0.2s ease;
+  animation: cardPop 0.3s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 3 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+@keyframes cardPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.grid-cols-3 .bg-gray-50:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Modal Animation */
+.fixed.inset-0 .bg-white {
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Backdrop Fade */
+.fixed.inset-0 .absolute.inset-0 {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Input Focus */
+input, select {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+}
+
+/* Toggle Switch */
+.relative.inline-flex {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .tax-information,
+  .flex.gap-1 button,
+  tbody tr,
+  .flex.items-center.justify-between.p-3,
+  .border-2.border-dashed,
+  button,
+  .grid-cols-3 .bg-gray-50,
+  .fixed.inset-0 .bg-white,
+  .fixed.inset-0 .absolute.inset-0,
+  input, select,
+  .relative.inline-flex {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  tbody tr:hover,
+  .flex.items-center.justify-between.p-3:hover {
+    transform: none;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+  
+  .grid-cols-3 .bg-gray-50:hover {
+    transform: none;
+  }
+}

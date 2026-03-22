@@ -1,0 +1,107 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Profile Settings - Only Animations
+================================ */
+
+.profile-settings {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+input, select, textarea {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.05);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+.relative button {
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.bg-success-50 {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.text-success-600 {
+  animation: checkPop 0.3s ease-out;
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-settings,
+  input, select, textarea,
+  button,
+  .relative button,
+  .bg-success-50,
+  .text-success-600 {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

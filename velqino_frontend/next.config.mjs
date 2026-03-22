@@ -1,7 +1,27 @@
-/** @type {import('next').NextConfig} */
+﻿/** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
   reactCompiler: true,
+  sassOptions: {
+    includePaths: ['./src/styles'],
+    silenceDeprecations: ['import', 'legacy-js-api'],
+  },
+  turbopack: {},
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Force webpack to watch the entire src folder
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+        ignored: /node_modules/,
+      };
+      
+      // This is the KEY fix - watch features folder
+      config.snapshot = {
+        managedPaths: [],
+        immutablePaths: [],
+      };
+    }
+    return config;
+  },
 };
-
 export default nextConfig;

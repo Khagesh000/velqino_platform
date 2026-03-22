@@ -1,0 +1,187 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Invoice Generator - Only Animations
+================================ */
+
+/* Section Entrance */
+.invoice-generator {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Order Cards */
+.w-full.p-3 {
+  transition: all 0.2s ease;
+  animation: cardSlide 0.2s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@for $i from 1 through 10 {
+  .w-full.p-3:nth-child(#{$i}) {
+    animation-delay: $i * 0.05s;
+  }
+}
+
+@keyframes cardSlide {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.w-full.p-3:hover {
+  transform: translateX(4px);
+}
+
+/* Invoice Preview Animation */
+.invoice-preview {
+  animation: slideDown 0.3s ease-out;
+  transform-origin: top;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* Table Rows Animation */
+tbody tr {
+  transition: all 0.2s ease;
+  animation: rowFade 0.2s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 10 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+}
+
+@keyframes rowFade {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Buttons */
+button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.05);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Input Fields */
+input, textarea, select {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+}
+
+/* Loading Spinner */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Success Check */
+.text-success-600 {
+  animation: checkPop 0.3s ease-out;
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Preview Header */
+.bg-gray-50 {
+  transition: all 0.2s ease;
+}
+
+/* Bill To Section */
+.bg-gray-50.p-3 {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: var(--primary-50);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .invoice-generator,
+  .w-full.p-3,
+  .invoice-preview,
+  tbody tr,
+  button,
+  input, textarea, select,
+  .animate-spin,
+  .text-success-600,
+  .bg-gray-50.p-3 {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .w-full.p-3:hover {
+    transform: none;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

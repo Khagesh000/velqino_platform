@@ -1,0 +1,138 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Notification Preferences - Only Animations
+================================ */
+
+.notification-preferences {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Toggle Switch Animation */
+.peer:checked ~ .peer-checked\:bg-primary-500 {
+  transition: background-color 0.2s ease;
+}
+
+.peer:checked ~ .after\:translate-x-full {
+  transition: transform 0.2s ease;
+}
+
+/* Tab Animation */
+button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--primary-600);
+  }
+}
+
+/* Save Button */
+button:has(.save) {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.05);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Category Items */
+.flex.items-start.justify-between {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: var(--gray-50);
+    transform: translateX(4px);
+  }
+}
+
+/* Digest Cards */
+.border.border-gray-200 {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--primary-200);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Success Message */
+.bg-success-50 {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading Spinner */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .notification-preferences,
+  .peer:checked ~ .peer-checked\:bg-primary-500,
+  .peer:checked ~ .after\:translate-x-full,
+  button,
+  button:has(.save),
+  .flex.items-start.justify-between,
+  .border.border-gray-200,
+  .bg-success-50,
+  .animate-spin {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .flex.items-start.justify-between:hover {
+    transform: none;
+    background-color: transparent;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

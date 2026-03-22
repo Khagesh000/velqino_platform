@@ -15,7 +15,7 @@ import {
 } from "../../../../utils/icons";
 import "../../../../styles/Wholesaler/PaymentsPayouts/BalanceCards.scss";
 
-export default function BalanceCards() {
+export default function BalanceCard() {
   const [showBalance, setShowBalance] = useState(true);
   const [hoveredCard, setHoveredCard] = useState(null);
 

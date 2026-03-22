@@ -1,30 +1,32 @@
 "use client"
 
-import React, { useState, lazy, Suspense, useEffect } from 'react'
+import React, { useState, lazy, Suspense } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
 
 // Lazy load all non-critical components
-const BalanceCards = lazy(() => import('./Components/BalanceCards'))
-/* const TransactionsTable = lazy(() => import('./Components/TransactionsTable'))
-const WithdrawalSection = lazy(() => import('./Components/WithdrawalSection'))
-const PaymentMethods = lazy(() => import('./Components/PaymentMethods'))
-const TaxInformation = lazy(() => import('./Components/TaxInformation'))
-const InvoiceGenerator = lazy(() => import('./Components/InvoiceGenerator')) */
+const BalanceCards = lazy(() => import('./components/BalanceCard'))
+const TransactionsTable = lazy(() => import('./components/TransactionsTable'))
+const WithdrawalSection = lazy(() => import('./components/WithdrawalSection'))
+const PaymentMethods = lazy(() => import('./components/PaymentMethods'))
+const TaxInformation = lazy(() => import('./components/TaxInformation'))
+const InvoiceGenerator = lazy(() => import('./components/InvoiceGenerator'))
+const WithdrawModal = lazy(() => import('./components/WithdrawModal'))
 
 // Loading placeholders
 const BalancePlaceholder = () => <div className="w-full h-[180px] bg-gray-50 rounded-xl animate-pulse" />
-/* const TablePlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
+const TablePlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
 const WithdrawalPlaceholder = () => <div className="w-full h-[280px] bg-gray-50 rounded-xl animate-pulse" />
 const MethodsPlaceholder = () => <div className="w-full h-[220px] bg-gray-50 rounded-xl animate-pulse" />
 const TaxPlaceholder = () => <div className="w-full h-[280px] bg-gray-50 rounded-xl animate-pulse" />
-const InvoicePlaceholder = () => <div className="w-full h-[300px] bg-gray-50 rounded-xl animate-pulse" /> */
+const InvoicePlaceholder = () => <div className="w-full h-[300px] bg-gray-50 rounded-xl animate-pulse" />
+const ModalPlaceholder = () => <div className="w-full h-full bg-gray-50 animate-pulse" />
 
 export default function PaymentsAndPayouts() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <WholesaleNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -59,21 +61,21 @@ export default function PaymentsAndPayouts() {
           </div>
 
           {/* Withdrawal Section */}
-         {/*  <div className="mt-6" style={{ minHeight: '280px' }}>
+          <div className="mt-6" style={{ minHeight: '280px' }}>
             <Suspense fallback={<WithdrawalPlaceholder />}>
               <WithdrawalSection onWithdraw={() => setShowWithdrawModal(true)} />
             </Suspense>
-          </div> */}
+          </div>
 
           {/* Transaction History */}
-          {/* <div className="mt-6" style={{ minHeight: '400px' }}>
+          <div className="mt-6" style={{ minHeight: '400px' }}>
             <Suspense fallback={<TablePlaceholder />}>
               <TransactionsTable />
             </Suspense>
-          </div> */}
+          </div>
 
           {/* Payment Methods & Tax Information Grid */}
-          {/* <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div style={{ minHeight: '220px' }}>
               <Suspense fallback={<MethodsPlaceholder />}>
                 <PaymentMethods />
@@ -84,32 +86,35 @@ export default function PaymentsAndPayouts() {
                 <TaxInformation />
               </Suspense>
             </div>
-          </div> */}
+          </div>
 
           {/* Invoice Generator */}
-          {/* <div className="mt-6" style={{ minHeight: '300px' }}>
+          <div className="mt-6" style={{ minHeight: '300px' }}>
             <Suspense fallback={<InvoicePlaceholder />}>
               <InvoiceGenerator />
             </Suspense>
-          </div> */}
+          </div>
 
         </div>
       </main>
 
       {/* Withdraw Modal */}
-      {/* {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowWithdrawModal(false)}
-          />
-          <div className="absolute inset-y-0 right-0 w-full sm:w-[480px] md:w-[560px]">
-            <Suspense fallback={<ModalPlaceholder />}>
-              <WithdrawModal onClose={() => setShowWithdrawModal(false)} />
-            </Suspense>
-          </div>
-        </div>
-      )} */}
+      {showWithdrawModal && (
+  <div className="fixed inset-0 z-50 overflow-hidden">
+    {/* Backdrop */}
+    <div 
+      className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+      onClick={() => setShowWithdrawModal(false)}
+    />
+    
+    {/* Panel - Mobile optimized with padding */}
+    <div className="absolute inset-y-0 right-0 w-full sm:w-[480px] md:w-[560px] pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
+      <Suspense fallback={<ModalPlaceholder />}>
+        <WithdrawModal onClose={() => setShowWithdrawModal(false)} />
+      </Suspense>
+    </div>
+  </div>
+)}
     </div>
   )
 }

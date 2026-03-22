@@ -76,7 +76,7 @@ export default function WholesaleNavbar() {
     { icon: <BarChart3 size={20} />, label: 'Analytics & Reports', href: '/wholesaler/analyticsreports', badge: null },
     { icon: <Users size={20} />, label: 'Customers', href: '/wholesaler/customers', badge: '3' },
     { icon: <Wallet size={20} />, label: 'Payments & Payouts', href: '/wholesaler/paymentsandpayouts', badge: null },
-    { icon: <Settings size={20} />, label: 'Settings', href: '/wholesale/settings', badge: null },
+    { icon: <Settings size={20} />, label: 'Settings', href: '/wholesaler/settings', badge: null },
   ]
 
   return (
@@ -331,7 +331,7 @@ export default function WholesaleNavbar() {
             {!isSidebarCollapsed && (
               <div className="absolute bottom-6 left-3 right-3">
                 <Link
-                  href="/wholesale/support"
+                  href="/wholesaler/support"
                   className="flex items-center gap-3 px-3 py-2.5 text-secondary hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-fast"
                 >
                   <HelpCircle size={20} />
@@ -383,7 +383,7 @@ export default function WholesaleNavbar() {
                 ))}
 
                 <Link
-                  href="/wholesale/support"
+                  href="/wholesaler/support"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-3 text-secondary hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-fast"
                 >
@@ -409,7 +409,7 @@ export default function WholesaleNavbar() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-light z-sticky">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-light z-sticky ">
         <div className="flex items-center justify-around px-2 py-1">
           <Link href="/wholesale" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
             <Home size={20} />

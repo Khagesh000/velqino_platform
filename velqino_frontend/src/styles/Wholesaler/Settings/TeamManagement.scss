@@ -1,0 +1,111 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Team Management - Only Animations
+================================ */
+
+.team-management {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+tbody tr {
+  animation: slideInRow 0.2s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@for $i from 1 through 10 {
+  tbody tr:nth-child(#{$i}) {
+    animation-delay: $i * 0.05s;
+  }
+}
+
+@keyframes slideInRow {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+tbody tr:hover {
+  background-color: var(--gray-50);
+  transition: background-color 0.2s ease;
+}
+
+button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.05);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+.border.border-gray-200.rounded-lg {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.fixed.inset-0 .bg-white {
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-management,
+  tbody tr,
+  button,
+  .border.border-gray-200.rounded-lg,
+  .fixed.inset-0 .bg-white {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  tbody tr:hover {
+    background-color: transparent;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

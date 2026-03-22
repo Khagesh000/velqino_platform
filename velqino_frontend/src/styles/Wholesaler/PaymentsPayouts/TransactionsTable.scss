@@ -1,0 +1,183 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Transactions Table - Only Animations
+================================ */
+
+/* Row Enter Animation */
+.transactions-table-row {
+  animation: slideInRow 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@for $i from 1 through 20 {
+  .transactions-table-row:nth-child(#{$i}) {
+    animation-delay: $i * 0.03s;
+  }
+}
+
+@keyframes slideInRow {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Row Hover Effect */
+.transactions-table-row-hover {
+  background-color: var(--primary-50);
+  transition: background-color 0.2s ease;
+  
+  td:first-child {
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background-color: var(--primary-500);
+      animation: slideInLeft 0.2s ease-out;
+    }
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Checkbox Animation */
+input[type="checkbox"] {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:checked {
+    animation: checkboxPop 0.2s ease-out;
+  }
+}
+
+@keyframes checkboxPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Action Buttons */
+.transactions-table button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Status Badge Animation */
+.transactions-table .inline-block {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+    filter: brightness(1.05);
+  }
+}
+
+/* Amount Animation */
+.text-success-600, .text-error-600 {
+  transition: all 0.2s ease;
+}
+
+.transactions-table-row:hover .text-success-600,
+.transactions-table-row:hover .text-error-600 {
+  transform: scale(1.05);
+}
+
+/* Table Header Sort */
+th.cursor-pointer {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--primary-600);
+    background-color: var(--primary-50);
+  }
+}
+
+/* Pagination Buttons */
+button:has(.chevron-left), button:has(.chevron-right) {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}
+
+/* Icon Pulse */
+.text-success-600 svg, .text-error-600 svg {
+  animation: arrowBounce 2s infinite;
+}
+
+@keyframes arrowBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .transactions-table-row,
+  .transactions-table-row-hover td:first-child::before,
+  input[type="checkbox"],
+  .transactions-table button,
+  .transactions-table .inline-block,
+  .text-success-600, .text-error-600,
+  th.cursor-pointer,
+  button:has(.chevron-left), button:has(.chevron-right),
+  .text-success-600 svg, .text-error-600 svg {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .transactions-table-row-hover td:first-child::before {
+    display: none;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}

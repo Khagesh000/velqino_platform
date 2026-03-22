@@ -1,0 +1,181 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Withdrawal Section - Only Animations
+================================ */
+
+/* Section Entrance */
+.withdrawal-section {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Amount Input Focus */
+input[type="number"] {
+  transition: all 0.2s ease;
+  
+  &:focus {
+    transform: translateY(-1px);
+  }
+}
+
+/* Quick Amount Buttons */
+.flex.flex-wrap button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* Payment Method Cards */
+.grid button {
+  transition: all 0.2s ease;
+  animation: cardFade 0.3s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 3 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+@keyframes cardFade {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Withdraw Button */
+.bg-primary-500 {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+  }
+  
+  &:hover:not(:disabled)::before {
+    left: 100%;
+  }
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--primary-200);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}
+
+/* Processing Spinner */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Success Check */
+.text-success-600 {
+  animation: checkPop 0.3s ease-out;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* History Table Row */
+tbody tr {
+  transition: all 0.2s ease;
+  animation: rowFade 0.2s ease-out forwards;
+  opacity: 0;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.05s;
+    }
+  }
+}
+
+@keyframes rowFade {
+  to {
+    opacity: 1;
+  }
+}
+
+tbody tr:hover {
+  transform: translateX(4px);
+}
+
+/* Chevron Rotation */
+button:has(.chevron-down) svg {
+  transition: transform 0.3s ease;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .withdrawal-section,
+  input[type="number"],
+  .flex.flex-wrap button,
+  .grid button,
+  .bg-primary-500,
+  .bg-primary-500::before,
+  .animate-spin,
+  .text-success-600,
+  tbody tr,
+  button:has(.chevron-down) svg {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .grid button:hover {
+    transform: none;
+  }
+  
+  .bg-primary-500:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+    
+    &::before {
+      display: none;
+    }
+  }
+  
+  tbody tr:hover {
+    transform: none;
+  }
+}

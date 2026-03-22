@@ -1,0 +1,164 @@
+@import '../../reusables/variables.scss';
+
+/* ================================
+   Store Customization - Only Animations
+================================ */
+
+.store-customization {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.border-2.border-dashed {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--primary-300);
+    background-color: var(--primary-50);
+    transform: scale(1.02);
+  }
+}
+
+.grid-cols-3 button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+input[type="color"] {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+label input[type="checkbox"] {
+  transition: all 0.2s ease;
+  
+  &:checked {
+    animation: checkboxPop 0.2s ease-out;
+  }
+}
+
+@keyframes checkboxPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    
+    svg {
+      transform: scale(1.05);
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+}
+
+.relative.group button {
+  transition: all 0.2s ease;
+  opacity: 0;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.relative.group:hover button {
+  opacity: 1;
+}
+
+.bg-gradient-to-r {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.bg-success-50 {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-customization,
+  .border-2.border-dashed,
+  .grid-cols-3 button,
+  input[type="color"],
+  label input[type="checkbox"],
+  button,
+  .relative.group button,
+  .bg-gradient-to-r,
+  .bg-success-50 {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .border-2.border-dashed:hover {
+    transform: none;
+  }
+  
+  .grid-cols-3 button:hover {
+    transform: none;
+  }
+  
+  .relative.group button {
+    opacity: 0;
+  }
+  
+  .relative.group:hover button {
+    opacity: 1;
+  }
+  
+  button:hover {
+    transform: none;
+    
+    svg {
+      transform: none;
+    }
+  }
+}
