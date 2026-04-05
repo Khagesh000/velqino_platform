@@ -3,6 +3,8 @@ import './globals.scss'
 import './tailwind.css'
 import  ReduxProvider  from "@/redux/wholesaler/Provider";
 import ClientOnly from "./ClientOnly";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,13 +24,13 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Veltrix Platform - Your Business Solution",
+  title: "Velqino Platform - Your Business Solution",
   description: "Connect with wholesalers and retailers seamlessly",
   keywords: "wholesaler, retailer, business, ecommerce, b2b",
   authors: [{ name: "Veltrix" }],
   robots: "index, follow",
   openGraph: {
-    title: "Veltrix Platform",
+    title: "Velqino Platform",
     description: "Connect with wholesalers and retailers seamlessly",
     type: "website",
   },
@@ -47,6 +49,20 @@ export default function RootLayout({ children }) {
         <ReduxProvider>
           <ClientOnly> {/* ✅ ALL children now protected */}
             {children}
+
+            <ToastContainer 
+  position="top-right"
+  autoClose={3000}
+  hideProgressBar={false}
+  newestOnTop={false}
+  closeOnClick
+  rtl={false}
+  pauseOnFocusLoss
+  draggable
+  pauseOnHover
+  theme="light"
+/>
+
           </ClientOnly>
         </ReduxProvider>
       </body>

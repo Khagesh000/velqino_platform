@@ -13,13 +13,15 @@ import {
   FileText,
   Grid,
   List,
-  Filter
+  Filter,
+  ImageIcon,
 } from '../../../../utils/icons'
 import '../../../../styles/Wholesaler/ProductsCatalog/QuickActionsBar.scss'
 
 export default function QuickActionsBar({
   onAddNew,
   onImport,
+  onImportImages,
   onExport,
   onBulkEdit,
   onManageCategories,
@@ -40,11 +42,19 @@ export default function QuickActionsBar({
   },
   {
     id: 'import',
-    label: 'Import',
+    label: 'Import Video',
     icon: Upload,
     color: 'info',
     onClick: onImport,
-    description: 'Bulk import from CSV/Excel'
+    description: 'Bulk import from MP4'
+  },
+  {
+    id: 'importImages',
+    label: 'Import Images',
+    icon: ImageIcon,
+    color: 'info',
+    onClick: onImportImages,
+    description: 'Bulk import from images'
   },
   {
     id: 'export',
@@ -84,7 +94,7 @@ export default function QuickActionsBar({
   const getActionColorClasses = (color, isHovered) => {
     const colors = {
       primary: {
-        bg: 'bg-primary-50',
+        bg: 'bg-primary-80',
         text: 'text-primary-700',
         border: 'border-primary-200',
         hover: 'hover:bg-primary-100 hover:border-primary-300',

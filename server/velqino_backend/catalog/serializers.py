@@ -1,0 +1,114 @@
+import uuid
+from rest_framework import serializers
+from .models import Category, Product, ProductImage, ProductVariant
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'parent', 'description']
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'is_primary', 'order', 'is_front']
+
+
+class ProductVariantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductVariant
+        fields = ['id', 'color', 'size', 'sku', 'stock', 'price']
+
+
+class ProductListSerializer(serializers.ModelSerializer):
+    primary_image = serializers.SerializerMethodField()
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'slug', 'sku', 'price', 'stock', 'status', 
+                  'primary_image', 'category_name', 'pattern', 'primary_color']
+    
+    def get_primary_image(self, obj):
+        primary = obj.images.filter(is_primary=True).first()
+        return primary.image.url if primary else None
+
+
+class ProductDetailSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+
+# ============= NEW BULK UPLOAD SERIALIZERS =============
+
+class BulkImageUploadSerializer(serializers.Serializer):
+    """For bulk image upload - multiple images, one price"""
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        help_text="Multiple product images (front and back views)"
+    )
+    common_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    common_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
+    category_id = serializers.IntegerField(required=False, allow_null=True)
+    common_name_prefix = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    sizes = serializers.ListField(
+    child=serializers.CharField(max_length=10),
+    required=False,
+    default=list
+    )
+    
+    def validate_images(self, value):
+        if len(value) < 2:
+            raise serializers.ValidationError("At least 2 images required")
+        if len(value) > 100:
+            raise serializers.ValidationError("Maximum 100 images per batch")
+        return value
+
+
+class BulkVideoUploadSerializer(serializers.Serializer):
+    """For video upload - one video, many products"""
+    video = serializers.FileField(help_text="Video file showing all products in grid")
+    number_of_products = serializers.IntegerField(min_value=1, max_value=50)
+    common_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    common_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
+    category_id = serializers.IntegerField(required=False, allow_null=True)
+    common_name_prefix = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    sizes = serializers.ListField(
+    child=serializers.CharField(max_length=10),
+    required=False,
+    default=list
+    )
+    grid_rows = serializers.IntegerField(default=2, min_value=1, max_value=5)
+    grid_columns = serializers.IntegerField(default=5, min_value=1, max_value=10)
+    
+    def validate_video(self, value):
+        ext = value.name.split('.')[-1].lower()
+        if ext not in ['mp4', 'mov', 'avi', 'mkv', 'webm']:
+            raise serializers.ValidationError("Video must be MP4, MOV, AVI, MKV, or WEBM format")
+        if value.size > 500 * 1024 * 1024:  # 500MB
+            raise serializers.ValidationError("Video size must be less than 500MB")
+        return value
+    
+
+class ProductCreateSerializer(serializers.ModelSerializer):
+    """Create new product"""
+    class Meta:
+        model = Product
+        fields = ['name', 'price', 'cost', 'category_id', 'brand', 'description', 'stock']
+
+
+class ProductUpdateSerializer(serializers.ModelSerializer):
+    """Update existing product"""
+    class Meta:
+        model = Product
+        fields = ['name', 'price', 'cost', 'stock', 'status', 'description']

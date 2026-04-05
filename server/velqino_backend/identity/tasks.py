@@ -7,6 +7,7 @@ from .models import WholesalerProfile, User
 from .utils.cache_utils import CacheService
 import logging
 from typing import Dict, Any
+from django_redis import get_redis_connection
 
 logger = logging.getLogger(__name__)
 
@@ -110,11 +111,10 @@ def update_wholesaler_cache(profile_id: int):
         cache_key = f"wholesaler_list_{profile.city}_*"
         # Pattern delete for list caches
         # This is Redis specific
-        from django_redis import get_redis_connection
+        
         redis_conn = get_redis_connection("default")
-        keys = redis_conn.keys(cache_key)
-        if keys:
-            redis_conn.delete(*keys)
+        for key in redis_conn.scan_iter(cache_key):
+            redis_conn.delete(key)
         
         logger.info(f"Cache updated for profile {profile_id}")
         

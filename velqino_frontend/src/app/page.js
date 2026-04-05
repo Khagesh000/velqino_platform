@@ -1,4 +1,4 @@
-import Navbar from "@/features/common/Navbar";
+import Navbar from "@/features/Wholesaler/components/Navbar";
 
 export const viewport = {
   width: "device-width",
@@ -6,7 +6,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Home - Veltrix Platform",
+  title: "Home - Velqino Platform",
   description: "Find the best wholesalers and retailers near you",
 };
 

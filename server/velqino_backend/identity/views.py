@@ -12,10 +12,17 @@ from .serializers import (
 from .tasks import verify_wholesaler_profile
 from .utils.cache_utils import CacheService
 import logging
+from django_ratelimit.decorators import ratelimit
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
+
 
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
+@ratelimit(key='ip', rate='5/hour', method='POST')
 def register_wholesaler(request):
     """
     Register a new wholesaler (automatically sets role)
@@ -35,6 +42,9 @@ def register_wholesaler(request):
                 # Cache the new profile
                 CacheService.get_wholesaler_profile(profile.user.id)
                 
+                # Generate JWT token
+                refresh = RefreshToken.for_user(profile.user)
+                
                 # Return response with serialized data
                 response_serializer = WholesalerProfileSerializer(profile)
                 
@@ -43,6 +53,8 @@ def register_wholesaler(request):
                 return Response({
                     'status': 'success',
                     'message': 'Wholesaler registered successfully',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
                     'data': response_serializer.data
                 }, status=status.HTTP_201_CREATED)
         else:
@@ -60,11 +72,19 @@ def register_wholesaler(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_wholesaler_profile(request, user_id):
     """
     Get wholesaler profile with caching
     """
     try:
+        # Check if user is accessing their own profile
+        if request.user.id != user_id:
+            return Response({
+                'status': 'error',
+                'message': 'Unauthorized access'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         # Try cache first
         profile_data = CacheService.get_wholesaler_profile(user_id)
         
@@ -99,11 +119,19 @@ def get_wholesaler_profile(request, user_id):
 
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def update_wholesaler_profile(request, user_id):
     """
     Update wholesaler profile
     """
     try:
+        # Check if user is updating their own profile
+        if request.user.id != user_id:
+            return Response({
+                'status': 'error',
+                'message': 'Unauthorized access'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         profile = WholesalerProfile.objects.get(user_id=user_id)
         serializer = WholesalerProfileUpdateSerializer(profile, data=request.data, partial=True)
         
@@ -141,6 +169,7 @@ def update_wholesaler_profile(request, user_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def list_wholesalers(request):
     """
     List all wholesalers with optional filters
@@ -174,11 +203,19 @@ def list_wholesalers(request):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_wholesaler_profile(request, user_id):
     """
     Delete wholesaler profile
     """
     try:
+        # Check if user is deleting their own profile
+        if request.user.id != user_id:
+            return Response({
+                'status': 'error',
+                'message': 'Unauthorized access'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         profile = WholesalerProfile.objects.get(user_id=user_id)
         user = profile.user
         
@@ -204,3 +241,23 @@ def delete_wholesaler_profile(request, user_id):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+""" @api_view(['POST'])
+def login(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    user = authenticate(request, username=email, password=password)
+    
+    if user:
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id,
+            'role': user.role
+        })
+    
+    return Response({'error': 'Invalid credentials'}, status=400) """

@@ -5,11 +5,16 @@ Django settings for velqino_backend project.
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Load environment variables from .env file
 load_dotenv()
 
-
+# Redis Configuration
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+REDIS_DB = int(os.environ.get('REDIS_DB', 0))
+REDIS_MAX_CONNECTIONS = int(os.environ.get('REDIS_MAX_CONNECTIONS', 20))
 
 # CORS Configuration - Add these lines
 CORS_ALLOWED_ORIGINS = [
@@ -17,6 +22,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8000",
 ]
+
+AUTH_USER_MODEL = 'identity.User'
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),   # ← ADD THIS
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30), # ← ADD THIS
+}
+
 
 # Or if you want to allow all (for development only)
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development!
@@ -57,6 +72,8 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 # Application definition
 INSTALLED_APPS = [
+
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -66,8 +83,10 @@ INSTALLED_APPS = [
 
     # Third party apps
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     'channels',
+    
 
     # Custom apps
     'identity',
@@ -83,6 +102,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -118,6 +138,12 @@ CHANNEL_LAYERS = {
             "hosts": [(os.getenv('REDIS_HOST', '127.0.0.1'), int(os.getenv('REDIS_PORT', 6379)))],
         },
     },
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 WSGI_APPLICATION = 'velqino_backend.wsgi.application'
@@ -161,8 +187,10 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -227,3 +255,17 @@ LOGGING = {
         },
     },
 }
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+print("GOOGLE_VISION_API_KEY:", bool(os.getenv('GOOGLE_VISION_API_KEY')))
+print("REMOVE_BG_API_KEY:", bool(os.getenv('REMOVE_BG_API_KEY')))
+print("REPLICATE_API_TOKEN:", bool(os.getenv('REPLICATE_API_TOKEN'))) 
+print("HUGGINGFACE_API_TOKEN:", bool(os.getenv('HUGGINGFACE_API_TOKEN')))
+
+# AI API Keys
+GOOGLE_VISION_API_KEY = os.environ.get('GOOGLE_VISION_API_KEY', '')
+REMOVE_BG_API_KEY = os.environ.get('REMOVE_BG_API_KEY', '')
+REPLICATE_API_TOKEN = os.environ.get('REPLICATE_API_TOKEN', '')
+HUGGINGFACE_API_TOKEN = os.environ.get('HUGGINGFACE_API_TOKEN')

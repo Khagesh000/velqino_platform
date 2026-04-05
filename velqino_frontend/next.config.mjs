@@ -23,5 +23,10 @@ const nextConfig = {
     }
     return config;
   },
+  // ADD THIS FOR NGORK HOT RELOAD
+  allowedDevOrigins: [
+    'metamerically-aerobiotic-lizbeth.ngrok-free.dev',
+    '*.ngrok-free.dev'
+  ],
 };
 export default nextConfig;

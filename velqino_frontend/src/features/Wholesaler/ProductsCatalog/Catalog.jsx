@@ -2,11 +2,14 @@
 
 import React, { useState, lazy, Suspense } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
+import ImportModal from './Modals/ImportModal'
+import ExportModal from './Modals/ExportModal'
+import ImportImagesModal from './Modals/ImportImagesModal'
 
 // Lazy load all non-critical components
 const ProductsCatalog = lazy(() => import('./Components/ProductsCatalog'))
 const QuickActionsBar = lazy(() => import('./Components/QuickActionsBar'))
-const ProductsTable = lazy(() => import('./Components/ProductsTable'))
+const ProductsTable = lazy(() => import('./Components/ProductTables'))
 const ProductEditModal = lazy(() => import('./Components/ProductEditModal'))
 const CategoriesManager = lazy(() => import('./Components/CategoriesManager'))
 const BulkEditTool = lazy(() => import('./Components/BulkEditTool')) 
@@ -26,6 +29,9 @@ export default function Catalog() {
   const [showBulkEdit, setShowBulkEdit] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [selectedProducts, setSelectedProducts] = useState([])
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [showImportImagesModal, setShowImportImagesModal] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -57,15 +63,16 @@ export default function Catalog() {
           </div>
 
           {/* Quick Actions Bar */}
-         <div className="mt-6" style={{ minHeight: '120px' }}>
+          <div className="mt-6" style={{ minHeight: '120px' }}>
             <Suspense fallback={<QuickActionsPlaceholder />}>
               <QuickActionsBar 
                 onAddNew={() => {
                   setSelectedProduct(null)
                   setShowEditModal(true)
                 }}
-                onImport={() => console.log('Import products')}
-                onExport={() => console.log('Export products')}
+                onImport={() => setShowImportModal(true)}
+                onImportImages={() => setShowImportImagesModal(true)}
+                onExport={() => setShowExportModal(true)}
                 onBulkEdit={() => setShowBulkEdit(true)}
                 onManageCategories={() => setShowCategoriesManager(true)}
                 onManageAttributes={() => console.log('Manage attributes')}
@@ -89,78 +96,85 @@ export default function Catalog() {
         </div>
       </main>
 
+      {/* Product Edit Modal */}
       {showEditModal && (
-  <div className="fixed inset-0 z-50 overflow-hidden">
-    {/* Backdrop */}
-    <div 
-      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      onClick={() => setShowEditModal(false)}
-    />
-    
-    {/* Panel */}
-    <div className="absolute inset-y-0 right-0 w-full max-w-4xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-      <Suspense fallback={<ModalPlaceholder />}>
-        <ProductEditModal 
-          product={selectedProduct}
-          onClose={() => setShowEditModal(false)}
-          onSave={() => {
-            console.log('Product saved')
-            setShowEditModal(false)
-          }}
-        />
-      </Suspense>
-    </div>
-  </div>
-)}
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowEditModal(false)}
+          />
+          <div className="absolute inset-y-0 right-0 w-full max-w-4xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
+            <Suspense fallback={<ModalPlaceholder />}>
+              <ProductEditModal 
+                product={selectedProduct}
+                onClose={() => setShowEditModal(false)}
+                onSave={() => {
+                  console.log('Product saved')
+                  setShowEditModal(false)
+                }}
+              />
+            </Suspense>
+          </div>
+        </div>
+      )}
 
       {/* Categories Manager Modal */}
-    {showCategoriesManager && (
-  <div className="fixed inset-0 z-50 overflow-hidden">
-    {/* Backdrop */}
-    <div 
-      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      onClick={() => setShowCategoriesManager(false)}
-    />
-    
-    {/* Panel - Mobile optimized with padding */}
-    <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-      <Suspense fallback={<CategoriesPlaceholder />}>
-        <CategoriesManager 
-          onClose={() => setShowCategoriesManager(false)}
-          onSave={() => {
-            console.log('Categories updated')
-            setShowCategoriesManager(false)
-          }}
-        />
-      </Suspense>
-    </div>
-  </div>
-)}
+      {showCategoriesManager && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowCategoriesManager(false)}
+          />
+          <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
+            <Suspense fallback={<CategoriesPlaceholder />}>
+              <CategoriesManager 
+                onClose={() => setShowCategoriesManager(false)}
+                onSave={() => {
+                  console.log('Categories updated')
+                  setShowCategoriesManager(false)
+                }}
+              />
+            </Suspense>
+          </div>
+        </div>
+      )}
 
       {/* Bulk Edit Tool Modal */}
-{showBulkEdit && (
-  <div className="fixed inset-0 z-50 overflow-hidden">
-    {/* Backdrop */}
-    <div 
-      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      onClick={() => setShowBulkEdit(false)}
-    />
-    
-    {/* Panel - Mobile optimized with padding */}
-    <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-      <Suspense fallback={<BulkEditPlaceholder />}>
-        <BulkEditTool 
-          selectedProducts={selectedProducts}
-          onClose={() => setShowBulkEdit(false)}
-          onApply={(updates) => {
-            console.log('Bulk updates applied:', updates)
-            setShowBulkEdit(false)
-          }}
-        />
-      </Suspense>
-    </div>
-  </div>
-)}
+      {showBulkEdit && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowBulkEdit(false)}
+          />
+          <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
+            <Suspense fallback={<BulkEditPlaceholder />}>
+              <BulkEditTool 
+                selectedProducts={selectedProducts}
+                onClose={() => setShowBulkEdit(false)}
+                onApply={(updates) => {
+                  console.log('Bulk updates applied:', updates)
+                  setShowBulkEdit(false)
+                }}
+              />
+            </Suspense>
+          </div>
+        </div>
+      )}
+
+      {/* Import Products Modal */}
+      {showImportModal && (
+        <ImportModal onClose={() => setShowImportModal(false)} />
+      )}
+
+      {showImportImagesModal && (
+        <ImportImagesModal onClose={() => setShowImportImagesModal(false)} />
+      )}
+
+      {/* Export Products Modal */}
+      {showExportModal && (
+        <ExportModal onClose={() => setShowExportModal(false)} />
+      )}
+
     </div>
   )
 }
