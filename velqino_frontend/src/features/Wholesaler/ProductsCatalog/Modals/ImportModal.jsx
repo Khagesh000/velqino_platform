@@ -14,6 +14,8 @@ export default function ImportModal({ onClose }) {
   const [taskId, setTaskId] = useState(null)
   const [selectedSizes, setSelectedSizes] = useState([])
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+  const [progress, setProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState('')
 
   const [formData, setFormData] = useState({
     number_of_products: '',
@@ -113,22 +115,26 @@ export default function ImportModal({ onClose }) {
     }
 
     socket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
+    const data = JSON.parse(event.data)
+    console.log('📦 Video progress:', data)
 
-      if (data.type === 'ai_progress') {
-        console.log(`Progress: ${data.progress}% - ${data.message}`)
-      }
+    if (data.type === 'send_progress' || data.type === 'ai_progress') {
+      setProgress(data.progress)
+      setProgressMessage(data.message)
+    }
 
-      if (data.type === 'ai_complete') {
-        toast.success("✅ Products created successfully!")
-
+    if (data.progress === 100 || data.type === 'ai_complete') {
+      setProgress(100)
+      setProgressMessage('Completed!')
+      toast.success("✅ Products created successfully!")
+      setTimeout(() => {
         setUploading(false)
         socket.close()
-
         onClose()
         window.location.reload()
-      }
+      }, 1000)
     }
+  }
 
     socket.onerror = () => {
       toast.error("WebSocket error")
@@ -258,6 +264,69 @@ export default function ImportModal({ onClose }) {
                     onChange={handleChange} className="w-full border p-2 rounded" />
                 </div>
 
+                {uploading && (
+                <div className="rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-5 space-y-4 shadow-sm mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <svg className="animate-spin w-10 h-10 text-primary-200" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
+                      </svg>
+                      <svg className="absolute inset-0 w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                        <circle
+                          cx="18" cy="18" r="16"
+                          fill="none"
+                          stroke="#6366f1"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeDasharray={`${progress} 100`}
+                          className="transition-all duration-500"
+                        />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-primary-700">
+                        {progress}%
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">
+                        {progressMessage || 'Processing video...'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {progress < 30 && '🎬 Extracting frames...'}
+                        {progress >= 30 && progress < 60 && '🖼️ Processing images...'}
+                        {progress >= 60 && progress < 90 && '✨ AI enhancement...'}
+                        {progress >= 90 && '🚀 Creating products...'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="relative w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
+                      <div
+                        className="h-3 rounded-full transition-all duration-500 relative"
+                        style={{
+                          width: `${progress}%`,
+                          background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7)'
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-400 px-0.5">
+                      <span className={progress >= 10 ? 'text-primary-500 font-medium' : ''}>Upload</span>
+                      <span className={progress >= 30 ? 'text-primary-500 font-medium' : ''}>Extract</span>
+                      <span className={progress >= 60 ? 'text-primary-500 font-medium' : ''}>Process</span>
+                      <span className={progress >= 90 ? 'text-primary-500 font-medium' : ''}>Finish</span>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-xs text-gray-400 italic">
+                    {progress < 50
+                      ? '🎥 AI is analyzing your video frames...'
+                      : '✨ Creating professional product listings!'}
+                  </p>
+                </div>
+              )}
+
                 <div className="flex gap-3 mt-4">
                   <button onClick={onClose} className="flex-1 border p-2 rounded">
                     Cancel
@@ -268,7 +337,7 @@ export default function ImportModal({ onClose }) {
                     disabled={uploading}
                     className="flex-1 bg-primary-600 text-white p-2 rounded"
                   >
-                    {uploading ? 'Uploading...' : 'Submit'}
+                    {uploading ? `Processing ${progress}%...` : 'Submit'}
                   </button>
                 </div>
 

@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from .models import Product, Category
+from .models import Product, Category, ProductImage, ProductVariant
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer,
     BulkImageUploadSerializer, BulkVideoUploadSerializer,
@@ -13,6 +13,7 @@ from .serializers import (
 from .services.product_service import ProductService
 from .utils.product_helpers import ProductHelpers
 import logging
+from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +63,65 @@ def product_list(request):
         return Response({'status': 'success', 'data': response_data})
     
     elif request.method == 'POST':
-        serializer = ProductCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            product = ProductService.create_product_with_variants(request.user, serializer.validated_data)
+        # Direct creation without serializer for FormData support
+        try:
+            # Get or generate SKU
+            sku = request.POST.get('sku') or ''
+            
+            # Create product
+            product = Product.objects.create(
+                seller=request.user,
+                name=request.POST.get('name'),
+                sku=sku,
+                price=request.POST.get('price'),
+                cost=request.POST.get('cost') or 0,
+                compare_price=request.POST.get('compare_price') or None,
+                category_id=request.POST.get('category_id') or None,
+                brand=request.POST.get('brand', ''),
+                description=request.POST.get('description', ''),
+                stock=int(request.POST.get('stock', 0)),
+                threshold=int(request.POST.get('threshold', 10)),
+                weight=request.POST.get('weight') or None,
+                status=request.POST.get('status', 'draft')
+            )
+            
+            # Process sizes
+            sizes = request.POST.getlist('sizes')
+            for size in sizes:
+                if size and size.strip():
+                    ProductVariant.objects.create(
+                        product=product,
+                        size=size.strip(),
+                        sku=f"{product.sku}-{size.strip()}",
+                        stock=product.stock,
+                        price=product.price
+                    )
+            
+            # Process images
+            images = request.FILES.getlist('images')
+            for idx, img in enumerate(images):
+                ProductImage.objects.create(
+                    product=product,
+                    image=img,
+                    is_primary=(idx == 0),
+                    order=idx,
+                    is_front=(idx == 0)
+                )
+            
+            # Invalidate cache
             cache.delete_pattern(f"product:list:{seller_id}:*")
+            
+            # Return full product data
             return Response({
                 'status': 'success',
                 'data': ProductDetailSerializer(product).data
             }, status=status.HTTP_201_CREATED)
-        return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
+            
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'errors': {'__all__': str(e)}
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
@@ -267,3 +317,31 @@ def category_list(request):
                           status=status.HTTP_201_CREATED)
         return Response({'status': 'error', 'errors': serializer.errors}, 
                        status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def export_products(request):
+    """Export products to CSV or Excel"""
+    seller_id = request.user.id
+    format_type = request.data.get('format', 'csv')
+    
+    try:
+        if format_type == 'csv':
+            data = ProductService.export_products_to_csv(seller_id)
+            response = HttpResponse(data, content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="products_{seller_id}.csv"'
+            return response
+        
+        elif format_type == 'excel':
+            data = ProductService.export_products_to_excel(seller_id)
+            response = HttpResponse(data, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename="products_{seller_id}.xlsx"'
+            return response
+        
+        else:
+            return Response({'status': 'error', 'message': 'Invalid format'}, status=400)
+            
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)

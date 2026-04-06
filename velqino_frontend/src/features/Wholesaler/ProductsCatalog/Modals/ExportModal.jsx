@@ -9,22 +9,27 @@ export default function ExportModal({ onClose }) {
   const [exporting, setExporting] = useState(false)
 
   const handleExport = async () => {
-    setExporting(true)
-    try {
-      const blob = await productsAPI.exportProducts({ format })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `products.${format}`
-      a.click()
-      window.URL.revokeObjectURL(url)
-      onClose()
-    } catch (error) {
-      alert('Export failed: ' + error.message)
-    } finally {
-      setExporting(false)
-    }
+  setExporting(true)
+  try {
+    const response = await productsAPI.exportProducts({ format })
+    // ✅ response is the axios response object
+    const blob = response.data  // ✅ Get blob from response.data
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `products.${format === 'excel' ? 'xlsx' : 'csv'}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    onClose()
+  } catch (error) {
+    console.error('Export error:', error)
+    alert('Export failed: ' + (error.response?.data?.message || error.message))
+  } finally {
+    setExporting(false)
   }
+}
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">

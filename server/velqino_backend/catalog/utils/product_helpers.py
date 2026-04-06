@@ -80,3 +80,6 @@ class ProductHelpers:
         cache.delete_pattern(f"product:list:{seller_id}:*")
         cache.delete(f"low_stock:{seller_id}")
         cache.delete(f"stock_value:{seller_id}")
+
+        from ..services.product_service import ProductService
+        ProductService.invalidate_export_cache(seller_id)

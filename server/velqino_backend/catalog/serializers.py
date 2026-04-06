@@ -102,9 +102,16 @@ class BulkVideoUploadSerializer(serializers.Serializer):
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     """Create new product"""
+    compare_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    threshold = serializers.IntegerField(default=10, required=False)
+    weight = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    status = serializers.ChoiceField(choices=['active', 'draft', 'archived'], default='draft')
+    sku = serializers.CharField(required=False, allow_blank=True, allow_null=True)  # ✅ ADD THIS LINE
+    
     class Meta:
         model = Product
-        fields = ['name', 'price', 'cost', 'category_id', 'brand', 'description', 'stock']
+        fields = ['name', 'sku', 'price', 'compare_price', 'cost', 'category_id', 
+                  'brand', 'description', 'stock', 'threshold', 'weight', 'status']
 
 
 class ProductUpdateSerializer(serializers.ModelSerializer):
@@ -112,3 +119,21 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['name', 'price', 'cost', 'stock', 'status', 'description']
+
+
+# ADD this to existing serializers.py
+
+class SingleProductCreateSerializer(serializers.Serializer):
+    """Single product creation serializer"""
+    name = serializers.CharField(max_length=255)
+    sku = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    category_id = serializers.IntegerField(required=False, allow_null=True)
+    brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    compare_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    stock = serializers.IntegerField(default=0)
+    threshold = serializers.IntegerField(default=10)
+    weight = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    status = serializers.ChoiceField(choices=['active', 'draft'], default='draft')

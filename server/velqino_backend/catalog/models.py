@@ -37,7 +37,7 @@ class Product(models.Model):
 
     name = models.CharField(max_length=255, db_index=True)
     slug = models.SlugField(unique=True)
-    sku = models.CharField(max_length=100, unique=True, db_index=True)
+    sku = models.CharField(max_length=100, unique=True, db_index=True, blank=True, null=True)
 
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     compare_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

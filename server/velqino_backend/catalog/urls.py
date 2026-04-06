@@ -14,4 +14,6 @@ urlpatterns = [
     
     # Category endpoints
     path('categories/', views.category_list, name='category-list'),
+
+    path('products/export/', views.export_products, name='export-products'),
 ]

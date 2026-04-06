@@ -5,6 +5,11 @@ from ..models import Product, Category, ProductImage
 from ..utils.product_helpers import ProductHelpers
 from ..tasks import process_bulk_images_task, process_bulk_video_task
 import logging
+import csv
+import io
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +165,236 @@ class ProductService:
             grid_columns=common_data.get('grid_columns', 5)
         )
         return {'task_id': task.id, 'status': 'queued'}
+
+
+
+    # ADD this method to existing ProductService class
+
+    @staticmethod
+    def create_single_product_advanced(seller_id, data, task_id=None):
+        """Advanced single product creation with WebSocket progress"""
+        from channels.layers import get_channel_layer
+        from django.core.cache import cache
+        
+        channel_layer = get_channel_layer()
+        room_group_name = f"product_task_{task_id}" if task_id else f"product_{seller_id}"
+        
+        # Send progress
+        from asyncio import new_event_loop, set_event_loop
+        loop = new_event_loop()
+        set_event_loop(loop)
+        
+        async def send_progress(progress, message):
+            await channel_layer.group_send(
+                room_group_name,
+                {'type': 'send_progress', 'data': {'progress': progress, 'message': message}}
+            )
+        
+        loop.run_until_complete(send_progress(10, "Creating product record..."))
+        
+        # Create product
+        from ..models import Product
+        import uuid
+        from django.utils.text import slugify
+        
+        sku = data.get('sku') or f"PROD-{uuid.uuid4().hex[:8].upper()}"
+        product = Product.objects.create(
+            seller_id=seller_id,
+            name=data['name'],
+            sku=sku,
+            slug=f"{slugify(data['name'])}-{sku}"[:50],
+            category_id=data.get('category_id'),
+            brand=data.get('brand', ''),
+            description=data.get('description', ''),
+            price=data['price'],
+            cost=data.get('cost'),
+            compare_price=data.get('compare_price'),
+            stock=data.get('stock', 0),
+            threshold=data.get('threshold', 10),
+            status=data.get('status', 'draft'),
+            weight=data.get('weight')
+        )
+        
+        loop.run_until_complete(send_progress(50, "Caching product..."))
+        
+        # Cache
+        cache_key = f"product:{product.id}"
+        cache.set(cache_key, product, 300)
+        
+        # Invalidate caches
+        from ..utils.product_helpers import ProductHelpers
+        ProductHelpers.invalidate_product_caches(seller_id)
+        
+        loop.run_until_complete(send_progress(100, "Product created successfully!"))
+        loop.close()
+        
+        return {'product_id': product.id, 'sku': product.sku}
+    
+
+
+    @staticmethod
+    def create_product_with_variants(seller, data, sizes=None, images=None):
+        from ..models import Product, ProductVariant, ProductImage
+        import uuid
+        from django.utils.text import slugify
+        
+        sku = data.get('sku') or f"PROD-{uuid.uuid4().hex[:8].upper()}"
+        
+        product = Product.objects.create(
+            seller=seller,
+            name=data['name'],
+            sku=sku,
+            slug=f"{slugify(data['name'])}-{sku}"[:50],
+            category_id=data.get('category_id'),
+            brand=data.get('brand', ''),
+            description=data.get('description', ''),
+            price=data['price'],
+            cost=data.get('cost'),
+            compare_price=data.get('compare_price'),
+            stock=data.get('stock', 0),
+            threshold=data.get('threshold', 10),
+            status=data.get('status', 'draft'),
+            weight=data.get('weight')
+        )
+        
+        # ✅ Create variants from sizes parameter (FormData)
+        if sizes:
+            for size in sizes:
+                ProductVariant.objects.create(
+                    product=product,
+                    size=size,
+                    sku=f"{sku}-{size}",
+                    stock=product.stock,
+                    price=product.price
+                )
+        
+        # ✅ Create images from FILES
+        if images:
+            for idx, img in enumerate(images):
+                ProductImage.objects.create(
+                    product=product,
+                    image=img,
+                    is_primary=(idx == 0),
+                    order=idx
+                )
+        
+        return product
+    
+
+    @staticmethod
+    def export_products_to_csv(seller_id):
+        """Export products to CSV with caching"""
+        cache_key = f"export:csv:{seller_id}"
+        cached_data = cache.get(cache_key)
+        
+        if cached_data:
+            return cached_data
+        
+        products = Product.objects.filter(seller_id=seller_id).select_related('category').prefetch_related('variants', 'images')
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Headers
+        writer.writerow([
+            'ID', 'Name', 'SKU', 'Price', 'Cost', 'Compare Price', 'Stock', 
+            'Threshold', 'Category', 'Brand', 'Description', 'Status', 
+            'Pattern', 'Primary Color', 'Weight', 'Created At', 'Image URLs', 'Variants'
+        ])
+        
+        # Data rows
+        for product in products:
+            images_urls = ', '.join([img.image.url for img in product.images.all()[:5]])
+            variants_info = ', '.join([f"{v.size}" for v in product.variants.all()])
+            
+            writer.writerow([
+                product.id, product.name, product.sku, product.price, product.cost,
+                product.compare_price or '', product.stock, product.threshold,
+                product.category.name if product.category else '', product.brand,
+                product.description[:200], product.status, product.pattern,
+                product.primary_color, product.weight or '', product.created_at,
+                images_urls, variants_info
+            ])
+        
+        result = output.getvalue()
+        cache.set(cache_key, result, 300)  # Cache for 5 minutes
+        return result
+    
+    @staticmethod
+    def export_products_to_excel(seller_id):
+        """Export products to Excel with formatting"""
+        cache_key = f"export:excel:{seller_id}"
+        cached_data = cache.get(cache_key)
+        
+        if cached_data:
+            return cached_data
+        
+        products = Product.objects.filter(seller_id=seller_id).select_related('category').prefetch_related('variants', 'images')
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Products"
+        
+        # Headers with styling
+        headers = ['ID', 'Name', 'SKU', 'Price', 'Cost', 'Compare Price', 'Stock', 
+                   'Threshold', 'Category', 'Brand', 'Description', 'Status', 
+                   'Pattern', 'Primary Color', 'Weight', 'Created At', 'Images', 'Variants']
+        
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="6366F1", end_color="6366F1", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Data rows
+        for row_idx, product in enumerate(products, 2):
+            images_urls = ', '.join([img.image.url for img in product.images.all()[:3]])
+            variants_info = ', '.join([f"{v.size}:{v.stock}" for v in product.variants.all()])
+            
+            ws.cell(row=row_idx, column=1, value=product.id)
+            ws.cell(row=row_idx, column=2, value=product.name)
+            ws.cell(row=row_idx, column=3, value=product.sku)
+            ws.cell(row=row_idx, column=4, value=float(product.price))
+            ws.cell(row=row_idx, column=5, value=float(product.cost) if product.cost else 0)
+            ws.cell(row=row_idx, column=6, value=float(product.compare_price) if product.compare_price else '')
+            ws.cell(row=row_idx, column=7, value=product.stock)
+            ws.cell(row=row_idx, column=8, value=product.threshold)
+            ws.cell(row=row_idx, column=9, value=product.category.name if product.category else '')
+            ws.cell(row=row_idx, column=10, value=product.brand)
+            ws.cell(row=row_idx, column=11, value=product.description[:200])
+            ws.cell(row=row_idx, column=12, value=product.status)
+            ws.cell(row=row_idx, column=13, value=product.pattern)
+            ws.cell(row=row_idx, column=14, value=product.primary_color)
+            ws.cell(row=row_idx, column=15, value=float(product.weight) if product.weight else '')
+            ws.cell(row=row_idx, column=16, value=product.created_at.strftime('%Y-%m-%d %H:%M'))
+            ws.cell(row=row_idx, column=17, value=images_urls)
+            ws.cell(row=row_idx, column=18, value=variants_info)
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        output = io.BytesIO()
+        wb.save(output)
+        result = output.getvalue()
+        cache.set(cache_key, result, 300)
+        return result
+    
+    @staticmethod
+    def invalidate_export_cache(seller_id):
+        """Clear export cache when products change"""
+        cache.delete(f"export:csv:{seller_id}")
+        cache.delete(f"export:excel:{seller_id}")

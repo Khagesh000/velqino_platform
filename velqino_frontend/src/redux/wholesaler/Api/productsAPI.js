@@ -12,7 +12,11 @@ const productsAPI = {
         API.get(`catalog/products/${productId}/`),
 
     createProduct: (data) =>
-        API.post('catalog/products/', data),
+  API.post('catalog/products/', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
 
     updateProduct: (productId, data) =>
         API.put(`catalog/products/${productId}/`, data),
@@ -54,6 +58,11 @@ const productsAPI = {
       'Content-Type': 'multipart/form-data'
     }
   }),
+
+  exportProducts: (data) =>
+    API.post('catalog/products/export/', data, {
+        responseType: 'blob'
+    }),
 
 };
 
