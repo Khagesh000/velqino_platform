@@ -31,7 +31,9 @@ const productsAPI = {
         API.get('catalog/products/low-stock/'),
 
     bulkAction: (data) =>
-        API.post('catalog/products/bulk/', data),
+    API.post('catalog/products/bulk/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
 
     // ===============================
     // 🗂️ CATEGORIES

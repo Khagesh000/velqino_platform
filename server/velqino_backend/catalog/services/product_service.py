@@ -106,8 +106,10 @@ class ProductService:
         return result
     
     @staticmethod
-    def bulk_operation(seller_id, product_ids, operation, value=None):
-        """Perform bulk operations"""
+    def bulk_operation(seller_id, product_ids, operation, value=None, percentage=None, category_id=None, images=None):
+        """Perform bulk operations with advanced features"""
+        from ..models import ProductVariant, ProductImage
+        
         products = Product.objects.filter(seller_id=seller_id, id__in=product_ids)
         
         if operation == 'delete':
@@ -121,12 +123,96 @@ class ProductService:
             return {'updated': count}
         
         elif operation == 'update_price':
+            print(f"🔍 DEBUG: update_price called")
+            print(f"   percentage: {percentage}, type: {type(percentage)}")
+            print(f"   value: {value}, type: {type(value)}")
+            print(f"   products count: {products.count()}")
+            
             with transaction.atomic():
-                for product in products:
-                    product.price = value
-                    product.save()
+                if percentage:
+                    print(f"📊 Processing percentage: {percentage}")
+                    percentage = float(percentage)
+                    multiplier = 1 + (percentage / 100)
+                    print(f"   multiplier: {multiplier}")
+                    
+                    for product in products:
+                        old_price = product.price
+                        product.price = float(product.price) * multiplier
+                        product.save()
+                        print(f"   Product {product.id}: price {old_price} → {product.price}")
+                        
+                        variant_count = product.variants.count()
+                        print(f"   Variants count: {variant_count}")
+                        
+                        for variant in product.variants.all():
+                            old_variant_price = variant.price
+                            variant.price = float(variant.price) * multiplier
+                            variant.save()
+                            print(f"      Variant {variant.id}: price {old_variant_price} → {variant.price}")
+                    
+                    count = products.count()
+                    print(f"✅ Updated {count} products and their variants")
+                    
+                else:
+                    print(f"📊 Processing set value: {value}")
+                    for product in products:
+                        old_price = product.price
+                        product.price = float(value)
+                        product.save()
+                        print(f"   Product {product.id}: price {old_price} → {product.price}")
+                        
+                        for variant in product.variants.all():
+                            old_variant_price = variant.price
+                            variant.price = float(value)
+                            variant.save()
+                            print(f"      Variant {variant.id}: price {old_variant_price} → {variant.price}")
+                    
+                    count = products.count()
+                    print(f"✅ Updated {count} products and their variants")
+            
             ProductHelpers.invalidate_product_caches(seller_id)
-            return {'updated': len(product_ids)}
+            return {'updated': count}
+        
+        elif operation == 'update_category':
+            count = products.update(category_id=category_id)
+            ProductHelpers.invalidate_product_caches(seller_id)
+            return {'updated': count}
+        
+        elif operation == 'update_stock':
+            with transaction.atomic():
+                if percentage:
+                    percentage = int(float(percentage))
+                    for product in products:
+                        product.stock = max(0, product.stock + percentage)
+                        product.save()
+                        for variant in product.variants.all():
+                            variant.stock = max(0, variant.stock + percentage)
+                            variant.save()
+                    count = products.count()
+                else:
+                    value = int(value)
+                    for product in products:
+                        product.stock = value
+                        product.save()
+                        for variant in product.variants.all():
+                            variant.stock = value
+                            variant.save()
+                    count = products.count()
+            ProductHelpers.invalidate_product_caches(seller_id)
+            return {'updated': count}
+        
+        elif operation == 'update_images':
+            if images:
+                for product in products:
+                    for idx, img in enumerate(images):
+                        ProductImage.objects.create(
+                            product=product,
+                            image=img,
+                            is_primary=(idx == 0),
+                            order=idx
+                        )
+            ProductHelpers.invalidate_product_caches(seller_id)
+            return {'updated': products.count()}
         
         return {'error': 'Invalid operation'}
     

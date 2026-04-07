@@ -79,13 +79,14 @@
 .edit-type-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: cardFadeIn 0.3s ease-out forwards;
-  opacity: 0;
+  animation-fill-mode: forwards;  /* Ensure final state persists */
   
-  @for $i from 1 through 4 {
+  @for $i from 1 through 5 {  /* Change 4 to 5 for 5 cards */
     &:nth-child(#{$i}) {
       animation-delay: $i * 0.1s;
     }
   }
+
   
   &:hover {
     transform: translateY(-2px);
@@ -275,3 +276,5 @@ input, select {
     transform: none;
   }
 }
+
+

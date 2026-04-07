@@ -273,11 +273,34 @@ def low_stock_products(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_product_action(request):
-    """Bulk actions on products (delete, update status, update price)"""
     seller_id = request.user.id
-    product_ids = request.data.get('product_ids', [])
-    operation = request.data.get('operation')
-    value = request.data.get('value')
+    product_ids = [int(id) for id in request.POST.getlist('product_ids')]
+    operation = request.POST.get('operation')
+    value = request.POST.get('value')
+    percentage = request.POST.get('percentage')
+    category_id = request.POST.get('category_id')
+    images = request.FILES.getlist('images')
+    
+    # ✅ Convert percentage to float if exists
+    if percentage:
+        percentage = float(percentage)
+    
+    # ✅ Convert value to float if exists
+    if value:
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+    
+    # ✅ Map frontend operation names to backend operation names
+    operation_map = {
+        'price': 'update_price',
+        'category': 'update_category',
+        'status': 'update_status',
+        'stock': 'update_stock',
+        'images': 'update_images'
+    }
+    backend_operation = operation_map.get(operation, operation)
     
     if not product_ids or not operation:
         return Response({
@@ -285,7 +308,11 @@ def bulk_product_action(request):
             'message': 'product_ids and operation are required'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    result = ProductService.bulk_operation(seller_id, product_ids, operation, value)
+    result = ProductService.bulk_operation(
+        seller_id, product_ids, backend_operation, 
+        value=value, percentage=percentage, 
+        category_id=category_id, images=images
+    )
     return Response({'status': 'success', 'data': result})
 
 
