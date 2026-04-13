@@ -49,18 +49,25 @@ export default function Catalog() {
           
           {/* Products Catalog - Main Component */}
           <div style={{ minHeight: '600px' }}>
-            <Suspense fallback={<CatalogPlaceholder />}>
-              <ProductsCatalog 
-                onEditProduct={(product) => {
-                  setSelectedProduct(product)
-                  setShowEditModal(true)
-                }}
-                onBulkEdit={() => setShowBulkEdit(true)}
-                onManageCategories={() => setShowCategoriesManager(true)}
-                onProductsSelect={setSelectedProducts}
-              />
-            </Suspense>
-          </div>
+          <Suspense fallback={<CatalogPlaceholder />}>
+            <ProductsCatalog 
+              onEditProduct={(product) => {
+                setSelectedProduct(product)
+                setShowEditModal(true)
+              }}
+              onBulkEdit={() => setShowBulkEdit(true)}
+              onExport={() => setShowExportModal(true)}
+              onImport={() => setShowImportModal(true)}
+              onImportImages={() => setShowImportImagesModal(true)}
+              onAddProduct={() => {
+                setSelectedProduct(null)
+                setShowEditModal(true)
+              }}
+              onManageCategories={() => setShowCategoriesManager(true)}
+              onProductsSelect={setSelectedProducts}
+            />
+          </Suspense>
+        </div>
 
           {/* Quick Actions Bar */}
           <div className="mt-6" style={{ minHeight: '120px' }}>
@@ -84,12 +91,19 @@ export default function Catalog() {
           <div className="mt-6" style={{ minHeight: '500px' }}>
             <Suspense fallback={<TablePlaceholder />}>
               <ProductsTable 
-                onEditProduct={(product) => {
-                  setSelectedProduct(product)
-                  setShowEditModal(true)
-                }}
-                onProductsSelect={setSelectedProducts}
-              />
+              onViewProduct={(product) => {
+                console.log('View product called:', product)
+                // For view, you can show a read-only modal or just log
+                // setSelectedProduct(product)
+                // setShowViewModal(true)
+              }}
+              onEditProduct={(product) => {
+                console.log('Edit product called:', product)
+                setSelectedProduct(product)
+                setShowEditModal(true)
+              }}
+              onProductsSelect={setSelectedProducts}
+            />
             </Suspense>
           </div> 
 

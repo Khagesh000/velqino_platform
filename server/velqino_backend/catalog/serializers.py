@@ -3,10 +3,18 @@ from rest_framework import serializers
 from .models import Category, Product, ProductImage, ProductVariant
 
 
+# catalog/serializers.py - UPDATE CategorySerializer
 class CategorySerializer(serializers.ModelSerializer):
+    children = serializers.SerializerMethodField()
+    parent_name = serializers.CharField(source='parent.name', read_only=True)
+    
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'parent', 'description']
+        fields = ['id', 'name', 'slug', 'parent', 'parent_name', 'description', 'children']
+    
+    def get_children(self, obj):
+        children = obj.category_set.all()  # Categories that have this as parent
+        return CategorySerializer(children, many=True).data
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

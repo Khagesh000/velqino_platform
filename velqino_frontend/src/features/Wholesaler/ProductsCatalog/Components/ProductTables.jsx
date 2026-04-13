@@ -6,7 +6,6 @@ import {
   Edit,
   Copy,
   Trash2,
-  MoreVertical,
   Star,
   ChevronLeft,
   ChevronRight,
@@ -14,128 +13,31 @@ import {
   AlertCircle
 } from '../../../../utils/icons'
 import '../../../../styles/Wholesaler/ProductsCatalog/ProductsTable.scss'
+import { useGetProductsQuery, useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice'
+import { toast } from 'react-toastify'
+import { BASE_IMAGE_URL } from '../../../../utils/apiConfig'
 
-export default function ProductsTables({ onEditProduct, onProductsSelect }) {
+export default function ProductsTables({ onEditProduct, onViewProduct, onProductsSelect }) {
   const [selectedProducts, setSelectedProducts] = useState([])
   const [hoveredRow, setHoveredRow] = useState(null)
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
-  const products = [
-    {
-      id: 1,
-      image: '🎧',
-      name: 'Wireless Headphones',
-      sku: 'WH-001',
-      category: 'Electronics',
-      price: 1250,
-      stock: 45,
-      threshold: 10,
-      status: 'Active',
-      sales: 128,
-      rating: 4.5,
-      vendor: 'Sony Corp'
-    },
-    {
-      id: 2,
-      image: '👕',
-      name: 'Cotton T-Shirt',
-      sku: 'CT-045',
-      category: 'Clothing',
-      price: 450,
-      stock: 120,
-      threshold: 20,
-      status: 'Active',
-      sales: 89,
-      rating: 4.2,
-      vendor: 'Fashion Hub'
-    },
-    {
-      id: 3,
-      image: '☕',
-      name: 'Ceramic Mug',
-      sku: 'CM-112',
-      category: 'Home Decor',
-      price: 299,
-      stock: 8,
-      threshold: 15,
-      status: 'Low Stock',
-      sales: 56,
-      rating: 4.8,
-      vendor: 'Home Essentials'
-    },
-    {
-      id: 4,
-      image: '🧘',
-      name: 'Yoga Mat',
-      sku: 'YM-078',
-      category: 'Fitness',
-      price: 899,
-      stock: 34,
-      threshold: 12,
-      status: 'Active',
-      sales: 67,
-      rating: 4.6,
-      vendor: 'FitLife'
-    },
-    {
-      id: 5,
-      image: '💡',
-      name: 'Desk Lamp',
-      sku: 'DL-234',
-      category: 'Home Decor',
-      price: 1299,
-      stock: 18,
-      threshold: 8,
-      status: 'Active',
-      sales: 42,
-      rating: 4.3,
-      vendor: 'Lighting Co'
-    },
-    {
-      id: 6,
-      image: '📓',
-      name: 'Notebook Set',
-      sku: 'NB-056',
-      category: 'Stationery',
-      price: 199,
-      stock: 6,
-      threshold: 25,
-      status: 'Low Stock',
-      sales: 34,
-      rating: 4.7,
-      vendor: 'Paper World'
-    },
-    {
-      id: 7,
-      image: '🔊',
-      name: 'Bluetooth Speaker',
-      sku: 'BS-089',
-      category: 'Electronics',
-      price: 2499,
-      stock: 23,
-      threshold: 10,
-      status: 'Active',
-      sales: 156,
-      rating: 4.4,
-      vendor: 'AudioTech'
-    },
-    {
-      id: 8,
-      image: '👖',
-      name: 'Denim Jeans',
-      sku: 'DJ-123',
-      category: 'Clothing',
-      price: 1299,
-      stock: 0,
-      threshold: 15,
-      status: 'Out of Stock',
-      sales: 73,
-      rating: 4.1,
-      vendor: 'Fashion Hub'
-    }
-  ]
+  // Fetch real products from API
+  const { data: productsData, isLoading, refetch } = useGetProductsQuery({
+    page: currentPage,
+    per_page: itemsPerPage
+  })
+
+  const [deleteProduct] = useDeleteProductMutation()
+
+  // Get products from API response
+  const products = productsData?.data?.products || []
+  const totalProducts = productsData?.data?.pagination?.total || 0
+  const totalPages = productsData?.data?.pagination?.total_pages || 1
+
+  console.log('ProductsTable - Products loaded:', products.length)
 
   const toggleProductSelection = (productId) => {
     let newSelected
@@ -150,7 +52,7 @@ export default function ProductsTables({ onEditProduct, onProductsSelect }) {
 
   const toggleSelectAll = () => {
     let newSelected
-    if (selectedProducts.length === products.length) {
+    if (selectedProducts.length === products.length && products.length > 0) {
       newSelected = []
     } else {
       newSelected = products.map(p => p.id)
@@ -185,9 +87,52 @@ export default function ProductsTables({ onEditProduct, onProductsSelect }) {
     return a[sortConfig.key] < b[sortConfig.key] ? 1 : -1
   })
 
-  const totalPages = Math.ceil(products.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedProducts = sortedProducts.slice(startIndex, startIndex + itemsPerPage)
+  const handleDeleteProduct = async (productId) => {
+    if (confirm('Are you sure you want to delete this product?')) {
+      try {
+        await deleteProduct(productId).unwrap()
+        toast.success('Product deleted successfully')
+        refetch()
+        setSelectedProducts(prev => prev.filter(id => id !== productId))
+      } catch (error) {
+        toast.error('Failed to delete product')
+      }
+    }
+  }
+
+  // Add this function before return (around line 70)
+const handleBulkDelete = async () => {
+  if (selectedProducts.length === 0) {
+    toast.error('Please select products to delete')
+    return
+  }
+  
+  if (confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
+    try {
+      // Delete each selected product
+      for (const productId of selectedProducts) {
+        await deleteProduct(productId).unwrap()
+      }
+      toast.success(`${selectedProducts.length} products deleted successfully`)
+      refetch()
+      setSelectedProducts([]) // Clear selection after delete
+      if (onProductsSelect) onProductsSelect([])
+    } catch (error) {
+      toast.error('Failed to delete some products')
+    }
+  }
+}
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+  }
+
+  const getProductImage = (product) => {
+    if (product.primary_image) {
+      return `${BASE_IMAGE_URL}${product.primary_image}`
+    }
+    return null
+  }
 
   return (
     <div className="products-table-container bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -197,7 +142,7 @@ export default function ProductsTables({ onEditProduct, onProductsSelect }) {
           <Package size={18} className="text-gray-500" />
           <h3 className="font-semibold text-gray-900">Products Inventory</h3>
           <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
-            {products.length} items
+            {totalProducts} items
           </span>
         </div>
         {selectedProducts.length > 0 && (
@@ -205,9 +150,13 @@ export default function ProductsTables({ onEditProduct, onProductsSelect }) {
             <span className="text-sm text-gray-600">
               {selectedProducts.length} selected
             </span>
-            <button className="p-1 text-gray-400 hover:text-gray-600">
-              <Trash2 size={16} />
-            </button>
+            <button 
+      onClick={handleBulkDelete}
+      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+      title="Delete selected"
+    >
+      <Trash2 size={16} />
+    </button>
           </div>
         )}
       </div>
@@ -218,168 +167,210 @@ export default function ProductsTables({ onEditProduct, onProductsSelect }) {
           <thead>
             <tr>
               <th className="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={selectedProducts.length === products.length}
+                <input 
+                  type="checkbox" 
+                  checked={products.length > 0 && selectedProducts.length === products.length}
                   onChange={toggleSelectAll}
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('name')}>
-                <div className="flex items-center gap-1">
-                  Product Name
-                  {sortConfig.key === 'name' && (
-                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </div>
+                <div className="flex items-center gap-1">Product Name</div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('price')}>
-                <div className="flex items-center gap-1">
-                  Price
-                  {sortConfig.key === 'price' && (
-                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </div>
+                <div className="flex items-center gap-1">Price</div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('sales')}>
-                <div className="flex items-center gap-1">
-                  Sales
-                  {sortConfig.key === 'sales' && (
-                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </div>
-              </th>
               <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {paginatedProducts.map((product, index) => (
-              <tr
-                key={product.id}
-                className={`products-table-row ${hoveredRow === product.id ? 'products-table-row-hover' : ''} ${
-                  selectedProducts.includes(product.id) ? 'bg-primary-50/30' : ''
-                }`}
-                onMouseEnter={() => setHoveredRow(product.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                style={{ animationDelay: `${index * 0.03}s` }}
-              >
-                <td className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedProducts.includes(product.id)}
-                    onChange={() => toggleProductSelection(product.id)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-xl">
-                    {product.image}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Star size={12} className="text-warning-400 fill-current" />
-                      <span className="text-xs text-gray-600">{product.rating}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm text-gray-600">{product.sku}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm text-gray-600">{product.category}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-semibold text-gray-900">₹{product.price}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm ${product.stock === 0 ? 'text-error-600' : product.stock <= product.threshold ? 'text-warning-600' : 'text-gray-900'}`}>
-                      {product.stock}
-                    </span>
-                    {product.stock <= product.threshold && (
-                      <AlertCircle size={14} className="text-warning-500" />
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStockStatusClass(product.stock, product.threshold)}`}>
-                    {getStockText(product.stock, product.threshold)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-medium text-gray-900">{product.sales}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <button
-                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
-                      onClick={() => onEditProduct?.(product)}
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
-                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
-                      onClick={() => onEditProduct?.(product)}
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                      <Copy size={16} />
-                    </button>
-                    <button className="p-1.5 text-gray-400 hover:text-error-600 hover:bg-error-50 rounded-lg transition-all">
-                      <Trash2 size={16} />
-                    </button>
+            {isLoading ? (
+              <tr>
+                <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                  <div className="flex justify-center items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                    Loading products...
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : sortedProducts.length === 0 ? (
+              <tr>
+                <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
+                  No products found
+                </td>
+              </tr>
+            ) : (
+              sortedProducts.map((product, index) => (
+                <tr
+                  key={product.id}
+                  className={`products-table-row ${hoveredRow === product.id ? 'products-table-row-hover' : ''} ${
+                    selectedProducts.includes(product.id) ? 'bg-primary-50' : ''
+                  }`}
+                  onMouseEnter={() => setHoveredRow(product.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  style={{ animationDelay: `${index * 0.03}s` }}
+                >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product.id)}
+                      onChange={() => toggleProductSelection(product.id)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+                      {getProductImage(product) ? (
+                        <img 
+                          src={getProductImage(product)} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                            e.target.parentElement.innerHTML = '<span class="text-xl">📦</span>'
+                          }}
+                        />
+                      ) : (
+                        <span className="text-xl">📦</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">ID: {product.sku}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-600">{product.sku}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-600">{product.category_name || '-'}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-semibold text-gray-900">₹{product.price}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${product.stock === 0 ? 'text-error-600' : product.stock <= (product.threshold || 10) ? 'text-warning-600' : 'text-gray-900'}`}>
+                        {product.stock}
+                      </span>
+                      {product.stock <= (product.threshold || 10) && product.stock > 0 && (
+                        <AlertCircle size={14} className="text-warning-500" />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStockStatusClass(product.stock, product.threshold || 10)}`}>
+                      {getStockText(product.stock, product.threshold || 10)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {/* EYE BUTTON - View only, no modal */}
+                      <button
+                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                        onClick={() => {
+                          console.log('View product:', product.id, product.name)
+                          if (onViewProduct) {
+                            onViewProduct(product)
+                          } else {
+                            console.warn('onViewProduct prop is not provided')
+                          }
+                        }}
+                        title="View Product"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      
+                      {/* EDIT BUTTON - Opens edit modal */}
+                      <button
+                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                        onClick={() => {
+                          console.log('Edit product:', product.id, product.name)
+                          if (onEditProduct) {
+                            onEditProduct(product)
+                          } else {
+                            console.warn('onEditProduct prop is not provided')
+                          }
+                        }}
+                        title="Edit Product"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      
+                      {/* DELETE BUTTON */}
+                      <button 
+                        className="p-1.5 text-gray-400 hover:text-error-600 hover:bg-error-50 rounded-lg transition-all"
+                        onClick={() => handleDeleteProduct(product.id)}
+                        title="Delete Product"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Pagination */}
-      <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, products.length)} of {products.length} products
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          {[...Array(totalPages)].map((_, i) => (
+      {totalPages > 1 && (
+        <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts} products
+          </p>
+          <div className="flex items-center gap-2">
             <button
-              key={i}
-              className={`w-8 h-8 text-sm rounded-lg transition-all ${
-                currentPage === i + 1
-                  ? 'bg-primary-500 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              onClick={() => setCurrentPage(i + 1)}
+              className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
             >
-              {i + 1}
+              <ChevronLeft size={16} />
             </button>
-          ))}
-          <button
-            className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight size={16} />
-          </button>
+            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+              let pageNum
+              if (totalPages <= 5) {
+                pageNum = i + 1
+              } else if (currentPage <= 3) {
+                pageNum = i + 1
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i
+              } else {
+                pageNum = currentPage - 2 + i
+              }
+              return (
+                <button
+                  key={pageNum}
+                  className={`w-8 h-8 text-sm rounded-lg transition-all ${
+                    currentPage === pageNum
+                      ? 'bg-primary-500 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  onClick={() => handlePageChange(pageNum)}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+            <button
+              className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

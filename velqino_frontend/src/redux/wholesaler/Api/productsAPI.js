@@ -35,11 +35,6 @@ const productsAPI = {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
 
-    // ===============================
-    // 🗂️ CATEGORIES
-    // ===============================
-    getCategories: () =>
-        API.get('catalog/categories/'),
 
     // ===============================
     // 🖼️ BULK IMAGE UPLOAD

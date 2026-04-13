@@ -12,7 +12,8 @@ import {
   Trash2 
 } from '../../../../utils/icons'
 import '../../../../styles/Wholesaler/ProductsCatalog/ProductEditModal.scss'
-import { useCreateProductMutation, useGetCategoriesQuery  } from '@/redux/wholesaler/slices/productsSlice'
+import { useCreateProductMutation } from '@/redux/wholesaler/slices/productsSlice'
+import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
 import { toast } from 'react-toastify'
 
 export default function ProductEditModal({ product = null, onClose, onSave }) {
@@ -35,7 +36,7 @@ const [formData, setFormData] = useState({
   price: product?.price || '',
   compare_price: product?.compare_price || '',
   cost: product?.cost || '',
-  stock: product?.stock || 0,
+ /*  stock: product?.stock || 0, */
   threshold: product?.threshold || 10,
   weight: product?.weight || '',
   status: product?.status || 'draft',
@@ -92,7 +93,7 @@ const handleSave = async () => {
   payload.append('category_id', formData.category_id || '')
   payload.append('brand', formData.brand || '')
   payload.append('description', formData.description || '')
-  payload.append('stock', formData.stock.toString())  // ✅ Convert to string
+ /*  payload.append('stock', formData.stock.toString())  // ✅ Convert to string */
   payload.append('threshold', formData.threshold.toString())  // ✅ Convert to string
   payload.append('weight', formData.weight || '')
   payload.append('status', formData.status)
@@ -300,7 +301,7 @@ const handleSave = async () => {
         {activeTab === 'inventory' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
               <input
                 type="number"
@@ -310,7 +311,7 @@ const handleSave = async () => {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
                 placeholder="0"
               />
-            </div>
+            </div> */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Low Stock Threshold</label>
               <input

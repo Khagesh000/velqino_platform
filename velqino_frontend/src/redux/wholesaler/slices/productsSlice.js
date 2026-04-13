@@ -95,30 +95,7 @@ export const productsApi = createApi({
             invalidatesTags: ['Products']
         }),
         
-        // Categories
-        getCategories: builder.query({
-            async queryFn() {
-                try {
-                    const response = await productsAPI.getCategories();
-                    return { data: response.data };
-                } catch (error) {
-                    return { error };
-                }
-            },
-            providesTags: ['Categories']
-        }),
         
-        createCategory: builder.mutation({
-            async queryFn(data) {
-                try {
-                    const response = await productsAPI.createCategory(data);
-                    return { data: response.data };
-                } catch (error) {
-                    return { error };
-                }
-            },
-            invalidatesTags: ['Categories']
-        }),
         // Add this inside endpoints (builder)
 aiCreateProduct: builder.mutation({
   async queryFn(formData) {
@@ -142,7 +119,5 @@ export const {
     useDeleteProductMutation,
     useGetLowStockProductsQuery,
     useBulkActionMutation,
-    useGetCategoriesQuery,
-    useCreateCategoryMutation,
     useAiCreateProductMutation,
 } = productsApi;

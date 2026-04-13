@@ -1,6 +1,9 @@
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8000/api/';
+const BASE_IMAGE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000'
+
+
 
 const API = axios.create({
     baseURL: BASE_URL,
@@ -70,4 +73,5 @@ API.interceptors.response.use(
     }
 );
 
+export { BASE_IMAGE_URL };
 export default API;

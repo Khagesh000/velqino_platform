@@ -6,7 +6,7 @@ from django.conf import settings
 class Category(models.Model):
     """Product categories"""
     name = models.CharField(max_length=100, unique=True, db_index=True)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(unique=True, blank=True)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -43,7 +43,7 @@ class Product(models.Model):
     compare_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
 
-    stock = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    stock = models.IntegerField(default=1, validators=[MinValueValidator(0)])
     threshold = models.IntegerField(default=10, help_text="Low stock alert level")
 
     description = models.TextField(blank=True)

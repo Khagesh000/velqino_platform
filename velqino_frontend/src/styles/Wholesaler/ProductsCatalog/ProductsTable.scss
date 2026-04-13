@@ -7,8 +7,18 @@
 /* Row Enter Animation */
 .products-table-row {
   animation: slideInRow 0.3s ease-out forwards;
-  opacity: 0;
   transform: translateX(-10px);
+}
+
+@keyframes slideInRow {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @for $i from 1 through 20 {
@@ -17,16 +27,8 @@
   }
 }
 
-@keyframes slideInRow {
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Row Hover Effect */
+/* Row Hover Effect Animation */
 .products-table-row-hover {
-  background-color: var(--primary-50);
   transition: background-color 0.2s ease;
   
   td:first-child {
@@ -39,7 +41,6 @@
       top: 0;
       height: 100%;
       width: 3px;
-      background-color: var(--primary-500);
       animation: slideInLeft 0.2s ease-out;
     }
   }
@@ -54,7 +55,7 @@
   }
 }
 
-/* Checkbox Animation */
+/* Checkbox Animation Only - No colors */
 input[type="checkbox"] {
   transition: all 0.2s ease;
   cursor: pointer;
@@ -76,7 +77,7 @@ input[type="checkbox"] {
   }
 }
 
-/* Action Buttons */
+/* Action Buttons Animation */
 .products-table button {
   transition: all 0.2s ease;
   
@@ -103,11 +104,10 @@ input[type="checkbox"] {
   
   &:hover {
     transform: scale(1.05);
-    filter: brightness(1.05);
   }
 }
 
-/* Stock Alert Icon */
+/* Stock Alert Icon Animation */
 .products-table svg.text-warning-500 {
   animation: pulse 1.5s infinite;
 }
@@ -123,23 +123,17 @@ input[type="checkbox"] {
   }
 }
 
-/* Table Header Sort */
+/* Table Header Sort Animation */
 th.cursor-pointer {
   transition: all 0.2s ease;
-  
-  &:hover {
-    color: var(--primary-600);
-    background-color: var(--primary-50);
-  }
 }
 
-/* Pagination Button */
+/* Pagination Button Animation */
 .pagination-btn {
   transition: all 0.2s ease;
   
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
   
   &:active:not(:disabled) {
@@ -147,21 +141,7 @@ th.cursor-pointer {
   }
 }
 
-/* Selection Bar Animation */
-.bg-primary-50\/30 {
-  animation: pulseBg 2s infinite;
-}
-
-@keyframes pulseBg {
-  0%, 100% {
-    background-color: rgba(var(--primary-50), 0.3);
-  }
-  50% {
-    background-color: rgba(var(--primary-50), 0.5);
-  }
-}
-
-/* Loading Shimmer */
+/* Loading Shimmer Animation */
 .products-table-loading {
   background: linear-gradient(
     90deg,
@@ -182,22 +162,19 @@ th.cursor-pointer {
   }
 }
 
-/* Reduced Motion */
+/* Reduced Motion - Respect user preferences */
 @media (prefers-reduced-motion: reduce) {
   .products-table-row,
-  .products-table-row-hover,
+  .products-table-row-hover td:first-child::before,
   input[type="checkbox"],
   .products-table button,
   .products-table .inline-block,
   .products-table svg.text-warning-500,
   th.cursor-pointer,
-  .pagination-btn {
+  .pagination-btn,
+  .products-table-loading {
     animation: none !important;
     transition: none !important;
-  }
-  
-  .products-table-row-hover td:first-child::before {
-    display: none;
   }
   
   button:hover {

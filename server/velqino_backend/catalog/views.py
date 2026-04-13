@@ -65,8 +65,21 @@ def product_list(request):
     elif request.method == 'POST':
         # Direct creation without serializer for FormData support
         try:
+            print("=" * 60)
+            print("🔍 PRODUCT CREATION DEBUG - START")
+            print(f"Request method: {request.method}")
+            print(f"All POST data: {dict(request.POST)}")
+            print(f"Stock from request POST: '{request.POST.get('stock')}'")
+            print(f"Stock type: {type(request.POST.get('stock'))}")
+
             # Get or generate SKU
             sku = request.POST.get('sku') or ''
+
+            stock_raw = request.POST.get('stock', 1)
+            print(f"stock_raw value: {stock_raw}")
+            
+            stock_value = int(stock_raw)
+            print(f"stock_value after int(): {stock_value}")
             
             # Create product
             product = Product.objects.create(
@@ -79,37 +92,50 @@ def product_list(request):
                 category_id=request.POST.get('category_id') or None,
                 brand=request.POST.get('brand', ''),
                 description=request.POST.get('description', ''),
-                stock=int(request.POST.get('stock', 0)),
+                stock=stock_value,
                 threshold=int(request.POST.get('threshold', 10)),
                 weight=request.POST.get('weight') or None,
                 status=request.POST.get('status', 'draft')
             )
             
+            print(f"✅ Product created with ID: {product.id}")
+            print(f"✅ Product stock after save: {product.stock}")
+            print("=" * 60)
+            
             # Process sizes
             sizes = request.POST.getlist('sizes')
+            print(f"Sizes received: {sizes}")
+            
             for size in sizes:
                 if size and size.strip():
-                    ProductVariant.objects.create(
+                    variant = ProductVariant.objects.create(
                         product=product,
                         size=size.strip(),
                         sku=f"{product.sku}-{size.strip()}",
                         stock=product.stock,
                         price=product.price
                     )
+                    print(f"✅ Variant created: {variant.size} with stock: {variant.stock}")
             
             # Process images
             images = request.FILES.getlist('images')
+            print(f"Images count: {len(images)}")
+            
             for idx, img in enumerate(images):
-                ProductImage.objects.create(
+                product_image = ProductImage.objects.create(
                     product=product,
                     image=img,
                     is_primary=(idx == 0),
                     order=idx,
                     is_front=(idx == 0)
                 )
+                print(f"✅ Image {idx+1} saved: {product_image.image.url if product_image.image else 'No URL'}")
             
             # Invalidate cache
             cache.delete_pattern(f"product:list:{seller_id}:*")
+            
+            print("🎉 PRODUCT CREATION COMPLETED SUCCESSFULLY!")
+            print("=" * 60)
             
             # Return full product data
             return Response({
@@ -118,10 +144,17 @@ def product_list(request):
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
+            print(f"❌ ERROR in product creation: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            print("=" * 60)
             return Response({
                 'status': 'error',
                 'errors': {'__all__': str(e)}
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
@@ -345,6 +378,55 @@ def category_list(request):
         return Response({'status': 'error', 'errors': serializer.errors}, 
                        status=status.HTTP_400_BAD_REQUEST)
     
+# catalog/views.py - ADD this function
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def category_detail(request, category_id):
+    """Get, update or delete a single category"""
+    try:
+        category = Category.objects.get(id=category_id)
+    except Category.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Category not found'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        serializer = CategorySerializer(category)
+        return Response({'status': 'success', 'data': serializer.data})
+    
+    elif request.method == 'PUT':
+        serializer = CategorySerializer(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            cache.delete("categories:all")
+            return Response({'status': 'success', 'data': serializer.data})
+        return Response({'status': 'error', 'errors': serializer.errors}, 
+                       status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        # Check if category has products
+        if category.products.exists():
+            return Response({
+                'status': 'error',
+                'message': 'Cannot delete category with products. Move or delete products first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        category.delete()
+        cache.delete("categories:all")
+        return Response({'status': 'success', 'message': 'Category deleted'})
+    
+# catalog/views.py - ADD this function for drag-drop reordering
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def category_reorder(request):
+    """Reorder categories (for drag-drop functionality)"""
+    data = request.data
+    ordered_ids = data.get('ordered_ids', [])
+    
+    for index, category_id in enumerate(ordered_ids):
+        Category.objects.filter(id=category_id).update(order=index)
+    
+    cache.delete("categories:all")
+    return Response({'status': 'success', 'message': 'Categories reordered'})
 
 
 @api_view(['POST'])
