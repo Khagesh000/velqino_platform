@@ -1,0 +1,121 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Retailer KPI Stats Cards - Only Animations
+================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-x {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Animation Classes */
+.animate-fadeInUp {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.animate-fadeInGrid {
+  animation: fadeInGrid 0.5s ease-out forwards;
+}
+
+.animate-cardAppear {
+  animation: cardAppear 0.4s ease-out forwards;
+}
+
+.animate-bounce-x {
+  animation: bounce-x 1s infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Stagger Delays */
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+
+/* Hover Animations */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-4px);
+  }
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.02);
+  }
+}
+
+.hover-rotate {
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.1) rotate(3deg);
+  }
+}
+
+/* Progress Bar Animation */
+.progress-fill {
+  transition: width 0.5s ease-out;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

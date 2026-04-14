@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, WholesalerProfile
+from .models import User, WholesalerProfile, RetailerProfile
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -39,3 +39,33 @@ class WholesalerProfileAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+
+
+# Retailer's
+@admin.register(RetailerProfile)
+class RetailerProfileAdmin(admin.ModelAdmin):
+    list_display = ['id', 'business_name', 'user_email', 'city', 'pincode', 'is_active', 'created_at']
+    list_filter = ['is_active', 'is_verified', 'city', 'state']
+    search_fields = ['business_name', 'user__email', 'user__mobile', 'gst_number']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('user', 'business_name', 'gst_number')
+        }),
+        ('Address Information', {
+            'fields': ('shipping_address', 'city', 'state', 'pincode')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_verified')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'Email'

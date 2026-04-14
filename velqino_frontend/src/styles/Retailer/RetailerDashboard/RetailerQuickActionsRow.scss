@@ -1,0 +1,192 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Retailer Quick Actions Row - Only Animations
+================================ */
+
+/* Container Animation */
+.retailer-quick-actions {
+  animation: fadeInUp 0.3s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Grid Animation */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+  animation: fadeInGrid 0.4s ease-out forwards;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 640px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Quick Action Card */
+.quick-action-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: cardSlideIn 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes cardSlideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger Animation */
+.quick-action-card:nth-child(1) { animation-delay: 0.05s; }
+.quick-action-card:nth-child(2) { animation-delay: 0.1s; }
+.quick-action-card:nth-child(3) { animation-delay: 0.15s; }
+.quick-action-card:nth-child(4) { animation-delay: 0.2s; }
+
+/* Card Hover Effect */
+.quick-action-card-hover {
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+/* Icon Animation */
+.quick-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.quick-action-card-hover .quick-action-icon {
+  transform: scale(1.05);
+}
+
+/* Content */
+.quick-action-content {
+  flex: 1;
+  text-align: left;
+}
+
+.quick-action-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.125rem;
+  transition: color 0.2s ease;
+}
+
+.quick-action-description {
+  font-size: 0.7rem;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+/* Arrow Animation */
+.quick-action-arrow {
+  color: #9ca3af;
+  transition: all 0.2s ease;
+}
+
+.quick-action-card-hover .quick-action-arrow {
+  transform: translateX(3px);
+  color: #4f46e5;
+}
+
+/* Arrow SVG Animation */
+.quick-action-arrow svg {
+  transition: transform 0.2s ease;
+}
+
+/* Color Variants - Only transitions, no colors */
+.quick-action-card-primary {
+  transition: all 0.2s ease;
+}
+
+.quick-action-card-success {
+  transition: all 0.2s ease;
+}
+
+.quick-action-card-info {
+  transition: all 0.2s ease;
+}
+
+.quick-action-card-warning {
+  transition: all 0.2s ease;
+}
+
+/* Icon Variants - Only transitions */
+.quick-action-icon-primary {
+  transition: all 0.2s ease;
+}
+
+.quick-action-icon-success {
+  transition: all 0.2s ease;
+}
+
+.quick-action-icon-info {
+  transition: all 0.2s ease;
+}
+
+.quick-action-icon-warning {
+  transition: all 0.2s ease;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .retailer-quick-actions,
+  .quick-actions-grid,
+  .quick-action-card,
+  .quick-action-icon,
+  .quick-action-arrow,
+  .quick-action-arrow svg {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .quick-action-card-hover {
+    transform: none;
+  }
+  
+  .quick-action-card-hover .quick-action-arrow {
+    transform: none;
+  }
+}

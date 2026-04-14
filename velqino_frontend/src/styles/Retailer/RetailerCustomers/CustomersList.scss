@@ -1,0 +1,95 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Customers List - Only Animations
+================================ */
+
+.customers-list-container {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.customer-row {
+  animation: slideInLeft 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.customer-row {
+  transition: background-color 0.2s ease;
+}
+
+.customer-row:nth-child(1) { animation-delay: 0.03s; }
+.customer-row:nth-child(2) { animation-delay: 0.06s; }
+.customer-row:nth-child(3) { animation-delay: 0.09s; }
+.customer-row:nth-child(4) { animation-delay: 0.12s; }
+.customer-row:nth-child(5) { animation-delay: 0.15s; }
+.customer-row:nth-child(6) { animation-delay: 0.18s; }
+.customer-row:nth-child(7) { animation-delay: 0.21s; }
+.customer-row:nth-child(8) { animation-delay: 0.24s; }
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+input, select {
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus {
+  transform: translateY(-1px);
+}
+
+/* Custom Scrollbar */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customers-list-container,
+  .customer-row,
+  button,
+  input,
+  select {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+  input:focus, select:focus {
+    transform: none;
+  }
+}

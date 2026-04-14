@@ -1,0 +1,75 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Products Grid - Only Animations
+================================ */
+
+.products-grid-container {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.product-card {
+  animation: cardFadeIn 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes cardFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.product-card {
+  transition: all 0.2s ease;
+}
+
+.product-card:active {
+  transform: scale(0.98);
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+.h-full {
+  transition: width 0.3s ease-out;
+}
+
+tr {
+  transition: background-color 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .products-grid-container,
+  .product-card,
+  button,
+  .h-full,
+  tr {
+    animation: none !important;
+    transition: none !important;
+  }
+  .product-card:active {
+    transform: none;
+  }
+  button:active {
+    transform: none;
+  }
+}

@@ -1,0 +1,117 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Barcode Printing - Only Animations
+================================ */
+
+.barcode-printing {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-scale {
+  animation: scale 0.3s ease-out forwards;
+}
+
+@keyframes scale {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+input {
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  transform: translateY(-1px);
+}
+
+/* Print Styles */
+@media print {
+  .barcode-printing {
+    background: white;
+    box-shadow: none;
+  }
+  
+  button, 
+  .bg-gray-100, 
+  .border-b, 
+  .p-4:not(:last-child) {
+    display: none !important;
+  }
+  
+  .print-block {
+    display: block !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barcode-printing,
+  .animate-fadeIn,
+  .animate-scale,
+  .animate-spin,
+  button,
+  input {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active:not(:disabled) {
+    transform: none;
+  }
+  input:focus {
+    transform: none;
+  }
+}

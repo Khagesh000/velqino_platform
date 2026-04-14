@@ -1,0 +1,76 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Order Details - Only Animations
+================================ */
+
+.order-details {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.order-details > div {
+  animation: slideInRight 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.order-details > div:nth-child(1) { animation-delay: 0.05s; }
+.order-details > div:nth-child(2) { animation-delay: 0.1s; }
+.order-details > div:nth-child(3) { animation-delay: 0.15s; }
+.order-details > div:nth-child(4) { animation-delay: 0.2s; }
+.order-details > div:nth-child(5) { animation-delay: 0.25s; }
+.order-details > div:nth-child(6) { animation-delay: 0.3s; }
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Custom Scrollbar */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-details,
+  .order-details > div,
+  button {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+}

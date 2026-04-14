@@ -1,0 +1,84 @@
+@import '../../../styles/reusables/variables.scss';
+
+/* Navbar Hide/Show Animation */
+.navbar-hidden {
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.navbar-visible {
+  transform: translateY(0);
+  transition: transform 0.3s ease;
+}
+
+/* Slide Down Animation */
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out forwards;
+}
+
+/* Dropdown Animations */
+.slide-down {
+  animation: slideDown 0.2s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile Notifications Dropdown */
+@media (max-width: 768px) {
+  .notifications-dropdown {
+    position: fixed !important;
+    top: 56px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    width: 90% !important;
+    max-width: 320px !important;
+  }
+}
+
+/* Transition Classes */
+.transition-fast {
+  transition: all 0.2s ease;
+}
+
+/* Hover Effects */
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Rotate Animation */
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.rotate-90 {
+  transform: rotate(90deg);
+}
+
+.rotate-0 {
+  transform: rotate(0);
+}

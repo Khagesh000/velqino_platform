@@ -2,12 +2,15 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.db import transaction
-from .models import User, WholesalerProfile
+from .models import User, WholesalerProfile, RetailerProfile
 from .serializers import (
     WholesalerProfileSerializer,
     WholesalerProfileCreateSerializer,
     WholesalerProfileUpdateSerializer,
-    WholesalerProfileListSerializer
+    WholesalerProfileListSerializer,
+    RetailerRegisterSerializer,
+    RetailerProfileSerializer,
+    RetailerProfileUpdateSerializer,
 )
 from .tasks import verify_wholesaler_profile
 from .utils.cache_utils import CacheService
@@ -261,3 +264,191 @@ def login(request):
         })
     
     return Response({'error': 'Invalid credentials'}, status=400) """
+
+
+#Retialers
+@api_view(['POST'])
+@ratelimit(key='ip', rate='10/hour', method='POST')
+def register_retailer(request):
+    """
+    Register a new retailer (automatically sets role='retailer')
+    """
+    try:
+        serializer = RetailerRegisterSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            with transaction.atomic():
+                # Create user
+                user = serializer.save()
+                
+                # Create empty retailer profile (will be filled later)
+                RetailerProfile.objects.create(
+                    user=user,
+                    business_name=user.username,
+                    shipping_address="",
+                    city="",
+                    state="",
+                    pincode=""
+                )
+                
+                # Generate JWT token
+                refresh = RefreshToken.for_user(user)
+                
+                logger.info(f"New retailer registered: {user.email}")
+                
+                return Response({
+                    'status': 'success',
+                    'message': 'Retailer registered successfully',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'user_id': user.id
+                }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'status': 'error',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Retailer registration failed: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def retailer_login(request):
+    """
+    Retailer login
+    """
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        user = User.objects.filter(email=email).first()
+        
+        if not user or not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if user.role != 'retailer':
+            return Response({
+                'status': 'error',
+                'message': 'Account is not a retailer account'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'status': 'success',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id
+        })
+        
+    except Exception as e:
+        logger.error(f"Retailer login failed: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def retailer_profile(request, user_id):
+    """
+    Get or update retailer profile
+    """
+    try:
+        # Security check
+        if request.user.id != user_id or request.user.role != 'retailer':
+            return Response({
+                'status': 'error',
+                'message': 'Unauthorized access'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        profile = RetailerProfile.objects.select_related('user').get(user_id=user_id)
+        
+        if request.method == 'GET':
+            serializer = RetailerProfileSerializer(profile)
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            })
+        
+        elif request.method == 'PUT':
+            serializer = RetailerProfileUpdateSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'status': 'success',
+                    'data': serializer.data
+                })
+            return Response({
+                'status': 'error',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except RetailerProfile.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Profile not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Retailer profile error: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_retailers(request):
+    """
+    List all retailers (for wholesaler to see their customers)
+    """
+    try:
+        # Only wholesalers can view retailers
+        if request.user.role != 'wholesaler':
+            return Response({
+                'status': 'error',
+                'message': 'Only wholesalers can view retailers'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Pagination
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 20))
+        
+        retailers = RetailerProfile.objects.select_related('user').filter(
+            is_active=True
+        ).order_by('-created_at')
+        
+        # Paginate
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated = retailers[start:end]
+        
+        serializer = RetailerProfileSerializer(paginated, many=True)
+        
+        return Response({
+            'status': 'success',
+            'data': serializer.data,
+            'pagination': {
+                'total': retailers.count(),
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (retailers.count() + per_page - 1) // per_page
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"List retailers error: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)

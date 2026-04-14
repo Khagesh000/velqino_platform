@@ -1,0 +1,196 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Quick Reorder - Only Animations
+================================ */
+
+/* Container Animation */
+.quick-reorder {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Animation */
+.quick-reorder > div:first-child {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Selection Bar Animation */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Summary Cards Animation */
+.quick-reorder .grid:first-of-type {
+  animation: fadeInGrid 0.35s ease-out forwards;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Summary Card Hover */
+.quick-reorder .grid:first-of-type > div {
+  transition: all 0.2s ease;
+}
+
+.quick-reorder .grid:first-of-type > div:hover {
+  transform: translateY(-2px);
+}
+
+/* Reorder Item Animation */
+.reorder-item {
+  animation: slideInLeft 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger Delays */
+.reorder-item:nth-child(1) { animation-delay: 0.05s; }
+.reorder-item:nth-child(2) { animation-delay: 0.1s; }
+.reorder-item:nth-child(3) { animation-delay: 0.15s; }
+.reorder-item:nth-child(4) { animation-delay: 0.2s; }
+.reorder-item:nth-child(5) { animation-delay: 0.25s; }
+.reorder-item:nth-child(6) { animation-delay: 0.3s; }
+
+/* Reorder Item Hover */
+.reorder-item {
+  transition: all 0.2s ease;
+}
+
+/* Checkbox Animation */
+input[type="checkbox"] {
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  animation: checkboxPop 0.2s ease-out;
+}
+
+@keyframes checkboxPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Action Button Transition */
+.reorder-item button {
+  transition: all 0.2s ease;
+}
+
+.reorder-item button:hover {
+  transform: translateY(-1px);
+}
+
+.reorder-item button:active {
+  transform: translateY(1px);
+}
+
+/* Urgency Badge Pulse */
+.bg-red-500, .bg-orange-500 {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .quick-reorder,
+  .quick-reorder > div:first-child,
+  .animate-fadeIn,
+  .quick-reorder .grid:first-of-type,
+  .reorder-item,
+  input[type="checkbox"],
+  .reorder-item button,
+  .bg-red-500,
+  .bg-orange-500 {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .quick-reorder .grid:first-of-type > div:hover {
+    transform: none;
+  }
+  
+  .reorder-item button:hover {
+    transform: none;
+  }
+}

@@ -152,6 +152,29 @@ import {
   Database,
   Cloud,
 
+  Heart,
+  ShoppingCart,
+
+  Scan,
+  Gift,
+
+  Receipt,
+  Archive,
+
+  CheckSquare,
+
+  Medal,
+  Gem,
+  Rocket,
+
+  BarChart2,
+
+  Flag,
+
+  Cake,
+
+  
+
 
 } from 'lucide-react';
 
@@ -293,5 +316,24 @@ export {
   Server,
   Database,
   Cloud,
+
+  Heart,
+  ShoppingCart,
+
+  Scan,
+  Gift,
+
+  Receipt,
+  Archive,
+
+  CheckSquare,
+  Medal,
+  Gem,
+  Rocket,
+  BarChart2,
+
+  Flag,
+
+  Cake,
 
 };

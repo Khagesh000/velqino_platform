@@ -1,0 +1,152 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Today's Summary - Only Animations
+================================ */
+
+/* Container Animation */
+.todays-summary {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Animation */
+.todays-summary > div:first-child {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stats Cards Animation */
+.todays-summary .grid:first-of-type {
+  animation: fadeInGrid 0.35s ease-out forwards;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Stat Card Hover Effects */
+.stat-card {
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Gradient Card Animation */
+.bg-gradient-to-br {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Progress Bar Animation */
+.h-full {
+  transition: width 0.5s ease-out;
+}
+
+/* Hover Card Effect */
+.todays-summary .grid:first-of-type > div {
+  transition: all 0.2s ease;
+}
+
+/* Payment Methods Hover */
+.todays-summary .grid-cols-4 > div {
+  transition: all 0.2s ease;
+}
+
+.todays-summary .grid-cols-4 > div:hover {
+  transform: translateY(-2px);
+}
+
+/* Pulse Animation for Busy Indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Hourly Peak Animation */
+.bg-amber-50 {
+  transition: all 0.2s ease;
+}
+
+.bg-amber-50:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+}
+
+/* Top Hour Animation */
+.bg-green-50 {
+  transition: all 0.2s ease;
+}
+
+.bg-green-50:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .todays-summary,
+  .todays-summary > div:first-child,
+  .todays-summary .grid:first-of-type,
+  .stat-card,
+  .bg-gradient-to-br,
+  .h-full,
+  .todays-summary .grid-cols-4 > div,
+  .bg-amber-50,
+  .bg-green-50 {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .stat-card:hover {
+    transform: none;
+  }
+  
+  .todays-summary .grid-cols-4 > div:hover {
+    transform: none;
+  }
+}

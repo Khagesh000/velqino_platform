@@ -152,3 +152,43 @@ class WholesalerProfile(models.Model):
         from django.core.cache import cache
         cache.delete(f"wholesaler_profile_{self.user_id}")
         cache.delete(f"wholesaler_list_city_{self.city}")
+
+
+# Retailers
+# identity/models.py - ADD THIS
+
+class RetailerProfile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="retailer_profile"
+    )
+    
+    # Basic Information
+    business_name = models.CharField(max_length=255, db_index=True)
+    gst_number = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Shipping Address (required for delivery)
+    shipping_address = models.TextField()
+    city = models.CharField(max_length=100, db_index=True)
+    state = models.CharField(max_length=100)
+    pincode = models.CharField(max_length=10, db_index=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['business_name']),
+            models.Index(fields=['city', 'pincode']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['is_active', 'is_verified']),
+        ]
+    
+    def __str__(self):
+        return f"{self.business_name} ({self.user.email})"

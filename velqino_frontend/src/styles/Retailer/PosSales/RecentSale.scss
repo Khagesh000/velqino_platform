@@ -1,0 +1,71 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Recent Sale - Only Animations
+================================ */
+
+.recent-sale {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recent-sale .p-3 {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.animate-pulse-overlay {
+  animation: pulseOverlay 0.5s ease-out;
+}
+
+@keyframes pulseOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+/* Hover Effects */
+.recent-sale .p-3:hover {
+  transform: translateY(-1px);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .recent-sale,
+  .recent-sale .p-3,
+  .animate-pulse-overlay,
+  button {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .recent-sale .p-3:hover {
+    transform: none;
+  }
+  
+  button:active {
+    transform: none;
+  }
+}

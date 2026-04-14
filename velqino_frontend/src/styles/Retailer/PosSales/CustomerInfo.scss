@@ -1,0 +1,101 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Customer Info - Only Animations
+================================ */
+
+.customer-info {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.selected-customer {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+input, textarea {
+  transition: all 0.2s ease;
+}
+
+input:focus, textarea:focus {
+  transform: translateY(-1px);
+}
+
+/* Custom Scrollbar */
+.max-h-60::-webkit-scrollbar {
+  width: 4px;
+}
+
+.max-h-60::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.max-h-60::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-info,
+  .animate-fadeIn,
+  .selected-customer,
+  button,
+  input,
+  textarea {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+  input:focus,
+  textarea:focus {
+    transform: none;
+  }
+}

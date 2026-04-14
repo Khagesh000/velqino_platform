@@ -5,6 +5,8 @@ import redis
 import json
 from typing import Optional, Any, Union
 import logging
+import re
+from django.core.validators import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -159,3 +161,48 @@ class CacheService:
                 'mobile': profile.user.mobile,
             } if profile.user else None
         }
+    
+# Retailers
+class RetailerValidator:
+    """Validation utilities for retailers"""
+    
+    @staticmethod
+    def validate_gst(gst_number):
+        """Validate GST number format"""
+        if not gst_number:
+            return True
+        
+        pattern = r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$'
+        if re.match(pattern, gst_number):
+            return True
+        raise ValidationError("Invalid GST number format")
+    
+    @staticmethod
+    def validate_pincode(pincode):
+        """Validate Indian pincode"""
+        pattern = r'^[1-9][0-9]{5}$'
+        if re.match(pattern, str(pincode)):
+            return True
+        raise ValidationError("Invalid pincode (must be 6 digits)")
+
+
+class RetailerCacheHelper:
+    """Cache management for retailers"""
+    
+    @staticmethod
+    def get_retailer_cache_key(user_id):
+        return f"retailer_profile_{user_id}"
+    
+    @staticmethod
+    def get_retailers_list_cache_key(page, per_page, filters):
+        filter_str = "_".join([f"{k}_{v}" for k, v in filters.items()]) if filters else "all"
+        return f"retailers_list_p{page}_pp{per_page}_{filter_str}"
+    
+    @staticmethod
+    def clear_retailer_cache(user_id):
+        from django.core.cache import cache
+        cache.delete(f"retailer_profile_{user_id}")
+        
+        # Also clear list caches
+        cache.delete_pattern("retailers_list_*")
+        logger.info(f"Cleared retailer cache for user: {user_id}")

@@ -1,0 +1,88 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Payment Methods - Only Animations
+================================ */
+
+.payment-methods {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.payment-method-card {
+  transition: all 0.2s ease;
+  animation: cardFadeIn 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.payment-method-card:nth-child(1) { animation-delay: 0.05s; }
+.payment-method-card:nth-child(2) { animation-delay: 0.1s; }
+.payment-method-card:nth-child(3) { animation-delay: 0.15s; }
+.payment-method-card:nth-child(4) { animation-delay: 0.2s; }
+.payment-method-card:nth-child(5) { animation-delay: 0.25s; }
+.payment-method-card:nth-child(6) { animation-delay: 0.3s; }
+
+.payment-method-card:active {
+  transform: scale(0.98);
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.split-payment input {
+  transition: all 0.2s ease;
+}
+
+.split-payment input:focus {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .payment-methods,
+  .payment-method-card,
+  .animate-fadeIn,
+  .split-payment input {
+    animation: none !important;
+    transition: none !important;
+  }
+  .payment-method-card:active {
+    transform: none;
+  }
+  .split-payment input:focus {
+    transform: none;
+  }
+}

@@ -8,5 +8,10 @@ urlpatterns = [
     path('wholesaler/profile/<int:user_id>/delete/', views.delete_wholesaler_profile),
     path('wholesalers/', views.list_wholesalers),
 
+    path('retailer/register/', views.register_retailer, name='register-retailer'),
+    path('retailer/login/', views.retailer_login, name='retailer-login'),
+    path('retailer/profile/<int:user_id>/', views.retailer_profile, name='retailer-profile'),
+    path('retailers/list/', views.list_retailers, name='list-retailers'),
+
     
 ]

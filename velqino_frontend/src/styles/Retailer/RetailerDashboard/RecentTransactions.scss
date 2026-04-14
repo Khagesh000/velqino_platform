@@ -1,0 +1,146 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Recent Transactions - Only Animations
+================================ */
+
+/* Container Animation */
+.recent-transactions {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Animation */
+.recent-transactions > div:first-child {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Summary Cards Animation */
+.recent-transactions .grid {
+  animation: fadeInGrid 0.35s ease-out forwards;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Summary Card Hover */
+.recent-transactions .grid > div {
+  transition: all 0.2s ease;
+}
+
+.recent-transactions .grid > div:hover {
+  transform: translateY(-2px);
+}
+
+/* Transaction Row Animation */
+.transaction-row {
+  animation: fadeInLeft 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes fadeInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger Delays */
+.transaction-row:nth-child(1) { animation-delay: 0.03s; }
+.transaction-row:nth-child(2) { animation-delay: 0.06s; }
+.transaction-row:nth-child(3) { animation-delay: 0.09s; }
+.transaction-row:nth-child(4) { animation-delay: 0.12s; }
+.transaction-row:nth-child(5) { animation-delay: 0.15s; }
+.transaction-row:nth-child(6) { animation-delay: 0.18s; }
+.transaction-row:nth-child(7) { animation-delay: 0.21s; }
+
+/* Row Hover Effect */
+.transaction-row {
+  transition: background-color 0.2s ease;
+}
+
+/* Status Badge Pulse for Pending */
+.transaction-row td:nth-child(6) .text-yellow-600 {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Action Button Transition */
+button svg {
+  transition: all 0.2s ease;
+}
+
+button:hover svg {
+  transform: scale(1.1);
+}
+
+button:active svg {
+  transform: scale(0.95);
+}
+
+/* Footer Button Animation */
+footer button svg {
+  transition: transform 0.2s ease;
+}
+
+footer button:hover svg {
+  transform: translateX(2px);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .recent-transactions,
+  .recent-transactions > div:first-child,
+  .recent-transactions .grid,
+  .transaction-row,
+  button svg,
+  footer button svg {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .recent-transactions .grid > div:hover {
+    transform: none;
+  }
+  
+  .transaction-row:hover {
+    background-color: transparent;
+  }
+}

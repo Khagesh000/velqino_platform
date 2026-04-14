@@ -1,0 +1,106 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Quick Actions Bar - Only Animations
+================================ */
+
+.quick-actions-bar {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.action-btn {
+  transition: all 0.2s ease;
+  animation: btnFadeIn 0.3s ease-out forwards;
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+@keyframes btnFadeIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.action-btn:nth-child(1) { animation-delay: 0.05s; }
+.action-btn:nth-child(2) { animation-delay: 0.1s; }
+.action-btn:nth-child(3) { animation-delay: 0.15s; }
+.action-btn:nth-child(4) { animation-delay: 0.2s; }
+
+.action-btn:active {
+  transform: scale(0.96);
+}
+
+/* Color Variants - Only transitions, colors via Tailwind */
+.action-btn-primary {
+  transition: all 0.2s ease;
+}
+
+.action-btn-blue {
+  transition: all 0.2s ease;
+}
+
+.action-btn-green {
+  transition: all 0.2s ease;
+}
+
+.action-btn-purple {
+  transition: all 0.2s ease;
+}
+
+/* Scanner Animation */
+.animate-scan {
+  animation: scanMove 2s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+  0% {
+    transform: translateY(-60px);
+  }
+  50% {
+    transform: translateY(60px);
+  }
+  100% {
+    transform: translateY(-60px);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions-bar,
+  .action-btn,
+  .animate-scan,
+  .animate-fadeIn {
+    animation: none !important;
+    transition: none !important;
+  }
+  .action-btn:active {
+    transform: none;
+  }
+}

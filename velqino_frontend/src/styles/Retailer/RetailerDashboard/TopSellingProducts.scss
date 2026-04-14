@@ -1,0 +1,130 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Top Selling Products - Only Animations
+================================ */
+
+/* Container Animation */
+.top-selling-products {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Animation */
+.top-selling-products > div:first-child {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Product Item Animation */
+.product-item {
+  animation: fadeInLeft 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes fadeInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger Delays */
+.product-item:nth-child(1) { animation-delay: 0.05s; }
+.product-item:nth-child(2) { animation-delay: 0.1s; }
+.product-item:nth-child(3) { animation-delay: 0.15s; }
+.product-item:nth-child(4) { animation-delay: 0.2s; }
+.product-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* Product Item Transition */
+.product-item {
+  transition: all 0.2s ease;
+}
+
+/* Image Hover Effect */
+.product-image {
+  transition: all 0.2s ease;
+}
+
+.product-item:hover .product-image {
+  transform: scale(1.05);
+}
+
+/* Rank Number Transition */
+.rank span {
+  transition: all 0.2s ease;
+}
+
+.product-item:hover .rank span {
+  transform: scale(1.1);
+}
+
+/* Action Buttons Transition */
+.actions button {
+  transition: all 0.2s ease;
+}
+
+.actions button:hover {
+  transform: translateY(-1px);
+}
+
+.actions button:active {
+  transform: translateY(1px);
+}
+
+/* Footer Button Animation */
+button svg {
+  transition: transform 0.2s ease;
+}
+
+button:hover svg {
+  transform: translateX(2px);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .top-selling-products,
+  .top-selling-products > div:first-child,
+  .product-item,
+  .product-image,
+  .rank span,
+  .actions button,
+  button svg {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .product-item:hover .product-image {
+    transform: none;
+  }
+  
+  .actions button:hover {
+    transform: none;
+  }
+  
+  button:hover svg {
+    transform: none;
+  }
+}

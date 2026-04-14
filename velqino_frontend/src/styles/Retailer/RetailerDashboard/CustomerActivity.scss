@@ -1,0 +1,188 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Customer Activity - Only Animations
+================================ */
+
+/* Container Animation */
+.customer-activity {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Animation */
+.customer-activity > div:first-child {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Summary Cards Animation */
+.customer-activity .grid:first-of-type {
+  animation: fadeInGrid 0.35s ease-out forwards;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Summary Card Hover */
+.customer-activity .grid:first-of-type > div {
+  transition: all 0.2s ease;
+}
+
+.customer-activity .grid:first-of-type > div:hover {
+  transform: translateY(-2px);
+}
+
+/* Customer Item Animation */
+.customer-item {
+  animation: slideInLeft 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger Delays */
+.customer-item:nth-child(1) { animation-delay: 0.05s; }
+.customer-item:nth-child(2) { animation-delay: 0.1s; }
+.customer-item:nth-child(3) { animation-delay: 0.15s; }
+.customer-item:nth-child(4) { animation-delay: 0.2s; }
+.customer-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* Customer Item Hover */
+.customer-item {
+  transition: all 0.2s ease;
+}
+
+/* Avatar Pulse Animation */
+.customer-item .w-10.h-10 {
+  transition: all 0.2s ease;
+}
+
+.customer-item:hover .w-10.h-10 {
+  transform: scale(1.05);
+}
+
+/* Button Transitions */
+.customer-item button {
+  transition: all 0.2s ease;
+}
+
+.customer-item button:hover {
+  transform: translateY(-1px);
+}
+
+.customer-item button:active {
+  transform: translateY(1px);
+}
+
+/* Status Badge Pulse */
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* VIP Badge Animation */
+.bg-gradient-to-r {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .customer-activity,
+  .customer-activity > div:first-child,
+  .customer-activity .grid:first-of-type,
+  .customer-item,
+  .customer-item .w-10.h-10,
+  .customer-item button,
+  .animate-pulse,
+  .bg-gradient-to-r {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .customer-activity .grid:first-of-type > div:hover {
+    transform: none;
+  }
+  
+  .customer-item:hover .w-10.h-10 {
+    transform: none;
+  }
+  
+  .customer-item button:hover {
+    transform: none;
+  }
+}

@@ -8,6 +8,8 @@ from .utils.cache_utils import CacheService
 import logging
 from typing import Dict, Any
 from django_redis import get_redis_connection
+from django.core.mail import send_mail
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -120,3 +122,100 @@ def update_wholesaler_cache(profile_id: int):
         
     except Exception as e:
         logger.error(f"Cache update failed for profile {profile_id}: {e}")
+
+
+
+# Retailers
+@shared_task
+def send_retailer_welcome_email(user_id):
+    """Send welcome email to new retailer"""
+    from .models import User, RetailerProfile
+    
+    try:
+        user = User.objects.get(id=user_id)
+        profile = RetailerProfile.objects.get(user_id=user_id)
+        
+        subject = f"Welcome to Velqino - {profile.business_name}"
+        message = f"""
+        Dear {profile.business_name},
+        
+        Welcome to Velqino Platform!
+        
+        Your retailer account has been successfully created.
+        
+        Login Email: {user.email}
+        
+        Get started:
+        1. Complete your profile
+        2. Browse products from wholesalers
+        3. Place your first order
+        
+        Thank you for joining Velqino!
+        
+        Best Regards,
+        Velqino Team
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        
+        logger.info(f"Welcome email sent to retailer: {user.email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send welcome email: {e}")
+        return False
+
+
+@shared_task
+def verify_retailer_profile_async(profile_id):
+    """Async verification of retailer profile"""
+    from .models import RetailerProfile
+    
+    try:
+        profile = RetailerProfile.objects.get(id=profile_id)
+        
+        # Auto-verify if all required fields are filled
+        if profile.business_name and profile.shipping_address and profile.city:
+            profile.is_verified = True
+            profile.save()
+            cache.delete(f"retailer_profile_{profile.user_id}")
+            logger.info(f"Retailer profile auto-verified: {profile.user_id}")
+            return True
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Retailer verification failed: {e}")
+        return False
+
+
+@shared_task
+def cleanup_inactive_retailers():
+    """Clean up inactive retailer profiles (runs monthly)"""
+    from .models import RetailerProfile
+    from datetime import timedelta
+    from django.utils import timezone
+    
+    # Deactivate retailers with no activity for 6 months
+    six_months_ago = timezone.now() - timedelta(days=180)
+    
+    inactive = RetailerProfile.objects.filter(
+        is_active=True,
+        created_at__lt=six_months_ago,
+        user__last_login__lt=six_months_ago
+    )
+    
+    count = inactive.update(is_active=False)
+    
+    # Clear cache for all deactivated
+    for profile in inactive:
+        cache.delete(f"retailer_profile_{profile.user_id}")
+    
+    logger.info(f"Cleaned up {count} inactive retailers")
+    return count

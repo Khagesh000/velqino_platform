@@ -1,0 +1,87 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Product Details - Only Animations
+================================ */
+
+.product-details {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.product-details > div {
+  animation: slideInRight 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.product-details > div:nth-child(1) { animation-delay: 0.05s; }
+.product-details > div:nth-child(2) { animation-delay: 0.1s; }
+.product-details > div:nth-child(3) { animation-delay: 0.15s; }
+.product-details > div:nth-child(4) { animation-delay: 0.2s; }
+.product-details > div:nth-child(5) { animation-delay: 0.25s; }
+.product-details > div:nth-child(6) { animation-delay: 0.3s; }
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+input {
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-details,
+  .product-details > div,
+  button,
+  .animate-spin,
+  input {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+  input:focus {
+    transform: none;
+  }
+}

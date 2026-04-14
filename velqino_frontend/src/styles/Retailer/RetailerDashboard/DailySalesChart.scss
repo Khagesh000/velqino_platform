@@ -1,0 +1,210 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Daily Sales Chart - Only Animations
+================================ */
+
+/* Container Animation */
+.daily-sales-chart {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Animation */
+.chart-header {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Button Transitions */
+.chart-view-btn {
+  transition: all 0.2s ease;
+}
+
+/* Summary Cards Animation */
+.chart-summary {
+  animation: fadeInGrid 0.35s ease-out forwards;
+}
+
+@keyframes fadeInGrid {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Card Hover */
+.summary-card {
+  transition: all 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Trend Pulse Animation */
+.summary-trend {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Chart Container */
+.chart-container {
+  animation: fadeInUp 0.4s ease-out 0.1s both;
+}
+
+/* Bar Rise Animation */
+.chart-bar {
+  transition: all 0.2s ease;
+  animation: barRise 0.4s ease-out forwards;
+  transform-origin: bottom;
+}
+
+@keyframes barRise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Bar Fill Transition */
+.chart-bar-fill {
+  transition: all 0.2s ease;
+}
+
+/* Bar Hover Effects */
+.chart-bar-wrapper:hover .chart-bar {
+  transform: translateY(-2px);
+}
+
+.chart-bar-wrapper:hover .chart-bar-fill {
+  filter: brightness(1.1);
+}
+
+/* Tooltip Transition */
+.chart-bar-tooltip {
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+/* Label Transition */
+.chart-bar-label {
+  transition: all 0.2s ease;
+}
+
+.chart-bar-wrapper:hover .chart-bar-label {
+  transform: translateY(2px);
+}
+
+/* Target Line Dash Animation */
+.target-line {
+  animation: dashMove 1s linear infinite;
+  background-size: 10px 1px;
+}
+
+@keyframes dashMove {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 10px 0;
+  }
+}
+
+/* Legend Items Animation */
+.legend-item {
+  animation: fadeInLeft 0.3s ease-out forwards;
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Legend Dot Transition */
+.legend-dot {
+  transition: all 0.2s ease;
+}
+
+.legend-item:hover .legend-dot {
+  transform: scale(1.2);
+}
+
+/* Footer Animation */
+.chart-footer {
+  animation: fadeInUp 0.3s ease-out 0.15s both;
+}
+
+/* Note Pulse */
+.chart-note {
+  animation: pulse 2s infinite;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .daily-sales-chart,
+  .chart-header,
+  .chart-summary,
+  .chart-container,
+  .chart-bar,
+  .chart-bar-fill,
+  .chart-bar-wrapper,
+  .chart-bar-label,
+  .legend-item,
+  .chart-footer,
+  .chart-note {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .summary-card:hover {
+    transform: none;
+  }
+  
+  .chart-bar-wrapper:hover .chart-bar {
+    transform: none;
+  }
+  
+  .target-line {
+    animation: none;
+  }
+}

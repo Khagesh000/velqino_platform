@@ -1,0 +1,94 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Walk-in Tracker - Only Animations
+================================ */
+
+.walkin-tracker {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.walkin-tracker > div {
+  animation: slideInRight 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.walkin-tracker > div:nth-child(1) { animation-delay: 0.05s; }
+.walkin-tracker > div:nth-child(2) { animation-delay: 0.1s; }
+.walkin-tracker > div:nth-child(3) { animation-delay: 0.15s; }
+.walkin-tracker > div:nth-child(4) { animation-delay: 0.2s; }
+.walkin-tracker > div:nth-child(5) { animation-delay: 0.25s; }
+.walkin-tracker > div:nth-child(6) { animation-delay: 0.3s; }
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.h-full {
+  transition: width 0.5s ease-out;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* SVG Circle Animation */
+circle {
+  transition: stroke-dasharray 0.5s ease-out;
+}
+
+/* Bar Animation */
+.bg-primary-500 {
+  transition: width 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walkin-tracker,
+  .walkin-tracker > div,
+  button,
+  .h-full,
+  .animate-fadeIn,
+  circle,
+  .bg-primary-500 {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+}

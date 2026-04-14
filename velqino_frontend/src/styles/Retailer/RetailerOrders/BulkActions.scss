@@ -1,0 +1,90 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Bulk Actions - Only Animations
+================================ */
+
+.bulk-actions {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-actions > div {
+  animation: slideInRight 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.bulk-actions > div:nth-child(1) { animation-delay: 0.05s; }
+.bulk-actions > div:nth-child(2) { animation-delay: 0.1s; }
+.bulk-actions > div:nth-child(3) { animation-delay: 0.15s; }
+.bulk-actions > div:nth-child(4) { animation-delay: 0.2s; }
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Custom Scrollbar */
+.max-h-32::-webkit-scrollbar {
+  width: 4px;
+}
+
+.max-h-32::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.max-h-32::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bulk-actions,
+  .bulk-actions > div,
+  button,
+  .animate-fadeIn {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}

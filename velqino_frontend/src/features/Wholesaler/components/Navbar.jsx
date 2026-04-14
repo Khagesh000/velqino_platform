@@ -246,7 +246,7 @@ const handleVendorClick = () => {
                     </button>
                     
                     <button 
-                      onClick={() => handleNavigation('/wholesaler/ordermanagment')}
+                      onClick={() => handleNavigation('/retailer/retailerdashboard')}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-secondary hover:bg-primary-100 hover:text-primary-600 transition-fast"
                     >
                       <ShoppingCart size={16} className="text-success-500" />
@@ -439,7 +439,7 @@ const handleVendorClick = () => {
                   </button>
                   
                   <button 
-                    onClick={() => handleNavigation('/wholesaler/ordermanagment')}
+                    onClick={() => handleNavigation('/retailer/retailerdashboard')}
                     className="w-full flex items-center gap-3 py-2.5 px-4 text-secondary hover:bg-primary-100"
                   >
                     <ShoppingCart size={16} className="text-success-500" />
