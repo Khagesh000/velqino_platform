@@ -1,0 +1,85 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Attendance - Only Animations
+================================ */
+
+.attendance {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.calendar-day {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.calendar-day:hover {
+  transform: translateY(-1px);
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+/* Tooltip Animation */
+.calendar-day .absolute {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendance,
+  .calendar-day,
+  button,
+  .calendar-day .absolute {
+    animation: none !important;
+    transition: none !important;
+  }
+  .calendar-day:hover {
+    transform: none;
+  }
+  button:active {
+    transform: none;
+  }
+}

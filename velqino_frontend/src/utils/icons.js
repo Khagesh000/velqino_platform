@@ -172,8 +172,23 @@ import {
   Flag,
 
   Cake,
+  UserCheck,
+  Target,
 
-  
+  Megaphone,
+  Trophy,
+  Store,
+  Monitor,
+  HardDrive,
+  Calculator,
+  AlignLeft,
+
+  Play,
+  Share2,
+  Bookmark,
+  Wifi,
+
+  LogIn,
 
 
 } from 'lucide-react';
@@ -335,5 +350,22 @@ export {
   Flag,
 
   Cake,
+  UserCheck,
+  Target,
+  Megaphone,
+  Trophy,
+  Store,
+  Monitor,
+  HardDrive,
+  Calculator,
+  AlignLeft,
+
+  Play,
+  Share2,
+  Bookmark,
+  Wifi,
+
+  LogIn,
+
 
 };

@@ -206,3 +206,28 @@ class RetailerCacheHelper:
         # Also clear list caches
         cache.delete_pattern("retailers_list_*")
         logger.info(f"Cleared retailer cache for user: {user_id}")
+
+
+# identity/utils.py
+
+# ✅ ADD Customer Validator
+class CustomerValidator:
+    """Validation utilities for customers"""
+    
+    @staticmethod
+    def validate_phone(phone):
+        """Validate phone number"""
+        import re
+        pattern = r'^\+?[1-9][0-9]{9,14}$'
+        if re.match(pattern, phone):
+            return True
+        raise ValidationError("Invalid phone number format")
+    
+    @staticmethod
+    def validate_pincode(pincode):
+        """Validate Indian pincode"""
+        import re
+        pattern = r'^[1-9][0-9]{5}$'
+        if re.match(pattern, str(pincode)):
+            return True
+        raise ValidationError("Invalid pincode (must be 6 digits)")

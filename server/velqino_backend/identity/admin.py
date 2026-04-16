@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, WholesalerProfile, RetailerProfile
+from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -60,6 +60,37 @@ class RetailerProfileAdmin(admin.ModelAdmin):
         }),
         ('Status', {
             'fields': ('is_active', 'is_verified')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'Email'
+
+
+
+# identity/admin.py
+
+# ✅ ADD Customer Admin
+@admin.register(CustomerProfile)
+class CustomerProfileAdmin(admin.ModelAdmin):
+    list_display = ['id', 'full_name', 'user_email', 'phone', 'city', 'created_at']
+    list_filter = ['city', 'state']
+    search_fields = ['full_name', 'user__email', 'user__mobile', 'phone']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('user', 'full_name', 'phone')
+        }),
+        ('Address Information', {
+            'fields': ('address_line1', 'address_line2', 'city', 'state', 'pincode', 'landmark')
+        }),
+        ('Preferences', {
+            'fields': ('email_notifications', 'sms_notifications')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')

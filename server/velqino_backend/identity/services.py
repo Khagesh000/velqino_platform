@@ -4,7 +4,7 @@ import logging
 from django.core.cache import cache
 from django.db import transaction
 from django.db import models
-from .models import User, WholesalerProfile, RetailerProfile
+from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile
 from .serializers import WholesalerProfileSerializer, RetailerProfileSerializer
 
 logger = logging.getLogger(__name__)
@@ -127,3 +127,40 @@ class RetailerService:
                 'total_pages': (total + per_page - 1) // per_page
             }
         }
+    
+
+# identity/services.py
+
+# ✅ ADD Customer Service
+class CustomerService:
+    
+    @staticmethod
+    def get_customer_profile(user_id):
+        """Get customer profile with Redis caching"""
+        cache_key = f"customer_profile_{user_id}"
+        profile = cache.get(cache_key)
+        
+        if profile:
+            return profile
+        
+        profile = CustomerProfile.objects.select_related("user").get(user_id=user_id)
+        cache.set(cache_key, profile, timeout=60 * 10)
+        
+        return profile
+    
+    @staticmethod
+    def update_customer_profile(user_id, data):
+        """Update customer profile and clear cache"""
+        cache_key = f"customer_profile_{user_id}"
+        
+        with transaction.atomic():
+            profile = CustomerProfile.objects.select_for_update().get(user_id=user_id)
+            
+            for key, value in data.items():
+                if hasattr(profile, key) and value is not None:
+                    setattr(profile, key, value)
+            
+            profile.save()
+            cache.delete(cache_key)
+            logger.info(f"Customer profile updated: {user_id}")
+            return profile

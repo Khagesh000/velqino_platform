@@ -9,6 +9,7 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ("wholesaler", "Wholesaler"),
         ("retailer", "Retailer"),
+        ("customer", "Customer"),
     )
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
@@ -192,3 +193,41 @@ class RetailerProfile(models.Model):
     
     def __str__(self):
         return f"{self.business_name} ({self.user.email})"
+    
+
+# ✅ ADD NEW MODEL - CustomerProfile
+class CustomerProfile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="customer_profile"
+    )
+    
+    # Basic Information
+    full_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=15)
+    
+    # Delivery Address
+    address_line1 = models.TextField()
+    address_line2 = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, db_index=True)
+    state = models.CharField(max_length=100)
+    pincode = models.CharField(max_length=10, db_index=True)
+    landmark = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Preferences
+    email_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['phone']),
+            models.Index(fields=['city', 'pincode']),
+        ]
+    
+    def __str__(self):
+        return f"{self.full_name} ({self.user.email})"

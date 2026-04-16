@@ -13,5 +13,10 @@ urlpatterns = [
     path('retailer/profile/<int:user_id>/', views.retailer_profile, name='retailer-profile'),
     path('retailers/list/', views.list_retailers, name='list-retailers'),
 
+    path('customer/register/', views.register_customer, name='register-customer'),
+    path('customer/login/', views.customer_login, name='customer-login'),
+    path('customer/profile/<int:user_id>/', views.customer_profile, name='customer-profile'),
+    path('customers/list/', views.list_customers, name='list-customers'),
+
     
 ]

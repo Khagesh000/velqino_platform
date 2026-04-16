@@ -219,3 +219,49 @@ def cleanup_inactive_retailers():
     
     logger.info(f"Cleaned up {count} inactive retailers")
     return count
+
+
+# identity/tasks.py
+
+# ✅ ADD Customer welcome email task
+@shared_task
+def send_customer_welcome_email(user_id):
+    """Send welcome email to new customer"""
+    from .models import User, CustomerProfile
+    
+    try:
+        user = User.objects.get(id=user_id)
+        profile = CustomerProfile.objects.get(user_id=user_id)
+        
+        subject = f"Welcome to Veltrix - {profile.full_name}"
+        message = f"""
+        Dear {profile.full_name},
+        
+        Welcome to Veltrix Platform!
+        
+        Your customer account has been successfully created.
+        
+        Login Email: {user.email}
+        
+        Start shopping now!
+        
+        Thank you for joining Veltrix!
+        
+        Best Regards,
+        Veltrix Team
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        
+        logger.info(f"Welcome email sent to customer: {user.email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send customer welcome email: {e}")
+        return False

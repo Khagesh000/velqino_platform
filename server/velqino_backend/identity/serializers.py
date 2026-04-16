@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, WholesalerProfile, RetailerProfile
+from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile
 
 class UserSerializer(serializers.ModelSerializer):
     """Serialize User model - basic user info"""
@@ -201,3 +201,50 @@ class RetailerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = RetailerProfile
         fields = ['business_name', 'gst_number', 'shipping_address', 'city', 'state', 'pincode']
+
+
+
+# identity/serializers.py
+
+# ✅ ADD Customer Register Serializer
+class CustomerRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+    
+    class Meta:
+        model = User
+        fields = ['email', 'mobile', 'password', 'confirm_password', 'username']
+    
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError("Passwords don't match")
+        return data
+    
+    def create(self, validated_data):
+        validated_data.pop('confirm_password')
+        user = User.objects.create_user(
+            username=validated_data.get('username', validated_data['email'].split('@')[0]),
+            email=validated_data['email'],
+            mobile=validated_data['mobile'],
+            password=validated_data['password'],
+            role='customer'  # ✅ Auto-set role
+        )
+        return user
+
+
+# ✅ ADD Customer Profile Serializer
+class CustomerProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+    mobile = serializers.CharField(source='user.mobile', read_only=True)
+    
+    class Meta:
+        model = CustomerProfile
+        fields = '__all__'
+        depth = 1
+
+
+# ✅ ADD Customer Profile Update Serializer
+class CustomerProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerProfile
+        fields = ['full_name', 'phone', 'address_line1', 'address_line2', 'city', 'state', 'pincode', 'landmark']

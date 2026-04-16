@@ -1,0 +1,55 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Profit & Loss - Only Animations
+================================ */
+
+.profit-loss {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.border-gray-200 {
+  transition: all 0.2s ease;
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.h-full {
+  transition: width 0.5s ease-out;
+}
+
+/* Progress Bar Animation */
+.h-full {
+  transition: width 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profit-loss,
+  .border-gray-200,
+  button,
+  .h-full {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+}

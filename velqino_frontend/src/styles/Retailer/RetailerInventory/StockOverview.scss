@@ -1,0 +1,67 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Stock Overview - Only Animations
+================================ */
+
+.stock-overview {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stock-card {
+  animation: cardFadeIn 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes cardFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stock-card {
+  transition: all 0.2s ease;
+}
+
+.stock-card:nth-child(1) { animation-delay: 0.05s; }
+.stock-card:nth-child(2) { animation-delay: 0.1s; }
+.stock-card:nth-child(3) { animation-delay: 0.15s; }
+.stock-card:nth-child(4) { animation-delay: 0.2s; }
+
+.stock-card:active {
+  transform: scale(0.98);
+}
+
+/* Hover Effect */
+.stock-card:hover {
+  transition: all 0.2s ease;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .stock-overview,
+  .stock-card {
+    animation: none !important;
+    transition: none !important;
+  }
+  .stock-card:active {
+    transform: none;
+  }
+  .stock-card:hover {
+    transform: none;
+  }
+}

@@ -33,6 +33,25 @@ class Product(models.Model):
     )
 
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='products')
+
+
+    # ✅ ADD THESE 2 FIELDS RIGHT AFTER seller
+    wholesaler = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='wholesaler_products',
+        null=True,
+        blank=True
+    )
+    retailer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='retailer_products',
+        null=True,
+        blank=True
+    )
+
+    
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
 
     name = models.CharField(max_length=255, db_index=True)

@@ -11,6 +11,10 @@ from .serializers import (
     RetailerRegisterSerializer,
     RetailerProfileSerializer,
     RetailerProfileUpdateSerializer,
+    CustomerProfile,
+    CustomerProfileSerializer,
+    CustomerProfileUpdateSerializer,
+    CustomerRegisterSerializer
 )
 from .tasks import verify_wholesaler_profile
 from .utils.cache_utils import CacheService
@@ -448,6 +452,192 @@ def list_retailers(request):
         
     except Exception as e:
         logger.error(f"List retailers error: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# identity/views.py
+
+# ✅ ADD Customer Registration
+@api_view(['POST'])
+@ratelimit(key='ip', rate='10/hour', method='POST')
+def register_customer(request):
+    """
+    Register a new customer (automatically sets role='customer')
+    """
+    try:
+        serializer = CustomerRegisterSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            with transaction.atomic():
+                user = serializer.save()
+                
+                # Create empty customer profile
+                CustomerProfile.objects.create(
+                    user=user,
+                    full_name=user.username,
+                    phone=user.mobile,
+                    address_line1="",
+                    city="",
+                    state="",
+                    pincode=""
+                )
+                
+                refresh = RefreshToken.for_user(user)
+                
+                logger.info(f"New customer registered: {user.email}")
+                
+                return Response({
+                    'status': 'success',
+                    'message': 'Customer registered successfully',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'user_id': user.id,
+                    'role': 'customer'
+                }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'status': 'error',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Customer registration failed: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ ADD Customer Login (same as retailer/wholesaler, just check role)
+@api_view(['POST'])
+def customer_login(request):
+    """
+    Customer login
+    """
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        user = User.objects.filter(email=email).first()
+        
+        if not user or not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if user.role != 'customer':
+            return Response({
+                'status': 'error',
+                'message': 'Account is not a customer account'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'status': 'success',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id,
+            'role': 'customer'
+        })
+        
+    except Exception as e:
+        logger.error(f"Customer login failed: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ ADD Customer Profile Views
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def customer_profile(request, user_id):
+    """Get or update customer profile"""
+    try:
+        if request.user.id != user_id or request.user.role != 'customer':
+            return Response({
+                'status': 'error',
+                'message': 'Unauthorized access'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        profile = CustomerProfile.objects.select_related('user').get(user_id=user_id)
+        
+        if request.method == 'GET':
+            serializer = CustomerProfileSerializer(profile)
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            })
+        
+        elif request.method == 'PUT':
+            serializer = CustomerProfileUpdateSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'status': 'success',
+                    'data': serializer.data
+                })
+            return Response({
+                'status': 'error',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except CustomerProfile.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Profile not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Customer profile error: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ✅ ADD List Customers (for retailers to see their customers)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_customers(request):
+    """List all customers (for retailers to see their customers)"""
+    try:
+        if request.user.role != 'retailer':
+            return Response({
+                'status': 'error',
+                'message': 'Only retailers can view customers'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 20))
+        
+        customers = CustomerProfile.objects.select_related('user').filter(
+            is_active=True
+        ).order_by('-created_at')
+        
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated = customers[start:end]
+        
+        serializer = CustomerProfileSerializer(paginated, many=True)
+        
+        return Response({
+            'status': 'success',
+            'data': serializer.data,
+            'pagination': {
+                'total': customers.count(),
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (customers.count() + per_page - 1) // per_page
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"List customers error: {e}")
         return Response({
             'status': 'error',
             'message': str(e)

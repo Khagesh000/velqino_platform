@@ -1,4 +1,4 @@
-import Navbar from "@/features/Wholesaler/components/Navbar";
+import Navbar from "@/features/common/Navbar";
 
 export const viewport = {
   width: "device-width",

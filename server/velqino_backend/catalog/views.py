@@ -84,6 +84,8 @@ def product_list(request):
             # Create product
             product = Product.objects.create(
                 seller=request.user,
+                wholesaler=request.data.get('wholesaler_id') if request.user.role == 'retailer' else None,  # ✅ ADD
+                retailer=request.user if request.user.role == 'retailer' else None,  # ✅ ADD
                 name=request.POST.get('name'),
                 sku=sku,
                 price=request.POST.get('price'),

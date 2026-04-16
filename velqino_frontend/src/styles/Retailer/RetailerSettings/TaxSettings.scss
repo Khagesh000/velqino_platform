@@ -1,0 +1,86 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Tax Settings - Only Animations
+================================ */
+
+.tax-settings {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+input, select {
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus {
+  transform: translateY(-1px);
+}
+
+.border-gray-200 {
+  transition: all 0.2s ease;
+}
+
+table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tax-settings,
+  .animate-fadeIn,
+  button,
+  input,
+  select,
+  .border-gray-200,
+  table tbody tr {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+  input:focus, select:focus {
+    transform: none;
+  }
+  table tbody tr:hover {
+    background-color: transparent;
+  }
+}

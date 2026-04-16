@@ -1,0 +1,77 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Expense List - Only Animations
+================================ */
+
+.expense-list {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.expense-row {
+  animation: slideInLeft 0.3s ease-out forwards;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes slideInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.expense-row {
+  transition: background-color 0.2s ease;
+}
+
+.expense-row:nth-child(1) { animation-delay: 0.03s; }
+.expense-row:nth-child(2) { animation-delay: 0.06s; }
+.expense-row:nth-child(3) { animation-delay: 0.09s; }
+.expense-row:nth-child(4) { animation-delay: 0.12s; }
+.expense-row:nth-child(5) { animation-delay: 0.15s; }
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+input, select {
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expense-list,
+  .expense-row,
+  button,
+  input,
+  select {
+    animation: none !important;
+    transition: none !important;
+  }
+  button:active {
+    transform: none;
+  }
+  input:focus, select:focus {
+    transform: none;
+  }
+}

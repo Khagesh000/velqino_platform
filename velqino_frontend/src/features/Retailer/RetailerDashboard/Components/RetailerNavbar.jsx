@@ -70,13 +70,13 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
     { icon: <Package size={20} />, label: 'Products', href: '/retailer/retailerproducts', badge: null },
     { icon: <ShoppingBag size={20} />, label: 'Orders', href: '/retailer/retailerorders', badge: '3' },
     { icon: <Users size={20} />, label: 'Customers', href: '/retailer/retailercustomers', badge: null },
-    { icon: <Box size={20} />, label: 'Inventory', href: '/retailer/inventory', badge: '5' },
-    { icon: <BarChart3 size={20} />, label: 'Reports & Analytics', href: '/retailer/reports', badge: null },
-    { icon: <Wallet size={20} />, label: 'Expenses', href: '/retailer/expenses', badge: null },
-    { icon: <Truck size={20} />, label: 'Suppliers', href: '/retailer/suppliers', badge: null },
-    { icon: <Star size={20} />, label: 'Loyalty Program', href: '/retailer/loyalty', badge: null },
-    { icon: <Users size={20} />, label: 'Staff Management', href: '/retailer/staff', badge: null },
-    { icon: <Settings size={20} />, label: 'Settings', href: '/retailer/settings', badge: null },
+    { icon: <Box size={20} />, label: 'Inventory', href: '/retailer/retailerinventory', badge: '5' },
+    { icon: <BarChart3 size={20} />, label: 'Reports & Analytics', href: '/retailer/retailerreports', badge: null },
+    { icon: <Wallet size={20} />, label: 'Expenses', href: '/retailer/retailerexpenses', badge: null },
+    { icon: <Truck size={20} />, label: 'Suppliers', href: '/retailer/retailersuppliers', badge: null },
+    { icon: <Star size={20} />, label: 'Loyalty Program', href: '/retailer/retailerloyalty', badge: null },
+    { icon: <Users size={20} />, label: 'Staff Management', href: '/retailer/retailerstaff', badge: null },
+    { icon: <Settings size={20} />, label: 'Settings', href: '/retailer/retailersettings', badge: null },
   ]
 
   return (
@@ -255,107 +255,104 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
         </div>
       )}
 
-      {/* Sidebar */}
       <aside className={`
-        hidden lg:block fixed left-0 top-20 h-[calc(100vh-5rem)] 
-        bg-white border-r border-gray-200 transition-all duration-300 z-40
-        ${isSidebarCollapsed ? 'w-20' : 'w-64'}
-      `}>
-        <div className="py-6 px-3">
-          <nav className="space-y-1">
-            {navItems.map((item, index) => (
-              <Link
-                key={index}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-2.5 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-xl transition-all group relative"
-              >
-                <span className="text-gray-500 group-hover:text-primary-600 transition-all">
-                  {item.icon}
-                </span>
-                {!isSidebarCollapsed && (
-                  <>
-                    <span className="text-sm font-medium flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-                {isSidebarCollapsed && item.badge && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
-
+  hidden lg:block fixed left-0 top-20 h-[calc(100vh-5rem)] 
+  bg-white border-r border-gray-200 transition-all duration-300 z-40
+  ${isSidebarCollapsed ? 'w-20' : 'w-64'}
+`}>
+  <div className="py-4 px-3 flex flex-col h-full">
+    <nav className="space-y-1 flex-1">
+      {navItems.map((item, index) => (
+        <Link
+          key={index}
+          href={item.href}
+          className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all group relative text-sm"
+        >
+          <span className="text-gray-500 group-hover:text-primary-600 transition-all w-5 h-5 flex items-center justify-center">
+            {item.icon}
+          </span>
           {!isSidebarCollapsed && (
-            <div className="absolute bottom-6 left-3 right-3">
-              <Link
-                href="/retailer/support"
-                className="flex items-center gap-3 px-3 py-2.5 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-xl transition-all"
-              >
-                <HelpCircle size={20} />
-                <span className="text-sm font-medium">Support</span>
-              </Link>
-            </div>
+            <>
+              <span className="text-sm font-medium flex-1">{item.label}</span>
+              {item.badge && (
+                <span className="px-2 py-0.5 bg-primary-500 text-white text-xs font-medium rounded-full">
+                  {item.badge}
+                </span>
+              )}
+            </>
           )}
-        </div>
-      </aside>
+          {isSidebarCollapsed && item.badge && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 text-white text-[9px] font-medium rounded-full flex items-center justify-center">
+              {item.badge}
+            </span>
+          )}
+        </Link>
+      ))}
+    </nav>
 
-      {/* Mobile Sidebar Drawer */}
-      <div className={`
-        lg:hidden fixed inset-0 bg-black/50 z-50 transition-opacity duration-300
-        ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-      `}>
-        <aside className={`
-          fixed left-0 top-0 h-full w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <Link href="/retailer" className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-              VELTRIX
-            </Link>
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
-            >
-              <X size={20} />
-            </button>
-          </div>
+    <div className="pt-4 mt-2 border-t border-gray-100">
+      <Link
+        href="/retailer/retailersupport"
+        className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all text-sm"
+      >
+        <HelpCircle size={18} className="text-gray-500" />
+        {!isSidebarCollapsed && <span className="text-sm font-medium">Support</span>}
+      </Link>
+    </div>
+  </div>
+</aside>
 
-          <div className="p-4">
-            <nav className="space-y-1">
-              {navItems.map((item, index) => (
-                <Link
-                  key={index}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-xl transition-all"
-                >
-                  <span className="text-gray-500">{item.icon}</span>
-                  <span className="text-sm font-medium flex-1">{item.label}</span>
-                  {item.badge && (
-                    <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              ))}
-              <Link
-                href="/retailer/support"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-xl transition-all"
-              >
-                <HelpCircle size={20} />
-                <span className="text-sm font-medium">Support</span>
-              </Link>
-            </nav>
-          </div>
-        </aside>
-      </div>
+{/* Mobile Sidebar Drawer - Perfect for Mobile */}
+<div className={`
+  lg:hidden fixed inset-0 bg-black/50 z-50 transition-opacity duration-300
+  ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+`}>
+  <aside className={`
+    fixed left-0 top-0 h-full w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out
+    ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+`}>
+    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <Link href="/retailer" className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+        VELTRIX
+      </Link>
+      <button
+        onClick={() => setIsMobileMenuOpen(false)}
+        className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+      >
+        <X size={20} />
+      </button>
+    </div>
+
+    <div className="p-4 overflow-y-auto h-[calc(100%-70px)]">
+      <nav className="space-y-1">
+        {navItems.map((item, index) => (
+          <Link
+            key={index}
+            href={item.href}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all"
+          >
+            <span className="text-gray-500">{item.icon}</span>
+            <span className="text-sm font-medium flex-1">{item.label}</span>
+            {item.badge && (
+              <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
+                {item.badge}
+              </span>
+            )}
+          </Link>
+        ))}
+        <Link
+          href="/retailer/retailersupport"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all"
+        >
+          <HelpCircle size={18} className="text-gray-500" />
+          <span className="text-sm font-medium">Support</span>
+        </Link>
+      </nav>
+    </div>
+  </aside>
+</div>
     </>
   )
 }

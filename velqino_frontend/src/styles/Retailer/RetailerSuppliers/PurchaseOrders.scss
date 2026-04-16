@@ -1,0 +1,97 @@
+@import '../../../styles/reusables/variables.scss';
+@import '../../../styles/reusables/mixins.scss';
+
+/* ================================
+   Purchase Orders - Only Animations
+================================ */
+
+.purchase-orders {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.border-gray-200 {
+  transition: all 0.2s ease;
+}
+
+.border-gray-200:hover {
+  transform: translateY(-1px);
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  transform: translateY(-1px);
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .purchase-orders,
+  .border-gray-200,
+  button,
+  input,
+  select,
+  textarea,
+  .animate-fadeIn {
+    animation: none !important;
+    transition: none !important;
+  }
+  .border-gray-200:hover {
+    transform: none;
+  }
+  button:active {
+    transform: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    transform: none;
+  }
+}
