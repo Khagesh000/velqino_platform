@@ -1,8 +1,5 @@
-
 @import '../styles/reusables/variables.scss';
 @import '../styles/reusables/mixins.scss';
-
-
 
 /* ================================
    Global Styles
@@ -102,6 +99,7 @@ body {
 /* ================================
    Typography Utilities
 ================================ */
+.text-xxs { font-size: $text-xxs; }
 .text-xs { font-size: $text-xs; }
 .text-sm { font-size: $text-sm; }
 .text-md { font-size: $text-md; }
@@ -113,8 +111,6 @@ body {
 .text-5xl { font-size: $text-5xl; }
 .text-6xl { font-size: $text-6xl; }
 .text-7xl { font-size: $text-7xl; }
-
-
 
 /* ================================
    Background Color Utilities
@@ -246,7 +242,6 @@ body {
   border: 1px solid $glass-border;
 }
 
-
 /* ================================
    Text Color Utilities
 ================================ */
@@ -257,7 +252,6 @@ body {
 .text-inverse { color: $text-inverse; }
 .text-accent { color: $text-accent; }
 
-/* Add these missing text color utilities */
 .text-success-500 { color: $success-500; }
 .text-success-600 { color: $success-600; }
 .text-success-400 { color: $success-400; }
@@ -277,7 +271,6 @@ body {
 .text-info-600 { color: $info-600; }
 .text-info-400 { color: $info-400; }
 .text-info-100 { color: $info-100; }
-
 
 /* ================================
    Z-Index Utilities
@@ -404,6 +397,7 @@ h6, .h6 {
 
 p { 
   margin-bottom: $space-4; 
+  font-size: $text-md;
 }
 
 a {
@@ -445,91 +439,558 @@ a {
 .block { display: block; }
 
 /* ================================
-   MOBILE RESPONSIVE OVERRIDES
-   Using your existing mixins
+   RESPONSIVE SIZES - Mobile First
 ================================ */
+
+/* Root variables for responsive design */
+:root {
+  --text-xxs: 9px;
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 12px;
+  --text-md: 13px;
+  --text-lg: 14px;
+  --text-xl: 16px;
+  --text-2xl: 18px;
+  --text-3xl: 20px;
+  --text-4xl: 24px;
+  --text-5xl: 28px;
+  
+  --space-1: 3px;
+  --space-2: 5px;
+  --space-3: 7px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-8: 18px;
+  --space-10: 22px;
+  --space-12: 26px;
+}
+
+/* TABLET (641px - 768px) */
+@media (min-width: 641px) {
+  :root {
+    --text-xxs: 10px;
+    --text-xs: 11px;
+    --text-sm: 12px;
+    --text-base: 13px;
+    --text-md: 14px;
+    --text-lg: 16px;
+    --text-xl: 18px;
+    --text-2xl: 20px;
+    --text-3xl: 24px;
+    --text-4xl: 28px;
+    --text-5xl: 32px;
+    
+    --space-1: 4px;
+    --space-2: 6px;
+    --space-3: 8px;
+    --space-4: 12px;
+    --space-5: 14px;
+    --space-6: 16px;
+    --space-8: 20px;
+    --space-10: 24px;
+    --space-12: 28px;
+  }
+}
+
+/* SMALL LAPTOP (769px - 1024px) */
+@media (min-width: 769px) {
+  :root {
+    --text-xxs: 10px;
+    --text-xs: 11px;
+    --text-sm: 12px;
+    --text-base: 13px;
+    --text-md: 14px;
+    --text-lg: 15px;
+    --text-xl: 17px;
+    --text-2xl: 19px;
+    --text-3xl: 22px;
+    --text-4xl: 26px;
+    --text-5xl: 30px;
+    
+    --space-1: 4px;
+    --space-2: 6px;
+    --space-3: 8px;
+    --space-4: 12px;
+    --space-5: 16px;
+    --space-6: 18px;
+    --space-8: 22px;
+    --space-10: 26px;
+    --space-12: 32px;
+  }
+}
+
+/* MEDIUM LAPTOP (1025px - 1280px) */
+@media (min-width: 1025px) {
+  :root {
+    --text-xxs: 11px;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 14px;
+    --text-md: 15px;
+    --text-lg: 16px;
+    --text-xl: 18px;
+    --text-2xl: 20px;
+    --text-3xl: 24px;
+    --text-4xl: 28px;
+    --text-5xl: 32px;
+    
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 10px;
+    --space-4: 14px;
+    --space-5: 18px;
+    --space-6: 20px;
+    --space-8: 24px;
+    --space-10: 30px;
+    --space-12: 36px;
+  }
+}
+
+/* LARGE LAPTOP (1281px - 1440px) */
+@media (min-width: 1281px) {
+  :root {
+    --text-xxs: 11px;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 14px;
+    --text-md: 14px;
+    --text-lg: 16px;
+    --text-xl: 18px;
+    --text-2xl: 20px;
+    --text-3xl: 24px;
+    --text-4xl: 28px;
+    --text-5xl: 32px;
+    
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+  }
+}
+
+/* DESKTOP (1441px+) */
+@media (min-width: 1441px) {
+  :root {
+    --text-xxs: 12px;
+    --text-xs: 13px;
+    --text-sm: 14px;
+    --text-base: 15px;
+    --text-md: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 28px;
+    --text-4xl: 32px;
+    --text-5xl: 36px;
+    
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+  }
+}
+
+/* Update typography utilities to use CSS variables */
+.text-xxs { font-size: var(--text-xxs); }
+.text-xs { font-size: var(--text-xs); }
+.text-sm { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-md { font-size: var(--text-md); }
+.text-lg { font-size: var(--text-lg); }
+.text-xl { font-size: var(--text-xl); }
+.text-2xl { font-size: var(--text-2xl); }
+.text-3xl { font-size: var(--text-3xl); }
+.text-4xl { font-size: var(--text-4xl); }
+.text-5xl { font-size: var(--text-5xl); }
+
+/* Update spacing utilities to use CSS variables */
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
+.mt-5 { margin-top: var(--space-5); }
+.mt-6 { margin-top: var(--space-6); }
+.mt-8 { margin-top: var(--space-8); }
+.mt-10 { margin-top: var(--space-10); }
+.mt-12 { margin-top: var(--space-12); }
+
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mb-5 { margin-bottom: var(--space-5); }
+.mb-6 { margin-bottom: var(--space-6); }
+.mb-8 { margin-bottom: var(--space-8); }
+.mb-10 { margin-bottom: var(--space-10); }
+.mb-12 { margin-bottom: var(--space-12); }
+
+.p-1 { padding: var(--space-1); }
+.p-2 { padding: var(--space-2); }
+.p-3 { padding: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+.p-5 { padding: var(--space-5); }
+.p-6 { padding: var(--space-6); }
+
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+.gap-5 { gap: var(--space-5); }
+.gap-6 { gap: var(--space-6); }
+
+/* Update heading font sizes */
+h1, .h1 { font-size: var(--text-5xl); }
+h2, .h2 { font-size: var(--text-4xl); }
+h3, .h3 { font-size: var(--text-3xl); }
+h4, .h4 { font-size: var(--text-2xl); }
+h5, .h5 { font-size: var(--text-xl); }
+h6, .h6 { font-size: var(--text-lg); }
+p { font-size: var(--text-base); }
+
+/* Container responsive padding */
+.container {
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
 
 /* ================================
    MOBILE RESPONSIVE OVERRIDES
 ================================ */
 
 @media (max-width: 768px) {
-  // Padding overrides
-  .p-3 { padding: 8px !important; }
-  .p-4 { padding: 12px !important; }
-  .p-5 { padding: 14px !important; }
-  .p-6 { padding: 16px !important; }
+  .p-3 { padding: calc(var(--space-3) * 0.8) !important; }
+  .p-4 { padding: calc(var(--space-4) * 0.8) !important; }
+  .p-5 { padding: calc(var(--space-5) * 0.8) !important; }
+  .p-6 { padding: calc(var(--space-6) * 0.8) !important; }
   
-  // Horizontal padding
-  .px-3 { padding-left: 8px !important; padding-right: 8px !important; }
-  .px-4 { padding-left: 12px !important; padding-right: 12px !important; }
-  .px-5 { padding-left: 14px !important; padding-right: 14px !important; }
-  .px-6 { padding-left: 16px !important; padding-right: 16px !important; }
+  .px-3 { padding-left: calc(var(--space-3) * 0.8) !important; padding-right: calc(var(--space-3) * 0.8) !important; }
+  .px-4 { padding-left: calc(var(--space-4) * 0.8) !important; padding-right: calc(var(--space-4) * 0.8) !important; }
+  .px-5 { padding-left: calc(var(--space-5) * 0.8) !important; padding-right: calc(var(--space-5) * 0.8) !important; }
+  .px-6 { padding-left: calc(var(--space-6) * 0.8) !important; padding-right: calc(var(--space-6) * 0.8) !important; }
   
-  // Vertical padding
-  .py-2 { padding-top: 6px !important; padding-bottom: 6px !important; }
-  .py-3 { padding-top: 8px !important; padding-bottom: 8px !important; }
-  .py-4 { padding-top: 12px !important; padding-bottom: 12px !important; }
+  .py-2 { padding-top: calc(var(--space-2) * 0.8) !important; padding-bottom: calc(var(--space-2) * 0.8) !important; }
+  .py-3 { padding-top: calc(var(--space-3) * 0.8) !important; padding-bottom: calc(var(--space-3) * 0.8) !important; }
+  .py-4 { padding-top: calc(var(--space-4) * 0.8) !important; padding-bottom: calc(var(--space-4) * 0.8) !important; }
   
-  // Gap overrides
-  .gap-1 { gap: 2px !important; }
-  .gap-2 { gap: 6px !important; }
-  .gap-3 { gap: 8px !important; }
-  .gap-4 { gap: 12px !important; }
+  .gap-1 { gap: calc(var(--space-1) * 0.8) !important; }
+  .gap-2 { gap: calc(var(--space-2) * 0.8) !important; }
+  .gap-3 { gap: calc(var(--space-3) * 0.8) !important; }
+  .gap-4 { gap: calc(var(--space-4) * 0.8) !important; }
   
-  // Font size overrides
-  .text-xxs { font-size: 10px !important; }
-  .text-xs { font-size: 11px !important; }
-  .text-sm { font-size: 12px !important; }
-  .text-base { font-size: 14px !important; }
-  .text-lg { font-size: 16px !important; }
-  .text-xl { font-size: 18px !important; }
-  
-  // Margin top
-  .mt-2 { margin-top: 6px !important; }
-  .mt-3 { margin-top: 8px !important; }
-  .mt-4 { margin-top: 12px !important; }
-  .mt-5 { margin-top: 14px !important; }
-  .mt-6 { margin-top: 16px !important; }
-  
-  // Margin bottom
-  .mb-2 { margin-bottom: 6px !important; }
-  .mb-3 { margin-bottom: 8px !important; }
-  .mb-4 { margin-bottom: 12px !important; }
-  .mb-5 { margin-bottom: 14px !important; }
-  .mb-6 { margin-bottom: 16px !important; }
-  
-  // Border radius
   .rounded-lg { border-radius: 8px !important; }
   .rounded-xl { border-radius: 12px !important; }
   .rounded-2xl { border-radius: 16px !important; }
   
-  // Inputs - preserve colors
   input, select, textarea {
     padding-top: 6px !important;
     padding-bottom: 6px !important;
-    font-size: 12px !important;
+    font-size: var(--text-sm) !important;
     color: inherit !important;
   }
   
-  // Buttons - preserve colors
   button, .btn {
     padding-top: 6px !important;
     padding-bottom: 6px !important;
-    font-size: 12px !important;
+    font-size: var(--text-sm) !important;
     color: inherit !important;
   }
   
-  // Labels - preserve colors
   label {
     color: inherit !important;
   }
   
-  // Table cells - preserve colors
   td, th {
-    padding: 8px 12px !important;
-    font-size: 12px !important;
+    padding: 6px 8px !important;
+    font-size: var(--text-sm) !important;
     color: inherit !important;
   }
 }
 
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+
+/* ================================
+   LAPTOP RESPONSIVE REDUCTIONS (1025px - 1366px)
+================================ */
+@media (min-width: 1025px) and (max-width: 1366px) {
+  /* Font size reductions - INCREASED SLIGHTLY */
+   .text-xs { font-size: 13px !important; }
+  .text-sm { font-size: 14px !important; }
+  .text-base { font-size: 15px !important; }
+  .text-md { font-size: 16px !important; }
+  .text-lg { font-size: 17px !important; }
+  .text-xl { font-size: 18px !important; }
+  .text-2xl { font-size: 26px !important; }
+  .text-3xl { font-size: 28px !important; }
+  .text-4xl { font-size: 30px !important; }
+  .text-5xl { font-size: 32px !important; } 
+  
+  /* Heading reductions - INCREASED SLIGHTLY */
+  h1, .h1 { font-size: 30px !important; }
+  h2, .h2 { font-size: 26px !important; }
+  h3, .h3 { font-size: 18px !important; }
+  h4, .h4 { font-size: 20px !important; }
+  h5, .h5 { font-size: 18px !important; }
+  h6, .h6 { font-size: 15px !important; } 
+  p { font-size: 14px !important; }
+  
+  /* Padding reductions - KEPT SAME */
+  .p-1 { padding: 3px !important; }
+  .p-2 { padding: 5px !important; }
+  .p-3 { padding: 8px !important; }
+  .p-4 { padding: 10px !important; }
+  .p-5 { padding: 12px !important; }
+  .p-6 { padding: 14px !important; }
+  
+  .px-3 { padding-left: 8px !important; padding-right: 8px !important; }
+  .px-4 { padding-left: 10px !important; padding-right: 10px !important; }
+  .px-5 { padding-left: 12px !important; padding-right: 12px !important; }
+  .px-6 { padding-left: 14px !important; padding-right: 14px !important; }
+  
+  .py-2 { padding-top: 5px !important; padding-bottom: 5px !important; }
+  .py-3 { padding-top: 8px !important; padding-bottom: 8px !important; }
+  .py-4 { padding-top: 10px !important; padding-bottom: 10px !important; }
+  
+  /* Gap reductions - KEPT SAME */
+  .gap-1 { gap: 3px !important; }
+  .gap-2 { gap: 5px !important; }
+  .gap-3 { gap: 8px !important; }
+  .gap-4 { gap: 10px !important; }
+  .gap-5 { gap: 12px !important; }
+  .gap-6 { gap: 14px !important; }
+  
+  /* Margin reductions - KEPT SAME */
+  .mt-2 { margin-top: 5px !important; }
+  .mt-3 { margin-top: 8px !important; }
+  .mt-4 { margin-top: 10px !important; }
+  .mt-5 { margin-top: 12px !important; }
+  .mt-6 { margin-top: 14px !important; }
+  
+  .mb-2 { margin-bottom: 5px !important; }
+  .mb-3 { margin-bottom: 8px !important; }
+  .mb-4 { margin-bottom: 10px !important; }
+  .mb-5 { margin-bottom: 12px !important; }
+  .mb-6 { margin-bottom: 14px !important; }
+  
+  /* Button sizes */
+  button, .btn {
+    font-size: 13px !important;
+  }
+  
+  /* Input sizes */
+  input, select, textarea {
+    font-size: 13px !important;
+  }
+}
+
+
+/* ================================
+   SMALL MOBILE (320px - 480px)
+================================ */
+@media (min-width: 320px) and (max-width: 480px) {
+  /* Font sizes */
+  .text-xs { font-size: 10px !important; }
+  .text-sm { font-size: 11px !important; }
+  .text-base { font-size: 12px !important; }
+  .text-md { font-size: 13px !important; }
+  .text-lg { font-size: 14px !important; }
+  .text-xl { font-size: 15px !important; }
+  .text-2xl { font-size: 18px !important; }
+  .text-3xl { font-size: 20px !important; }
+  .text-4xl { font-size: 22px !important; }
+  .text-5xl { font-size: 24px !important; }
+  
+  /* Headings */
+  h1, .h1 { font-size: 22px !important; }
+  h2, .h2 { font-size: 20px !important; }
+  h3, .h3 { font-size: 18px !important; }
+  h4, .h4 { font-size: 16px !important; }
+  h5, .h5 { font-size: 14px !important; }
+  h6, .h6 { font-size: 12px !important; }
+  p { font-size: 12px !important; }
+  
+  /* Padding */
+  .p-1 { padding: 2px !important; }
+  .p-2 { padding: 4px !important; }
+  .p-3 { padding: 6px !important; }
+  .p-4 { padding: 8px !important; }
+  .p-5 { padding: 10px !important; }
+  .p-6 { padding: 12px !important; }
+  
+  .px-3 { padding-left: 6px !important; padding-right: 6px !important; }
+  .px-4 { padding-left: 8px !important; padding-right: 8px !important; }
+  .px-5 { padding-left: 10px !important; padding-right: 10px !important; }
+  .px-6 { padding-left: 12px !important; padding-right: 12px !important; }
+  
+  .py-2 { padding-top: 4px !important; padding-bottom: 4px !important; }
+  .py-3 { padding-top: 6px !important; padding-bottom: 6px !important; }
+  .py-4 { padding-top: 8px !important; padding-bottom: 8px !important; }
+  
+  /* Gap */
+  .gap-1 { gap: 2px !important; }
+  .gap-2 { gap: 4px !important; }
+  .gap-3 { gap: 6px !important; }
+  .gap-4 { gap: 8px !important; }
+  .gap-5 { gap: 10px !important; }
+  .gap-6 { gap: 12px !important; }
+  
+  /* Margin */
+  .mt-2 { margin-top: 4px !important; }
+  .mt-3 { margin-top: 6px !important; }
+  .mt-4 { margin-top: 8px !important; }
+  .mt-5 { margin-top: 10px !important; }
+  .mt-6 { margin-top: 12px !important; }
+  
+  .mb-2 { margin-bottom: 4px !important; }
+  .mb-3 { margin-bottom: 6px !important; }
+  .mb-4 { margin-bottom: 8px !important; }
+  .mb-5 { margin-bottom: 10px !important; }
+  .mb-6 { margin-bottom: 12px !important; }
+  
+  
+  
+  
+  
+  /* Inputs */
+  input, select, textarea {
+    
+    font-size: 11px !important;
+  }
+  
+  
+  
+  /* Grid columns for mobile */
+  .grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ================================
+   MOBILE (481px - 768px)
+================================ */
+@media (min-width: 481px) and (max-width: 768px) {
+  /* Font sizes */
+  .text-xs { font-size: 11px !important; }
+  .text-sm { font-size: 12px !important; }
+  .text-base { font-size: 13px !important; }
+  .text-md { font-size: 14px !important; }
+  .text-lg { font-size: 15px !important; }
+  .text-xl { font-size: 16px !important; }
+  .text-2xl { font-size: 20px !important; }
+  .text-3xl { font-size: 22px !important; }
+  .text-4xl { font-size: 24px !important; }
+  .text-5xl { font-size: 26px !important; }
+  
+  /* Headings */
+  h1, .h1 { font-size: 24px !important; }
+  h2, .h2 { font-size: 22px !important; }
+  h3, .h3 { font-size: 20px !important; }
+  h4, .h4 { font-size: 18px !important; }
+  h5, .h5 { font-size: 16px !important; }
+  h6, .h6 { font-size: 14px !important; }
+  p { font-size: 13px !important; }
+  
+  /* Padding */
+  .p-1 { padding: 3px !important; }
+  .p-2 { padding: 5px !important; }
+  .p-3 { padding: 8px !important; }
+  .p-4 { padding: 10px !important; }
+  .p-5 { padding: 12px !important; }
+  .p-6 { padding: 14px !important; }
+  
+  .px-3 { padding-left: 8px !important; padding-right: 8px !important; }
+  .px-4 { padding-left: 10px !important; padding-right: 10px !important; }
+  .px-5 { padding-left: 12px !important; padding-right: 12px !important; }
+  .px-6 { padding-left: 14px !important; padding-right: 14px !important; }
+  
+  .py-2 { padding-top: 5px !important; padding-bottom: 5px !important; }
+  .py-3 { padding-top: 8px !important; padding-bottom: 8px !important; }
+  .py-4 { padding-top: 10px !important; padding-bottom: 10px !important; }
+  
+  /* Gap */
+  .gap-1 { gap: 3px !important; }
+  .gap-2 { gap: 5px !important; }
+  .gap-3 { gap: 8px !important; }
+  .gap-4 { gap: 10px !important; }
+  .gap-5 { gap: 12px !important; }
+  .gap-6 { gap: 14px !important; }
+  
+  /* Margin */
+  .mt-2 { margin-top: 5px !important; }
+  .mt-3 { margin-top: 8px !important; }
+  .mt-4 { margin-top: 10px !important; }
+  .mt-5 { margin-top: 12px !important; }
+  .mt-6 { margin-top: 14px !important; }
+  
+  .mb-2 { margin-bottom: 5px !important; }
+  .mb-3 { margin-bottom: 8px !important; }
+  .mb-4 { margin-bottom: 10px !important; }
+  .mb-5 { margin-bottom: 12px !important; }
+  .mb-6 { margin-bottom: 14px !important; }
+  
+ 
+  
+  /* Buttons */
+  button, .btn {
+    font-size: 12px !important;
+  }
+  
+  /* Inputs */
+  input, select, textarea {
+    font-size: 12px !important;
+  }
+}
+
+/* For all "View All" type buttons */
+a.inline-flex.items-center.gap-2,
+button.inline-flex.items-center.gap-2 {
+  @media (min-width: 320px) and (max-width: 480px) {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    gap: 4px !important;
+    
+    span {
+      font-size: 11px !important;
+    }
+    
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+    }
+  }
+  
+  @media (min-width: 481px) and (max-width: 768px) {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+    gap: 6px !important;
+    
+    span {
+      font-size: 12px !important;
+    }
+    
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+    }
+  }
+}

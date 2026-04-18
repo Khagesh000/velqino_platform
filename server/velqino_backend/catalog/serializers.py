@@ -33,10 +33,39 @@ class ProductListSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     
+    # ✅ ADD THESE FIELDS
+    display_price = serializers.SerializerMethodField()
+    display_min_order = serializers.SerializerMethodField()
+    
     class Meta:
         model = Product
-        fields = ['id', 'name', 'slug', 'sku', 'price', 'stock', 'status', 
-                  'primary_image', 'category_name', 'pattern', 'primary_color']
+        fields = ['id', 'name', 'slug', 'sku', 'price', 'retail_price', 'display_price', 
+                  'stock', 'status', 'primary_image', 'category_name', 'pattern', 
+                  'primary_color', 'min_order_qty', 'display_min_order']
+    
+    def get_display_price(self, obj):
+        request = self.context.get('request')
+        
+        # Guest (no login) or Customer - show retail price
+        if not request or not request.user.is_authenticated:
+            return float(obj.retail_price) if obj.retail_price else float(obj.price)
+        
+        if request.user.role == 'customer':
+            return float(obj.retail_price) if obj.retail_price else float(obj.price)
+        
+        # Wholesaler or Retailer - show wholesale price
+        return float(obj.price)
+    
+    def get_display_min_order(self, obj):
+        request = self.context.get('request')
+        
+        if not request or not request.user.is_authenticated:
+            return 1
+        
+        if request.user.role == 'customer':
+            return 1
+        
+        return obj.min_order_qty
     
     def get_primary_image(self, obj):
         primary = obj.images.filter(is_primary=True).first()

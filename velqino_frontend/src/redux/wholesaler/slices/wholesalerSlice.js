@@ -54,12 +54,23 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     return { error };
                 }
             }
-        })
+        }),
+        loginWholesaler: builder.mutation({
+            async queryFn(data) {
+                try {
+                    const response = await wholesalerAPI.login(data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            }
+        }),
     })
 });
 
 export const {
     useRegisterWholesalerMutation,
+    useLoginWholesalerMutation,
     useFetchProfileQuery,
     useUpdateProfileMutation,
     useDeleteProfileMutation,

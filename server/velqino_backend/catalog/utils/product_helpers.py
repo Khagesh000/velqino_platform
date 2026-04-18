@@ -83,3 +83,16 @@ class ProductHelpers:
 
         from ..services.product_service import ProductService
         ProductService.invalidate_export_cache(seller_id)
+
+
+    @staticmethod
+    def search_products_public(search_term):
+        """Public search across all products"""
+        from ..models import Product
+        from django.db.models import Q
+        
+        return Product.objects.filter(
+            Q(name__icontains=search_term) |
+            Q(sku__icontains=search_term) |
+            Q(brand__icontains=search_term)
+        )

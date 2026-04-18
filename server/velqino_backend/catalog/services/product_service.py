@@ -58,17 +58,47 @@ class ProductService:
             return product
     
     @staticmethod
-    def get_products_with_filters(seller_id, filters, page=1, per_page=20):
-        """Get products with filtering, pagination, and indexing"""
-        cache_key = f"product:list:{seller_id}:{hash(str(filters))}:{page}:{per_page}"
-        cached = cache.get(cache_key)
+    def get_products_with_filters(user, filters, page=1, per_page=20):
+        """Get products with filtering, pagination, and indexing based on user role"""
         
+        # ✅ Determine queryset based on user role
+        if not user or not user.is_authenticated:
+            # GUEST - see all products
+            cache_key = f"product:list:guest:{hash(str(filters))}:{page}:{per_page}"
+            queryset = Product.objects.select_related('category').all()
+            
+        elif user.role == 'customer':
+            # CUSTOMER - see only RETAILER products
+            cache_key = f"product:list:customer:{hash(str(filters))}:{page}:{per_page}"
+            queryset = Product.objects.filter(
+                seller__role='retailer'
+            ).select_related('category', 'seller')
+            
+        elif user.role == 'retailer':
+            # RETAILER - see only WHOLESALER products
+            cache_key = f"product:list:retailer:{hash(str(filters))}:{page}:{per_page}"
+            queryset = Product.objects.filter(
+                seller__role='wholesaler'
+            ).select_related('category', 'seller')
+            
+        elif user.role == 'wholesaler':
+            # WHOLESALER - see only THEIR products
+            cache_key = f"product:list:wholesaler:{user.id}:{hash(str(filters))}:{page}:{per_page}"
+            queryset = Product.objects.filter(
+                seller=user
+            ).select_related('category', 'seller')
+        
+        else:
+            # Default - all products
+            cache_key = f"product:list:default:{hash(str(filters))}:{page}:{per_page}"
+            queryset = Product.objects.select_related('category').all()
+        
+        # Check cache
+        cached = cache.get(cache_key)
         if cached:
             return cached
         
-        queryset = Product.objects.filter(seller_id=seller_id).select_related('category')
-        
-        # Apply filters with indexes
+        # Apply filters
         if filters.get('category'):
             queryset = queryset.filter(category_id=filters['category'])
         
@@ -84,11 +114,14 @@ class ProductService:
         if filters.get('pattern'):
             queryset = queryset.filter(pattern=filters['pattern'])
         
-        if filters.get('low_stock'):
-            queryset = ProductHelpers.get_low_stock_products(seller_id)
+        if filters.get('low_stock') and user and user.is_authenticated and user.role == 'wholesaler':
+            queryset = ProductHelpers.get_low_stock_products(user.id)
         
         if filters.get('search'):
-            queryset = ProductHelpers.search_products(filters['search'], seller_id)
+            if user and user.is_authenticated and user.role == 'wholesaler':
+                queryset = ProductHelpers.search_products(filters['search'], user.id)
+            else:
+                queryset = ProductHelpers.search_products_public(filters['search'])
         
         # Paginate
         paginator = Paginator(queryset, per_page)
@@ -102,9 +135,9 @@ class ProductService:
             'total_pages': paginator.num_pages
         }
         
-        cache.set(cache_key, result, 300)  # 5 minutes
+        cache.set(cache_key, result, 300)
         return result
-    
+        
     @staticmethod
     def bulk_operation(seller_id, product_ids, operation, value=None, percentage=None, category_id=None, images=None):
         """Perform bulk operations with advanced features"""

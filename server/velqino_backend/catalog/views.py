@@ -21,13 +21,12 @@ logger = logging.getLogger(__name__)
 # ============= PRODUCT ENDPOINTS =============
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
 def product_list(request):
     """List all products or create new product"""
-    seller_id = request.user.id
     
     if request.method == 'GET':
-        cache_key = f"product:list:{seller_id}:{request.GET.urlencode()}"
+        # ✅ PUBLIC - Anyone can view products
+        cache_key = f"product:list:public:{request.GET.urlencode()}"
         cached_data = cache.get(cache_key)
         
         if cached_data:
@@ -46,8 +45,9 @@ def product_list(request):
         page = int(request.query_params.get('page', 1))
         per_page = int(request.query_params.get('per_page', 20))
         
-        result = ProductService.get_products_with_filters(seller_id, filters, page, per_page)
-        serializer = ProductListSerializer(result['products'], many=True)
+        # ✅ Pass None for seller_id (get ALL products)
+        result = ProductService.get_products_with_filters(request.user, filters, page, per_page)
+        serializer = ProductListSerializer(result['products'], many=True, context={'request': request})
         
         response_data = {
             'products': serializer.data,
@@ -63,7 +63,13 @@ def product_list(request):
         return Response({'status': 'success', 'data': response_data})
     
     elif request.method == 'POST':
-        # Direct creation without serializer for FormData support
+        # ✅ PRIVATE - Only authenticated users can create products
+        if not request.user.is_authenticated:
+            return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
+        
+        seller_id = request.user.id
+        
+        # Rest of your POST code remains EXACTLY THE SAME...
         try:
             print("=" * 60)
             print("🔍 PRODUCT CREATION DEBUG - START")
@@ -84,8 +90,8 @@ def product_list(request):
             # Create product
             product = Product.objects.create(
                 seller=request.user,
-                wholesaler=request.data.get('wholesaler_id') if request.user.role == 'retailer' else None,  # ✅ ADD
-                retailer=request.user if request.user.role == 'retailer' else None,  # ✅ ADD
+                wholesaler=request.data.get('wholesaler_id') if request.user.role == 'retailer' else None,
+                retailer=request.user if request.user.role == 'retailer' else None,
                 name=request.POST.get('name'),
                 sku=sku,
                 price=request.POST.get('price'),

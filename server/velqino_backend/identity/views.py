@@ -78,6 +78,56 @@ def register_wholesaler(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['POST'])
+def wholesaler_login(request):
+    """
+    Wholesaler login
+    """
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        user = User.objects.filter(email=email).first()
+        
+        if not user or not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if user.role != 'wholesaler':
+            return Response({
+                'status': 'error',
+                'message': 'Account is not a wholesaler account'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        refresh = RefreshToken.for_user(user)
+        
+        # Get wholesaler profile data
+        profile = WholesalerProfile.objects.get(user=user)
+        profile_serializer = WholesalerProfileSerializer(profile)
+        
+        return Response({
+            'status': 'success',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id,
+            'role': 'wholesaler',
+            'data': profile_serializer.data
+        })
+        
+    except WholesalerProfile.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Wholesaler profile not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Wholesaler login failed: {e}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_wholesaler_profile(request, user_id):

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, LogIn, Store, Shield } from '../../utils/icons';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
+import { useLoginWholesalerMutation } from '@/redux/wholesaler/slices/wholesalerSlice';
 
 export default function WholesalerLoginModal({ isOpen, onClose, onLogin }) {
   const router = useRouter();
@@ -15,6 +17,7 @@ export default function WholesalerLoginModal({ isOpen, onClose, onLogin }) {
     rememberMe: false
   });
   const [error, setError] = useState('');
+  const [loginWholesaler] = useLoginWholesalerMutation();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -26,23 +29,26 @@ export default function WholesalerLoginModal({ isOpen, onClose, onLogin }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      setError('Please enter both email and password');
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      // API call would go here
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onLogin?.({ name: 'Wholesale Store', email: formData.email });
-    } catch (err) {
-      setError('Invalid credentials. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  e.preventDefault();
+  if (!formData.email || !formData.password) {
+    toast.error('Please enter both email and password');
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const response = await loginWholesaler({ email: formData.email, password: formData.password }).unwrap();
+    localStorage.setItem('access', response.access);
+    localStorage.setItem('refresh', response.refresh);
+    localStorage.setItem('user_role', 'wholesaler');
+    toast.success('Login successful! Redirecting...');
+    onClose();
+    setTimeout(() => router.push('/wholesaler/wholesalerdashboard'), 1000);
+  } catch (err) {
+    toast.error(err?.data?.message || 'Invalid credentials');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 

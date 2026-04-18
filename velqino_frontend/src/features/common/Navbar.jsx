@@ -20,6 +20,8 @@ export default function Navbar() {
   const [userRole, setUserRole] = useState(null);
   const [userName, setUserName] = useState('');
   
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   // Modal states
   const [isWholesalerLoginOpen, setIsWholesalerLoginOpen] = useState(false);
   const [isRetailerLoginOpen, setIsRetailerLoginOpen] = useState(false);
@@ -45,6 +47,22 @@ export default function Navbar() {
       setUserName(name || 'User');
     }
   }, []);
+
+// Add this useEffect
+useEffect(() => {
+  const handleScroll = () => {
+    if (window.scrollY > lastScrollY && window.scrollY > 100) {
+      setIsVisible(false); // Scrolling down - hide navbar
+    } else {
+      setIsVisible(true); // Scrolling up - show navbar
+    }
+    setLastScrollY(window.scrollY);
+  };
+
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, [lastScrollY]);
+
 
   // Add this useEffect with your other useEffects
 useEffect(() => {
@@ -110,9 +128,20 @@ useEffect(() => {
   };
 
   const handleRoleLogin = (role) => {
-    if (role === 'wholesaler') setIsWholesalerLoginOpen(true);
-    else if (role === 'retailer') setIsRetailerLoginOpen(true);
-    else setIsCustomerLoginOpen(true);
+    const token = localStorage.getItem('access');
+    const userRole = localStorage.getItem('user_role');
+    
+    // If already logged in with same role, redirect directly
+    if (token && userRole === role) {
+      if (role === 'wholesaler') router.push('/wholesaler/wholesalerdashboard');
+      else if (role === 'retailer') router.push('/retailer/retailerdashboard');
+      else router.push('/customer/dashboard');
+    } else {
+      // Otherwise open login modal
+      if (role === 'wholesaler') setIsWholesalerLoginOpen(true);
+      else if (role === 'retailer') setIsRetailerLoginOpen(true);
+      else setIsCustomerLoginOpen(true);
+    }
   };
 
   const handleLoginSuccess = (role, userData) => {
@@ -122,12 +151,10 @@ useEffect(() => {
     setUserRole(role);
     setUserName(userData.name || userData.email?.split('@')[0]);
     
-    // Close all modals
     setIsWholesalerLoginOpen(false);
     setIsRetailerLoginOpen(false);
     setIsCustomerLoginOpen(false);
     
-    // Redirect based on role
     if (role === 'wholesaler') router.push('/wholesaler/wholesalerdashboard');
     else if (role === 'retailer') router.push('/retailer/retailerdashboard');
     else router.push('/customer/dashboard');
@@ -161,8 +188,8 @@ useEffect(() => {
 
   return (
     <>
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4">
+      <nav className={`bg-white border-b border-gray-200 fixed top-0 w-full z-50 shadow-sm transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+  <div className="container mx-auto px-4 py-2">
           {/* Top Bar - Free Shipping Banner */}
           <div className="hidden lg:flex items-center justify-between py-1.5 border-b border-gray-100 text-xs">
             <div className="flex items-center gap-4">

@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('wholesaler/register/', views.register_wholesaler),
+    path('wholesaler/login/', views.wholesaler_login, name='wholesaler-login'),
     path('wholesaler/profile/<int:user_id>/', views.get_wholesaler_profile),
     path('wholesaler/profile/<int:user_id>/update/', views.update_wholesaler_profile),
     path('wholesaler/profile/<int:user_id>/delete/', views.delete_wholesaler_profile),

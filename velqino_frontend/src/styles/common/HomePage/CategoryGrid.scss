@@ -1,0 +1,73 @@
+.category-grid-section {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-grid-item {
+  animation: cardAppear 0.4s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes cardAppear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-card {
+  .category-card-image {
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  &:hover .category-card-image {
+    transform: scale(1.1);
+  }
+}
+
+/* Loading spinner animation */
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .category-grid-item {
+    animation-delay: calc(var(--index, 0) * 0.03s);
+  }
+}
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .category-grid-section,
+  .category-grid-item,
+  .category-card-image,
+  .animate-spin {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .category-card:hover .category-card-image {
+    transform: none;
+  }
+}

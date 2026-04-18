@@ -1,0 +1,44 @@
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animation-delay-100 {
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
+/* Progress bar animation */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duration-5000 {
+  transition-duration: 5000ms;
+}

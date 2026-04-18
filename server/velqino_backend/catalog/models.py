@@ -59,6 +59,21 @@ class Product(models.Model):
     sku = models.CharField(max_length=100, unique=True, db_index=True, blank=True, null=True)
 
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+
+    retail_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)],
+        default=0,
+        help_text="MRP for customers"
+    )
+    
+    min_order_qty = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="Minimum quantity per order"
+    )
+    
     compare_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
 

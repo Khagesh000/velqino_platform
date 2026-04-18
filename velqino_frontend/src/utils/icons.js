@@ -189,6 +189,23 @@ import {
   Wifi,
 
   LogIn,
+  Flame,
+  Snowflake,
+
+  Sun,
+  Quote,
+  Headphones,
+
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  Linkedin,
+  Apple,
+  GitCompare,
+
+  ChevronUp,
+  Loader2,
 
 
 } from 'lucide-react';
@@ -366,6 +383,24 @@ export {
   Wifi,
 
   LogIn,
+  Flame,
+  Snowflake,
+
+  Sun,
+  Quote,
+  Headphones,
+
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  Linkedin,
+  Apple,
+  GitCompare,
+
+  ChevronUp,
+  Loader2,
+
 
 
 };
