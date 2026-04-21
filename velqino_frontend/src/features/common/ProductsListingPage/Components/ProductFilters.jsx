@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Star, X } from '../../../../../utils/icons';
-import '../../../../../styles/common/Products/ProductsListingPage/ProductFilters.scss'
+import { ChevronDown, ChevronUp, Star, X } from '../../../../utils/icons';
+import '../../../../styles/common/ProductsListingPage/ProductFilters.scss'
 
 export default function ProductFilters() {
   const [openCategories, setOpenCategories] = useState(true);

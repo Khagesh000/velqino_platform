@@ -206,10 +206,6 @@ import {
 
   ChevronUp,
   Loader2,
-  ZoomIn,
-  RotateCcw,
-  ShieldCheck,
-  ArrowLeft,
 
 
 } from 'lucide-react';
@@ -404,10 +400,6 @@ export {
 
   ChevronUp,
   Loader2,
-  ZoomIn,
-  RotateCcw,
-  ShieldCheck,
-  ArrowLeft,
 
 
 

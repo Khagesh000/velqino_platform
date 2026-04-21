@@ -31,6 +31,7 @@ export default function HomePage() {
       <BenefitsSection />
       <RecentlyViewed />
       <NewsletterSection />
+      <Footer />
       <FloatingElements />
     </div>
   )

@@ -154,7 +154,7 @@ export default function CategoryGrid() {
     {/* View All Categories Button */}
     <div className="text-center mt-8 sm:mt-12">
   <Link
-    href="/product/productlistingpage"
+    href="/productslistingpage"
     className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
   >
     <span>View All Categories</span>

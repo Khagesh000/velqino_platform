@@ -61,19 +61,6 @@ const productsAPI = {
         responseType: 'blob'
     }),
 
-      // Address endpoints (add to existing productsAPI)
-  getAddresses: () =>
-      API.get('identity/addresses/'),
-
-  createAddress: (data) =>
-      API.post('identity/addresses/', data),
-
-  updateAddress: (addressId, data) =>
-      API.put(`identity/addresses/${addressId}/`, data),
-
-  deleteAddress: (addressId) =>
-      API.delete(`identity/addresses/${addressId}/`),
-
 };
 
 export default productsAPI;

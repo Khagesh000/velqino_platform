@@ -1,5 +1,5 @@
-import PageWrapper from '@/features/common/PageWrapper';
-import HomePage from '@/features/common/HomePage/HomePage';
+import Navbar from "@/features/common/Navbar";
+import HomePage from '@/features/common/HomePage/HomePage'
 
 export const viewport = {
   width: "device-width",
@@ -13,8 +13,9 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <PageWrapper>
+    <>
+      <Navbar />
       <HomePage />
-    </PageWrapper>
+    </>
   );
 }

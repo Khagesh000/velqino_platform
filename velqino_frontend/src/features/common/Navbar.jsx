@@ -3,11 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, ShoppingCart, User, ChevronDown, Menu, X, Store, Package, LogIn, Heart, Truck, Shield, Bell, Sun, Moon } from '../../utils/icons';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import WholesalerLoginModal from "./WholesalerLoginModal";
 import RetailerLoginModal from "./RetailerLoginModal";
 import CustomerLoginModal from "./CustomerLoginModal";
-import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
 
 export default function Navbar() {
   const router = useRouter();
@@ -16,6 +15,7 @@ export default function Navbar() {
   const [isBecomeSellerOpen, setIsBecomeSellerOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [cartCount, setCartCount] = useState(3);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [userName, setUserName] = useState('');
@@ -34,14 +34,6 @@ export default function Navbar() {
   
   const citiesHoverTimeout = useRef(null);
   const sellerHoverTimeout = useRef(null);
-
-  // Add this at the top of Navbar component
-  const pathname = usePathname();
-  const isHomePage = pathname === '/';
-
-  // Fetch cart count
-  const { data: cartData, refetch: refetchCart } = useGetCartQuery();
-  const cartCount = cartData?.data?.item_count || 0;
 
   useEffect(() => {
     setMounted(true);
@@ -70,12 +62,6 @@ useEffect(() => {
   window.addEventListener('scroll', handleScroll);
   return () => window.removeEventListener('scroll', handleScroll);
 }, [lastScrollY]);
-
-useEffect(() => {
-  if (mounted && (isLoggedIn || !isLoggedIn)) {
-    refetchCart();
-  }
-}, [isLoggedIn, mounted, refetchCart]);
 
 
   // Add this useEffect with your other useEffects
@@ -190,7 +176,7 @@ useEffect(() => {
     return (
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-2">
+          <div className="flex items-center justify-between h-16">
             <div className="flex-shrink-0">
               <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">VELTRIX</Link>
             </div>
@@ -205,7 +191,6 @@ useEffect(() => {
       <nav className={`bg-white border-b border-gray-200 fixed top-0 w-full z-50 shadow-sm transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
   <div className="container mx-auto px-4 py-2">
           {/* Top Bar - Free Shipping Banner */}
-          {isHomePage && (
           <div className="hidden lg:flex items-center justify-between py-1.5 border-b border-gray-100 text-xs">
             <div className="flex items-center gap-4">
               <span className="text-green-600 font-medium">✓ Free Shipping on orders above ₹999</span>
@@ -229,7 +214,6 @@ useEffect(() => {
               </button>
             </div>
           </div>
-        )}
 
           {/* Main Navbar */}
           <div className="flex items-center justify-between h-16 lg:h-20">
@@ -343,7 +327,7 @@ useEffect(() => {
             {/* Right Section - Cart & User */}
             <div className="flex items-center gap-4">
               {/* Cart */}
-              <button onClick={() => handleNavigation('/product/cartpage')} className="relative text-gray-700 hover:text-primary-600 transition-all p-1.5">
+              <button onClick={() => handleNavigation('/cart')} className="relative text-gray-700 hover:text-primary-600 transition-all p-1.5">
                 <ShoppingCart size={24} />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium">
@@ -478,7 +462,7 @@ useEffect(() => {
                 <span className="text-sm font-medium">Wholesaler Sign In</span>
               </button>
               
-              <button onClick={() => handleNavigation('/product/cartpage')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 border-b border-gray-100">
+              <button onClick={() => handleNavigation('/cart')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 border-b border-gray-100">
                 <ShoppingCart size={18} />
                 <span className="text-sm font-medium">Cart ({cartCount})</span>
               </button>

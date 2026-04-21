@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.db import transaction
-from .models import User, WholesalerProfile, RetailerProfile, Address
+from .models import User, WholesalerProfile, RetailerProfile
 from .serializers import (
     WholesalerProfileSerializer,
     WholesalerProfileCreateSerializer,
@@ -14,8 +14,7 @@ from .serializers import (
     CustomerProfile,
     CustomerProfileSerializer,
     CustomerProfileUpdateSerializer,
-    CustomerRegisterSerializer,
-    AddressSerializer
+    CustomerRegisterSerializer
 )
 from .tasks import verify_wholesaler_profile
 from .utils.cache_utils import CacheService
@@ -693,43 +692,3 @@ def list_customers(request):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def user_addresses(request):
-    """Get or create user addresses"""
-    
-    if request.method == 'GET':
-        addresses = Address.objects.filter(user=request.user)
-        serializer = AddressSerializer(addresses, many=True)
-        return Response({'status': 'success', 'data': serializer.data})
-    
-    elif request.method == 'POST':
-        serializer = AddressSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response({'status': 'success', 'data': serializer.data}, status=201)
-        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
-
-
-@api_view(['PUT', 'DELETE'])
-@permission_classes([IsAuthenticated])
-def address_detail(request, address_id):
-    """Update or delete address"""
-    
-    try:
-        address = Address.objects.get(id=address_id, user=request.user)
-    except Address.DoesNotExist:
-        return Response({'status': 'error', 'message': 'Address not found'}, status=404)
-    
-    if request.method == 'PUT':
-        serializer = AddressSerializer(address, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'status': 'success', 'data': serializer.data})
-        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
-    
-    elif request.method == 'DELETE':
-        address.delete()
-        return Response({'status': 'success', 'message': 'Address deleted'})

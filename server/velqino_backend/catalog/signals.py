@@ -17,4 +17,4 @@ def update_product_stock_on_order(sender, instance, created, **kwargs):
 """
 
 # ✅ Just print that signals are ready (temporary)
-print("[OK] Signals file loaded - Waiting for orders app")
+print("✅ Signals file loaded - Waiting for orders app")
