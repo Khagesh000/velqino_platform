@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile
+from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile, Address
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -100,3 +100,11 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     def user_email(self, obj):
         return obj.user.email
     user_email.short_description = 'Email'
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'full_name', 'phone', 'city', 'pincode', 'is_default', 'created_at')
+    list_filter = ('is_default', 'city', 'address_type')
+    search_fields = ('user__email', 'user__mobile', 'full_name', 'phone', 'pincode')
+    list_editable = ('is_default',)

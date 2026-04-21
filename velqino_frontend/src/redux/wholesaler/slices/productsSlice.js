@@ -4,7 +4,7 @@ import productsAPI from '../Api/productsAPI';
 export const productsApi = createApi({
     reducerPath: 'productsApi',
     baseQuery: fakeBaseQuery(),
-    tagTypes: ['Products', 'Product', 'Categories'],
+    tagTypes: ['Products', 'Product', 'Categories', 'Addresses'],
     endpoints: (builder) => ({
         // Product CRUD
         getProducts: builder.query({
@@ -96,18 +96,67 @@ export const productsApi = createApi({
         }),
         
         
-        // Add this inside endpoints (builder)
-aiCreateProduct: builder.mutation({
-  async queryFn(formData) {
-    try {
-      const response = await productsAPI.aiCreate(formData);
-      return { data: response.data };
-    } catch (error) {
-      return { error };
-    }
-  },
-  invalidatesTags: ['Products']
-}),
+                // Add this inside endpoints (builder)
+        aiCreateProduct: builder.mutation({
+        async queryFn(formData) {
+            try {
+            const response = await productsAPI.aiCreate(formData);
+            return { data: response.data };
+            } catch (error) {
+            return { error };
+            }
+        },
+        invalidatesTags: ['Products']
+        }),
+
+        getUserAddresses: builder.query({
+            async queryFn() {
+                try {
+                    const response = await productsAPI.getAddresses();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['Addresses']
+        }),
+
+        createAddress: builder.mutation({
+            async queryFn(data) {
+                try {
+                    const response = await productsAPI.createAddress(data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Addresses']
+        }),
+
+        updateAddress: builder.mutation({
+            async queryFn({ addressId, data }) {
+                try {
+                    const response = await productsAPI.updateAddress(addressId, data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Addresses']
+        }),
+
+        deleteAddress: builder.mutation({
+            async queryFn(addressId) {
+                try {
+                    await productsAPI.deleteAddress(addressId);
+                    return { data: addressId };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Addresses']
+        }),
+
     })
 });
 
@@ -120,4 +169,8 @@ export const {
     useGetLowStockProductsQuery,
     useBulkActionMutation,
     useAiCreateProductMutation,
+    useGetUserAddressesQuery,
+    useCreateAddressMutation,
+    useUpdateAddressMutation,
+    useDeleteAddressMutation,
 } = productsApi;
