@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, RegexValidator
 from django.utils import timezone
+from django.conf import settings
 import json
 
 
@@ -231,3 +232,47 @@ class CustomerProfile(models.Model):
     
     def __str__(self):
         return f"{self.full_name} ({self.user.email})"
+    
+
+class Address(models.Model):
+    """User addresses with indexing"""
+    
+    ADDRESS_TYPES = (
+        ('home', 'Home'),
+        ('work', 'Work'),
+        ('other', 'Other'),
+    )
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses', db_index=True)
+    
+    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPES, default='home')
+    full_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20)
+    
+    street = models.TextField()
+    city = models.CharField(max_length=100, db_index=True)
+    state = models.CharField(max_length=100)
+    pincode = models.CharField(max_length=10, db_index=True)
+    country = models.CharField(max_length=100, default='India')
+    
+    landmark = models.CharField(max_length=255, blank=True)
+    is_default = models.BooleanField(default=False, db_index=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_default']),
+            models.Index(fields=['pincode']),
+            models.Index(fields=['city']),
+        ]
+        ordering = ['-is_default', '-created_at']
+    
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            Address.objects.filter(user=self.user, is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.full_name} - {self.city}"

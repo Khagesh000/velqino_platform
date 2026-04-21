@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile
+from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile, Address
 
 class UserSerializer(serializers.ModelSerializer):
     """Serialize User model - basic user info"""
@@ -248,3 +248,10 @@ class CustomerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerProfile
         fields = ['full_name', 'phone', 'address_line1', 'address_line2', 'city', 'state', 'pincode', 'landmark']
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['id', 'address_type', 'full_name', 'phone', 'street', 'city', 'state', 'pincode', 'country', 'landmark', 'is_default', 'created_at']
+        read_only_fields = ['id', 'created_at']

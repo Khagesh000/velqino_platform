@@ -58,3 +58,5 @@ class ProductVariantAdmin(admin.ModelAdmin):
     list_display = ['id', 'product', 'color', 'size', 'sku', 'stock', 'price']
     list_filter = ['product']
     search_fields = ['sku', 'product__name']
+
+

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Search, X, Grid, List, Filter, ChevronDown } from '../../../../utils/icons';
+import { Search, X, Grid, List, Filter, ChevronDown } from '../../../../../utils/icons';
 
 export default function ProductTopBar({ onMobileFilterClick }) {
   const [searchQuery, setSearchQuery] = useState('');

@@ -18,6 +18,8 @@ urlpatterns = [
     path('customer/login/', views.customer_login, name='customer-login'),
     path('customer/profile/<int:user_id>/', views.customer_profile, name='customer-profile'),
     path('customers/list/', views.list_customers, name='list-customers'),
-
+    
+    path('addresses/', views.user_addresses, name='user-addresses'),
+    path('addresses/<int:address_id>/', views.address_detail, name='address-detail'),
     
 ]
