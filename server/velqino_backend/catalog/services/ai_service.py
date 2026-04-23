@@ -37,13 +37,17 @@ class AIService:
     # =========================
     @staticmethod
     def process_bulk_video(seller_id, video_data, product_count, common_price, common_cost, 
-                           category_id, name_prefix, brand, description, grid_rows, grid_columns, sizes=None, task_id=None):
+                        category_id, name_prefix, brand, description, grid_rows, grid_columns, 
+                        upload_mode='bulk_single_product', sizes=None, task_id=None):
         """
         Process one video containing multiple products in grid layout
+        - bulk_single_product: ONE product with ALL detected items
+        - front_back: Separate product per detected item
         """
-        print(f"\n🚀 Processing video with {product_count} products in {grid_rows}x{grid_columns} grid")\
+        print(f"\n🚀 Processing video with {product_count} products in {grid_rows}x{grid_columns} grid")
+        print(f"📌 Upload mode: {upload_mode}")
         
-        from ..models import Category  # adjust import path if needed
+        from ..models import Category
         if not Category.objects.filter(id=category_id).exists():
             raise ValueError(f"category_id {category_id} does not exist. Cannot create products.")
         
@@ -67,40 +71,28 @@ class AIService:
         
         AIService._send_progress(channel_layer, room_group_name, 30, "Extracted front and back frames")
         
-        # Step 3: Process each product
         created_products = []
         
-        for idx, product_frames in enumerate(products_data[:product_count]):
-            progress = 50 + int((idx / product_count) * 40)
-            AIService._send_progress(
-                channel_layer, room_group_name, progress, 
-                f"Processing product {idx+1}/{product_count}"
-            )
-            
-            # Get front and back images
-            front_img = product_frames.get('front')
-            back_img = product_frames.get('back')
-            
-            if not front_img:
-                continue
-            
-            # Remove background
-            front_cleaned = AIService._process_final_image(front_img)
-            back_cleaned = AIService._process_final_image(back_img) if back_img else None
-
-            # Detect pattern and colors
-            pattern = AIService._detect_pattern(front_img)
-            colors = AIService._detect_colors(front_img)
-            primary_color = colors[0]['name'] if colors else ''
+        # ✅ BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL ITEMS
+        if upload_mode == 'bulk_single_product':
+            AIService._send_progress(channel_layer, room_group_name, 50, "Creating one bulk product with all items...")
             
             # Generate product name
-            product_name = f"{name_prefix} {idx+1}"
-            if pattern and pattern != 'solid':
-                product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
-            elif primary_color:
-                product_name = f"{primary_color} {name_prefix}"
+            product_name = f"{name_prefix} (Bulk Pack)"
             
-            # Create product
+            # Detect pattern and colors from first item
+            first_item = products_data[0] if products_data else {}
+            front_img_data = first_item.get('front')
+            if front_img_data:
+                front_img = Image.open(io.BytesIO(front_img_data))
+                pattern = AIService._detect_pattern(front_img)
+                colors = AIService._detect_colors(front_img)
+                primary_color = colors[0]['name'] if colors else ''
+            else:
+                pattern = ''
+                primary_color = ''
+            
+            # Create ONE product
             product = Product.objects.create(
                 seller_id=seller_id,
                 name=product_name,
@@ -111,47 +103,150 @@ class AIService:
                 description=description,
                 pattern=pattern,
                 primary_color=primary_color,
+                stock=len(products_data),  # Stock = number of detected items
+                min_order_qty=len(products_data),  # Min order = number of items
                 status='active'
             )
             
-            # Save images
-            if front_cleaned:
-                ProductImage.objects.create(
-                    product=product,
-                    image=ContentFile(front_cleaned, name=f"{product.sku}_front.png"),
-                    is_primary=True,
-                    is_front=True,
-                    order=0
-                )
-            
-            if back_cleaned:
-                ProductImage.objects.create(
-                    product=product,
-                    image=ContentFile(back_cleaned, name=f"{product.sku}_back.png"),
-                    is_primary=False,
-                    is_front=False,
-                    order=1
-                )
+            # Save ALL detected items as images to the same product
+            for idx, product_frames in enumerate(products_data[:product_count]):
+                front_img_data = product_frames.get('front')
+                back_img_data = product_frames.get('back')
+                
+                if not front_img_data:
+                    continue
+                
+                # Process images
+                front_cleaned = AIService._process_final_image(front_img_data)
+                back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
+                
+                # Save front image
+                if front_cleaned:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(front_cleaned, name=f"{product.sku}_item_{idx+1}_front.png"),
+                        is_primary=(idx == 0),
+                        is_front=True,
+                        order=idx * 2
+                    )
+                
+                # Save back image
+                if back_cleaned:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(back_cleaned, name=f"{product.sku}_item_{idx+1}_back.png"),
+                        is_primary=False,
+                        is_front=False,
+                        order=idx * 2 + 1
+                    )
+                
+                # Update progress
+                progress = 50 + int((idx / product_count) * 40)
+                AIService._send_progress(channel_layer, room_group_name, progress, f"Processing item {idx+1}/{product_count}")
             
             created_products.append(product.id)
+            
+            # Add size variants if provided
             if sizes:
-                import uuid
                 for size in sizes:
                     ProductVariant.objects.create(
                         product=product,
                         size=size,
                         color=primary_color or '',
                         sku=f"{product.sku}-{size}",
-                        stock=0,  # wholesaler updates stock later
+                        stock=0,
                         price=common_price
                     )
-                print(f"✅ Created {len(sizes)} size variants for {product_name}")
+                print(f"✅ Created {len(sizes)} size variants for bulk product")
+            
+            print(f"✅ Created BULK product with {len(products_data)} items")
+        
+        # ✅ FRONT_BACK MODE - Separate product per detected item
+        else:
+            for idx, product_frames in enumerate(products_data[:product_count]):
+                progress = 50 + int((idx / product_count) * 40)
+                AIService._send_progress(
+                    channel_layer, room_group_name, progress, 
+                    f"Processing product {idx+1}/{product_count}"
+                )
+                
+                # Get front and back images
+                front_img_data = product_frames.get('front')
+                back_img_data = product_frames.get('back')
+                
+                if not front_img_data:
+                    continue
+                
+                # Remove background
+                front_cleaned = AIService._process_final_image(front_img_data)
+                back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
+
+                # Detect pattern and colors
+                front_img = Image.open(io.BytesIO(front_img_data))
+                pattern = AIService._detect_pattern(front_img)
+                colors = AIService._detect_colors(front_img)
+                primary_color = colors[0]['name'] if colors else ''
+                
+                # Generate product name
+                product_name = f"{name_prefix} {idx+1}"
+                if pattern and pattern != 'solid':
+                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                elif primary_color:
+                    product_name = f"{primary_color} {name_prefix}"
+                
+                # Create product
+                product = Product.objects.create(
+                    seller_id=seller_id,
+                    name=product_name,
+                    price=common_price,
+                    cost=common_cost,
+                    category_id=category_id,
+                    brand=brand,
+                    description=description,
+                    pattern=pattern,
+                    primary_color=primary_color,
+                    status='active'
+                )
+                
+                # Save images
+                if front_cleaned:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(front_cleaned, name=f"{product.sku}_front.png"),
+                        is_primary=True,
+                        is_front=True,
+                        order=0
+                    )
+                
+                if back_cleaned:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(back_cleaned, name=f"{product.sku}_back.png"),
+                        is_primary=False,
+                        is_front=False,
+                        order=1
+                    )
+                
+                created_products.append(product.id)
+                
+                if sizes:
+                    for size in sizes:
+                        ProductVariant.objects.create(
+                            product=product,
+                            size=size,
+                            color=primary_color or '',
+                            sku=f"{product.sku}-{size}",
+                            stock=0,
+                            price=common_price
+                        )
+                    print(f"✅ Created {len(sizes)} size variants for {product_name}")
         
         AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
         
         return {
             'products_created': len(created_products),
-            'product_ids': created_products
+            'product_ids': created_products,
+            'mode': upload_mode
         }
     
     # =========================
@@ -159,11 +254,13 @@ class AIService:
     # =========================
     @staticmethod
     def process_bulk_images(seller_id, images_data, common_price, common_cost,
-                        category_id, name_prefix, brand, description,
-                        upload_mode='front_back', sizes=None, task_id=None):
+                            category_id, name_prefix, brand, description,
+                            upload_mode='bulk_single_product', sizes=None, task_id=None):
         """
-        Process multiple images — supports front only OR front+back pairs
-        upload_mode: 'front_only' or 'front_back'
+        Process multiple images — supports:
+        - bulk_single_product: ONE product with ALL images
+        - front_back: Create products with front+back pairs
+        - front_only: Create separate product per image
         """
         print(f"\n🚀 Processing {len(images_data)} images (mode: {upload_mode})")
 
@@ -176,50 +273,27 @@ class AIService:
 
         AIService._send_progress(channel_layer, room_group_name, 10, "Processing images...")
 
-        # ✅ Decide product count based on mode
-        if upload_mode == 'front_only':
-            products_to_create = len(images_data)
-        else:
-            products_to_create = len(images_data) // 2
-
-        print(f"📦 Creating {products_to_create} products")
-
         created_products = []
 
-        for idx in range(products_to_create):
-
-            # ✅ Get front and back based on mode
-            if upload_mode == 'front_only':
-                front_img_data = images_data[idx]
-                back_img_data = None
-            else:
-                front_img_data = images_data[idx * 2]
-                back_img_data = images_data[idx * 2 + 1] if (idx * 2 + 1) < len(images_data) else None
-
-            progress = 10 + int((idx / products_to_create) * 80)
-            AIService._send_progress(
-                channel_layer, room_group_name, progress,
-                f"Processing product {idx+1}/{products_to_create}"
-            )
-
-            # ✅ Process images — background removal, HD, center on canvas
-            front_cleaned = AIService._process_final_image(front_img_data)
-            back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
-
-            # ✅ Detect pattern and colors from front image
-            front_img = Image.open(io.BytesIO(front_img_data))
-            pattern = AIService._detect_pattern(front_img)
-            colors = AIService._detect_colors(front_img)
+        # ✅ BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL IMAGES
+        if upload_mode == 'bulk_single_product':
+            AIService._send_progress(channel_layer, room_group_name, 20, "Creating one bulk product with all images...")
+            
+            # Detect pattern and colors from first image
+            first_img_data = images_data[0]
+            first_img = Image.open(io.BytesIO(first_img_data))
+            pattern = AIService._detect_pattern(first_img)
+            colors = AIService._detect_colors(first_img)
             primary_color = colors[0]['name'] if colors else ''
-
-            # ✅ Generate product name
-            product_name = f"{name_prefix} {idx+1}"
+            
+            # Generate product name
+            product_name = f"{name_prefix} (Bulk Pack)"
             if pattern and pattern != 'solid':
-                product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                product_name = f"{pattern.capitalize()} {primary_color} {name_prefix} (Bulk)"
             elif primary_color:
-                product_name = f"{primary_color} {name_prefix}"
-
-            # ✅ Create product
+                product_name = f"{primary_color} {name_prefix} (Bulk)"
+            
+            # Create ONE product
             product = Product.objects.create(
                 seller_id=seller_id,
                 name=product_name,
@@ -230,72 +304,198 @@ class AIService:
                 description=description,
                 pattern=pattern,
                 primary_color=primary_color,
+                stock=len(images_data),  # Stock = number of images
+                min_order_qty=len(images_data),  # Min order = number of images
                 status='active'
             )
-
-            # ✅ Save front image — always PNG, 1200x1200
-            if front_cleaned:
-                ProductImage.objects.create(
-                    product=product,
-                    image=ContentFile(front_cleaned, name=f"{product.sku}_front.png"),
-                    is_primary=True,
-                    is_front=True,
-                    order=0
-                )
-                print(f"✅ Saved front image for product {idx+1}")
-
-            # ✅ Save back image — only if provided
-            if back_cleaned:
-                ProductImage.objects.create(
-                    product=product,
-                    image=ContentFile(back_cleaned, name=f"{product.sku}_back.png"),
-                    is_primary=False,
-                    is_front=False,
-                    order=1
-                )
-                print(f"✅ Saved back image for product {idx+1}")
-
+            
+            # Save ALL images to the same product
+            for idx, img_data in enumerate(images_data):
+                progress = 20 + int((idx / len(images_data)) * 70)
+                AIService._send_progress(channel_layer, room_group_name, progress, f"Saving image {idx+1}/{len(images_data)}")
+                
+                # Process image
+                cleaned_img = AIService._process_final_image(img_data)
+                
+                if cleaned_img:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(cleaned_img, name=f"{product.sku}_image_{idx+1}.png"),
+                        is_primary=(idx == 0),
+                        is_front=True,
+                        order=idx
+                    )
+                    print(f"✅ Saved image {idx+1} for bulk product")
+            
             created_products.append(product.id)
+            
+            # Add size variants if provided
             if sizes:
-                import uuid
                 for size in sizes:
                     ProductVariant.objects.create(
                         product=product,
                         size=size,
                         color=primary_color or '',
                         sku=f"{product.sku}-{size}",
-                        stock=0,  # wholesaler updates stock later
+                        stock=0,
                         price=common_price
                     )
-                print(f"✅ Created {len(sizes)} size variants for {product_name}")
+                print(f"✅ Created {len(sizes)} size variants for bulk product")
+            
+            print(f"✅ Created BULK product with {len(images_data)} images")
+        
+        # ✅ FRONT_BACK MODE - Separate product per front+back pair
+        elif upload_mode == 'front_back':
+            products_to_create = len(images_data) // 2
+            print(f"📦 Front+Back mode: Creating {products_to_create} products")
+            
+            for idx in range(products_to_create):
+                front_img_data = images_data[idx * 2]
+                back_img_data = images_data[idx * 2 + 1] if (idx * 2 + 1) < len(images_data) else None
+
+                progress = 10 + int((idx / products_to_create) * 80)
+                AIService._send_progress(
+                    channel_layer, room_group_name, progress,
+                    f"Processing product {idx+1}/{products_to_create}"
+                )
+
+                # Process images
+                front_cleaned = AIService._process_final_image(front_img_data)
+                back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
+
+                # Detect pattern and colors
+                front_img = Image.open(io.BytesIO(front_img_data))
+                pattern = AIService._detect_pattern(front_img)
+                colors = AIService._detect_colors(front_img)
+                primary_color = colors[0]['name'] if colors else ''
+
+                # Generate product name
+                product_name = f"{name_prefix} {idx+1}"
+                if pattern and pattern != 'solid':
+                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                elif primary_color:
+                    product_name = f"{primary_color} {name_prefix}"
+
+                # Create product
+                product = Product.objects.create(
+                    seller_id=seller_id,
+                    name=product_name,
+                    price=common_price,
+                    cost=common_cost,
+                    category_id=category_id,
+                    brand=brand,
+                    description=description,
+                    pattern=pattern,
+                    primary_color=primary_color,
+                    status='active'
+                )
+
+                # Save images
+                if front_cleaned:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(front_cleaned, name=f"{product.sku}_front.png"),
+                        is_primary=True,
+                        is_front=True,
+                        order=0
+                    )
+
+                if back_cleaned:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(back_cleaned, name=f"{product.sku}_back.png"),
+                        is_primary=False,
+                        is_front=False,
+                        order=1
+                    )
+
+                created_products.append(product.id)
+                
+                if sizes:
+                    for size in sizes:
+                        ProductVariant.objects.create(
+                            product=product,
+                            size=size,
+                            color=primary_color or '',
+                            sku=f"{product.sku}-{size}",
+                            stock=0,
+                            price=common_price
+                        )
+                    print(f"✅ Created {len(sizes)} size variants for {product_name}")
+        
+        # ✅ FRONT_ONLY MODE - Separate product per image
+        else:  # 'front_only' mode
+            products_to_create = len(images_data)
+            print(f"📦 Front Only mode: Creating {products_to_create} products")
+            
+            for idx, img_data in enumerate(images_data):
+                progress = 10 + int((idx / products_to_create) * 80)
+                AIService._send_progress(
+                    channel_layer, room_group_name, progress,
+                    f"Processing product {idx+1}/{products_to_create}"
+                )
+
+                # Process image
+                cleaned_img = AIService._process_final_image(img_data)
+
+                # Detect pattern and colors
+                img = Image.open(io.BytesIO(img_data))
+                pattern = AIService._detect_pattern(img)
+                colors = AIService._detect_colors(img)
+                primary_color = colors[0]['name'] if colors else ''
+
+                # Generate product name
+                product_name = f"{name_prefix} {idx+1}"
+                if pattern and pattern != 'solid':
+                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                elif primary_color:
+                    product_name = f"{primary_color} {name_prefix}"
+
+                # Create product
+                product = Product.objects.create(
+                    seller_id=seller_id,
+                    name=product_name,
+                    price=common_price,
+                    cost=common_cost,
+                    category_id=category_id,
+                    brand=brand,
+                    description=description,
+                    pattern=pattern,
+                    primary_color=primary_color,
+                    status='active'
+                )
+
+                # Save image
+                if cleaned_img:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=ContentFile(cleaned_img, name=f"{product.sku}_image.png"),
+                        is_primary=True,
+                        is_front=True,
+                        order=0
+                    )
+
+                created_products.append(product.id)
+                
+                if sizes:
+                    for size in sizes:
+                        ProductVariant.objects.create(
+                            product=product,
+                            size=size,
+                            color=primary_color or '',
+                            sku=f"{product.sku}-{size}",
+                            stock=0,
+                            price=common_price
+                        )
+                    print(f"✅ Created {len(sizes)} size variants for {product_name}")
 
         AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
 
-        try:
-            import asyncio
-            group_name = f'ai_task_{task_id}'
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            async def send_complete():
-                await channel_layer.group_send(
-                    group_name,
-                    {
-                        'type': 'send_progress',
-                        'data': {
-                            'progress': 100,
-                            'message': 'Completed!'
-                        }
-                    }
-                )
-            loop.run_until_complete(send_complete())
-            loop.close()
-        except Exception as e:
-            print(f"❌ Complete send failed: {e}")
-
         return {
             'products_created': len(created_products),
-            'product_ids': created_products
+            'product_ids': created_products,
+            'mode': upload_mode,
+            'total_images': len(images_data)
         }
 
     @staticmethod

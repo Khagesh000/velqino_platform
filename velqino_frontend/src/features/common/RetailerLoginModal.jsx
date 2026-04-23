@@ -4,9 +4,12 @@ import React, { useState } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, LogIn, Store, ShoppingBag } from '../../utils/icons';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useLoginRetailerMutation } from '@/redux/retailer/slices/retailerSlice';
+import { toast } from 'react-toastify';
 
 export default function RetailerLoginModal({ isOpen, onClose, onLogin }) {
   const router = useRouter();
+  const [loginRetailer] = useLoginRetailerMutation();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,22 +29,52 @@ export default function RetailerLoginModal({ isOpen, onClose, onLogin }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      setError('Please enter both email and password');
-      return;
+  e.preventDefault();
+  if (!formData.email || !formData.password) {
+    toast.error('Please enter both email and password');
+    return;
+  }
+  
+  setIsLoading(true);
+  try {
+    const response = await loginRetailer({ 
+      email: formData.email, 
+      password: formData.password 
+    }).unwrap();
+    
+    localStorage.setItem('access', response.access);
+    localStorage.setItem('refresh', response.refresh);
+    localStorage.setItem('user_role', 'retailer');
+    localStorage.setItem('user_name', response.data?.business_name || 'Retailer');
+    
+    // ✅ MERGE GUEST CART AFTER LOGIN
+    const sessionId = localStorage.getItem('guest_session_id');
+    if (sessionId) {
+      try {
+        await fetch('http://localhost:8000/api/commerce/cart/merge/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${response.access}`,
+            'Content-Type': 'application/json',
+            'X-Session-ID': sessionId
+          }
+        });
+        localStorage.removeItem('guest_session_id');
+      } catch (mergeError) {
+        console.log('Cart merge failed:', mergeError);
+      }
     }
     
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onLogin?.({ name: 'Retail Store', email: formData.email });
-    } catch (err) {
-      setError('Invalid credentials. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    toast.success('Login successful! Redirecting...');
+    onClose();
+    setTimeout(() => router.push('/retailer/retailerdashboard'), 1000);
+    
+  } catch (err) {
+    toast.error(err?.data?.message || 'Invalid credentials');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 
@@ -155,13 +188,13 @@ export default function RetailerLoginModal({ isOpen, onClose, onLogin }) {
         {/* Sign Up Link */}
         <p className="text-center text-sm text-gray-600">
           Don't have a retailer account?{' '}
-          <button
-            type="button"
-            onClick={() => router.push('/retailer/retailerregistrationform')}
-            className="text-primary-600 font-medium hover:text-primary-700"
-          >
-            Register Now
-          </button>
+           <button
+              type="button"
+              onClick={() => router.push('/retailer/register')}
+              className="text-primary-600 font-medium hover:text-primary-700"
+            >
+              Register Now
+            </button>
         </p>
 
         {/* Info Note */}

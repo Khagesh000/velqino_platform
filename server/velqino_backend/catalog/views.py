@@ -26,6 +26,13 @@ def product_list(request):
     
     if request.method == 'GET':
         # ✅ PUBLIC - Anyone can view products
+
+        user = request.user
+        if user.is_authenticated and user.role in ['admin', 'support']:
+            products = Product.objects.all()
+            serializer = ProductListSerializer(products, many=True, context={'request': request})
+            return Response({'status': 'success', 'data': {'products': serializer.data}})
+        
         cache_key = f"product:list:public:{request.GET.urlencode()}"
         cached_data = cache.get(cache_key)
         
@@ -165,13 +172,13 @@ def product_list(request):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-@permission_classes([IsAuthenticated])
 def product_detail(request, product_id):
     """Get, update or delete a single product"""
-    seller_id = request.user.id
-    product = get_object_or_404(Product, id=product_id, seller_id=seller_id)
     
+    # ✅ GET method - PUBLIC (no authentication required)
     if request.method == 'GET':
+        product = get_object_or_404(Product, id=product_id)
+        
         cache_key = f"product:{product_id}"
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -181,20 +188,28 @@ def product_detail(request, product_id):
         cache.set(cache_key, serializer.data, timeout=1800)
         return Response({'status': 'success', 'data': serializer.data})
     
-    elif request.method == 'PUT':
-        serializer = ProductUpdateSerializer(product, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
+    # ✅ PUT and DELETE - PRIVATE (authentication required)
+    elif request.method == 'PUT' or request.method == 'DELETE':
+        if not request.user.is_authenticated:
+            return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
+        
+        seller_id = request.user.id
+        product = get_object_or_404(Product, id=product_id, seller_id=seller_id)
+        
+        if request.method == 'PUT':
+            serializer = ProductUpdateSerializer(product, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                cache.delete(f"product:{product_id}")
+                cache.delete_pattern(f"product:list:{seller_id}:*")
+                return Response({'status': 'success', 'data': ProductDetailSerializer(product).data})
+            return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif request.method == 'DELETE':
+            product.delete()
             cache.delete(f"product:{product_id}")
             cache.delete_pattern(f"product:list:{seller_id}:*")
-            return Response({'status': 'success', 'data': ProductDetailSerializer(product).data})
-        return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
-    elif request.method == 'DELETE':
-        product.delete()
-        cache.delete(f"product:{product_id}")
-        cache.delete_pattern(f"product:list:{seller_id}:*")
-        return Response({'status': 'success', 'message': 'Product deleted'})
+            return Response({'status': 'success', 'message': 'Product deleted'})
 
 
 # ============= NEW BULK UPLOAD ENDPOINTS =============
@@ -203,8 +218,8 @@ def product_detail(request, product_id):
 @permission_classes([IsAuthenticated])
 def bulk_image_upload(request):
     """
-    Upload multiple images to create multiple products
-    Supports front only OR front+back pairs
+    Upload multiple images to create ONE product with multiple images
+    Supports: bulk_single_product (default), front_back, single
     """
     serializer = BulkImageUploadSerializer(data=request.data)
 
@@ -215,8 +230,8 @@ def bulk_image_upload(request):
     data = serializer.validated_data
     images = data['images']
 
-    # ✅ Get upload mode from request
-    upload_mode = request.data.get('upload_mode', 'front_back')
+    # ✅ Default mode is 'bulk_single_product' (one product with all images)
+    upload_mode = request.data.get('upload_mode', 'bulk_single_product')
 
     # ✅ Validate based on mode
     if upload_mode == 'front_back' and len(images) % 2 != 0:
@@ -224,11 +239,13 @@ def bulk_image_upload(request):
             'status': 'error',
             'message': 'Front + Back mode requires even number of images'
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if upload_mode == 'bulk_single_product':
+        # All images go to ONE product
+        product_count = 1
+        print(f"📦 Bulk Single Product Mode: {len(images)} images → 1 product")
 
-    # ✅ Calculate product count based on mode
-    product_count = len(images) // 2 if upload_mode == 'front_back' else len(images)
     sizes = request.data.getlist('sizes', [])
-    print(f"🔴 SIZES FROM REQUEST: {sizes}")
 
     # Trigger async task
     result = ProductService.trigger_bulk_image_processing(
@@ -248,7 +265,7 @@ def bulk_image_upload(request):
 
     return Response({
         'status': 'success',
-        'message': f'Processing {product_count} products',
+        'message': f'Processing {product_count} product(s) with {len(images)} images',
         'task_id': result['task_id']
     }, status=status.HTTP_202_ACCEPTED)
 
@@ -258,7 +275,7 @@ def bulk_image_upload(request):
 def bulk_video_upload(request):
     """
     Upload one video showing multiple products in grid layout
-    Creates products for each detected item
+    Creates ONE product with multiple items detected
     """
     serializer = BulkVideoUploadSerializer(data=request.data)
     
@@ -267,10 +284,9 @@ def bulk_video_upload(request):
                        status=status.HTTP_400_BAD_REQUEST)
     
     data = serializer.validated_data
-
+    upload_mode = request.data.get('upload_mode', 'bulk_single_product')
     sizes = request.data.getlist('sizes', [])
-    print(f"🔴 SIZES FROM REQUEST: {sizes}")
-    
+
     # Trigger async task
     result = ProductService.trigger_bulk_video_processing(
         seller_id=request.user.id,
@@ -283,15 +299,16 @@ def bulk_video_upload(request):
             'common_name_prefix': data.get('common_name_prefix', 'Product'),
             'brand': data.get('brand', ''),
             'description': data.get('description', ''),
+            'upload_mode': upload_mode,
             'sizes': sizes,
             'grid_rows': data.get('grid_rows', 2),
             'grid_columns': data.get('grid_columns', 5)
         }
     )
-    
+
     return Response({
         'status': 'success',
-        'message': f'Processing video for {data["number_of_products"]} products',
+        'message': f'Processing video with {data["number_of_products"]} detected items',
         'task_id': result['task_id']
     }, status=status.HTTP_202_ACCEPTED)
 

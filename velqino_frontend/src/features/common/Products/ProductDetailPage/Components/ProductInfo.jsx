@@ -6,7 +6,11 @@ import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
 import { toast } from 'react-toastify';
 
 export default function ProductInfo({ product }) {
-  const [quantity, setQuantity] = useState(1);
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('user_role') : null;
+  const isBulkBuyer = userRole === 'retailer' || userRole === 'wholesaler';
+  const minOrderQty = product?.min_order_qty || 1;
+
+  const [quantity, setQuantity] = useState(isBulkBuyer ? minOrderQty : 1);
   const [selectedSize, setSelectedSize] = useState(product?.variants?.[0]?.size || 'M');
   const [selectedColor, setSelectedColor] = useState(product?.primary_color || 'black');
   const [isWishlist, setIsWishlist] = useState(false);
@@ -34,6 +38,8 @@ export default function ProductInfo({ product }) {
     { name: 'Navy', value: 'navy', class: 'bg-blue-900' },
     { name: 'Red', value: 'red', class: 'bg-red-600' },
   ];
+
+  
 
   const handlePinCheck = () => {
     if (pinCode.length === 6) {
@@ -97,6 +103,15 @@ export default function ProductInfo({ product }) {
       </>
     )}
   </div>
+
+    {/* Min Order Badge - Only for Retailer/Wholesaler */}
+  {isBulkBuyer && minOrderQty > 1 && (
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
+      <span className="text-xs sm:text-sm font-semibold text-orange-600">
+        Minimum Order: {minOrderQty} pieces
+      </span>
+    </div>
+  )}
   
   {/* You Save */}
   {youSave > 0 && (
@@ -157,14 +172,21 @@ export default function ProductInfo({ product }) {
     </span>
   </div>
 
-  {/* Quantity Selector */}
+    
+    {/* Quantity Selector */}
   {isInStock && (
     <div className="space-y-2 sm:space-y-3">
-      <span className="text-sm sm:text-base font-medium text-gray-700">Quantity</span>
+      <div className="flex items-center justify-between">
+        <span className="text-sm sm:text-base font-medium text-gray-700">Quantity</span>
+        {isBulkBuyer && minOrderQty > 1 && (
+          <span className="text-xs text-orange-600">Min: {minOrderQty}</span>
+        )}
+      </div>
       <div className="flex items-center gap-3 sm:gap-4">
         <button
-          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 flex items-center justify-center hover:border-primary-500 transition-all"
+          onClick={() => setQuantity(Math.max(isBulkBuyer ? minOrderQty : 1, quantity - 1))}
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 flex items-center justify-center hover:border-primary-500 transition-all disabled:opacity-50"
+          disabled={quantity <= (isBulkBuyer ? minOrderQty : 1)}
         >
           <Minus size={14} className="sm:w-4 sm:h-4" />
         </button>

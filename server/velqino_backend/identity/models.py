@@ -11,6 +11,8 @@ class User(AbstractUser):
         ("wholesaler", "Wholesaler"),
         ("retailer", "Retailer"),
         ("customer", "Customer"),
+        ("support", "Support Staff"),
+        ("admin", "Admin"),
     )
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
@@ -128,6 +130,10 @@ class WholesalerProfile(models.Model):
     upi_id = models.CharField(max_length=255, blank=True, null=True)
 
     shop_photo = models.ImageField(upload_to="shop_photos/", blank=True, null=True)
+    
+    # ✅ Add this field
+    is_verified = models.BooleanField(default=False, db_index=True)
+    
     verified = models.BooleanField(default=False)
     verification_date = models.DateTimeField(null=True, blank=True)
     
@@ -137,6 +143,7 @@ class WholesalerProfile(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['business_name']),
+            models.Index(fields=['is_verified', 'city']),  # ✅ Update index
             models.Index(fields=['verified', 'city']),
             models.Index(fields=['-created_at']),
         ]
@@ -146,6 +153,7 @@ class WholesalerProfile(models.Model):
     
     def verify_profile(self):
         """Verify the wholesaler profile"""
+        self.is_verified = True  # ✅ Update both fields
         self.verified = True
         self.verification_date = timezone.now()
         self.save()

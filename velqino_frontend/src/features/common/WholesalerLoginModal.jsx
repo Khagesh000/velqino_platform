@@ -36,13 +36,37 @@ export default function WholesalerLoginModal({ isOpen, onClose, onLogin }) {
   }
   setIsLoading(true);
   try {
-    const response = await loginWholesaler({ email: formData.email, password: formData.password }).unwrap();
+    const response = await loginWholesaler({ 
+      email: formData.email, 
+      password: formData.password 
+    }).unwrap();
+    
     localStorage.setItem('access', response.access);
     localStorage.setItem('refresh', response.refresh);
     localStorage.setItem('user_role', 'wholesaler');
+    
+    // ✅ MERGE GUEST CART AFTER LOGIN
+    const sessionId = localStorage.getItem('guest_session_id');
+    if (sessionId) {
+      try {
+        await fetch('http://localhost:8000/api/commerce/cart/merge/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${response.access}`,
+            'Content-Type': 'application/json',
+            'X-Session-ID': sessionId
+          }
+        });
+        localStorage.removeItem('guest_session_id');
+      } catch (mergeError) {
+        console.log('Cart merge failed:', mergeError);
+      }
+    }
+    
     toast.success('Login successful! Redirecting...');
     onClose();
     setTimeout(() => router.push('/wholesaler/wholesalerdashboard'), 1000);
+    
   } catch (err) {
     toast.error(err?.data?.message || 'Invalid credentials');
   } finally {

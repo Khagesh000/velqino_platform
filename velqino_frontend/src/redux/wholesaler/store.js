@@ -3,7 +3,9 @@ import { wholesalerApi } from '../wholesaler/slices/wholesalerSlice';
 import { productsApi } from '../wholesaler/slices/productsSlice';
 import { categoriesApi } from './slices/categoriesSlice';
 import { ordersApi } from './slices/ordersSlice';
-import { cartApi } from './slices/cartSlice';  // ✅ This is RTK Query slice
+import { cartApi } from './slices/cartSlice';  
+import { customerApi } from '../customer/slices/customerSlice';
+import { retailerApi } from '../retailer/slices/retailerSlice';
 
 export const store = configureStore({
     reducer: {
@@ -12,6 +14,8 @@ export const store = configureStore({
         [categoriesApi.reducerPath]: categoriesApi.reducer,
         [cartApi.reducerPath]: cartApi.reducer,
         [ordersApi.reducerPath]:ordersApi.reducer,
+        [customerApi.reducerPath]:customerApi.reducer,
+        [retailerApi.reducerPath]:retailerApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware().concat(
@@ -20,5 +24,7 @@ export const store = configureStore({
             categoriesApi.middleware,
             cartApi.middleware,
             ordersApi.middleware,
+            customerApi.middleware,
+            retailerApi.middleware,
         ),
 });

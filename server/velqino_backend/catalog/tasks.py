@@ -14,14 +14,17 @@ logger = logging.getLogger(__name__)
 def process_bulk_video_task(self, seller_id, video_data, number_of_products, 
                             common_price, common_cost, category_id, 
                             common_name_prefix, brand, description, 
-                            grid_rows, grid_columns, sizes=None,):
+                            grid_rows, grid_columns, 
+                            upload_mode='bulk_single_product', sizes=None):
     """
-    Process video and create multiple products
+    Process video and create ONE product with all detected items
     """
     try:
-        from .services.ai_service import AIService
+        from catalog.services.ai_service import AIService
         
-        print(f"🎥 Processing bulk video task for seller {seller_id}")
+        print(f"🎥 Processing bulk video for seller {seller_id}")
+        print(f"📌 Mode: {upload_mode}")
+        print(f"📊 Detected products: {number_of_products}")
         
         result = AIService.process_bulk_video(
             seller_id=seller_id,
@@ -33,15 +36,17 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
             name_prefix=common_name_prefix,
             brand=brand,
             description=description,
+            upload_mode=upload_mode,
             sizes=sizes or [],
             grid_rows=grid_rows,
             grid_columns=grid_columns,
             task_id=self.request.id
         )
         
-        # Invalidate caches
+        from catalog.utils.product_helpers import ProductHelpers
         ProductHelpers.invalidate_product_caches(seller_id)
         
+        print(f"✅ Bulk video processed: {result}")
         return result
         
     except Exception as e:
@@ -51,12 +56,15 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
 
 @shared_task(bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
 def process_bulk_images_task(self, seller_id, images_data, common_price, common_cost,
-                             category_id, common_name_prefix, brand, description, sizes=None,
-                             upload_mode='front_back'):  # ✅ ADD
+                             category_id, common_name_prefix, brand, description, 
+                             upload_mode='bulk_single_product', sizes=None):
+    """Process bulk images - creates ONE product with all images by default"""
     try:
-        from .services.ai_service import AIService
+        from catalog.services.ai_service import AIService
 
-        print(f"🖼️ Processing bulk images task for seller {seller_id}")
+        print(f"🖼️ Processing bulk images for seller {seller_id}")
+        print(f"📌 Mode: {upload_mode}")
+        print(f"📸 Images count: {len(images_data)}")
 
         result = AIService.process_bulk_images(
             seller_id=seller_id,
@@ -67,12 +75,15 @@ def process_bulk_images_task(self, seller_id, images_data, common_price, common_
             name_prefix=common_name_prefix,
             brand=brand,
             description=description,
-            upload_mode=upload_mode,  
+            upload_mode=upload_mode,
             sizes=sizes or [],
             task_id=self.request.id
         )
 
+        from catalog.utils.product_helpers import ProductHelpers
         ProductHelpers.invalidate_product_caches(seller_id)
+        
+        print(f"✅ Bulk images processed: {result}")
         return result
 
     except Exception as e:

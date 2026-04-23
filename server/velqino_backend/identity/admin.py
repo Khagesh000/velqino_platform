@@ -14,6 +14,7 @@ class WholesalerProfileAdmin(admin.ModelAdmin):
         'verified', 'created_at'
     ]
     list_filter = ['verified', 'city', 'business_type']
+    list_editable = ['verified']
     search_fields = ['business_name', 'shop_address', 'gst_number']
     readonly_fields = ['created_at', 'updated_at']
     

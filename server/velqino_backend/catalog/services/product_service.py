@@ -261,7 +261,7 @@ class ProductService:
             common_name_prefix=common_data.get('common_name_prefix', 'Product'),
             brand=common_data.get('brand', ''),
             description=common_data.get('description', ''),
-            upload_mode=common_data.get('upload_mode', 'front_back'),
+            upload_mode=common_data.get('upload_mode', 'bulk_single_product'),
             sizes=common_data.get('sizes', []),
         )
         return {'task_id': task.id, 'status': 'queued'}
@@ -279,6 +279,7 @@ class ProductService:
             common_name_prefix=common_data.get('common_name_prefix', 'Product'),
             brand=common_data.get('brand', ''),
             description=common_data.get('description', ''),
+            upload_mode=common_data.get('upload_mode', 'bulk_single_product'),
             sizes=common_data.get('sizes', []),
             grid_rows=common_data.get('grid_rows', 2),
             grid_columns=common_data.get('grid_columns', 5)

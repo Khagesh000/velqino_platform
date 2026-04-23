@@ -14,7 +14,7 @@ export default function EmptyCart() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
         <p className="text-gray-500 mb-6">Looks like you haven't added any items to your cart yet</p>
         <Link 
-          href="/products" 
+          href="/product/productlistingpage" 
           className="inline-flex items-center justify-center px-6 py-3 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600 transition-colors"
         >
           Start Shopping

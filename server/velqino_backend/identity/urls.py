@@ -2,6 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+
+    path('admin/login/', views.admin_login, name='admin-login'),
+    path('support/login/', views.support_login, name='support-login'),
+    path('admin/users/', views.get_all_users, name='get-all-users'),
+
     path('wholesaler/register/', views.register_wholesaler),
     path('wholesaler/login/', views.wholesaler_login, name='wholesaler-login'),
     path('wholesaler/profile/<int:user_id>/', views.get_wholesaler_profile),

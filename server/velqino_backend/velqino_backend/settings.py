@@ -60,6 +60,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-session-id',
 ]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -98,6 +99,8 @@ INSTALLED_APPS = [
     'analytics_engine',
     'media_pipeline',
 ]
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

@@ -210,6 +210,9 @@ import {
   RotateCcw,
   ShieldCheck,
   ArrowLeft,
+  Citrus,
+  Hash,
+  IndianRupeeIcon,
 
 
 } from 'lucide-react';
@@ -408,6 +411,9 @@ export {
   RotateCcw,
   ShieldCheck,
   ArrowLeft,
+  Citrus,
+  Hash,
+  IndianRupeeIcon,
 
 
 

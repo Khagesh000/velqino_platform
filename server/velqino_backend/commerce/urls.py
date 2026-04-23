@@ -11,6 +11,8 @@ urlpatterns = [
     path('cart/coupon/remove/', views.remove_coupon, name='remove-coupon'),
     path('cart/clear/', views.clear_cart, name='clear-cart'),
 
+    path('cart/merge/', views.merge_cart, name='merge-cart'),
+
     path('orders/create/', views.create_order, name='create-order'),
     path('orders/', views.get_orders, name='get-orders'),
     path('orders/<str:order_id>/', views.get_order, name='get-order'),
@@ -22,4 +24,6 @@ urlpatterns = [
     # Retailer orders & customers
     path('orders/retailer/list/', views.get_retailer_orders, name='retailer-orders'),
     path('retailer/customers/', views.get_retailer_customers, name='retailer-customers'),
+
+    path('orders/<str:order_id>/invoice/', views.download_invoice, name='download-invoice'),
 ]

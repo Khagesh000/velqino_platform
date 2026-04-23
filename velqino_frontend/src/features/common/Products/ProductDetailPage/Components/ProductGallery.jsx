@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ZoomIn } from '../../../../../utils/icons';
 import { BASE_IMAGE_URL } from '@/utils/apiConfig';
 
@@ -8,6 +8,18 @@ export default function ProductGallery({ product }) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+
+  const scrollRef = useRef(null);
+
+  const scrollThumbnails = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 100;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // Get images from product data
   const images = product?.images?.map((img, idx) => ({
@@ -55,7 +67,12 @@ export default function ProductGallery({ product }) {
 
       {/* Thumbnails */}
       {images.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="relative">
+        <div 
+          ref={scrollRef}
+          className="flex gap-3 overflow-x-auto pb-2 scroll-smooth"
+          style={{ scrollbarWidth: 'thin' }}
+        >
           {images.map((image, index) => (
             <button
               key={image.id}
@@ -75,7 +92,25 @@ export default function ProductGallery({ product }) {
             </button>
           ))}
         </div>
-      )}
+        {/* Scroll buttons */}
+        {images.length > 4 && (
+          <>
+            <button 
+              onClick={() => scrollThumbnails('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100"
+            >
+              ‹
+            </button>
+            <button 
+              onClick={() => scrollThumbnails('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100"
+            >
+              ›
+            </button>
+          </>
+        )}
+      </div>
+    )}
     </div>
   );
 }

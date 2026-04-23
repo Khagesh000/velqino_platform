@@ -2,14 +2,17 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
-import { ArrowLeft, ShoppingCart, Loader2 } from '../../../../utils/icons';
+import { useCreateOrderMutation } from '@/redux/wholesaler/slices/ordersSlice';
+import { ArrowLeft, ShoppingCart } from '../../../../utils/icons';
 import CheckoutSteps from './Components/CheckoutSteps';
 import AddressSection from './Components/AddressSection';
 import DeliverySection from './Components/DeliverySection';
 import PaymentSection from './Components/PaymentSection';
 import OrderSummary from './Components/OrderSummary';
 import OrderConfirmation from './Components/OrderConfirmation';
+import { toast } from 'react-toastify';
 
 export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -19,7 +22,10 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  const { data: cartData, isLoading: cartLoading, refetch: refetchCart } = useGetCartQuery();
+  const router = useRouter();
+  const [createOrder] = useCreateOrderMutation();
+
+  const { data: cartData, isLoading: cartLoading } = useGetCartQuery();
   
   const cartItems = cartData?.data?.items || [];
   const summary = cartData?.summary || {};
@@ -67,17 +73,36 @@ export default function CheckoutPage() {
 
   const handleNextStep = () => {
     if (currentStep === 1 && !selectedAddress) {
+      toast.error('Please select a delivery address');
       return;
     }
+    if (currentStep >= 3) return;
     setCurrentStep(currentStep + 1);
   };
 
   const handlePlaceOrder = async () => {
+    if (!selectedAddress) {
+      toast.error('Please select a delivery address');
+      setCurrentStep(1);
+      return;
+    }
+    
     setIsPlacingOrder(true);
-    // Order placement logic here
-    setTimeout(() => {
+    
+    try {
+      const response = await createOrder({
+        address_id: selectedAddress.id,
+        delivery_type: deliveryType,
+        payment_method: paymentMethod
+      }).unwrap();
+      
+      toast.success('Order placed successfully!');
+      router.push(`orderconfirmation/${response.data.order_id}`);
+      
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error?.data?.message || 'Failed to place order');
       setIsPlacingOrder(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -95,7 +120,8 @@ export default function CheckoutPage() {
       <CheckoutSteps currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
       <div className="flex flex-col lg:flex-row gap-8 mt-8">
-        {/* Left Section */}
+        
+        {/* LEFT SECTION - Forms */}
         <div className="lg:w-2/3 space-y-6">
           <AddressSection 
             currentStep={currentStep}
@@ -120,6 +146,21 @@ export default function CheckoutPage() {
             onBack={() => setCurrentStep(2)}
           />
           
+          {/* ✅ Order Summary - Mobile: Shows BEFORE Place Order button */}
+          <div className="block lg:hidden">
+            <OrderSummary 
+              cartItems={cartItems}
+              subtotal={subtotal}
+              discount={discount}
+              shippingCharge={shippingCharge}
+              tax={tax}
+              total={total}
+              couponCode={couponCode}
+              setCouponCode={setCouponCode}
+            />
+          </div>
+          
+          {/* Order Confirmation with Place Order button */}
           <OrderConfirmation 
             currentStep={currentStep}
             selectedAddress={selectedAddress}
@@ -131,8 +172,8 @@ export default function CheckoutPage() {
           />
         </div>
 
-        {/* Right Section */}
-        <div className="lg:w-1/3">
+        {/* RIGHT SECTION - Order Summary (Desktop only) */}
+        <div className="hidden lg:block lg:w-1/3">
           <OrderSummary 
             cartItems={cartItems}
             subtotal={subtotal}
@@ -144,6 +185,7 @@ export default function CheckoutPage() {
             setCouponCode={setCouponCode}
           />
         </div>
+        
       </div>
     </div>
   );

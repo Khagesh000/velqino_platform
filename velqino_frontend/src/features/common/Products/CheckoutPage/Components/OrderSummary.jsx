@@ -1,10 +1,23 @@
 "use client";
 
-import React from 'react';
-import { Lock, Shield, Clock, Truck } from '../../../../../utils/icons';
+import React, { useRef } from 'react';
+import { Lock, Shield, Clock, Truck, ChevronLeft, ChevronRight } from '../../../../../utils/icons';
 import { BASE_IMAGE_URL } from '@/utils/apiConfig';
 
 export default function OrderSummary({ cartItems, subtotal, discount, shippingCharge, tax, total, couponCode, setCouponCode }) {
+  const scrollRefs = useRef({});
+
+  const scrollImages = (itemId, direction) => {
+    const ref = scrollRefs.current[itemId];
+    if (ref) {
+      const scrollAmount = 60;
+      ref.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sticky top-24">
       <h3 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h3>
@@ -13,18 +26,64 @@ export default function OrderSummary({ cartItems, subtotal, discount, shippingCh
       <div className="space-y-3 max-h-80 overflow-y-auto mb-4 pr-2">
         {cartItems.map((item) => (
           <div key={item.id} className="flex gap-3">
-            <img 
-              src={item.product_detail?.primary_image ? `${BASE_IMAGE_URL}${item.product_detail.primary_image}` : '/images/placeholder.jpg'} 
-              alt={item.product_detail?.name} 
-              className="w-12 h-12 rounded-lg object-cover bg-gray-100"
-              onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-            />
+            {/* Product Images - Multiple images with scroll for bulk products */}
+            <div className="flex-shrink-0">
+              {item.product_detail?.images && item.product_detail.images.length > 1 ? (
+                <div className="relative">
+                  <div 
+                    ref={el => scrollRefs.current[item.id] = el}
+                    className="flex gap-1 overflow-x-auto scroll-smooth w-12 h-12 rounded-lg"
+                    style={{ scrollbarWidth: 'thin' }}
+                  >
+                    {item.product_detail.images.slice(0, 6).map((img, idx) => (
+                      <img 
+                        key={idx}
+                        src={`${BASE_IMAGE_URL}${img.image}`}
+                        alt={item.product_detail?.name}
+                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-gray-100"
+                        onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                      />
+                    ))}
+                  </div>
+                  {item.product_detail.images.length > 3 && (
+                    <>
+                      <button 
+                        onClick={() => scrollImages(item.id, 'left')}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-4 h-4 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100 text-[10px]"
+                      >
+                        ‹
+                      </button>
+                      <button 
+                        onClick={() => scrollImages(item.id, 'right')}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 w-4 h-4 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100 text-[10px]"
+                      >
+                        ›
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <img 
+                  src={item.product_detail?.primary_image ? `${BASE_IMAGE_URL}${item.product_detail.primary_image}` : '/images/placeholder.jpg'} 
+                  alt={item.product_detail?.name} 
+                  className="w-12 h-12 rounded-lg object-cover bg-gray-100"
+                  onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                />
+              )}
+            </div>
+            
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-800 line-clamp-1">{item.product_detail?.name}</p>
               <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
               {item.selected_size && <p className="text-xs text-gray-400">Size: {item.selected_size}</p>}
+              {/* Show pack badge for bulk products */}
+              {item.product_detail?.images && item.product_detail.images.length > 1 && (
+                <span className="text-[10px] text-primary-500 font-medium">📦 {item.product_detail.images.length}pcs pack</span>
+              )}
             </div>
-            <span className="text-sm font-semibold text-gray-900">₹{(item.price_at_add || item.product_detail?.price) * item.quantity}</span>
+            <span className="text-sm font-semibold text-gray-900">
+              ₹{(item.price_at_add || item.product_detail?.price) * item.quantity}
+            </span>
           </div>
         ))}
       </div>

@@ -10,6 +10,7 @@ export default function ImportModal({ onClose }) {
 
   const [video, setVideo] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadMode, setUploadMode] = useState('bulk_single_product')
   const [showForm, setShowForm] = useState(false)
   const [taskId, setTaskId] = useState(null)
   const [selectedSizes, setSelectedSizes] = useState([])
@@ -28,6 +29,18 @@ export default function ImportModal({ onClose }) {
     grid_rows: 2,
     grid_columns: 5
   })
+
+      // Add this useEffect right after all useState declarations
+    useEffect(() => {
+      if (isOpen) {
+        // Reset only when modal opens from closed state
+        setShowForm(false);
+        setVideo(null);
+        setSelectedSizes([]);
+        setProgress(0);
+        setProgressMessage('');
+      }
+    }, [isOpen]);
 
   // =============================
   // 🎥 HANDLE VIDEO SELECT
@@ -83,17 +96,18 @@ export default function ImportModal({ onClose }) {
 
   const data = new FormData()
   data.append('video', video)
+  data.append('upload_mode', 'bulk_single_product')  // ✅ DEFAULT BULK MODE
   selectedSizes.forEach(size => data.append('sizes', size))
 
   Object.keys(formData).forEach(key => {
-  if (formData[key] !== "" && formData[key] !== null) {
-    if (key === "category_id") {
-      data.append(key, Number(formData[key]))
-    } else {
-      data.append(key, formData[key])
+    if (formData[key] !== "" && formData[key] !== null) {
+      if (key === "category_id") {
+        data.append(key, Number(formData[key]))
+      } else {
+        data.append(key, formData[key])
+      }
     }
-  }
-})
+  })
 
   try {
     const response = await productsAPI.bulkVideoUpload(data)
@@ -115,26 +129,26 @@ export default function ImportModal({ onClose }) {
     }
 
     socket.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    console.log('📦 Video progress:', data)
+      const data = JSON.parse(event.data)
+      console.log('📦 Video progress:', data)
 
-    if (data.type === 'send_progress' || data.type === 'ai_progress') {
-      setProgress(data.progress)
-      setProgressMessage(data.message)
-    }
+      if (data.type === 'send_progress' || data.type === 'ai_progress') {
+        setProgress(data.progress)
+        setProgressMessage(data.message)
+      }
 
-    if (data.progress === 100 || data.type === 'ai_complete') {
-      setProgress(100)
-      setProgressMessage('Completed!')
-      toast.success("✅ Products created successfully!")
-      setTimeout(() => {
-        setUploading(false)
-        socket.close()
-        onClose()
-        window.location.reload()
-      }, 1000)
+      if (data.progress === 100 || data.type === 'ai_complete') {
+        setProgress(100)
+        setProgressMessage('Completed!')
+        toast.success("✅ Bulk product created successfully!")
+        setTimeout(() => {
+          setUploading(false)
+          socket.close()
+          onClose()
+          window.location.reload()
+        }, 1000)
+      }
     }
-  }
 
     socket.onerror = () => {
       toast.error("WebSocket error")
@@ -153,200 +167,261 @@ export default function ImportModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-        <div className="h-full bg-white rounded-l-2xl shadow-xl overflow-y-auto">
+  <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
+    <div className="h-full bg-white rounded-l-2xl shadow-xl overflow-y-auto">
 
-          <div className="p-6">
+      <div className="p-6">
 
-            {/* HEADER */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Bulk Video Upload</h2>
-              <button onClick={onClose}>
-                <X size={20} />
+        {/* HEADER */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Bulk Video Upload</h2>
+          <button onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* 📦 BULK MODE INFO */}
+        <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-200">
+          <p className="text-sm font-semibold text-primary-700 flex items-center gap-2">
+            📦 Bulk Single Product Mode
+          </p>
+          <p className="text-xs text-primary-600 mt-1">
+            All detected items from video will become ONE product with stock = number of items
+          </p>
+        </div>
+
+        {/* VIDEO UPLOAD */}
+        {!showForm && (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+
+            <p className="text-gray-600">Upload Product Video</p>
+            <p className="text-xs text-gray-400">MP4, MOV, AVI, WEBM (Max 500MB)</p>
+            <p className="text-xs text-primary-500 mt-1">All detected items → ONE bulk product</p>
+
+            <input
+              type="file"
+              accept="video/*"
+              className="hidden"
+              id="videoUpload"
+              onChange={handleVideoSelect}
+            />
+
+            <button
+              onClick={() => document.getElementById('videoUpload').click()}
+              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg"
+            >
+              Select Video
+            </button>
+          </div>
+        )}
+
+        {/* FORM AFTER VIDEO */}
+        {showForm && (
+          <div className="space-y-4">
+
+            <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+              <p className="text-sm text-green-700 font-medium">🎥 {video?.name}</p>
+              <span className="text-xs text-green-600">Bulk mode: 1 product</span>
+            </div>
+
+            <input 
+              type="number" 
+              name="number_of_products" 
+              placeholder="Number of Products in Video *"
+              onChange={handleChange} 
+              className="w-full border p-2 rounded" 
+              required
+            />
+
+            <input 
+              type="number" 
+              name="common_price" 
+              placeholder="Common Price *"
+              onChange={handleChange} 
+              className="w-full border p-2 rounded" 
+            />
+
+            <input 
+              type="number" 
+              name="common_cost" 
+              placeholder="Common Cost *"
+              onChange={handleChange} 
+              className="w-full border p-2 rounded" 
+            />
+
+            <input 
+              type="text" 
+              name="common_name_prefix" 
+              placeholder="Name Prefix (e.g. Shirt)"
+              onChange={handleChange} 
+              className="w-full border p-2 rounded" 
+            />
+
+            <input 
+              type="text" 
+              name="brand" 
+              placeholder="Brand"
+              onChange={handleChange} 
+              className="w-full border p-2 rounded" 
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Available Sizes <span className="text-xs text-gray-400">(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {availableSizes.map(size => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+                      selectedSizes.includes(size)
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+              {selectedSizes.length > 0 && (
+                <p className="text-xs text-primary-600 mt-1">
+                  ✅ {selectedSizes.length} sizes — applied to bulk product
+                </p>
+              )}
+            </div>
+
+            <select
+              name="category_id"
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              value={formData.category_id}
+            >
+              <option value="">Select Category</option>
+              <option value="1">Shirt</option>
+              <option value="2">Pant</option>
+              <option value="3">T-Shirt</option>
+            </select>
+
+            <textarea 
+              name="description" 
+              placeholder="Description (optional)"
+              onChange={handleChange} 
+              className="w-full border p-2 rounded" 
+              rows={3}
+            />
+
+            <div className="flex gap-3">
+              <input 
+                type="number" 
+                name="grid_rows" 
+                placeholder="Rows (default: 2)"
+                onChange={handleChange} 
+                className="w-full border p-2 rounded" 
+                defaultValue={2}
+              />
+
+              <input 
+                type="number" 
+                name="grid_columns" 
+                placeholder="Columns (default: 5)"
+                onChange={handleChange} 
+                className="w-full border p-2 rounded" 
+                defaultValue={5}
+              />
+            </div>
+
+            {/* Progress Bar */}
+            {uploading && (
+              <div className="rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-5 space-y-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="relative w-10 h-10 flex-shrink-0">
+                    <svg className="animate-spin w-10 h-10 text-primary-200" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
+                    </svg>
+                    <svg className="absolute inset-0 w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                      <circle
+                        cx="18" cy="18" r="16"
+                        fill="none"
+                        stroke="#6366f1"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray={`${progress} 100`}
+                        className="transition-all duration-500"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-primary-700">
+                      {progress}%
+                    </span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {progressMessage || 'Processing video...'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {progress < 30 && '🎬 Extracting frames...'}
+                      {progress >= 30 && progress < 60 && '🖼️ Processing images...'}
+                      {progress >= 60 && progress < 90 && '✨ AI enhancement...'}
+                      {progress >= 90 && '📦 Creating 1 bulk product...'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="relative w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
+                    <div
+                      className="h-3 rounded-full transition-all duration-500 relative"
+                      style={{
+                        width: `${progress}%`,
+                        background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7)'
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 px-0.5">
+                    <span className={progress >= 10 ? 'text-primary-500 font-medium' : ''}>Upload</span>
+                    <span className={progress >= 30 ? 'text-primary-500 font-medium' : ''}>Extract</span>
+                    <span className={progress >= 60 ? 'text-primary-500 font-medium' : ''}>Process</span>
+                    <span className={progress >= 90 ? 'text-primary-500 font-medium' : ''}>Finish</span>
+                  </div>
+                </div>
+
+                <p className="text-center text-xs text-gray-400 italic">
+                  {progress < 50
+                    ? '🎥 AI is analyzing your video frames...'
+                    : '✨ Creating 1 bulk product with all items!'}
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => { setShowForm(false); setVideo(null) }} 
+                className="flex-1 border p-2 rounded text-gray-600"
+              >
+                Change Video
+              </button>
+
+              <button
+                onClick={handleSubmit}
+                disabled={uploading}
+                className="flex-1 bg-primary-600 text-white p-2 rounded disabled:opacity-50"
+              >
+                {uploading ? `Processing ${progress}%...` : 'Upload 1 Bulk Product'}
               </button>
             </div>
 
-            {/* VIDEO UPLOAD */}
-            {!showForm && (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-
-                <p className="text-gray-600">Upload Product Video</p>
-                <p className="text-xs text-gray-400">MP4, MOV, AVI, WEBM (Max 500MB)</p>
-
-                <input
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  id="videoUpload"
-                  onChange={handleVideoSelect}
-                />
-
-                <button
-                  onClick={() => document.getElementById('videoUpload').click()}
-                  className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg"
-                >
-                  Select Video
-                </button>
-              </div>
-            )}
-
-            {/* FORM AFTER VIDEO */}
-            {showForm && (
-              <div className="space-y-4">
-
-                <p className="text-sm text-green-600">🎥 {video?.name}</p>
-
-                <input type="number" name="number_of_products" placeholder="Number of Products"
-                  onChange={handleChange} className="w-full border p-2 rounded" />
-
-                <input type="number" name="common_price" placeholder="Common Price"
-                  onChange={handleChange} className="w-full border p-2 rounded" />
-
-                <input type="number" name="common_cost" placeholder="Common Cost"
-                  onChange={handleChange} className="w-full border p-2 rounded" />
-
-                <input type="text" name="common_name_prefix" placeholder="Name Prefix"
-                  onChange={handleChange} className="w-full border p-2 rounded" />
-
-                <input type="text" name="brand" placeholder="Brand"
-                  onChange={handleChange} className="w-full border p-2 rounded" />
-
-                  <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Available Sizes <span className="text-xs text-gray-400">(optional)</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {availableSizes.map(size => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => toggleSize(size)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                          selectedSizes.includes(size)
-                            ? 'bg-primary-600 text-white border-primary-600'
-                            : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedSizes.length > 0 && (
-                    <p className="text-xs text-primary-600 mt-1">
-                      ✅ {selectedSizes.length} sizes — applied to all products
-                    </p>
-                  )}
-                </div>
-
-                <select
-                    name="category_id"
-                    onChange={handleChange}
-                    className="w-full border p-2 rounded"
-                    value={formData.category_id}
-                  >
-                    <option value="">Select Category</option>
-                    <option value="1">Shirt</option>
-                    <option value="2">Pant</option>
-                    <option value="3">T-Shirt</option>
-                  </select>
-
-                <textarea name="description" placeholder="Description"
-                  onChange={handleChange} className="w-full border p-2 rounded" />
-
-                <div className="flex gap-3">
-                  <input type="number" name="grid_rows" placeholder="Rows"
-                    onChange={handleChange} className="w-full border p-2 rounded" />
-
-                  <input type="number" name="grid_columns" placeholder="Columns"
-                    onChange={handleChange} className="w-full border p-2 rounded" />
-                </div>
-
-                {uploading && (
-                <div className="rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-5 space-y-4 shadow-sm mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-10 h-10 flex-shrink-0">
-                      <svg className="animate-spin w-10 h-10 text-primary-200" viewBox="0 0 36 36">
-                        <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
-                      </svg>
-                      <svg className="absolute inset-0 w-10 h-10 -rotate-90" viewBox="0 0 36 36">
-                        <circle
-                          cx="18" cy="18" r="16"
-                          fill="none"
-                          stroke="#6366f1"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeDasharray={`${progress} 100`}
-                          className="transition-all duration-500"
-                        />
-                      </svg>
-                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-primary-700">
-                        {progress}%
-                      </span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">
-                        {progressMessage || 'Processing video...'}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {progress < 30 && '🎬 Extracting frames...'}
-                        {progress >= 30 && progress < 60 && '🖼️ Processing images...'}
-                        {progress >= 60 && progress < 90 && '✨ AI enhancement...'}
-                        {progress >= 90 && '🚀 Creating products...'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="relative w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
-                      <div
-                        className="h-3 rounded-full transition-all duration-500 relative"
-                        style={{
-                          width: `${progress}%`,
-                          background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7)'
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-gray-400 px-0.5">
-                      <span className={progress >= 10 ? 'text-primary-500 font-medium' : ''}>Upload</span>
-                      <span className={progress >= 30 ? 'text-primary-500 font-medium' : ''}>Extract</span>
-                      <span className={progress >= 60 ? 'text-primary-500 font-medium' : ''}>Process</span>
-                      <span className={progress >= 90 ? 'text-primary-500 font-medium' : ''}>Finish</span>
-                    </div>
-                  </div>
-
-                  <p className="text-center text-xs text-gray-400 italic">
-                    {progress < 50
-                      ? '🎥 AI is analyzing your video frames...'
-                      : '✨ Creating professional product listings!'}
-                  </p>
-                </div>
-              )}
-
-                <div className="flex gap-3 mt-4">
-                  <button onClick={onClose} className="flex-1 border p-2 rounded">
-                    Cancel
-                  </button>
-
-                  <button
-                    onClick={handleSubmit}
-                    disabled={uploading}
-                    className="flex-1 bg-primary-600 text-white p-2 rounded"
-                  >
-                    {uploading ? `Processing ${progress}%...` : 'Submit'}
-                  </button>
-                </div>
-
-              </div>
-            )}
-
           </div>
-        </div>
+        )}
+
       </div>
     </div>
+  </div>
+</div>
   )
 }

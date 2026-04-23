@@ -29,6 +29,111 @@ from rest_framework.decorators import permission_classes
 
 logger = logging.getLogger(__name__)
 
+
+@api_view(['POST'])
+def admin_login(request):
+    """Admin login"""
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        # ✅ Case-insensitive role check
+        user = User.objects.filter(email=email).first()
+        
+        if not user or user.role.lower() != 'admin':
+            return Response({
+                'status': 'error',
+                'message': 'Invalid admin credentials'
+            }, status=401)
+        
+        if not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Invalid admin credentials'
+            }, status=401)
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'status': 'success',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'data': {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role
+            }
+        })
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
+@api_view(['POST'])
+def support_login(request):
+    """Support staff login"""
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        # ✅ Case-insensitive role check
+        user = User.objects.filter(email=email).first()
+        
+        if not user or user.role.lower() != 'support':
+            return Response({
+                'status': 'error',
+                'message': 'Invalid support credentials'
+            }, status=401)
+        
+        if not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Invalid support credentials'
+            }, status=401)
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'status': 'success',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'data': {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role
+            }
+        })
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_users(request):
+    """Admin/Support: Get all users"""
+    user = request.user
+    
+    # Only admin and support can access
+    if user.role not in ['admin', 'support']:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    users = User.objects.all().order_by('-id')
+    
+    data = []
+    for u in users:
+        data.append({
+            'id': u.id,
+            'email': u.email,
+            'mobile': u.mobile,
+            'username': u.username,
+            'role': u.role,
+            'is_active': u.is_active,
+            'created_at': u.created_at
+        })
+    
+    return Response({'status': 'success', 'data': data})
+
+
+
 @api_view(['POST'])
 @ratelimit(key='ip', rate='5/hour', method='POST')
 def register_wholesaler(request):
@@ -230,30 +335,44 @@ def update_wholesaler_profile(request, user_id):
 @permission_classes([IsAuthenticated])
 def list_wholesalers(request):
     """
-    List all wholesalers with optional filters
+    List all wholesalers (for retailers, admin, support to see)
     """
     try:
-        city = request.query_params.get('city', None)
-        verified = request.query_params.get('verified', None)
+        # Allow retailers, admin, and support to view wholesalers
+        if request.user.role not in ['retailer', 'admin', 'support']:
+            return Response({
+                'status': 'error',
+                'message': 'Only retailers, admin, or support can view wholesalers'
+            }, status=status.HTTP_403_FORBIDDEN)
         
-        # Build query
-        queryset = WholesalerProfile.objects.select_related('user').all()
+        # Pagination
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 20))
         
-        if city:
-            queryset = queryset.filter(city=city)
-        if verified:
-            queryset = queryset.filter(verified=verified.lower() == 'true')
+        wholesalers = WholesalerProfile.objects.select_related('user').filter(
+            verified=True
+        ).order_by('-created_at')
         
-        serializer = WholesalerProfileListSerializer(queryset, many=True)
+        # Paginate
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated = wholesalers[start:end]
+        
+        serializer = WholesalerProfileSerializer(paginated, many=True)
         
         return Response({
             'status': 'success',
-            'count': queryset.count(),
-            'data': serializer.data
+            'data': serializer.data,
+            'pagination': {
+                'total': wholesalers.count(),
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (wholesalers.count() + per_page - 1) // per_page
+            }
         })
         
     except Exception as e:
-        logger.error(f"Error listing wholesalers: {e}")
+        logger.error(f"List wholesalers error: {e}")
         return Response({
             'status': 'error',
             'message': str(e)
@@ -465,14 +584,14 @@ def retailer_profile(request, user_id):
 @permission_classes([IsAuthenticated])
 def list_retailers(request):
     """
-    List all retailers (for wholesaler to see their customers)
+    List all retailers (for wholesaler, admin, support to see)
     """
     try:
-        # Only wholesalers can view retailers
-        if request.user.role != 'wholesaler':
+        # Allow wholesalers, admin, and support to view retailers
+        if request.user.role not in ['wholesaler', 'admin', 'support']:
             return Response({
                 'status': 'error',
-                'message': 'Only wholesalers can view retailers'
+                'message': 'Only wholesalers, admin, or support can view retailers'
             }, status=status.HTTP_403_FORBIDDEN)
         
         # Pagination
@@ -651,25 +770,27 @@ def customer_profile(request, user_id):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ✅ ADD List Customers (for retailers to see their customers)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_customers(request):
-    """List all customers (for retailers to see their customers)"""
+    """
+    List all customers (for retailer, admin, support to see)
+    """
     try:
-        if request.user.role != 'retailer':
+        # Allow retailers, admin, and support to view customers
+        if request.user.role not in ['retailer', 'admin', 'support']:
             return Response({
                 'status': 'error',
-                'message': 'Only retailers can view customers'
+                'message': 'Only retailers, admin, or support can view customers'
             }, status=status.HTTP_403_FORBIDDEN)
         
+        # Pagination
         page = int(request.GET.get('page', 1))
         per_page = int(request.GET.get('per_page', 20))
         
-        customers = CustomerProfile.objects.select_related('user').filter(
-            is_active=True
-        ).order_by('-created_at')
+        customers = CustomerProfile.objects.select_related('user').order_by('-created_at')
         
+        # Paginate
         start = (page - 1) * per_page
         end = start + per_page
         paginated = customers[start:end]
@@ -695,28 +816,96 @@ def list_customers(request):
         }, status=status.HTTP_400_BAD_REQUEST)
     
 
+from django.core.cache import cache
+
+from django.core.cache import cache
+
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
 def user_addresses(request):
     """Get or create user addresses"""
     
+    # ✅ Get session_id from header
+    session_id = request.headers.get('X-Session-ID')
+    print(f"🔑 Session ID: {session_id}")
+    
+    # ✅ GET method
     if request.method == 'GET':
-        addresses = Address.objects.filter(user=request.user)
+        print(f"📥 GET request - User authenticated: {request.user.is_authenticated}")
+        
+        if not request.user.is_authenticated:
+            # Guest: Get address from cache using session_id
+            if session_id:
+                cache_key = f'guest_address_{session_id}'
+                guest_address = cache.get(cache_key)
+                print(f"🔍 Cache key: {cache_key}")
+                print(f"📦 Retrieved from cache: {guest_address}")
+                
+                if guest_address:
+                    return Response({'status': 'success', 'data': [guest_address], 'source': 'cache'})
+            return Response({'status': 'success', 'data': []})
+        
+        # Logged-in user: Get from database
+        if request.user.role in ['admin', 'support']:
+            addresses = Address.objects.all()
+        else:
+            addresses = Address.objects.filter(user=request.user)
+        
         serializer = AddressSerializer(addresses, many=True)
         return Response({'status': 'success', 'data': serializer.data})
     
+    # ✅ POST method
     elif request.method == 'POST':
+        print(f"📤 POST request - User authenticated: {request.user.is_authenticated}")
+        
         serializer = AddressSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response({'status': 'success', 'data': serializer.data}, status=201)
-        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+        
+        if not serializer.is_valid():
+            return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+        
+        # ✅ Logged-in user: Save to database
+        if request.user.is_authenticated:
+            print(f"💾 Saving address to DATABASE for user: {request.user.id}")
+            user = request.user
+            if request.user.role == 'admin' and request.data.get('user_id'):
+                try:
+                    user = User.objects.get(id=request.data.get('user_id'))
+                except User.DoesNotExist:
+                    return Response({'status': 'error', 'message': 'User not found'}, status=404)
+            
+            address = serializer.save(user=user)
+            return Response({'status': 'success', 'data': AddressSerializer(address).data, 'saved': True}, status=201)
+        
+        # ✅ Guest: Save to cache using session_id
+        else:
+            print(f"💾 Saving address to CACHE for session: {session_id}")
+            
+            if not session_id:
+                return Response({'status': 'error', 'message': 'Session ID required'}, status=400)
+            
+            cache_key = f'guest_address_{session_id}'
+            cache.set(cache_key, serializer.validated_data, 3600)
+            
+            # Verify cache was set
+            verify = cache.get(cache_key)
+            print(f"✅ Cache key: {cache_key}")
+            print(f"✅ Cache set at: {cache_key}")
+            print(f"✅ Verify cache read: {verify}")
+            
+            return Response({
+                'status': 'success',
+                'data': serializer.validated_data,
+                'saved': False,
+                'expires_in': '1 hour',
+                'message': 'Address stored temporarily (expires in 1 hour)'
+            }, status=200)
 
 
 @api_view(['PUT', 'DELETE'])
-@permission_classes([IsAuthenticated])
 def address_detail(request, address_id):
     """Update or delete address"""
+    
+    if not request.user.is_authenticated:
+        return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
     
     try:
         address = Address.objects.get(id=address_id, user=request.user)

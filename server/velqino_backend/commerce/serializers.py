@@ -1,12 +1,12 @@
 from rest_framework import serializers
 from .models import Order, OrderItem, Cart, CartItem
-from catalog.serializers import ProductListSerializer
+from catalog.serializers import ProductListSerializer, ProductDetailSerializer
 
 
 class CartItemSerializer(serializers.ModelSerializer):
     """Serializer for cart items"""
     
-    product_detail = ProductListSerializer(source='product', read_only=True)
+    product_detail = ProductDetailSerializer(source='product', read_only=True)
     subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     saved_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     
@@ -62,9 +62,18 @@ class ApplyCouponSerializer(serializers.Serializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    """Serializer for order items with all product images"""
+    
+    product_images = serializers.SerializerMethodField()
+    
     class Meta:
         model = OrderItem
-        fields = ['id', 'product_name', 'product_sku', 'quantity', 'price', 'total']
+        fields = ['id', 'product_name', 'product_sku', 'quantity', 'price', 'total', 'product_images']
+    
+    def get_product_images(self, obj):
+        if obj.product:
+            return [img.image.url for img in obj.product.images.all()]
+        return []
 
 class OrderListSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)

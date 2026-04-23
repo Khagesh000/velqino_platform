@@ -1,28 +1,43 @@
 "use client";
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useGetOrderQuery } from '@/redux/wholesaler/slices/ordersSlice';
-import { Download, ShoppingBag, FileText, CheckCircle } from '../../../../utils/icons';
+import { useGetOrderQuery, useDownloadInvoiceMutation } from '@/redux/wholesaler/slices/ordersSlice';
+import { Download, ShoppingBag, FileText, CheckCircle, Loader2 } from '../../../../utils/icons';
 import SuccessAnimation from './Components/SuccessAnimation';
 import OrderDetailsTable from './Components/OrderDetailsTable';
 import ShippingCard from './Components/ShippingCard';
 import PriceBreakdown from './Components/PriceBreakdown';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
-export default function OrderConfirmationPage() {
-  const { orderId } = useParams();
+export default function OrderConfirmationPage({ orderId }) {
+  console.log('📦 Received orderId:', orderId);
+  
   const router = useRouter();
   const [showAnimation, setShowAnimation] = React.useState(true);
   
   const { data, isLoading, error } = useGetOrderQuery(orderId);
-  
-  const handleDownloadInvoice = async () => {
-    toast.success('Invoice download started');
-    // Implement invoice download logic
+  const [downloadInvoice, { isLoading: isDownloading }] = useDownloadInvoiceMutation();
+
+    const handleDownloadInvoice = async () => {
+      try {
+          const blob = await downloadInvoice(order.order_number).unwrap();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `invoice_${order.order_number}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          a.remove();
+          toast.success('Invoice downloaded!');
+      } catch (error) {
+          toast.error('Download failed');
+      }
   };
   
+  // ✅ Single loading check
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12">
@@ -34,6 +49,7 @@ export default function OrderConfirmationPage() {
     );
   }
   
+  // ✅ Single error check
   if (error || !data?.data) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
@@ -52,13 +68,15 @@ export default function OrderConfirmationPage() {
   }
   
   const order = data.data;
+  console.log('✅ Order data ready:', order);
+  
+  
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-8 sm:py-12">
       <SuccessAnimation onComplete={() => setShowAnimation(false)} />
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
-        
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -77,7 +95,7 @@ export default function OrderConfirmationPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Order Date</p>
-              <p className="text-gray-700">{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="text-gray-700">{new Date(order.created_at).toLocaleDateString('en-IN')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Order Status</p>
@@ -93,8 +111,7 @@ export default function OrderConfirmationPage() {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Section - Order Items */}
+          {/* Left Section */}
           <div className="lg:col-span-2 space-y-6">
             <OrderDetailsTable items={order.items} />
             <ShippingCard order={order} />
@@ -108,18 +125,26 @@ export default function OrderConfirmationPage() {
         
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 mt-8">
-          <Link href="/products" className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+          <Link href="/product/productlistingpage" className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50">
             <ShoppingBag size={18} />
             Continue Shopping
           </Link>
-          <Link href="/account/orders" className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+          <Link href="/product/orderslist" className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50">
             <FileText size={18} />
             View All Orders
           </Link>
-          <button onClick={handleDownloadInvoice} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600 transition-colors">
-            <Download size={18} />
-            Download Invoice
-          </button>
+          <button 
+            onClick={handleDownloadInvoice} 
+            disabled={isDownloading}
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600 disabled:opacity-50"
+        >
+            {isDownloading ? (
+                <Loader2 size={18} className="animate-spin" />
+            ) : (
+                <Download size={18} />
+            )}
+            {isDownloading ? 'Downloading...' : 'Download Invoice'}
+        </button>
         </div>
       </div>
     </div>

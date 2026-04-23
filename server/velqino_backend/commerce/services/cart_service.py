@@ -11,39 +11,44 @@ class CartService:
     
     CACHE_TTL = 300  # 5 minutes
     
+    
     @staticmethod
     def get_or_create_cart(user=None, session_id=None, user_type='customer'):
         """Get existing cart or create new one"""
         
-        # Priority: User cart > Session cart > New cart
         cart = None
         
+        # ✅ PRIORITY 1: If user is authenticated, get their cart
         if user and user.is_authenticated:
             cart = Cart.objects.filter(user=user, status='active').first()
             if cart:
-                # Update user type if changed
+                # Update user_type if changed
                 if cart.user_type != user.role:
                     cart.user_type = user.role
                     cart.save()
-        
-        if not cart and session_id:
-            cart = Cart.objects.filter(session_id=session_id, status='active', user__isnull=True).first()
-        
-        if not cart:
+                return cart
+            
+            # Create new cart for authenticated user
             cart = Cart.objects.create(
-                user=user if user and user.is_authenticated else None,
-                session_id=session_id if not user or not user.is_authenticated else None,
-                user_type=user.role if user and user.is_authenticated else user_type
+                user=user,
+                user_type=user.role,
+                status='active'
             )
+            return cart
         
-        # Merge guest cart with user cart if user just logged in
-        if user and user.is_authenticated and session_id:
-            guest_cart = Cart.objects.filter(session_id=session_id, status='active', user__isnull=True).first()
-            if guest_cart and guest_cart.id != cart.id:
-                cart = guest_cart.merge_with_user_cart(cart)
+        # ✅ PRIORITY 2: For guest users, use session_id
+        if session_id:
+            cart = Cart.objects.filter(session_id=session_id, status='active', user__isnull=True).first()
+            if cart:
+                return cart
         
-        # Invalidate cache
-        CartService._invalidate_cart_cache(cart.id)
+        # ✅ PRIORITY 3: Create new guest cart
+        import uuid
+        cart = Cart.objects.create(
+            session_id=session_id or str(uuid.uuid4()),
+            user_type=user_type,
+            status='active'
+        )
         
         return cart
     

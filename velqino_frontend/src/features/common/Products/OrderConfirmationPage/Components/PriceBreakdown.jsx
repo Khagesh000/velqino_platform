@@ -1,125 +1,67 @@
 "use client";
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useGetOrderQuery } from '@/redux/wholesaler/slices/ordersSlice';
-import { Download, ShoppingBag, FileText, CheckCircle } from '../../../../utils/icons';
-import SuccessAnimation from './Components/SuccessAnimation';
-import OrderDetailsTable from './Components/OrderDetailsTable';
-import ShippingCard from './Components/ShippingCard';
-import PriceBreakdown from './Components/PriceBreakdown';
-import toast from 'react-hot-toast';
+import { Wallet, CreditCard, Smartphone, Building } from '../../../../../utils/icons';
 
-export default function OrderConfirmationPage() {
-  const { orderId } = useParams();
-  const router = useRouter();
-  const [showAnimation, setShowAnimation] = React.useState(true);
-  
-  const { data, isLoading, error } = useGetOrderQuery(orderId);
-  
-  const handleDownloadInvoice = async () => {
-    toast.success('Invoice download started');
-    // Implement invoice download logic
+export default function PriceBreakdown({ order }) {
+  const getPaymentIcon = (method) => {
+    switch(method) {
+      case 'cod': return <Wallet size={18} className="text-primary-500" />;
+      case 'card': return <CreditCard size={18} className="text-primary-500" />;
+      case 'upi': return <Smartphone size={18} className="text-primary-500" />;
+      case 'netbanking': return <Building size={18} className="text-primary-500" />;
+      default: return <CreditCard size={18} className="text-primary-500" />;
+    }
   };
-  
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="animate-pulse max-w-5xl mx-auto">
-          <div className="h-32 bg-gray-100 rounded-xl mb-6"></div>
-          <div className="h-64 bg-gray-100 rounded-xl"></div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (error || !data?.data) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="max-w-md mx-auto">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Order Not Found</h2>
-          <p className="text-gray-500 mb-6">We couldn't find your order. Please check the order number.</p>
-          <Link href="/products" className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600">
-            Continue Shopping
-          </Link>
-        </div>
-      </div>
-    );
-  }
-  
-  const order = data.data;
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-8 sm:py-12">
-      <SuccessAnimation onComplete={() => setShowAnimation(false)} />
-      
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
-        
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={32} className="text-green-500" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
-          <p className="text-gray-500">Thank you for shopping with us. Your order has been placed successfully.</p>
+    <div className="space-y-4">
+      {/* Payment Method */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center gap-3 mb-4">
+          {getPaymentIcon(order.payment_method)}
+          <h2 className="font-semibold text-gray-900">Payment Method</h2>
         </div>
-        
-        {/* Order Info Card */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Order Number</p>
-              <p className="text-lg font-bold text-gray-900">{order.order_number}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Order Date</p>
-              <p className="text-gray-700">{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Order Status</p>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium capitalize bg-yellow-100 text-yellow-700">
-                {order.status}
-              </span>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Email Confirmation</p>
-              <p className="text-sm text-green-600">✓ Sent to {order.customer?.email}</p>
-            </div>
-          </div>
+        <div className="space-y-2">
+          <p className="font-medium text-gray-800 capitalize">
+            {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method}
+          </p>
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium capitalize ${
+            order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+          }`}>
+            {order.payment_status}
+          </span>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Section - Order Items */}
-          <div className="lg:col-span-2 space-y-6">
-            <OrderDetailsTable items={order.items} />
-            <ShippingCard order={order} />
+      </div>
+
+      {/* Price Summary */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-900 mb-4">Price Summary</h2>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Subtotal</span>
+            <span>₹{order.subtotal?.toFixed(2)}</span>
           </div>
-          
-          {/* Right Section */}
-          <div className="space-y-6">
-            <PriceBreakdown order={order} />
+          {order.discount > 0 && (
+            <div className="flex justify-between text-sm text-green-600">
+              <span>Discount</span>
+              <span>-₹{order.discount?.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Shipping</span>
+            <span>{order.shipping_charge === 0 ? 'Free' : `₹${order.shipping_charge}`}</span>
           </div>
-        </div>
-        
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-8">
-          <Link href="/products" className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-            <ShoppingBag size={18} />
-            Continue Shopping
-          </Link>
-          <Link href="/account/orders" className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-            <FileText size={18} />
-            View All Orders
-          </Link>
-          <button onClick={handleDownloadInvoice} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600 transition-colors">
-            <Download size={18} />
-            Download Invoice
-          </button>
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Tax (GST)</span>
+            <span>₹{order.tax?.toFixed(2)}</span>
+          </div>
+          <div className="border-t border-gray-100 pt-3 mt-3">
+            <div className="flex justify-between font-bold text-gray-900">
+              <span>Total</span>
+              <span className="text-primary-600">₹{order.total?.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -10,6 +10,15 @@ from identity.serializers import AddressSerializer
 from .services.cart_service import CartService
 from decimal import Decimal
 import uuid
+from identity.permissions import IsAdmin, IsSupport, IsAdminOrSupport
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+import io
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -18,6 +27,8 @@ def create_order(request):
     from .models import Cart, Order, OrderItem
     from catalog.models import Product
     from identity.models import Address
+    import uuid
+    from decimal import Decimal
     
     user = request.user
     
@@ -59,9 +70,9 @@ def create_order(request):
     # Calculate totals
     subtotal = cart.subtotal
     discount = cart.discount_amount
-    shipping_charge = 99 if delivery_type == 'express' else 0
-    tax = round((subtotal - discount) * 0.05, 2)
-    grand_total = subtotal - discount + shipping_charge + tax
+    shipping_charge = Decimal('99') if delivery_type == 'express' else Decimal('0')
+    tax = round((float(subtotal) - float(discount)) * 0.05, 2)
+    grand_total = float(subtotal) - float(discount) + float(shipping_charge) + tax
     
     # Create order
     order = Order.objects.create(
@@ -71,8 +82,8 @@ def create_order(request):
         total_amount=subtotal,
         discount_amount=discount,
         shipping_charge=shipping_charge,
-        tax_amount=tax,
-        grand_total=grand_total,
+        tax_amount=Decimal(str(tax)),
+        grand_total=Decimal(str(grand_total)),
         payment_method=payment_method,
         delivery_type=delivery_type,
         shipping_name=address.full_name,
@@ -87,11 +98,20 @@ def create_order(request):
     
     # Create order items and update stock
     for cart_item in cart.items.all():
+        # Get primary image URL
+        product_image = None
+        primary_image = cart_item.product.images.filter(is_primary=True).first()
+        if primary_image:
+            product_image = primary_image.image.url
+        elif cart_item.product.images.first():
+            product_image = cart_item.product.images.first().image.url
+        
         OrderItem.objects.create(
             order=order,
             product=cart_item.product,
             product_name=cart_item.product.name,
             product_sku=cart_item.product.sku,
+            product_image=product_image,
             quantity=cart_item.quantity,
             price=cart_item.price_at_add,
             total=cart_item.subtotal,
@@ -127,7 +147,9 @@ def get_orders(request):
     
     user = request.user
     
-    if user.role == 'customer':
+    if user.role in ['admin', 'support']:
+        orders = Order.objects.all().order_by('-created_at')
+    elif user.role == 'customer':
         orders = Order.objects.filter(customer=user)
     elif user.role == 'retailer':
         orders = Order.objects.filter(retailer=user)
@@ -175,20 +197,23 @@ def get_order(request, order_id):
             'message': 'Order not found'
         }, status=status.HTTP_404_NOT_FOUND)
     
-    # Check permission: only customer, retailer, or wholesaler can view
-    if user.role == 'customer' and order.customer.id != user.id:
+    if user.role in ['admin', 'support']:
+        pass  # Allow access to any order
+    
+    # Check permission for regular users
+    elif user.role == 'customer' and order.customer.id != user.id:
         return Response({
             'status': 'error',
             'message': 'You are not authorized to view this order'
         }, status=status.HTTP_403_FORBIDDEN)
     
-    if user.role == 'retailer' and order.retailer and order.retailer.id != user.id:
+    elif user.role == 'retailer' and order.retailer and order.retailer.id != user.id:
         return Response({
             'status': 'error',
             'message': 'You are not authorized to view this order'
         }, status=status.HTTP_403_FORBIDDEN)
     
-    if user.role == 'wholesaler' and order.wholesaler and order.wholesaler.id != user.id:
+    elif user.role == 'wholesaler' and order.wholesaler and order.wholesaler.id != user.id:
         return Response({
             'status': 'error',
             'message': 'You are not authorized to view this order'
@@ -202,7 +227,7 @@ def get_order(request, order_id):
             'product_id': item.product.id,
             'product_name': item.product_name,
             'product_sku': item.product_sku,
-            'product_image': item.product.primary_image if item.product else None,
+            'product_image': item.product_image,
             'quantity': item.quantity,
             'price': float(item.price),
             'total': float(item.total)
@@ -255,6 +280,50 @@ def get_order(request, order_id):
         'data': data
     })
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def merge_cart(request):
+    """Merge guest cart with user cart after login"""
+    
+    session_id = request.headers.get('X-Session-ID')
+    user = request.user
+    
+    if not session_id:
+        return Response({'status': 'error', 'message': 'Session ID required'}, status=400)
+    
+    # Get guest cart
+    guest_cart = Cart.objects.filter(session_id=session_id, status='active', user__isnull=True).first()
+    
+    if not guest_cart:
+        return Response({'status': 'success', 'message': 'No guest cart to merge'})
+    
+    # Get or create user cart
+    user_cart = Cart.objects.filter(user=user, status='active').first()
+    if not user_cart:
+        user_cart = Cart.objects.create(user=user, user_type=user.role, status='active')
+    
+    # Move items from guest cart to user cart
+    for guest_item in guest_cart.items.all():
+        existing_item = user_cart.items.filter(
+            product=guest_item.product,
+            selected_size=guest_item.selected_size,
+            selected_color=guest_item.selected_color
+        ).first()
+        
+        if existing_item:
+            existing_item.quantity += guest_item.quantity
+            existing_item.save()
+            guest_item.delete()
+        else:
+            guest_item.cart = user_cart
+            guest_item.save()
+    
+    # Delete guest cart
+    guest_cart.delete()
+    
+    return Response({'status': 'success', 'message': 'Cart merged successfully'})
+
 @api_view(['GET'])
 def get_cart(request):
     """Get current user's cart"""
@@ -262,12 +331,21 @@ def get_cart(request):
     # Get session ID from request
     session_id = request.headers.get('X-Session-ID', request.COOKIES.get('session_id'))
     
-    # Get or create cart
+    # Get authenticated user (if any)
+    user = request.user if request.user.is_authenticated else None
+    
+    # ✅ Pass user correctly
     cart = CartService.get_or_create_cart(
-        user=request.user if request.user.is_authenticated else None,
+        user=user,  # Pass the user object
         session_id=session_id,
-        user_type=request.user.role if request.user.is_authenticated else 'customer'
+        user_type=user.role if user else 'customer'
     )
+    
+    # ✅ If user is authenticated but cart has no user, update it
+    if user and not cart.user:
+        cart.user = user
+        cart.user_type = user.role
+        cart.save()
     
     # Get cart details
     cart_data = CartService.get_cart_details(cart)
@@ -280,8 +358,8 @@ def get_cart(request):
     })
     
     # Set session ID cookie for guests
-    if not request.user.is_authenticated and session_id:
-        response.set_cookie('session_id', session_id, max_age=30*24*60*60)  # 30 days
+    if not user and session_id:
+        response.set_cookie('session_id', session_id, max_age=30*24*60*60)
     
     return response
 
@@ -292,16 +370,19 @@ def add_to_cart(request):
     
     serializer = AddToCartSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
     
     # Get session ID
     session_id = request.headers.get('X-Session-ID', request.COOKIES.get('session_id'))
     
-    # Get or create cart
+    # Get authenticated user
+    user = request.user if request.user.is_authenticated else None
+    
+    # ✅ Get or create cart with correct user
     cart = CartService.get_or_create_cart(
-        user=request.user if request.user.is_authenticated else None,
+        user=user,
         session_id=session_id,
-        user_type=request.user.role if request.user.is_authenticated else 'customer'
+        user_type=user.role if user else 'customer'
     )
     
     try:
@@ -316,11 +397,11 @@ def add_to_cart(request):
         return Response({
             'status': 'success',
             'message': 'Product added to cart',
-            'data': CartItemSerializer(cart_item).data if cart_item else None
-        }, status=status.HTTP_201_CREATED)
+            'data': CartItemSerializer(cart_item).data
+        }, status=201)
         
     except ValueError as e:
-        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'status': 'error', 'message': str(e)}, status=400)
 
 
 @api_view(['PUT', 'PATCH'])
@@ -589,3 +670,123 @@ def get_customer_orders(request):
         'status': 'success',
         'data': serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_invoice(request, order_id):
+    """Download order invoice as PDF"""
+    from .models import Order
+    
+    try:
+        if str(order_id).startswith('ORD-'):
+            order = Order.objects.get(order_number=order_id)
+        else:
+            order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Order not found'}, status=404)
+    
+    # Check permission
+    user = request.user
+    if user.role not in ['admin', 'support']:
+        if user.role == 'customer' and order.customer.id != user.id:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        elif user.role == 'retailer' and order.retailer and order.retailer.id != user.id:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Title Style
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=TA_CENTER, fontSize=24, textColor=colors.HexColor('#396d72'))
+    
+    # Header
+    elements.append(Paragraph("VELTRIX", title_style))
+    elements.append(Paragraph("Invoice", styles['Heading2']))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Order Info Table
+    order_data = [
+        ['Order Number:', order.order_number, 'Order Date:', order.created_at.strftime('%d/%m/%Y')],
+        ['Payment Method:', order.payment_method.upper(), 'Payment Status:', order.payment_status.upper()],
+        ['Order Status:', order.status.upper(), 'Delivery Type:', order.delivery_type.upper()]
+    ]
+    
+    order_table = Table(order_data, colWidths=[1.5*inch, 2*inch, 1.5*inch, 2*inch])
+    order_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(order_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Customer Info
+    customer_data = [
+        ['Bill To:', 'Ship To:'],
+        [f"{order.customer.get_full_name() or order.customer.email}", f"{order.shipping_name}"],
+        [f"{order.customer.email}", f"{order.shipping_phone}"],
+        ['', f"{order.shipping_address}"],
+        ['', f"{order.shipping_city}, {order.shipping_state} - {order.shipping_pincode}"]
+    ]
+    
+    customer_table = Table(customer_data, colWidths=[3*inch, 4*inch])
+    customer_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOX', (0, 0), (-1, -1), 1, colors.grey),
+    ]))
+    elements.append(customer_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Items Table
+    items_data = [['#', 'Product', 'SKU', 'Quantity', 'Price', 'Total']]
+    
+    for idx, item in enumerate(order.items.all(), 1):
+        items_data.append([
+            str(idx),
+            item.product_name,
+            item.product_sku,
+            str(item.quantity),
+            f"₹{item.price}",
+            f"₹{item.total}"
+        ])
+    
+    # Add total row
+    items_data.append(['', '', '', '', 'Subtotal:', f"₹{order.total_amount}"])
+    items_data.append(['', '', '', '', 'Discount:', f"-₹{order.discount_amount}"])
+    items_data.append(['', '', '', '', 'Shipping:', f"₹{order.shipping_charge}"])
+    items_data.append(['', '', '', '', 'Tax (GST):', f"₹{order.tax_amount}"])
+    items_data.append(['', '', '', '', 'Grand Total:', f"₹{order.grand_total}"])
+    
+    items_table = Table(items_data, colWidths=[0.5*inch, 2.5*inch, 1.5*inch, 0.8*inch, 1.2*inch, 1.2*inch])
+    items_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#396d72')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -6), 0.5, colors.grey),
+        ('BOX', (0, -5), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (4, -5), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(items_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Footer
+    footer_style = ParagraphStyle('FooterStyle', parent=styles['Normal'], alignment=TA_CENTER, fontSize=8, textColor=colors.grey)
+    elements.append(Paragraph("Thank you for shopping with VELTRIX!", footer_style))
+    elements.append(Paragraph("For any queries, contact support@veltrix.com | +91 1800 123 4567", footer_style))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_{order.order_number}.pdf"'
+    return response
