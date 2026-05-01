@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, ShoppingCart, User, ChevronDown, Menu, X, Store, Package, LogIn, Heart, Truck, Shield, Bell, Sun, Moon } from '../../utils/icons';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Search, ShoppingCart, MapPin, User, ChevronDown, Menu, X, Store, Package, LogIn, Heart, Truck, Shield, Bell, Sun, Moon } from '../../utils/icons';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import WholesalerLoginModal from "./WholesalerLoginModal";
 import RetailerLoginModal from "./RetailerLoginModal";
 import CustomerLoginModal from "./CustomerLoginModal";
 import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
+import { toast } from 'react-toastify';
 
 export default function Navbar() {
   const router = useRouter();
@@ -56,54 +57,86 @@ export default function Navbar() {
     }
   }, []);
 
-// Add this useEffect
-useEffect(() => {
-  const handleScroll = () => {
-    if (window.scrollY > lastScrollY && window.scrollY > 100) {
-      setIsVisible(false); // Scrolling down - hide navbar
-    } else {
-      setIsVisible(true); // Scrolling up - show navbar
-    }
-    setLastScrollY(window.scrollY);
-  };
+    // Add this useEffect
+    useEffect(() => {
+      const handleScroll = () => {
+        if (window.scrollY > lastScrollY && window.scrollY > 100) {
+          setIsVisible(false); // Scrolling down - hide navbar
+        } else {
+          setIsVisible(true); // Scrolling up - show navbar
+        }
+        setLastScrollY(window.scrollY);
+      };
 
-  window.addEventListener('scroll', handleScroll);
-  return () => window.removeEventListener('scroll', handleScroll);
-}, [lastScrollY]);
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
 
-useEffect(() => {
-  if (mounted && (isLoggedIn || !isLoggedIn)) {
-    refetchCart();
-  }
-}, [isLoggedIn, mounted, refetchCart]);
+    useEffect(() => {
+      if (mounted && (isLoggedIn || !isLoggedIn)) {
+        refetchCart();
+      }
+    }, [isLoggedIn, mounted, refetchCart]);
 
 
-  // Add this useEffect with your other useEffects
-useEffect(() => {
-  function handleClickOutside(event) {
-    // Close user dropdown when clicking outside
-    if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-      setIsUserDropdownOpen(false);
-    }
-    // Close cities dropdown
-    if (citiesDropdownRef.current && !citiesDropdownRef.current.contains(event.target)) {
-      setIsCitiesDropdownOpen(false);
-    }
-    // Close become seller dropdown
-    if (becomeSellerDropdownRef.current && !becomeSellerDropdownRef.current.contains(event.target)) {
-      setIsBecomeSellerOpen(false);
-    }
-  }
+      // Add this useEffect with your other useEffects
+    useEffect(() => {
+      function handleClickOutside(event) {
+        // Close user dropdown when clicking outside
+        if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+          setIsUserDropdownOpen(false);
+        }
+        // Close cities dropdown
+        if (citiesDropdownRef.current && !citiesDropdownRef.current.contains(event.target)) {
+          setIsCitiesDropdownOpen(false);
+        }
+        // Close become seller dropdown
+        if (becomeSellerDropdownRef.current && !becomeSellerDropdownRef.current.contains(event.target)) {
+          setIsBecomeSellerOpen(false);
+        }
+      }
 
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleDashboardNavigation = useMemo(() => {
+      return () => {
+        const token = localStorage.getItem('access');
+        const role = localStorage.getItem('user_role');
+        
+        if (!token || !role) {
+          toast.error('Please login to access dashboard', {
+            position: 'bottom-right',
+            duration: 3000
+          });
+          router.push('/');
+          return;
+        }
+        
+        const dashboardMap = {
+          wholesaler: '/wholesaler/wholesalerdashboard',
+          retailer: '/retailer/retailerdashboard',
+          customer: '/customer/dashboard'
+        };
+        
+        const dashboardUrl = dashboardMap[role];
+        
+        if (!dashboardUrl) {
+          toast.error('Invalid user role');
+          return;
+        }
+        
+        router.push(dashboardUrl);
+      };
+    }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
+    localStorage.removeItem('user_id')
     setIsLoggedIn(false);
     setUserRole(null);
     router.push('/');
@@ -174,11 +207,7 @@ useEffect(() => {
     else router.push('/customer/dashboard');
   };
 
-  const getDashboardLink = () => {
-    if (userRole === 'wholesaler') return '/wholesaler/wholesalerdashboard';
-    if (userRole === 'retailer') return '/retailer/retailerdashboard';
-    return '/customer/dashboard';
-  };
+  
 
   const getRoleBadgeColor = () => {
     if (userRole === 'wholesaler') return 'bg-purple-100 text-purple-700';
@@ -377,17 +406,25 @@ useEffect(() => {
                           </span>
                         </div>
                         
-                        <button onClick={() => handleNavigation(getDashboardLink())} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <Package size={16} />
-                          <span className="text-sm">Dashboard</span>
-                        </button>
+                        <button 
+                            onClick={handleDashboardNavigation}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100"
+                          >
+                            <Package size={16} />
+                            <span className="text-sm">Dashboard</span>
+                          </button>
                         
                         <button onClick={() => handleNavigation('/orders')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                           <Truck size={16} />
                           <span className="text-sm">My Orders</span>
                         </button>
+
+                        <button onClick={() => router.push('/profile/addresses')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                          <MapPin size={16} />
+                          <span className="text-sm">Saved Addresses</span>
+                        </button>
                         
-                        <button onClick={() => handleNavigation('/wishlist')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                        <button onClick={() => handleNavigation('/profile/wishlist')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                           <Heart size={16} />
                           <span className="text-sm">Wishlist</span>
                         </button>

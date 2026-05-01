@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Search,
   BookOpen,
@@ -19,107 +19,92 @@ import {
   Phone,
   MessageSquare
 } from '../../../../utils/icons'
+import { useGetFAQsQuery, useGetFAQCategoriesQuery, useSearchFAQsQuery, useMarkFAQHelpfulMutation, useIncrementFAQViewMutation } from '@/redux/wholesaler/slices/supportSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Support/HelpCenter.scss'
 
-export default function HelpCenter() {
+export default function HelpCenter({ isActive = false }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedArticle, setSelectedArticle] = useState(null)
   const [selectedFaq, setSelectedFaq] = useState(null)
 
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetFAQCategoriesQuery(undefined, {
+    skip: !isActive
+  })
+  
+  const { data: faqsData, isLoading: faqsLoading } = useGetFAQsQuery({
+    category: selectedCategory !== 'all' ? selectedCategory : undefined,
+    per_page: 50
+  }, {
+    skip: !isActive
+  })
+  
+  // ✅ Skip search when tab not active or no query
+  const { data: searchResults, isLoading: searchLoading } = useSearchFAQsQuery(searchQuery, {
+    skip: !isActive || !searchQuery || searchQuery.length < 2
+  })
+
+  const [markHelpful] = useMarkFAQHelpfulMutation()
+  const [incrementView] = useIncrementFAQViewMutation()
+
+  // Transform API data to component format
   const categories = [
-    { id: 'all', label: 'All Topics', icon: BookOpen, count: 48 },
-    { id: 'getting-started', label: 'Getting Started', icon: HelpCircle, count: 12 },
-    { id: 'orders', label: 'Orders & Payments', icon: FileText, count: 15 },
-    { id: 'products', label: 'Products & Inventory', icon: BookOpen, count: 10 },
-    { id: 'account', label: 'Account & Settings', icon: HelpCircle, count: 8 },
-    { id: 'faq', label: 'FAQ', icon: HelpCircle, count: 3 }
+    { id: 'all', label: 'All Topics', icon: BookOpen, count: faqsData?.pagination?.total || 0 },
+    ...(categoriesData?.data || []).map(cat => ({
+      id: cat.slug,
+      label: cat.name,
+      icon: HelpCircle,
+      count: cat.faqs_count || 0
+    }))
   ]
 
-  const articles = [
-    {
-      id: 1,
-      title: 'How to create your first product listing',
-      category: 'getting-started',
-      content: 'Learn how to add products to your catalog with images, pricing, and inventory. Follow our step-by-step guide to get your products live in minutes.',
-      views: 1245,
-      helpful: 89,
-      date: '2024-03-15'
-    },
-    {
-      id: 2,
-      title: 'Understanding order status and fulfillment',
-      category: 'orders',
-      content: 'Explanation of order statuses: Pending, Processing, Shipped, Delivered, Cancelled. Learn how to manage fulfillment efficiently.',
-      views: 892,
-      helpful: 76,
-      date: '2024-03-14'
-    },
-    {
-      id: 3,
-      title: 'How to manage inventory and stock alerts',
-      category: 'products',
-      content: 'Set up low stock alerts, manage inventory levels, and track stock movements across your product catalog.',
-      views: 567,
-      helpful: 45,
-      date: '2024-03-13'
-    },
-    {
-      id: 4,
-      title: 'Setting up payment methods for payouts',
-      category: 'account',
-      content: 'Add bank account or UPI details to receive payouts from your sales. Learn about payout schedules and minimum withdrawal amounts.',
-      views: 723,
-      helpful: 68,
-      date: '2024-03-12'
-    },
-    {
-      id: 5,
-      title: 'How to process refunds and returns',
-      category: 'orders',
-      content: 'Step-by-step guide to process customer refunds, handle returns, and manage reverse logistics.',
-      views: 634,
-      helpful: 52,
-      date: '2024-03-11'
-    },
-    {
-      id: 6,
-      title: 'Wholesale pricing and bulk discounts',
-      category: 'faq',
-      content: 'Understanding wholesale pricing tiers, bulk discounts, and minimum order quantities for your products.',
-      views: 1456,
-      helpful: 112,
-      date: '2024-03-10'
-    }
-  ]
+  const articles = (faqsData?.data || []).map(faq => ({
+    id: faq.id,
+    title: faq.question,
+    category: faq.category_slug || 'general',
+    content: faq.answer,
+    views: faq.views || 0,
+    helpful: faq.helpful_count || 0,
+    date: faq.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+  }))
 
-  const faqs = [
-    { 
-      id: 1,
-      question: 'How long does it take to receive payouts?', 
-      answer: 'Payouts are processed within 3-5 business days after order delivery. Bank transfers may take an additional 1-2 days depending on your bank.'
-    },
-    { 
-      id: 2,
-      question: 'Can I change my store name?', 
-      answer: 'Yes, you can update your store name in Settings > Profile Settings. Store name changes are reflected within 24 hours.'
-    },
-    { 
-      id: 3,
-      question: 'How do I contact support?', 
-      answer: 'You can reach us via live chat (available 9 AM - 6 PM IST), email at support@veltrix.com, or raise a support ticket in the Contact Support section.'
-    },
-    { 
-      id: 4,
-      question: 'What is the minimum order quantity?', 
-      answer: 'Minimum order quantity varies by product. Check individual product pages for MOQ details. Bulk orders may qualify for additional discounts.'
-    },
-    { 
-      id: 5,
-      question: 'How do I track my orders?', 
-      answer: 'You can track all your orders in the Orders section. Each order has a tracking number once shipped. Click the tracking number to view real-time status.'
+  const displayedArticles = searchQuery && searchResults?.data 
+    ? (searchResults.data || []).map(faq => ({
+        id: faq.id,
+        title: faq.question,
+        category: faq.category_slug || 'general',
+        content: faq.answer,
+        views: faq.views || 0,
+        helpful: faq.helpful_count || 0,
+        date: faq.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+      }))
+    : articles
+
+  const filteredArticles = displayedArticles.filter(article => {
+    const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory
+    return matchesCategory
+  })
+
+  const handleArticleClick = async (article) => {
+    setSelectedArticle(article)
+    try {
+      await incrementView(article.id).unwrap()
+      refetchFAQs()
+    } catch (error) {
+      console.error('Error incrementing view:', error)
     }
-  ]
+  }
+
+  const handleHelpful = async (articleId, wasHelpful) => {
+    try {
+      await markHelpful({ faqId: articleId, helpful: wasHelpful }).unwrap()
+      toast.success(wasHelpful ? 'Thanks for your feedback!' : 'Feedback recorded')
+      refetchFAQs()
+    } catch (error) {
+      toast.error('Failed to submit feedback')
+    }
+  }
 
   const videoTutorials = [
     { title: 'Getting Started with VELTRIX', duration: '5:30', level: 'Beginner' },
@@ -128,17 +113,27 @@ export default function HelpCenter() {
     { title: 'Understanding Analytics Dashboard', duration: '10:20', level: 'Intermediate' }
   ]
 
-  const filteredArticles = articles.filter(article => {
-    const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory
-    const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           article.content.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+  const isLoading = categoriesLoading || faqsLoading || searchLoading
 
-  const filteredFaqs = faqs.filter(faq =>
-    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  if (isLoading) {
+    return (
+      <div className="help-center bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="animate-pulse">
+          <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-8 text-center">
+            <div className="h-6 bg-white/20 rounded w-48 mx-auto mb-2"></div>
+            <div className="h-4 bg-white/20 rounded w-64 mx-auto"></div>
+          </div>
+          <div className="p-4 space-y-4">
+            <div className="h-10 bg-gray-200 rounded-lg"></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-32 bg-gray-200 rounded-xl"></div>
+              <div className="h-32 bg-gray-200 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="help-center bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -212,33 +207,39 @@ export default function HelpCenter() {
             <BookOpen size={18} className="text-primary-500" />
             Knowledge Base Articles
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredArticles.slice(0, 6).map(article => (
-              <div
-                key={article.id}
-                className="border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-primary-200 transition-all cursor-pointer group"
-                onClick={() => setSelectedArticle(article)}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-all">
-                    {article.title}
-                  </h4>
-                  <ChevronRight size={16} className="text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+          {filteredArticles.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No articles found. Try a different search term.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredArticles.slice(0, 6).map(article => (
+                <div
+                  key={article.id}
+                  className="border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-primary-200 transition-all cursor-pointer group"
+                  onClick={() => handleArticleClick(article)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-all">
+                      {article.title}
+                    </h4>
+                    <ChevronRight size={16} className="text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3 line-clamp-2">{article.content}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Clock size={12} />
+                      {article.date}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <ThumbsUp size={12} />
+                      {article.helpful} helpful
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2">{article.content}</p>
-                <div className="flex items-center gap-3 text-xs text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <Clock size={12} />
-                    {article.date}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp size={12} />
-                    {article.helpful} helpful
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Video Tutorials */}
@@ -262,32 +263,6 @@ export default function HelpCenter() {
                     <span>{video.level}</span>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <HelpCircle size={18} className="text-primary-500" />
-            Frequently Asked Questions
-          </h3>
-          <div className="space-y-2">
-            {(searchQuery ? filteredFaqs : faqs.slice(0, 3)).map((faq) => (
-              <div key={faq.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <button
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-all"
-                  onClick={() => setSelectedFaq(selectedFaq === faq.id ? null : faq.id)}
-                >
-                  <span className="text-sm font-medium text-gray-900">{faq.question}</span>
-                  <ChevronRight size={16} className={`text-gray-400 transition-transform ${selectedFaq === faq.id ? 'rotate-90' : ''}`} />
-                </button>
-                {selectedFaq === faq.id && (
-                  <div className="p-3 pt-0 border-t border-gray-100">
-                    <p className="text-xs text-gray-600">{faq.answer}</p>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -323,11 +298,17 @@ export default function HelpCenter() {
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-medium text-gray-700 mb-2">Was this article helpful?</p>
               <div className="flex gap-2">
-                <button className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-success-100 hover:text-success-700 transition-all">
+                <button 
+                  onClick={() => handleHelpful(selectedArticle.id, true)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-success-100 hover:text-success-700 transition-all"
+                >
                   <ThumbsUp size={14} />
                   Yes
                 </button>
-                <button className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-error-100 hover:text-error-700 transition-all">
+                <button 
+                  onClick={() => handleHelpful(selectedArticle.id, false)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-error-100 hover:text-error-700 transition-all"
+                >
                   <ThumbsDown size={14} />
                   No
                 </button>

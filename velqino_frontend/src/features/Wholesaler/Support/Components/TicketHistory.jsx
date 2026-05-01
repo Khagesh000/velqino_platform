@@ -22,131 +22,87 @@ import {
   User,
   Mail,
   Paperclip,
-  X
+  X,
+  Send
 } from '../../../../utils/icons'
+import { 
+  useGetUserTicketsQuery, 
+  useGetTicketDetailQuery,
+  useGetTicketRepliesQuery,
+  useReplyToTicketMutation,
+  useCloseTicketMutation 
+} from '@/redux/wholesaler/slices/supportSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Support/TicketHistory.scss'
 
-export default function TicketHistory() {
+export default function TicketHistory({ isActive = false }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedTicket, setSelectedTicket] = useState(null)
-  const [expandedTickets, setExpandedTickets] = useState([])
+  const [replyMessage, setReplyMessage] = useState('')
+  const [isReplying, setIsReplying] = useState(false)
 
-  const tickets = [
-    {
-      id: 'TKT-2024-001',
-      subject: 'Unable to process order payment',
-      description: 'Getting error while processing payment for order #ORD-2024-045. The payment gateway is showing timeout error.',
-      category: 'payment',
-      status: 'resolved',
-      priority: 'high',
-      createdAt: '2024-03-15T10:30:00',
-      updatedAt: '2024-03-16T14:20:00',
-      messages: [
-        { id: 1, sender: 'user', message: 'Getting error while processing payment', time: '2024-03-15 10:30 AM' },
-        { id: 2, sender: 'support', message: 'We are looking into this issue. Could you please share the error screenshot?', time: '2024-03-15 11:45 AM' },
-        { id: 3, sender: 'user', message: 'Here is the screenshot showing the timeout error', time: '2024-03-15 02:15 PM' },
-        { id: 4, sender: 'support', message: 'Thank you. The issue has been fixed. Please try again.', time: '2024-03-16 02:20 PM' }
-      ],
-      resolution: 'Payment gateway timeout issue resolved. Updated payment API configuration.'
-    },
-    {
-      id: 'TKT-2024-002',
-      subject: 'Payout delay inquiry',
-      description: 'My payout for February has not been processed yet. Expected date was March 5th.',
-      category: 'payout',
-      status: 'in-progress',
-      priority: 'medium',
-      createdAt: '2024-03-10T09:15:00',
-      updatedAt: '2024-03-18T11:30:00',
-      messages: [
-        { id: 1, sender: 'user', message: 'Payout for February not received', time: '2024-03-10 09:15 AM' },
-        { id: 2, sender: 'support', message: 'We are checking your payout status. Will update shortly.', time: '2024-03-11 10:20 AM' }
-      ],
-      resolution: ''
-    },
-    {
-      id: 'TKT-2024-003',
-      subject: 'Product listing approval delay',
-      description: 'Products added 3 days ago are still pending approval. Please review.',
-      category: 'product',
-      status: 'pending',
-      priority: 'low',
-      createdAt: '2024-03-18T08:00:00',
-      updatedAt: '2024-03-18T08:00:00',
-      messages: [],
-      resolution: ''
-    },
-    {
-      id: 'TKT-2024-004',
-      subject: 'Wrong tax calculation on invoice',
-      description: 'Invoice #INV-2024-089 shows incorrect GST calculation. Should be 18% but showing 28%.',
-      category: 'tax',
-      status: 'resolved',
-      priority: 'high',
-      createdAt: '2024-03-05T14:20:00',
-      updatedAt: '2024-03-07T16:45:00',
-      messages: [
-        { id: 1, sender: 'user', message: 'Tax calculation error on invoice', time: '2024-03-05 02:20 PM' },
-        { id: 2, sender: 'support', message: 'We have identified the issue. Corrected invoice will be sent shortly.', time: '2024-03-06 11:30 AM' },
-        { id: 3, sender: 'support', message: 'Corrected invoice has been generated and emailed to you.', time: '2024-03-07 04:45 PM' }
-      ],
-      resolution: 'Tax rate corrected to 18%. New invoice generated and sent.'
-    },
-    {
-      id: 'TKT-2024-005',
-      subject: 'Unable to access seller dashboard',
-      description: 'Getting 404 error when accessing the seller dashboard. Works fine on mobile though.',
-      category: 'technical',
-      status: 'resolved',
-      priority: 'medium',
-      createdAt: '2024-03-12T11:45:00',
-      updatedAt: '2024-03-13T09:30:00',
-      messages: [
-        { id: 1, sender: 'user', message: 'Dashboard not loading on desktop', time: '2024-03-12 11:45 AM' },
-        { id: 2, sender: 'support', message: 'Please clear your browser cache and try again.', time: '2024-03-12 02:30 PM' },
-        { id: 3, sender: 'user', message: 'Working now! Thank you.', time: '2024-03-13 09:30 AM' }
-      ],
-      resolution: 'Cache issue resolved after clearing browser cache.'
-    },
-    {
-      id: 'TKT-2024-006',
-      subject: 'Bulk product import error',
-      description: 'CSV import fails with validation errors even though format seems correct.',
-      category: 'product',
-      status: 'in-progress',
-      priority: 'high',
-      createdAt: '2024-03-17T13:20:00',
-      updatedAt: '2024-03-18T10:15:00',
-      messages: [
-        { id: 1, sender: 'user', message: 'CSV import failing with validation errors', time: '2024-03-17 01:20 PM' },
-        { id: 2, sender: 'support', message: 'We are analyzing your CSV file. Will update soon.', time: '2024-03-18 10:15 AM' }
-      ],
-      resolution: ''
-    }
-  ]
+  // Fetch tickets from API
+  const { 
+    data: ticketsData, 
+    isLoading: ticketsLoading, 
+    refetch: refetchTickets 
+  } = useGetUserTicketsQuery({
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    search: searchQuery || undefined,
+    per_page: 20
+  }, {
+    skip: !isActive
+  })
+
+  const [replyToTicket, { isLoading: isReplyingLoading }] = useReplyToTicketMutation()
+  const [closeTicket, { isLoading: isClosing }] = useCloseTicketMutation()
+
+  // Get selected ticket details
+  const { data: ticketDetailData, refetch: refetchDetail } = useGetTicketDetailQuery(selectedTicket, {
+    skip: !selectedTicket
+  })
+
+  // Get ticket replies
+  const { data: repliesData, refetch: refetchReplies } = useGetTicketRepliesQuery(selectedTicket, {
+    skip: !selectedTicket
+  })
+
+  const tickets = ticketsData?.data || []
+  const pagination = ticketsData?.pagination || { total: 0, page: 1, per_page: 20, total_pages: 1 }
+  const ticketDetail = ticketDetailData?.data
+  const replies = repliesData?.data || []
+
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = !searchQuery || 
+        ticket.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ticket.ticket_id?.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
+    return matchesSearch && matchesStatus
+})
 
   const getStatusBadge = (status) => {
     const styles = {
       resolved: 'bg-success-100 text-success-700',
-      'in-progress': 'bg-info-100 text-info-700',
-      pending: 'bg-warning-100 text-warning-700',
+      'in_progress': 'bg-info-100 text-info-700',
+      open: 'bg-warning-100 text-warning-700',
       closed: 'bg-gray-100 text-gray-700'
     }
-    return styles[status] || styles.pending
+    return styles[status] || styles.open
   }
 
   const getStatusIcon = (status) => {
     switch(status) {
       case 'resolved': return <CheckCircle size={14} />
-      case 'in-progress': return <RefreshCw size={14} />
-      case 'pending': return <Clock size={14} />
+      case 'in_progress': return <RefreshCw size={14} />
+      case 'open': return <Clock size={14} />
       default: return <AlertCircle size={14} />
     }
   }
 
   const getPriorityBadge = (priority) => {
     const styles = {
+      urgent: 'bg-red-100 text-red-700',
       high: 'bg-error-100 text-error-700',
       medium: 'bg-warning-100 text-warning-700',
       low: 'bg-gray-100 text-gray-700'
@@ -155,37 +111,63 @@ export default function TicketHistory() {
   }
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A'
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
   const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A'
     const date = new Date(dateString)
     return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
-  const toggleExpand = (ticketId) => {
-    if (expandedTickets.includes(ticketId)) {
-      setExpandedTickets(expandedTickets.filter(id => id !== ticketId))
-    } else {
-      setExpandedTickets([...expandedTickets, ticketId])
+  const handleViewTicket = (ticketId) => {
+    setSelectedTicket(ticketId)
+  }
+
+  const handleCloseTicket = async (ticketId) => {
+    if (window.confirm('Are you sure you want to close this ticket?')) {
+      try {
+        await closeTicket(ticketId).unwrap()
+        toast.success('Ticket closed successfully')
+        refetchTickets()
+        setSelectedTicket(null)
+      } catch (error) {
+        toast.error(error?.data?.message || 'Failed to close ticket')
+      }
     }
   }
 
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          ticket.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const handleReplySubmit = async () => {
+    if (!replyMessage.trim()) {
+      toast.error('Please enter a reply message')
+      return
+    }
+
+    setIsReplying(true)
+    try {
+      await replyToTicket({ ticketId: selectedTicket, message: replyMessage }).unwrap()
+      toast.success('Reply sent successfully')
+      setReplyMessage('')
+      refetchReplies()
+      refetchDetail()
+      refetchTickets()
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to send reply')
+    } finally {
+      setIsReplying(false)
+    }
+  }
 
   const stats = {
-    total: tickets.length,
+    total: pagination.total || 0,
     resolved: tickets.filter(t => t.status === 'resolved').length,
-    inProgress: tickets.filter(t => t.status === 'in-progress').length,
-    pending: tickets.filter(t => t.status === 'pending').length
+    inProgress: tickets.filter(t => t.status === 'in_progress').length,
+    open: tickets.filter(t => t.status === 'open').length
   }
+
+  
 
   return (
     <div className="ticket-history bg-white rounded-xl border border-gray-200 overflow-hidden">

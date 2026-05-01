@@ -7,6 +7,7 @@ class Category(models.Model):
     """Product categories"""
     name = models.CharField(max_length=100, unique=True, db_index=True)
     slug = models.SlugField(unique=True, blank=True)
+    is_active = models.BooleanField(default=True)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -161,3 +162,30 @@ class ProductVariant(models.Model):
     
     def __str__(self):
         return f"{self.product.name} - {self.color} {self.size}"
+    
+
+class Wishlist(models.Model):
+    """User wishlist model"""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='wishlist_items'
+    )
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.CASCADE,
+        related_name='wishlisted_by'
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['user', 'product']
+        indexes = [
+            models.Index(fields=['user', '-added_at']),
+            models.Index(fields=['product']),
+        ]
+        ordering = ['-added_at']
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.product.name}"

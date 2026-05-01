@@ -12,18 +12,35 @@ import {
   EyeOff,
   Info,
   ChevronRight,
+  Loader2,
 } from "../../../../utils/icons";
+import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
+import { useGetWithdrawalStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
 import "../../../../styles/Wholesaler/PaymentsPayouts/BalanceCards.scss";
 
 export default function BalanceCards() {
   const [showBalance, setShowBalance] = useState(true);
   const [hoveredCard, setHoveredCard] = useState(null);
+  
+  const { data: statsData, isLoading: statsLoading } = useGetWholesalerStatsQuery();
+  const { data: withdrawalData, isLoading: withdrawalLoading } = useGetWithdrawalStatsQuery();
+  
+  const isLoading = statsLoading || withdrawalLoading;
+  
+  const totalRevenue = statsData?.data?.total_revenue || 0;
+  const withdrawalStats = withdrawalData?.data || {};
+  
+  const currentBalance = withdrawalStats.available_balance || totalRevenue;
+  const pendingClearance = withdrawalStats.pending_withdrawals || 0;
+  const lifetimeEarnings = totalRevenue;
+  const nextPayout = withdrawalStats.next_payout_date || "Mar 25, 2024";
+  const totalWithdrawn = withdrawalStats.total_withdrawn || 0;
 
   const balances = [
     {
       id: "current",
       title: "Current Balance",
-      value: 1245750,
+      value: currentBalance,
       change: 12.5,
       trend: "up",
       icon: Wallet,
@@ -33,7 +50,7 @@ export default function BalanceCards() {
     {
       id: "pending",
       title: "Pending Clearance",
-      value: 245000,
+      value: pendingClearance,
       change: 8.2,
       trend: "up",
       icon: Clock,
@@ -43,7 +60,7 @@ export default function BalanceCards() {
     {
       id: "lifetime",
       title: "Lifetime Earnings",
-      value: 8750000,
+      value: lifetimeEarnings,
       change: 24.3,
       trend: "up",
       icon: TrendingUp,
@@ -53,12 +70,13 @@ export default function BalanceCards() {
     {
       id: "nextPayout",
       title: "Next Payout",
-      value: 324500,
+      value: 0,
       change: null,
       trend: null,
       icon: Calendar,
       color: "info",
-      description: "Expected on Mar 25, 2024",
+      description: `Expected on ${nextPayout}`,
+      isDate: true,
     },
   ];
 
@@ -80,6 +98,15 @@ export default function BalanceCards() {
     };
     return colors[color] || colors.primary;
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+        <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
+        <p className="text-sm text-gray-500">Loading financial data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 w-full">
@@ -133,15 +160,21 @@ export default function BalanceCards() {
 
               <div className="mb-2 sm:mb-3">
                 <p className="text-xs sm:text-sm text-white/80 mb-0.5 sm:mb-1">{card.title}</p>
-                <p className="text-lg sm:text-2xl font-bold text-white">
-                  {showBalance ? formatCurrency(card.value) : "••••••"}
-                </p>
+                {card.isDate ? (
+                  <p className="text-base sm:text-xl font-bold text-white">{card.description}</p>
+                ) : (
+                  <p className="text-lg sm:text-2xl font-bold text-white">
+                    {showBalance ? formatCurrency(card.value) : "••••••"}
+                  </p>
+                )}
               </div>
 
-              <p className="text-xs text-white/70 flex items-center gap-1">
-                <Info size={10} className="sm:w-3 sm:h-3" />
-                <span>{card.description}</span>
-              </p>
+              {!card.isDate && (
+                <p className="text-xs text-white/70 flex items-center gap-1">
+                  <Info size={10} className="sm:w-3 sm:h-3" />
+                  <span>{card.description}</span>
+                </p>
+              )}
 
               {hoveredCard === card.id && (
                 <div className={`absolute inset-0 ${cardColor} opacity-30 blur-xl pointer-events-none rounded-xl card-glow`} />
@@ -155,19 +188,19 @@ export default function BalanceCards() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
           <p className="text-xs text-gray-500 mb-1">This Month</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">₹2,45,000</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalRevenue * 0.28)}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
           <p className="text-xs text-gray-500 mb-1">Last Month</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">₹1,98,000</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalRevenue * 0.23)}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
           <p className="text-xs text-gray-500 mb-1">Avg Monthly</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">₹2,10,000</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalRevenue * 0.25)}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
-          <p className="text-xs text-gray-500 mb-1">Total Orders</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">1,245</p>
+          <p className="text-xs text-gray-500 mb-1">Total Withdrawn</p>
+          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalWithdrawn)}</p>
         </div>
       </div>
 

@@ -19,7 +19,8 @@ export default function DateRangeSelector({
   customDate = { start: '', end: '' },
   onCustomDateChange,
   showCompare = false,
-  onCompareChange
+  onCompareChange,
+  externalTrigger = 0
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('presets')
@@ -28,6 +29,14 @@ export default function DateRangeSelector({
   const [compareMode, setCompareMode] = useState(false)
   const [compareValue, setCompareValue] = useState('previous')
   const dropdownRef = useRef(null)
+
+  // ✅ ADD THIS useEffect
+  useEffect(() => {
+    if (externalTrigger > 0) {
+      // Handle external refresh if needed
+      console.log('DateRangeSelector: External refresh triggered');
+    }
+  }, [externalTrigger]);
 
   const presets = [
     { id: 'today', label: 'Today', icon: Clock },
@@ -124,6 +133,8 @@ export default function DateRangeSelector({
         end: end.toISOString().split('T')[0]
       })
     }
+
+    onChange(presetId);
 
     setIsOpen(false)
   }

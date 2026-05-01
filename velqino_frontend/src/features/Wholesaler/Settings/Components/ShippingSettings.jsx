@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Truck,
   Package,
@@ -20,14 +20,19 @@ import {
   FileText,
   Download
 } from '../../../../utils/icons'
+import { useFetchProfileQuery, useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/ShippingSettings.scss'
 
-export default function ShippingSettings() {
+export default function ShippingSettings({ wholesaler, isLoading: parentLoading }) {
   const [isEditing, setIsEditing] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showAddRateModal, setShowAddRateModal] = useState(false)
   const [showReturnPolicyModal, setShowReturnPolicyModal] = useState(false)
 
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
+
+  // Initialize shipping settings from backend
   const [shippingSettings, setShippingSettings] = useState({
     defaultCarrier: 'delhivery',
     carriers: [
@@ -41,12 +46,7 @@ export default function ShippingSettings() {
       { id: 'polybag', name: 'Polybag', dimensions: '25x20 cm', weight: '0.1 kg', cost: 20 },
       { id: 'tube', name: 'Tube', dimensions: '40x10 cm', weight: '0.3 kg', cost: 35 }
     ],
-    shippingRates: [
-      { id: 1, name: 'Standard Shipping', minWeight: 0, maxWeight: 5, cost: 50, estimatedDays: '3-5', zone: 'Domestic' },
-      { id: 2, name: 'Express Shipping', minWeight: 0, maxWeight: 10, cost: 150, estimatedDays: '1-2', zone: 'Domestic' },
-      { id: 3, name: 'Bulk Orders', minWeight: 10, maxWeight: 50, cost: 300, estimatedDays: '2-4', zone: 'Domestic' },
-      { id: 4, name: 'International Standard', minWeight: 0, maxWeight: 20, cost: 800, estimatedDays: '7-14', zone: 'International' }
-    ],
+    shippingRates: [],
     returnPolicy: {
       enabled: true,
       days: 7,
@@ -61,14 +61,49 @@ export default function ShippingSettings() {
   const [editedSettings, setEditedSettings] = useState(shippingSettings)
   const [newRate, setNewRate] = useState({ name: '', minWeight: '', maxWeight: '', cost: '', estimatedDays: '', zone: 'Domestic' })
 
-  const handleSave = () => {
-    setSaveSuccess(false)
-    setTimeout(() => {
+  // Load shipping settings from backend when wholesaler data is available
+  useEffect(() => {
+    if (wholesaler?.shipping_settings) {
+      const backendSettings = wholesaler.shipping_settings
+      setShippingSettings({
+        defaultCarrier: backendSettings.defaultCarrier || 'delhivery',
+        carriers: backendSettings.carriers || shippingSettings.carriers,
+        packagingOptions: backendSettings.packagingOptions || shippingSettings.packagingOptions,
+        shippingRates: backendSettings.shippingRates || [],
+        returnPolicy: backendSettings.returnPolicy || shippingSettings.returnPolicy
+      })
+      setEditedSettings({
+        defaultCarrier: backendSettings.defaultCarrier || 'delhivery',
+        carriers: backendSettings.carriers || shippingSettings.carriers,
+        packagingOptions: backendSettings.packagingOptions || shippingSettings.packagingOptions,
+        shippingRates: backendSettings.shippingRates || [],
+        returnPolicy: backendSettings.returnPolicy || shippingSettings.returnPolicy
+      })
+    }
+  }, [wholesaler])
+
+  const handleSave = async () => {
+    try {
+      const formData = new FormData()
+      formData.append('shipping_settings', JSON.stringify({
+        defaultCarrier: editedSettings.defaultCarrier,
+        carriers: editedSettings.carriers,
+        packagingOptions: editedSettings.packagingOptions,
+        shippingRates: editedSettings.shippingRates,
+        returnPolicy: editedSettings.returnPolicy
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      
       setShippingSettings(editedSettings)
       setSaveSuccess(true)
+      toast.success('Shipping settings updated successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update shipping settings')
+    }
   }
 
   const handleCancel = () => {
@@ -100,14 +135,15 @@ export default function ShippingSettings() {
     })
   }
 
-  const handleUpdateReturnPolicy = () => {
-    setSaveSuccess(false)
-    setTimeout(() => {
-      setShippingSettings({ ...shippingSettings, returnPolicy: editedSettings.returnPolicy })
-      setSaveSuccess(true)
-      setShowReturnPolicyModal(false)
-      setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -253,22 +289,30 @@ export default function ShippingSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {editedSettings.shippingRates.map(rate => (
-                  <tr key={rate.id}>
-                    <td className="px-4 py-2 text-sm text-gray-900">{rate.name}</td>
-                    <td className="px-4 py-2 text-sm text-gray-600">{rate.minWeight} - {rate.maxWeight} kg</td>
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{rate.cost}</td>
-                    <td className="px-4 py-2 text-sm text-gray-600">{rate.estimatedDays} days</td>
-                    <td className="px-4 py-2 text-sm text-gray-600">{rate.zone}</td>
-                    {isEditing && (
-                      <td className="px-4 py-2">
-                        <button onClick={() => handleDeleteRate(rate.id)} className="p-1 text-gray-400 hover:text-error-600">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    )}
+                {editedSettings.shippingRates.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                      No shipping rates added yet. Click "Add Rate" to create one.
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  editedSettings.shippingRates.map(rate => (
+                    <tr key={rate.id}>
+                      <td className="px-4 py-2 text-sm text-gray-900">{rate.name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{rate.minWeight} - {rate.maxWeight} kg</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{rate.cost}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{rate.estimatedDays} days</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{rate.zone}</td>
+                      {isEditing && (
+                        <td className="px-4 py-2">
+                          <button onClick={() => handleDeleteRate(rate.id)} className="p-1 text-gray-400 hover:text-error-600">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -465,7 +509,7 @@ export default function ShippingSettings() {
                 />
               </div>
               <button
-                onClick={handleUpdateReturnPolicy}
+                onClick={() => setShowReturnPolicyModal(false)}
                 className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
               >
                 Save Policy

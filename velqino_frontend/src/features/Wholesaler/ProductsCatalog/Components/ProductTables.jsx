@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
   Eye,
   Edit,
@@ -11,33 +11,33 @@ import {
   ChevronRight,
   Package,
   AlertCircle
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/ProductsCatalog/ProductsTable.scss'
-import { useGetProductsQuery, useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice'
-import { toast } from 'react-toastify'
-import { BASE_IMAGE_URL } from '../../../../utils/apiConfig'
+} from '../../../../utils/icons';
+import '../../../../styles/Wholesaler/ProductsCatalog/ProductsTable.scss';
+import { useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice';
+import { toast } from 'react-toastify';
+import { BASE_IMAGE_URL } from '../../../../utils/apiConfig';
 
-export default function ProductsTables({ onEditProduct, onViewProduct, onProductsSelect }) {
-  const [selectedProducts, setSelectedProducts] = useState([])
-  const [hoveredRow, setHoveredRow] = useState(null)
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+export default function ProductsTables({ 
+  productsData,        
+  isLoading,           
+  onEditProduct, 
+  onViewProduct, 
+  onProductsSelect,
+  currentPage,
+  setCurrentPage,
+  itemsPerPage = 10,
+}) {
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  
+  // ✅ Use props, not local state
+  const products = productsData?.data?.products || [];
+  const totalProducts = productsData?.data?.pagination?.total || 0;
+  const totalPages = productsData?.data?.pagination?.total_pages || 1;
 
-  // Fetch real products from API
-  const { data: productsData, isLoading, refetch } = useGetProductsQuery({
-    page: currentPage,
-    per_page: itemsPerPage
-  })
 
-  const [deleteProduct] = useDeleteProductMutation()
-
-  // Get products from API response
-  const products = productsData?.data?.products || []
-  const totalProducts = productsData?.data?.pagination?.total || 0
-  const totalPages = productsData?.data?.pagination?.total_pages || 1
-
-  console.log('ProductsTable - Products loaded:', products.length)
+  const [deleteProduct] = useDeleteProductMutation();
 
   const toggleProductSelection = (productId) => {
     let newSelected
@@ -224,23 +224,27 @@ const handleBulkDelete = async () => {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
-                      {getProductImage(product) ? (
-                        <img 
-                          src={getProductImage(product)} 
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          onError={(e) => {
-                            e.target.style.display = 'none'
-                            e.target.parentElement.innerHTML = '<span class="text-xl">📦</span>'
-                          }}
-                        />
-                      ) : (
-                        <span className="text-xl">📦</span>
-                      )}
-                    </div>
-                  </td>
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+      {product.images && product.images.length > 0 ? (
+        <img 
+          src={`${BASE_IMAGE_URL}${product.images[0].image}`} 
+          alt={product.name} 
+          className="w-full h-full object-cover"
+          onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+        />
+      ) : (
+        <span className="text-xl">📦</span>
+      )}
+      {product.images && product.images.length > 1 && (
+        <span className="absolute bottom-0 right-0 bg-primary-500 text-white text-[8px] px-1 rounded-tl">
+          +{product.images.length}
+        </span>
+      )}
+    </div>
+    <span className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{product.name}</span>
+  </div>
+</td>
                   <td className="px-4 py-3">
                     <div>
                       <p className="text-sm font-medium text-gray-900">{product.name}</p>

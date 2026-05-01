@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, lazy, Suspense, useEffect } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
+import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice'
 
 // Lazy load all non-critical components
 const OverviewCards = lazy(() => import('./Components/OverviewCards'))
@@ -24,6 +25,23 @@ export default function Reports() {
   const [showComparison, setShowComparison] = useState(false)
   const [reportType, setReportType] = useState('sales')
   const [isLoading, setIsLoading] = useState(false)
+
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const getDateParams = () => {
+      if (dateRange === 'custom' && customDate.start && customDate.end) {
+        return { start_date: customDate.start, end_date: customDate.end };
+      }
+      return { range: dateRange };
+    };
+
+    // Use in query
+    const { data: statsData, refetch } = useGetWholesalerStatsQuery(getDateParams());
+
+  // Refetch when date range changes
+  useEffect(() => {
+    refetch();
+  }, [dateRange, customDate, refetch]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -56,9 +74,17 @@ export default function Reports() {
               <Suspense fallback={<DateRangePlaceholder />}>
                 <DateRangeSelector 
                   value={dateRange}
-                  onChange={setDateRange}
+                  onChange={(range) => {
+                    setDateRange(range);
+                    // trigger refresh
+                    setRefreshTrigger(prev => prev + 1);
+                  }}
                   customDate={customDate}
-                  onCustomDateChange={setCustomDate}
+                  onCustomDateChange={(dates) => {
+                    setCustomDate(dates);
+                    setDateRange('custom');
+                    setRefreshTrigger(prev => prev + 1);
+                  }}
                 />
               </Suspense>
             </div> 
@@ -71,6 +97,7 @@ export default function Reports() {
                 dateRange={dateRange}
                 customDate={customDate}
                 isLoading={isLoading}
+                statsData={statsData}
               />
             </Suspense>
           </div>
@@ -100,6 +127,7 @@ export default function Reports() {
                 <ComparisonTool 
                   dateRange={dateRange}
                   customDate={customDate}
+                  statsData={statsData}
                 />
               </Suspense>
             </div>
@@ -112,6 +140,7 @@ export default function Reports() {
                 dateRange={dateRange}
                 customDate={customDate}
                 showComparison={showComparison}
+                statsData={statsData}
               />
             </Suspense>
           </div> 
@@ -142,6 +171,7 @@ export default function Reports() {
                 type={reportType}
                 dateRange={dateRange}
                 customDate={customDate}
+                statsData={statsData}
               />
             </Suspense>
           </div> 

@@ -94,6 +94,7 @@ export default function CustomerRegistration() {
       localStorage.setItem('refresh', response.refresh);
       localStorage.setItem('user_role', 'customer');
       localStorage.setItem('user_name', formData.username);
+      localStorage.setItem('user_id', response.data?.id);
       
       // ✅ Clear guest session after registration
       localStorage.removeItem('guest_session_id');

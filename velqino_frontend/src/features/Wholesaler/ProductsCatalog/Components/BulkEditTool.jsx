@@ -125,60 +125,91 @@ export default function BulkEditTool({ selectedProducts = [], onClose, onApply }
   }
 
   const handleApply = async () => {
-    if (localSelectedProducts.length === 0) {
-      alert('Please select at least one product')
-      return
+  if (localSelectedProducts.length === 0) {
+    alert('Please select at least one product')
+    return
+  }
+  
+  setApplying(true)
+  
+  try {
+    let successCount = 0
+    let failCount = 0
+    
+    for (const productId of localSelectedProducts) {
+      const product = realProducts.find(p => p.id === productId)
+      if (!product) continue
+      
+      const payload = new FormData()
+      
+      // ✅ FIX: Always ensure cost is a valid number, not empty string
+      const updatedPrice = editType === 'price' ? calculateNewValue(product.price) : product.price
+      const updatedCost = product.cost && !isNaN(product.cost) ? Number(product.cost) : 0
+      
+      payload.append('name', product.name)
+      payload.append('price', updatedPrice)
+      payload.append('cost', updatedCost)  // ✅ Send number instead of empty string
+      payload.append('category_id', editType === 'category' ? updateValue : product.category_id)
+      payload.append('brand', product.brand || '')
+      payload.append('description', product.description || '')
+      payload.append('threshold', product.threshold || 10)
+      payload.append('status', editType === 'status' ? updateValue : product.status)
+      payload.append('stock', editType === 'stock' ? calculateNewStock(product.stock) : product.stock)
+      payload.append('pattern', product.pattern || '')
+      payload.append('primary_color', product.primary_color || '')
+      
+      if (product.variants && product.variants.length > 0) {
+        product.variants.forEach(variant => payload.append('sizes', variant.size))
+      }
+      
+      try {
+        await productsAPI.updateProduct(productId, payload)
+        successCount++
+      } catch (err) {
+        console.error(`Failed to update product ${productId}:`, err)
+        failCount++
+      }
     }
     
-    setApplying(true)
-    
-    const formData = new FormData()
-    
-    let backendOperation = editType
-    if (editType === 'price') backendOperation = 'update_price'
-    if (editType === 'category') backendOperation = 'update_category'
-    if (editType === 'status') backendOperation = 'update_status'
-    if (editType === 'stock') backendOperation = 'update_stock'
-    if (editType === 'images') backendOperation = 'update_images'
-    formData.append('operation', backendOperation)
-    
-    localSelectedProducts.forEach(id => formData.append('product_ids', id))
-    
-    if (editType === 'price') {
-      if (updateOperation === 'set') {
-        formData.append('value', updateValue)
-      } else if (updateOperation === 'increase') {
-        formData.append('percentage', updateValue)
-      } else if (updateOperation === 'decrease') {
-        formData.append('percentage', -updateValue)
-      }
-    } else if (editType === 'category') {
-      formData.append('category_id', updateValue)
-    } else if (editType === 'status') {
-      formData.append('value', updateValue)
-    } else if (editType === 'stock') {
-      if (updateOperation === 'set') {
-        formData.append('value', updateValue)
-      } else if (updateOperation === 'increase') {
-        formData.append('percentage', updateValue)
-      } else if (updateOperation === 'decrease') {
-        formData.append('percentage', -updateValue)
-      }
-    } else if (editType === 'images') {
-      selectedImages.forEach(img => formData.append('images', img))
-    }
-    
-    try {
-      await productsAPI.bulkAction(formData)
+    if (successCount > 0) {
+      alert(`Successfully updated ${successCount} product(s)${failCount > 0 ? `, ${failCount} failed` : ''}`)
       onApply?.()
       onClose()
-    } catch (error) {
-      console.error('Bulk edit failed:', error)
-      alert('Bulk edit failed: ' + error.message)
-    } finally {
-      setApplying(false)
+    } else {
+      alert('No products were updated')
     }
+    
+  } catch (error) {
+    console.error('Bulk edit failed:', error)
+    alert('Bulk edit failed: ' + error.message)
+  } finally {
+    setApplying(false)
   }
+}
+
+// ✅ Helper function to calculate new price
+const calculateNewValue = (currentPrice) => {
+  if (updateOperation === 'set') {
+    return Number(updateValue)
+  } else if (updateOperation === 'increase') {
+    return currentPrice * (1 + Number(updateValue) / 100)
+  } else if (updateOperation === 'decrease') {
+    return currentPrice * (1 - Number(updateValue) / 100)
+  }
+  return currentPrice
+}
+
+// ✅ Helper function to calculate new stock
+const calculateNewStock = (currentStock) => {
+  if (updateOperation === 'set') {
+    return Number(updateValue)
+  } else if (updateOperation === 'increase') {
+    return currentStock + Number(updateValue)
+  } else if (updateOperation === 'decrease') {
+    return Math.max(0, currentStock - Number(updateValue))
+  }
+  return currentStock
+}
 
   // ADD this function to fetch products
 const fetchProducts = async () => {

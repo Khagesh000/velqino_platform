@@ -5,25 +5,30 @@ import {
   Activity,
   CheckCircle,
   AlertCircle,
+  Loader2,
   XCircle,
   Clock,
-  RefreshCw,
   Server,
   Database,
   Cloud,
   Shield,
   Bell,
   Calendar,
-  ChevronRight,
   ExternalLink
 } from '../../../../utils/icons'
+import { useGetSystemStatusQuery } from '@/redux/wholesaler/slices/supportSlice'
 import '../../../../styles/Wholesaler/Support/SystemStatus.scss'
 
-export default function SystemStatus() {
+export default function SystemStatus({ isActive = false }) {
   const [lastChecked, setLastChecked] = useState(new Date())
   const [refreshing, setRefreshing] = useState(false)
 
-  const services = [
+  const { data: statusData, isLoading, refetch } = useGetSystemStatusQuery(undefined, {
+    skip: !isActive
+  })
+
+  // Use API data or fallback to static data
+  const services = statusData?.data?.services || [
     {
       id: 'api',
       name: 'API Gateway',
@@ -80,7 +85,7 @@ export default function SystemStatus() {
     }
   ]
 
-  const maintenanceHistory = [
+  const maintenanceHistory = statusData?.data?.maintenance || [
     {
       id: 1,
       title: 'Scheduled Maintenance - Database Upgrade',
@@ -115,7 +120,7 @@ export default function SystemStatus() {
     }
   ]
 
-  const incidents = [
+  const incidents = statusData?.data?.incidents || [
     {
       id: 1,
       title: 'Payment Gateway Timeout',
@@ -171,24 +176,34 @@ export default function SystemStatus() {
       case 'outage': return <XCircle size={16} />
       case 'completed': return <CheckCircle size={16} />
       case 'upcoming': return <Clock size={16} />
-      case 'in-progress': return <RefreshCw size={16} />
+      case 'in-progress': return <Loader2 size={16} />
       case 'resolved': return <CheckCircle size={16} />
       case 'monitoring': return <AlertCircle size={16} />
       default: return <Activity size={16} />
     }
   }
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true)
-    setTimeout(() => {
-      setLastChecked(new Date())
-      setRefreshing(false)
-    }, 1000)
+    await refetch()
+    setLastChecked(new Date())
+    setRefreshing(false)
   }
 
   const overallStatus = services.every(s => s.status === 'operational') ? 'All Systems Operational' :
                          services.some(s => s.status === 'outage') ? 'Partial Outage Detected' :
                          'Degraded Performance'
+
+  if (isLoading && !statusData) {
+    return (
+      <div className="system-status bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="animate-pulse p-8 text-center">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="system-status bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -208,7 +223,7 @@ export default function SystemStatus() {
           disabled={refreshing}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
         >
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          <Loader2 size={14} className={refreshing ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
@@ -232,7 +247,7 @@ export default function SystemStatus() {
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {services.map((service, index) => {
-            const Icon = service.icon
+            const Icon = service.icon || Server
             return (
               <div
                 key={service.id}

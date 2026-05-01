@@ -20,6 +20,20 @@ const customerAPI = {
     // List all customers (admin only)
     listCustomers: () =>
         API.get('identity/customers/list/'),
+
+    changePassword: (data) =>
+        API.post('identity/change-password/', data),
+
+    getProfile: (userId, userRole) =>
+        API.get(`identity/${userRole}/profile/${userId}/`),
+
+    updateProfile: (userId, userRole, data) =>
+        API.put(`identity/${userRole}/profile/${userId}/update/`, data),
+
+    mergeCart: (sessionId) => 
+    API.post('commerce/cart/merge/', {}, {
+        headers: { 'X-Session-ID': sessionId }
+    }),
 };
 
 export default customerAPI;

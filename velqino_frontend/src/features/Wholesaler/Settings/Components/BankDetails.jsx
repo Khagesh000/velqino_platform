@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Banknote,
   CreditCard,
@@ -16,24 +16,29 @@ import {
   Eye,
   EyeOff
 } from '../../../../utils/icons'
+import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/BankDetails.scss'
 
-export default function BankDetails() {
+export default function BankDetails({ wholesaler, isLoading: parentLoading }) {
   const [isEditing, setIsEditing] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState(false)
   const [showAccountNumber, setShowAccountNumber] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
 
   const [bankDetails, setBankDetails] = useState({
-    accountHolderName: 'Rajesh Kumar',
-    accountNumber: '1234567890123456',
-    confirmAccountNumber: '1234567890123456',
-    ifscCode: 'HDFC0001234',
-    bankName: 'HDFC Bank',
-    branch: 'Indiranagar Branch',
-    city: 'Bangalore',
-    upiId: 'rajesh@okhdfcbank',
+    accountHolderName: '',
+    accountNumber: '',
+    confirmAccountNumber: '',
+    ifscCode: '',
+    bankName: '',
+    branch: '',
+    city: '',
+    upiId: '',
     accountType: 'Current'
   })
 
@@ -41,20 +46,70 @@ export default function BankDetails() {
 
   const accountTypes = ['Current', 'Savings', 'Salary']
 
-  const handleSave = () => {
+  // Load bank details from backend
+  useEffect(() => {
+    if (wholesaler?.bank_details) {
+      const bankData = wholesaler.bank_details
+      setBankDetails({
+        accountHolderName: bankData.account_holder_name || '',
+        accountNumber: bankData.account_number || '',
+        confirmAccountNumber: bankData.account_number || '',
+        ifscCode: bankData.ifsc_code || '',
+        bankName: bankData.bank_name || '',
+        branch: bankData.branch || '',
+        city: bankData.city || '',
+        upiId: bankData.upi_id || '',
+        accountType: bankData.account_type || 'Current'
+      })
+      setEditedDetails({
+        accountHolderName: bankData.account_holder_name || '',
+        accountNumber: bankData.account_number || '',
+        confirmAccountNumber: bankData.account_number || '',
+        ifscCode: bankData.ifsc_code || '',
+        bankName: bankData.bank_name || '',
+        branch: bankData.branch || '',
+        city: bankData.city || '',
+        upiId: bankData.upi_id || '',
+        accountType: bankData.account_type || 'Current'
+      })
+    }
+  }, [wholesaler])
+
+  const handleSave = async () => {
     if (editedDetails.accountNumber !== editedDetails.confirmAccountNumber) {
       setSaveError(true)
+      toast.error('Account numbers do not match!')
       setTimeout(() => setSaveError(false), 3000)
       return
     }
 
-    setSaveSuccess(false)
-    setTimeout(() => {
+    setIsSaving(true)
+    try {
+      const formData = new FormData()
+      formData.append('bank_details', JSON.stringify({
+        account_holder_name: editedDetails.accountHolderName,
+        account_number: editedDetails.accountNumber,
+        ifsc_code: editedDetails.ifscCode,
+        bank_name: editedDetails.bankName,
+        branch: editedDetails.branch,
+        city: editedDetails.city,
+        upi_id: editedDetails.upiId,
+        account_type: editedDetails.accountType
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      
       setBankDetails(editedDetails)
       setSaveSuccess(true)
+      toast.success('Bank details updated successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update bank details')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -64,14 +119,28 @@ export default function BankDetails() {
   }
 
   const handleCopy = (text) => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (text) {
+      navigator.clipboard.writeText(text)
+      setCopied(true)
+      toast.info('Copied to clipboard!')
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   const maskAccountNumber = (number) => {
     if (!number) return ''
     return 'XXXX XXXX XXXX ' + number.slice(-4)
+  }
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -99,16 +168,18 @@ export default function BankDetails() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCancel}
-              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              disabled={isSaving}
+              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1"
+              disabled={isSaving}
+              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1 disabled:opacity-50"
             >
               <Save size={14} />
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -137,13 +208,15 @@ export default function BankDetails() {
                   />
                 ) : (
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-900">{bankDetails.accountHolderName}</p>
-                    <button
-                      onClick={() => handleCopy(bankDetails.accountHolderName)}
-                      className="p-1 text-gray-400 hover:text-primary-600"
-                    >
-                      <Copy size={14} />
-                    </button>
+                    <p className="text-sm text-gray-900">{bankDetails.accountHolderName || '-'}</p>
+                    {bankDetails.accountHolderName && (
+                      <button
+                        onClick={() => handleCopy(bankDetails.accountHolderName)}
+                        className="p-1 text-gray-400 hover:text-primary-600"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -160,7 +233,7 @@ export default function BankDetails() {
                     ))}
                   </select>
                 ) : (
-                  <p className="text-sm text-gray-900">{bankDetails.accountType}</p>
+                  <p className="text-sm text-gray-900">{bankDetails.accountType || '-'}</p>
                 )}
               </div>
             </div>
@@ -185,13 +258,17 @@ export default function BankDetails() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-mono text-gray-900">{maskAccountNumber(bankDetails.accountNumber)}</p>
-                    <button
-                      onClick={() => handleCopy(bankDetails.accountNumber)}
-                      className="p-1 text-gray-400 hover:text-primary-600"
-                    >
-                      <Copy size={14} />
-                    </button>
+                    <p className="text-sm font-mono text-gray-900">
+                      {bankDetails.accountNumber ? maskAccountNumber(bankDetails.accountNumber) : '-'}
+                    </p>
+                    {bankDetails.accountNumber && (
+                      <button
+                        onClick={() => handleCopy(bankDetails.accountNumber)}
+                        className="p-1 text-gray-400 hover:text-primary-600"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -220,13 +297,15 @@ export default function BankDetails() {
                   />
                 ) : (
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-mono text-gray-900">{bankDetails.ifscCode}</p>
-                    <button
-                      onClick={() => handleCopy(bankDetails.ifscCode)}
-                      className="p-1 text-gray-400 hover:text-primary-600"
-                    >
-                      <Copy size={14} />
-                    </button>
+                    <p className="text-sm font-mono text-gray-900">{bankDetails.ifscCode || '-'}</p>
+                    {bankDetails.ifscCode && (
+                      <button
+                        onClick={() => handleCopy(bankDetails.ifscCode)}
+                        className="p-1 text-gray-400 hover:text-primary-600"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -240,7 +319,7 @@ export default function BankDetails() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                   />
                 ) : (
-                  <p className="text-sm text-gray-900">{bankDetails.bankName}</p>
+                  <p className="text-sm text-gray-900">{bankDetails.bankName || '-'}</p>
                 )}
               </div>
             </div>
@@ -256,7 +335,7 @@ export default function BankDetails() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                   />
                 ) : (
-                  <p className="text-sm text-gray-900">{bankDetails.branch}</p>
+                  <p className="text-sm text-gray-900">{bankDetails.branch || '-'}</p>
                 )}
               </div>
               <div>
@@ -269,7 +348,7 @@ export default function BankDetails() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                   />
                 ) : (
-                  <p className="text-sm text-gray-900">{bankDetails.city}</p>
+                  <p className="text-sm text-gray-900">{bankDetails.city || '-'}</p>
                 )}
               </div>
             </div>
@@ -297,13 +376,15 @@ export default function BankDetails() {
                 />
               ) : (
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-900">{bankDetails.upiId}</p>
-                  <button
-                    onClick={() => handleCopy(bankDetails.upiId)}
-                    className="p-1 text-gray-400 hover:text-primary-600"
-                  >
-                    <Copy size={14} />
-                  </button>
+                  <p className="text-sm text-gray-900">{bankDetails.upiId || '-'}</p>
+                  {bankDetails.upiId && (
+                    <button
+                      onClick={() => handleCopy(bankDetails.upiId)}
+                      className="p-1 text-gray-400 hover:text-primary-600"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>

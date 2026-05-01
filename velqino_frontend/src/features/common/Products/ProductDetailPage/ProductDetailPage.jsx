@@ -39,7 +39,7 @@ export default function ProductDetailPage({ productId }) {
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
         <a href="/" className="hover:text-primary-500">Home</a>
         <span>/</span>
-        <a href="/products" className="hover:text-primary-500">Products</a>
+        <a href="/product/productlistingpage" className="hover:text-primary-500">Products</a>
         <span>/</span>
         <span className="text-gray-900 font-medium">{product.name}</span>
       </div>

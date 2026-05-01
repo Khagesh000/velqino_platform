@@ -5,6 +5,8 @@ import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
 import ImportModal from './Modals/ImportModal'
 import ExportModal from './Modals/ExportModal'
 import ImportImagesModal from './Modals/ImportImagesModal'
+import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice'
+import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
 
 // Lazy load all non-critical components
 const ProductsCatalog = lazy(() => import('./Components/ProductsCatalog'))
@@ -33,6 +35,30 @@ export default function Catalog() {
   const [showExportModal, setShowExportModal] = useState(false)
   const [showImportImagesModal, setShowImportImagesModal] = useState(false)
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(12)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('All Categories')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [stockStatusFilter, setStockStatusFilter] = useState('All')
+
+  const { data: productsData, isLoading, refetch } = useGetProductsQuery({
+  page: currentPage,
+  per_page: itemsPerPage,
+  search: searchQuery || undefined,
+  category_id: selectedCategory && selectedCategory !== 'All Categories' ? Number(selectedCategory) : undefined,
+  min_price: minPrice ? Number(minPrice) : undefined,
+  max_price: maxPrice ? Number(maxPrice) : undefined,
+  stock_status: stockStatusFilter !== 'All' ? stockStatusFilter : undefined
+})
+
+   
+
+    // Fetch categories once
+    const { data: categoriesData } = useGetCategoriesQuery();
+    const categories = categoriesData?.data || categoriesData || [];
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <WholesaleNavbar 
@@ -51,7 +77,9 @@ export default function Catalog() {
           <div style={{ minHeight: '600px' }}>
           <Suspense fallback={<CatalogPlaceholder />}>
             <ProductsCatalog 
+              // ✅ Existing props
               onEditProduct={(product) => {
+                console.log('Editing product:', product);
                 setSelectedProduct(product)
                 setShowEditModal(true)
               }}
@@ -65,6 +93,23 @@ export default function Catalog() {
               }}
               onManageCategories={() => setShowCategoriesManager(true)}
               onProductsSelect={setSelectedProducts}
+              
+              // ✅ ADD THESE MISSING PROPS
+              productsData={productsData}
+              isLoading={isLoading}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              minPrice={minPrice}
+              setMinPrice={setMinPrice}
+              maxPrice={maxPrice}
+              setMaxPrice={setMaxPrice}
+              stockStatusFilter={stockStatusFilter}
+              setStockStatusFilter={setStockStatusFilter}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              categories={categories}
             />
           </Suspense>
         </div>
@@ -91,19 +136,24 @@ export default function Catalog() {
           <div className="mt-6" style={{ minHeight: '500px' }}>
             <Suspense fallback={<TablePlaceholder />}>
               <ProductsTable 
-              onViewProduct={(product) => {
-                console.log('View product called:', product)
-                // For view, you can show a read-only modal or just log
-                // setSelectedProduct(product)
-                // setShowViewModal(true)
-              }}
-              onEditProduct={(product) => {
-                console.log('Edit product called:', product)
-                setSelectedProduct(product)
-                setShowEditModal(true)
-              }}
-              onProductsSelect={setSelectedProducts}
-            />
+                onViewProduct={(product) => {
+                  console.log('View product called:', product)
+                }}
+                onEditProduct={(product) => {
+                  console.log('Edit product called:', product)
+                  setSelectedProduct(product)
+                  setShowEditModal(true)
+                }}
+                onProductsSelect={setSelectedProducts}
+                
+                // ✅ ADD THESE MISSING PROPS
+                productsData={productsData}
+                isLoading={isLoading}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                refetch={refetch}
+              />
             </Suspense>
           </div> 
 
@@ -126,6 +176,7 @@ export default function Catalog() {
                   console.log('Product saved')
                   setShowEditModal(false)
                 }}
+                categories={categories}
               />
             </Suspense>
           </div>
@@ -177,11 +228,17 @@ export default function Catalog() {
 
       {/* Import Products Modal */}
       {showImportModal && (
-        <ImportModal onClose={() => setShowImportModal(false)} />
+        <ImportModal 
+          onClose={() => setShowImportModal(false)} 
+          categories={categories}  // ✅ ADD THIS
+        />
       )}
 
       {showImportImagesModal && (
-        <ImportImagesModal onClose={() => setShowImportImagesModal(false)} />
+        <ImportImagesModal 
+          onClose={() => setShowImportImagesModal(false)} 
+          categories={categories}  // ✅ ADD THIS
+        />
       )}
 
       {/* Export Products Modal */}

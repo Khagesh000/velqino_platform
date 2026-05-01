@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Palette,
   Image,
@@ -18,21 +18,25 @@ import {
   Type,
   Sparkles
 } from '../../../../utils/icons'
+import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/StoreCustomization.scss'
 
-export default function StoreCustomization() {
+export default function StoreCustomization({ wholesaler, isLoading: parentLoading }) {
   const [isEditing, setIsEditing] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [selectedTheme, setSelectedTheme] = useState('light')
+  const [isSaving, setIsSaving] = useState(false)
   const [bannerPreview, setBannerPreview] = useState(null)
   const [logoPreview, setLogoPreview] = useState(null)
   const bannerInputRef = useRef(null)
   const logoInputRef = useRef(null)
 
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
+
   const [storeSettings, setStoreSettings] = useState({
-    storeName: 'VELTRIX Wholesale',
-    storeTagline: 'Premium Products for Your Business',
-    storeDescription: 'VELTRIX Wholesale is a leading distributor of premium electronics and lifestyle products, serving retailers across India since 2020. We offer high-quality products at competitive wholesale prices with reliable shipping and dedicated customer support.',
+    storeName: '',
+    storeTagline: '',
+    storeDescription: '',
     storeLogo: null,
     bannerImages: [],
     theme: 'light',
@@ -43,7 +47,7 @@ export default function StoreCustomization() {
     showFeaturedProducts: true,
     showCategories: true,
     showTestimonials: true,
-    footerText: '© 2024 VELTRIX Wholesale. All rights reserved.'
+    footerText: ''
   })
 
   const [editedSettings, setEditedSettings] = useState(storeSettings)
@@ -54,9 +58,52 @@ export default function StoreCustomization() {
     { id: 'colorful', name: 'Colorful', color: '#CE8E6A', textColor: '#FFFFFF', bgColor: '#A25690' }
   ]
 
+  // Load store settings from backend
+  useEffect(() => {
+    if (wholesaler?.store_settings) {
+      const storeData = wholesaler.store_settings
+      setStoreSettings({
+        storeName: storeData.store_name || wholesaler.business_name || '',
+        storeTagline: storeData.store_tagline || '',
+        storeDescription: storeData.store_description || wholesaler.business_description || '',
+        storeLogo: storeData.store_logo || null,
+        bannerImages: storeData.banner_images || [],
+        theme: storeData.theme || 'light',
+        primaryColor: storeData.primary_color || '#CE8E6A',
+        secondaryColor: storeData.secondary_color || '#A25690',
+        accentColor: storeData.accent_color || '#E3B751',
+        layout: storeData.layout || 'grid',
+        showFeaturedProducts: storeData.show_featured_products !== false,
+        showCategories: storeData.show_categories !== false,
+        showTestimonials: storeData.show_testimonials !== false,
+        footerText: storeData.footer_text || `© ${new Date().getFullYear()} ${wholesaler.business_name || 'Store'}. All rights reserved.`
+      })
+      setEditedSettings({
+        storeName: storeData.store_name || wholesaler.business_name || '',
+        storeTagline: storeData.store_tagline || '',
+        storeDescription: storeData.store_description || wholesaler.business_description || '',
+        storeLogo: storeData.store_logo || null,
+        bannerImages: storeData.banner_images || [],
+        theme: storeData.theme || 'light',
+        primaryColor: storeData.primary_color || '#CE8E6A',
+        secondaryColor: storeData.secondary_color || '#A25690',
+        accentColor: storeData.accent_color || '#E3B751',
+        layout: storeData.layout || 'grid',
+        showFeaturedProducts: storeData.show_featured_products !== false,
+        showCategories: storeData.show_categories !== false,
+        showTestimonials: storeData.show_testimonials !== false,
+        footerText: storeData.footer_text || `© ${new Date().getFullYear()} ${wholesaler.business_name || 'Store'}. All rights reserved.`
+      })
+    }
+  }, [wholesaler])
+
   const handleLogoUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Logo size should be less than 2MB')
+        return
+      }
       const reader = new FileReader()
       reader.onloadend = () => {
         setLogoPreview(reader.result)
@@ -69,6 +116,10 @@ export default function StoreCustomization() {
   const handleBannerUpload = (e) => {
     const files = Array.from(e.target.files)
     files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Banner image size should be less than 5MB')
+        return
+      }
       const reader = new FileReader()
       reader.onloadend = () => {
         setBannerPreview(reader.result)
@@ -84,14 +135,50 @@ export default function StoreCustomization() {
     setEditedSettings({ ...editedSettings, bannerImages: newBanners })
   }
 
-  const handleSave = () => {
-    setSaveSuccess(false)
-    setTimeout(() => {
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const formData = new FormData()
+      formData.append('store_settings', JSON.stringify({
+        store_name: editedSettings.storeName,
+        store_tagline: editedSettings.storeTagline,
+        store_description: editedSettings.storeDescription,
+        theme: editedSettings.theme,
+        primary_color: editedSettings.primaryColor,
+        secondary_color: editedSettings.secondaryColor,
+        accent_color: editedSettings.accentColor,
+        layout: editedSettings.layout,
+        show_featured_products: editedSettings.showFeaturedProducts,
+        show_categories: editedSettings.showCategories,
+        show_testimonials: editedSettings.showTestimonials,
+        footer_text: editedSettings.footerText,
+        banner_images: editedSettings.bannerImages.filter(img => typeof img === 'string')
+      }))
+
+      // Only append new logo file if it's a File object
+      if (editedSettings.storeLogo && typeof editedSettings.storeLogo !== 'string') {
+        formData.append('store_logo', editedSettings.storeLogo)
+      }
+
+      // Only append new banner files
+      const newBannerFiles = editedSettings.bannerImages.filter(img => typeof img !== 'string')
+      newBannerFiles.forEach((file, index) => {
+        formData.append(`banner_images_${index}`, file)
+      })
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      
       setStoreSettings(editedSettings)
       setSaveSuccess(true)
+      toast.success('Store customization saved successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to save store customization')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -99,6 +186,17 @@ export default function StoreCustomization() {
     setLogoPreview(null)
     setBannerPreview(null)
     setIsEditing(false)
+  }
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -127,9 +225,9 @@ export default function StoreCustomization() {
             <button onClick={handleCancel} className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={handleSave} className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1">
+            <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1 disabled:opacity-50">
               <Save size={14} />
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -163,7 +261,7 @@ export default function StoreCustomization() {
               )}
               <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
             </div>
-            {isEditing && <p className="text-xs text-gray-500">Recommended size: 200x200px (PNG, JPG)</p>}
+            {isEditing && <p className="text-xs text-gray-500">Recommended size: 200x200px (PNG, JPG, max 2MB)</p>}
           </div>
         </div>
 
@@ -203,7 +301,7 @@ export default function StoreCustomization() {
               )}
             </div>
             <input ref={bannerInputRef} type="file" accept="image/*" multiple onChange={handleBannerUpload} className="hidden" />
-            {isEditing && <p className="text-xs text-gray-500 mt-2">Recommended size: 1200x400px. Supports JPG, PNG, WebP</p>}
+            {isEditing && <p className="text-xs text-gray-500 mt-2">Recommended size: 1200x400px. Supports JPG, PNG, WebP (max 5MB each)</p>}
           </div>
         </div>
 
@@ -226,7 +324,7 @@ export default function StoreCustomization() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{storeSettings.storeName}</p>
+                <p className="text-sm text-gray-900">{storeSettings.storeName || '-'}</p>
               )}
             </div>
             <div>
@@ -239,7 +337,7 @@ export default function StoreCustomization() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-600">{storeSettings.storeTagline}</p>
+                <p className="text-sm text-gray-600">{storeSettings.storeTagline || '-'}</p>
               )}
             </div>
             <div>
@@ -252,7 +350,7 @@ export default function StoreCustomization() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-600">{storeSettings.storeDescription}</p>
+                <p className="text-sm text-gray-600">{storeSettings.storeDescription || '-'}</p>
               )}
             </div>
           </div>
@@ -427,7 +525,7 @@ export default function StoreCustomization() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-600">{storeSettings.footerText}</p>
+                <p className="text-sm text-gray-600">{storeSettings.footerText || '-'}</p>
               )}
             </div>
           </div>
@@ -457,11 +555,11 @@ export default function StoreCustomization() {
                 )}
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">{editedSettings.storeName}</p>
-                <p className="text-xs text-gray-500">{editedSettings.storeTagline}</p>
+                <p className="text-sm font-semibold text-gray-900">{editedSettings.storeName || 'Store Name'}</p>
+                <p className="text-xs text-gray-500">{editedSettings.storeTagline || 'Store Tagline'}</p>
               </div>
             </div>
-            <p className="text-xs text-gray-600 line-clamp-2">{editedSettings.storeDescription}</p>
+            <p className="text-xs text-gray-600 line-clamp-2">{editedSettings.storeDescription || 'Store description will appear here...'}</p>
           </div>
         </div>
       </div>

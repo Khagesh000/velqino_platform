@@ -46,6 +46,7 @@ export default function RetailerLoginModal({ isOpen, onClose, onLogin }) {
     localStorage.setItem('refresh', response.refresh);
     localStorage.setItem('user_role', 'retailer');
     localStorage.setItem('user_name', response.data?.business_name || 'Retailer');
+    localStorage.setItem('user_id', response.data?.id);
     
     // ✅ MERGE GUEST CART AFTER LOGIN
     const sessionId = localStorage.getItem('guest_session_id');

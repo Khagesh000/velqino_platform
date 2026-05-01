@@ -44,6 +44,7 @@ export default function WholesalerLoginModal({ isOpen, onClose, onLogin }) {
     localStorage.setItem('access', response.access);
     localStorage.setItem('refresh', response.refresh);
     localStorage.setItem('user_role', 'wholesaler');
+    localStorage.setItem('user_id', response.data?.id);
     
     // ✅ MERGE GUEST CART AFTER LOGIN
     const sessionId = localStorage.getItem('guest_session_id');

@@ -6,7 +6,6 @@ export const retailerApi = createApi({
     baseQuery: fakeBaseQuery(),
     tagTypes: ['Retailer', 'Retailers'],
     endpoints: (builder) => ({
-        // Register Retailer
         registerRetailer: builder.mutation({
             async queryFn(data) {
                 try {
@@ -18,7 +17,6 @@ export const retailerApi = createApi({
             },
         }),
         
-        // Login Retailer
         loginRetailer: builder.mutation({
             async queryFn(data) {
                 try {
@@ -30,7 +28,6 @@ export const retailerApi = createApi({
             },
         }),
         
-        // Get Retailer Profile
         getRetailerProfile: builder.query({
             async queryFn(userId) {
                 try {
@@ -43,7 +40,6 @@ export const retailerApi = createApi({
             providesTags: (result, error, userId) => [{ type: 'Retailer', id: userId }]
         }),
         
-        // Update Retailer Profile
         updateRetailerProfile: builder.mutation({
             async queryFn({ userId, data }) {
                 try {
@@ -55,6 +51,45 @@ export const retailerApi = createApi({
             },
             invalidatesTags: (result, error, { userId }) => [{ type: 'Retailer', id: userId }]
         }),
+
+        // ✅ FIXED - This is the correct version
+        listRetailers: builder.query({
+            async queryFn(params) {
+                try {
+                    console.log('📤 retailerSlice.listRetailers called with params:', params);
+                    const response = await retailerAPI.listRetailers(params || {});
+                    return { data: response.data };
+                } catch (error) {
+                    console.error('❌ Error in listRetailers:', error);
+                    return { error };
+                }
+            },
+            providesTags: ['Retailers']
+        }),
+
+        blockRetailer: builder.mutation({
+            async queryFn(userId) {
+                try {
+                    const response = await retailerAPI.blockRetailer(userId);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Retailers']
+        }),
+
+        unblockRetailer: builder.mutation({
+            async queryFn(userId) {
+                try {
+                    const response = await retailerAPI.unblockRetailer(userId);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Retailers']
+        }),
     })
 });
 
@@ -63,4 +98,7 @@ export const {
     useLoginRetailerMutation,
     useGetRetailerProfileQuery,
     useUpdateRetailerProfileMutation,
+    useListRetailersQuery,
+    useBlockRetailerMutation,
+    useUnblockRetailerMutation,
 } = retailerApi;

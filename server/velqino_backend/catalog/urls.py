@@ -19,5 +19,11 @@ urlpatterns = [
 
     path('products/export/', views.export_products, name='export-products'),
 
+    path('wishlist/', views.get_wishlist, name='wishlist'),
+    path('wishlist/add/', views.add_to_wishlist, name='add-to-wishlist'),
+    path('wishlist/remove/', views.remove_from_wishlist, name='remove-from-wishlist'),
+    path('wishlist/bulk-add/', views.bulk_add_to_wishlist, name='bulk-add-wishlist'),
+    path('wishlist/stats/', views.wishlist_stats, name='wishlist-stats'),
+
    
 ]

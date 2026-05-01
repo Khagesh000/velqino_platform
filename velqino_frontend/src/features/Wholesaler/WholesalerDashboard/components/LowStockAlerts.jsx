@@ -1,32 +1,50 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { useGetLowStockAlertsQuery } from '@/redux/wholesaler/slices/statsSlice';
 import { Package, AlertTriangle, RefreshCw, ChevronRight } from '../../../../utils/icons';
-import '../../../../styles/Wholesaler/WholesalerDashboard/LowStockAlerts.scss'
+import '../../../../styles/Wholesaler/WholesalerDashboard/LowStockAlerts.scss';
 
 export default function LowStockAlerts() {
-  const [hoveredItem, setHoveredItem] = useState(null)
+  const [hoveredItem, setHoveredItem] = useState(null);
+  const [page, setPage] = useState(1);
+  const { data: alertsData, isLoading, refetch } = useGetLowStockAlertsQuery({ page, per_page: 8 });
 
-  const lowStockItems = [
-    { id: 1, name: 'Wireless Headphones', sku: 'WH-001', stock: 2, threshold: 10, category: 'Electronics', image: '🎧' },
-    { id: 2, name: 'Cotton T-Shirt', sku: 'CT-045', stock: 5, threshold: 15, category: 'Clothing', image: '👕' },
-    { id: 3, name: 'Ceramic Mug', sku: 'CM-112', stock: 3, threshold: 20, category: 'Home Decor', image: '☕' },
-    { id: 4, name: 'Yoga Mat', sku: 'YM-078', stock: 1, threshold: 12, category: 'Fitness', image: '🧘' },
-    { id: 5, name: 'Desk Lamp', sku: 'DL-234', stock: 4, threshold: 8, category: 'Home Decor', image: '💡' },
-    { id: 6, name: 'Notebook Set', sku: 'NB-056', stock: 2, threshold: 25, category: 'Stationery', image: '📓' }
-  ]
+  const lowStockItems = alertsData?.data || [];
+  const hasMore = alertsData?.has_next || false;
+  const totalCount = alertsData?.count || 0;
+  
+  const loadMore = () => {
+      if (hasMore) {
+          setPage(prev => prev + 1);
+      }
+  };
 
   const getStockLevelClass = (stock) => {
-    if (stock <= 2) return 'bg-error-100 text-error-600'
-    if (stock <= 5) return 'bg-warning-100 text-warning-600'
-    return 'bg-accent-100 text-accent-600'
-  }
+    if (stock <= 2) return 'bg-error-100 text-error-600';
+    if (stock <= 5) return 'bg-warning-100 text-warning-600';
+    return 'bg-accent-100 text-accent-600';
+  };
 
   const getProgressColor = (stock, threshold) => {
-    const percentage = (stock / threshold) * 100
-    if (percentage <= 20) return 'bg-error-500'
-    if (percentage <= 40) return 'bg-warning-500'
-    return 'bg-accent-500'
+    const percentage = (stock / threshold) * 100;
+    if (percentage <= 20) return 'bg-error-500';
+    if (percentage <= 40) return 'bg-warning-500';
+    return 'bg-accent-500';
+  };
+
+  if (isLoading) {
+    return <div className="bg-white rounded-2xl p-6">Loading...</div>;
+  }
+
+  if (lowStockItems.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-light p-6 text-center">
+        <AlertTriangle size={32} className="text-success-500 mx-auto mb-3" />
+        <h3 className="text-lg font-semibold text-primary">No Low Stock Alerts</h3>
+        <p className="text-sm text-tertiary">All products are above threshold levels</p>
+      </div>
+    );
   }
 
   return (
@@ -42,13 +60,25 @@ export default function LowStockAlerts() {
             <p className="text-xs lg:text-sm text-tertiary">Products below threshold level</p>
           </div>
         </div>
-        <button className="flex items-center gap-1 px-3 py-1.5 lg:px-4 lg:py-2 bg-surface-1 border border-light rounded-full text-xs lg:text-sm text-secondary hover:bg-surface-2 hover:text-primary-600 transition-all">
+        <button onClick={() => refetch()} className="flex items-center gap-1 px-3 py-1.5 lg:px-4 lg:py-2 bg-surface-1 border border-light rounded-full text-xs lg:text-sm text-secondary hover:bg-surface-2 hover:text-primary-600 transition-all">
           <RefreshCw size={14} className="lg:w-4 lg:h-4" />
           <span>Refresh</span>
         </button>
       </div>
 
+      {lowStockItems.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Package size={32} className="text-green-500" />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">No low stock alerts</h4>
+          <p className="text-sm text-gray-500">All products are above threshold levels</p>
+        </div>
+      )}
+
       {/* Low Stock Grid */}
+      {lowStockItems.length > 0 && (
+  <>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
         {lowStockItems.map((item) => (
           <div
@@ -59,16 +89,14 @@ export default function LowStockAlerts() {
             onMouseEnter={() => setHoveredItem(item.id)}
             onMouseLeave={() => setHoveredItem(null)}
           >
-            {/* Status Indicator */}
             <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${
               item.stock <= 2 ? 'bg-error-500 animate-pulse' : 
               item.stock <= 5 ? 'bg-warning-500' : 'bg-accent-500'
             }`} />
 
-            {/* Product Info */}
             <div className="flex items-start gap-3 mb-3">
               <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-white border border-light flex items-center justify-center text-xl">
-                {item.image}
+                📦
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm lg:text-base font-semibold text-primary truncate">{item.name}</h4>
@@ -77,7 +105,6 @@ export default function LowStockAlerts() {
               </div>
             </div>
 
-            {/* Stock Info */}
             <div className="space-y-2 mb-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-secondary">Current Stock</span>
@@ -91,7 +118,6 @@ export default function LowStockAlerts() {
               </div>
             </div>
 
-            {/* Progress Bar */}
             <div className="space-y-1 mb-4">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-tertiary">Stock level</span>
@@ -105,7 +131,6 @@ export default function LowStockAlerts() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-2">
               <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium rounded-lg transition-all hover:shadow-md">
                 <Package size={14} />
@@ -116,7 +141,6 @@ export default function LowStockAlerts() {
               </button>
             </div>
 
-            {/* Hover Glow Effect */}
             {hoveredItem === item.id && (
               <div className={`absolute inset-0 rounded-xl opacity-10 blur-xl pointer-events-none ${
                 item.stock <= 2 ? 'bg-error-500' : 
@@ -127,13 +151,20 @@ export default function LowStockAlerts() {
         ))}
       </div>
 
-      {/* View All Link */}
       <div className="flex items-center justify-center mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-light">
-        <button className="flex items-center gap-1 text-xs lg:text-sm text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
-          <span>View all low stock products</span>
-          <ChevronRight size={14} />
-        </button>
+        {hasMore && (
+            <button onClick={loadMore} className="flex items-center gap-1 text-xs lg:text-sm text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
+                <span>Load more ({lowStockItems.length}/{totalCount})</span>
+                <ChevronRight size={14} />
+            </button>
+        )}
+
+        {!hasMore && lowStockItems.length > 0 && (
+            <p className="text-xs text-tertiary text-center">All low stock products loaded</p>
+        )}
       </div>
+      </>
+)}
     </div>
-  )
+  );
 }

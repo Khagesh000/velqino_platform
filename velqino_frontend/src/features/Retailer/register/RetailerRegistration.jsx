@@ -128,6 +128,7 @@ export default function RetailerRegistration() {
       localStorage.setItem('refresh', response.refresh);
       localStorage.setItem('user_role', 'retailer');
       localStorage.setItem('user_name', formData.business_name);
+      localStorage.setItem('user_id', response.data?.id);
       
       // ✅ Clear guest session after registration
       localStorage.removeItem('guest_session_id');

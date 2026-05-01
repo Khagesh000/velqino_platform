@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Key,
   Webhook,
@@ -19,9 +19,11 @@ import {
   Code,
   ExternalLink
 } from '../../../../utils/icons'
+import { useFetchProfileQuery, useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/APIAccess.scss'
 
-export default function APIAccess() {
+export default function APIAccess({ wholesaler, isLoading: parentLoading }) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showWebhookModal, setShowWebhookModal] = useState(false)
   const [showKey, setShowKey] = useState(false)
@@ -31,47 +33,10 @@ export default function APIAccess() {
   const [generatingKey, setGeneratingKey] = useState(false)
   const [generatedKey, setGeneratedKey] = useState(null)
 
-  const [apiKeys, setApiKeys] = useState([
-    {
-      id: 1,
-      name: 'Production API Key',
-      key: 'vk_live_abc123def456ghi789jkl012mno345',
-      created: '2024-01-15',
-      lastUsed: 'Today 10:30 AM',
-      status: 'Active',
-      permissions: ['read', 'write']
-    },
-    {
-      id: 2,
-      name: 'Test API Key',
-      key: 'vk_test_xyz789abc456def123ghi789jkl',
-      created: '2024-02-20',
-      lastUsed: 'Yesterday 03:45 PM',
-      status: 'Active',
-      permissions: ['read']
-    }
-  ])
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
 
-  const [webhooks, setWebhooks] = useState([
-    {
-      id: 1,
-      name: 'Order Updates',
-      url: 'https://api.yourdomain.com/webhooks/orders',
-      events: ['order.created', 'order.updated', 'order.cancelled'],
-      status: 'Active',
-      lastTriggered: '2024-03-21 09:15 AM',
-      created: '2024-01-10'
-    },
-    {
-      id: 2,
-      name: 'Inventory Alerts',
-      url: 'https://api.yourdomain.com/webhooks/inventory',
-      events: ['stock.low', 'stock.out'],
-      status: 'Active',
-      lastTriggered: '2024-03-20 04:30 PM',
-      created: '2024-02-05'
-    }
-  ])
+  const [apiKeys, setApiKeys] = useState([])
+  const [webhooks, setWebhooks] = useState([])
 
   const availableEvents = [
     { id: 'order.created', label: 'Order Created' },
@@ -86,11 +51,35 @@ export default function APIAccess() {
     { id: 'customer.created', label: 'New Customer' }
   ]
 
+  // Load API settings from backend
+  useEffect(() => {
+    if (wholesaler?.api_settings) {
+      setApiKeys(wholesaler.api_settings.api_keys || [])
+      setWebhooks(wholesaler.api_settings.webhooks || [])
+    }
+  }, [wholesaler])
+
+  const saveToBackend = async (newApiKeys, newWebhooks) => {
+    try {
+      const formData = new FormData()
+      formData.append('api_settings', JSON.stringify({
+        api_keys: newApiKeys,
+        webhooks: newWebhooks
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      toast.success('API settings saved successfully!')
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to save API settings')
+    }
+  }
+
   const handleGenerateKey = () => {
     setGeneratingKey(true)
     setTimeout(() => {
       const newKey = {
-        id: apiKeys.length + 1,
+        id: Date.now(),
         name: newKeyName,
         key: `vk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
         created: new Date().toISOString().split('T')[0],
@@ -98,40 +87,50 @@ export default function APIAccess() {
         status: 'Active',
         permissions: ['read', 'write']
       }
+      const updatedKeys = [...apiKeys, newKey]
+      setApiKeys(updatedKeys)
+      saveToBackend(updatedKeys, webhooks)
       setGeneratedKey(newKey)
       setGeneratingKey(false)
-      setApiKeys([...apiKeys, newKey])
       setShowCreateModal(false)
       setNewKeyName('')
       setTimeout(() => setGeneratedKey(null), 5000)
+      toast.success('API key generated successfully!')
     }, 1500)
   }
 
   const handleDeleteKey = (id) => {
     if (confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
-      setApiKeys(apiKeys.filter(key => key.id !== id))
+      const updatedKeys = apiKeys.filter(key => key.id !== id)
+      setApiKeys(updatedKeys)
+      saveToBackend(updatedKeys, webhooks)
+      toast.success('API key deleted successfully!')
     }
   }
 
   const handleRegenerateKey = (id) => {
     if (confirm('Regenerating this key will invalidate the old one. Continue?')) {
-      setApiKeys(apiKeys.map(key => 
+      const updatedKeys = apiKeys.map(key => 
         key.id === id 
           ? { ...key, key: `vk_live_${Math.random().toString(36).substring(2, 20)}` }
           : key
-      ))
+      )
+      setApiKeys(updatedKeys)
+      saveToBackend(updatedKeys, webhooks)
+      toast.success('API key regenerated successfully!')
     }
   }
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text)
     setCopied(true)
+    toast.info('Copied to clipboard!')
     setTimeout(() => setCopied(false), 2000)
   }
 
   const handleAddWebhook = () => {
     const newWebhookData = {
-      id: webhooks.length + 1,
+      id: Date.now(),
       name: newWebhook.name,
       url: newWebhook.url,
       events: newWebhook.events,
@@ -139,14 +138,20 @@ export default function APIAccess() {
       lastTriggered: 'Never',
       created: new Date().toISOString().split('T')[0]
     }
-    setWebhooks([...webhooks, newWebhookData])
+    const updatedWebhooks = [...webhooks, newWebhookData]
+    setWebhooks(updatedWebhooks)
+    saveToBackend(apiKeys, updatedWebhooks)
     setShowWebhookModal(false)
     setNewWebhook({ name: '', url: '', events: [] })
+    toast.success('Webhook added successfully!')
   }
 
   const handleDeleteWebhook = (id) => {
     if (confirm('Are you sure you want to delete this webhook?')) {
-      setWebhooks(webhooks.filter(webhook => webhook.id !== id))
+      const updatedWebhooks = webhooks.filter(webhook => webhook.id !== id)
+      setWebhooks(updatedWebhooks)
+      saveToBackend(apiKeys, updatedWebhooks)
+      toast.success('Webhook deleted successfully!')
     }
   }
 
@@ -161,6 +166,17 @@ export default function APIAccess() {
   const maskApiKey = (key) => {
     if (!key) return ''
     return key.substring(0, 15) + '...' + key.substring(key.length - 8)
+  }
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -196,43 +212,49 @@ export default function APIAccess() {
           </div>
 
           <div className="space-y-3">
-            {apiKeys.map(key => (
-              <div key={key.id} className="border border-gray-200 rounded-xl p-4 hover:border-primary-200 transition-all">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Key size={14} className="text-primary-500" />
-                      <span className="text-sm font-semibold text-gray-900">{key.name}</span>
-                      <span className="px-2 py-0.5 bg-success-100 text-success-700 text-xs rounded-full">{key.status}</span>
+            {apiKeys.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No API keys created yet. Click "Create API Key" to generate one.
+              </div>
+            ) : (
+              apiKeys.map(key => (
+                <div key={key.id} className="border border-gray-200 rounded-xl p-4 hover:border-primary-200 transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Key size={14} className="text-primary-500" />
+                        <span className="text-sm font-semibold text-gray-900">{key.name}</span>
+                        <span className="px-2 py-0.5 bg-success-100 text-success-700 text-xs rounded-full">{key.status}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                          {showKey ? key.key : maskApiKey(key.key)}
+                        </code>
+                        <button onClick={() => handleCopy(key.key)} className="p-1 text-gray-400 hover:text-primary-600">
+                          <Copy size={14} />
+                        </button>
+                        <button onClick={() => setShowKey(!showKey)} className="p-1 text-gray-400 hover:text-primary-600">
+                          {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>Created: {key.created}</span>
+                        <span>Last used: {key.lastUsed}</span>
+                        <span>Permissions: {key.permissions.join(', ')}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                        {showKey ? key.key : maskApiKey(key.key)}
-                      </code>
-                      <button onClick={() => handleCopy(key.key)} className="p-1 text-gray-400 hover:text-primary-600">
-                        <Copy size={14} />
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleRegenerateKey(key.id)} className="p-1.5 text-gray-400 hover:text-warning-600 rounded-lg">
+                        <RefreshCw size={14} />
                       </button>
-                      <button onClick={() => setShowKey(!showKey)} className="p-1 text-gray-400 hover:text-primary-600">
-                        {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                      <button onClick={() => handleDeleteKey(key.id)} className="p-1.5 text-gray-400 hover:text-error-600 rounded-lg">
+                        <Trash2 size={14} />
                       </button>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>Created: {key.created}</span>
-                      <span>Last used: {key.lastUsed}</span>
-                      <span>Permissions: {key.permissions.join(', ')}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => handleRegenerateKey(key.id)} className="p-1.5 text-gray-400 hover:text-warning-600 rounded-lg">
-                      <RefreshCw size={14} />
-                    </button>
-                    <button onClick={() => handleDeleteKey(key.id)} className="p-1.5 text-gray-400 hover:text-error-600 rounded-lg">
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -253,39 +275,42 @@ export default function APIAccess() {
           </div>
 
           <div className="space-y-3">
-            {webhooks.map(webhook => (
-              <div key={webhook.id} className="border border-gray-200 rounded-xl p-4 hover:border-primary-200 transition-all">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Webhook size={14} className="text-primary-500" />
-                      <span className="text-sm font-semibold text-gray-900">{webhook.name}</span>
-                      <span className="px-2 py-0.5 bg-success-100 text-success-700 text-xs rounded-full">{webhook.status}</span>
+            {webhooks.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No webhooks configured yet. Click "Add Webhook" to create one.
+              </div>
+            ) : (
+              webhooks.map(webhook => (
+                <div key={webhook.id} className="border border-gray-200 rounded-xl p-4 hover:border-primary-200 transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Webhook size={14} className="text-primary-500" />
+                        <span className="text-sm font-semibold text-gray-900">{webhook.name}</span>
+                        <span className="px-2 py-0.5 bg-success-100 text-success-700 text-xs rounded-full">{webhook.status}</span>
+                      </div>
+                      <div className="mb-2">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{webhook.url}</code>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {webhook.events.map(event => (
+                          <span key={event} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{event}</span>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>Created: {webhook.created}</span>
+                        <span>Last triggered: {webhook.lastTriggered}</span>
+                      </div>
                     </div>
-                    <div className="mb-2">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{webhook.url}</code>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleDeleteWebhook(webhook.id)} className="p-1.5 text-gray-400 hover:text-error-600 rounded-lg">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {webhook.events.map(event => (
-                        <span key={event} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{event}</span>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>Created: {webhook.created}</span>
-                      <span>Last triggered: {webhook.lastTriggered}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg">
-                      <RefreshCw size={14} />
-                    </button>
-                    <button onClick={() => handleDeleteWebhook(webhook.id)} className="p-1.5 text-gray-400 hover:text-error-600 rounded-lg">
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -318,13 +343,6 @@ export default function APIAccess() {
                 <option>v1 (Latest)</option>
                 <option>v1 (Stable)</option>
               </select>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">IP Whitelist</p>
-                <p className="text-xs text-gray-500">Restrict API access to specific IPs</p>
-              </div>
-              <button className="text-sm text-primary-600 hover:text-primary-700">Configure</button>
             </div>
           </div>
         </div>

@@ -11,6 +11,9 @@ urlpatterns = [
      path('api/commerce/', include('commerce.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('api/analytics/', include('analytics_engine.urls')),
+    path('api/realtime_hub/', include('realtime_hub.urls')),
 ]
 
 if settings.DEBUG:

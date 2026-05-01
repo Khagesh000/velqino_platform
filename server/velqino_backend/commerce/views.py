@@ -9,16 +9,23 @@ from catalog.models import Product
 from identity.serializers import AddressSerializer
 from .services.cart_service import CartService
 from decimal import Decimal
+from django.core.cache import cache
 import uuid
 from identity.permissions import IsAdmin, IsSupport, IsAdminOrSupport
 from django.http import HttpResponse
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+from reportlab.lib.pagesizes import A4 # type: ignore
+from reportlab.lib.units import inch # type: ignore
+from reportlab.lib import colors # type: ignore
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer # type: ignore
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle # type: ignore
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT # type: ignore
+from django.utils import timezone
+import logging
+from commerce.models import OrderStatusHistory
+
+logger = logging.getLogger(__name__)
 import io
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -94,6 +101,14 @@ def create_order(request):
         shipping_pincode=address.pincode,
         status='pending',
         payment_status='pending'
+    )
+
+    
+    OrderStatusHistory.objects.create(
+        order=order,
+        status='pending',
+        notes='Order placed successfully',
+        created_by=user if user.is_authenticated else None
     )
     
     # Create order items and update stock
@@ -790,3 +805,185 @@ def download_invoice(request, order_id):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="invoice_{order.order_number}.pdf"'
     return response
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_order_status(request, order_id):
+    """
+    Update order status (Wholesaler/Admin only)
+    Status flow: pending → confirmed → processing → shipped → out_for_delivery → delivered
+    """
+    from .models import Order
+    
+    user = request.user
+    
+    # ✅ Only wholesaler, admin, or support can update order status
+    if user.role not in ['wholesaler', 'admin', 'support']:
+        return Response({
+            'status': 'error',
+            'message': 'You are not authorized to update order status'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # ✅ Get order
+    try:
+        if str(order_id).startswith('ORD-'):
+            order = Order.objects.get(order_number=order_id)
+        else:
+            order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # ✅ Check if wholesaler owns this order
+    if user.role == 'wholesaler' and order.wholesaler and order.wholesaler.id != user.id:
+        return Response({
+            'status': 'error',
+            'message': 'You can only update your own orders'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # ✅ Get new status from request
+    new_status = request.data.get('status')
+    tracking_number = request.data.get('tracking_number')
+    notes = request.data.get('notes', '')
+    
+    if not new_status:
+        return Response({
+            'status': 'error',
+            'message': 'Status is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # ✅ Define valid status transitions
+    valid_transitions = {
+        'pending': ['confirmed', 'cancelled'],
+        'confirmed': ['processing', 'cancelled'],
+        'processing': ['shipped', 'cancelled'],
+        'shipped': ['out_for_delivery', 'cancelled'],
+        'out_for_delivery': ['delivered', 'cancelled'],
+        'delivered': ['refunded'],
+        'cancelled': [],
+        'refunded': []
+    }
+    
+    # ✅ Check if transition is valid
+    current_status = order.status
+    if new_status not in valid_transitions.get(current_status, []):
+        return Response({
+            'status': 'error',
+            'message': f'Invalid status transition from {current_status} to {new_status}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # ✅ Update order status
+    order.status = new_status
+    order.updated_at = timezone.now()
+
+    if tracking_number:
+        order.tracking_number = tracking_number
+
+    if notes:
+        order.notes = (order.notes + '\n' + notes) if order.notes else notes
+
+    if new_status == 'delivered':
+        order.delivered_at = timezone.now()
+
+    order.save()
+
+    # ✅ Add status history HERE (after save, before cache delete)
+    from commerce.models import OrderStatusHistory
+    OrderStatusHistory.objects.create(
+        order=order,
+        status=new_status,
+        notes=notes or f'Status updated from {current_status} to {new_status}',
+        created_by=user
+    )
+
+    # ✅ Invalidate cache
+    cache.delete(f"order:{order.id}")
+    cache.delete(f"order:{order.order_number}")
+
+    # ✅ Log status change
+    logger.info(f"Order {order.order_number} status updated from {current_status} to {new_status} by {user.email}")
+
+    
+    # ✅ Send notification (optional - can add Celery task)
+    # from commerce.tasks import send_order_status_email
+    # send_order_status_email.delay(order.id, current_status, new_status)
+    
+    return Response({
+        'status': 'success',
+        'message': f'Order status updated to {new_status}',
+        'data': {
+            'order_id': order.order_number,
+            'previous_status': current_status,
+            'current_status': order.status,
+            'tracking_number': order.tracking_number,
+            'updated_at': order.updated_at
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_order_status_history(request, order_id):
+    """
+    Get order status history and timeline
+    """
+    from .models import Order
+    from commerce.models import OrderStatusHistory
+    
+    user = request.user
+    
+    # ✅ Get order
+    try:
+        if str(order_id).startswith('ORD-'):
+            order = Order.objects.get(order_number=order_id)
+        else:
+            order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # ✅ Check permission
+    if user.role not in ['admin', 'support']:
+        if user.role == 'wholesaler' and order.wholesaler and order.wholesaler.id != user.id:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        elif user.role == 'retailer' and order.retailer and order.retailer.id != user.id:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        elif user.role == 'customer' and order.customer.id != user.id:
+            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    # ✅ Get status history
+    history = OrderStatusHistory.objects.filter(order=order).order_by('-created_at')
+    
+    history_data = []
+    for h in history:
+        history_data.append({
+            'status': h.status,
+            'notes': h.notes,
+            'created_at': h.created_at,
+            'created_by': h.created_by.email if h.created_by else None
+        })
+    
+    # ✅ Build timeline
+    timeline = [
+        {'status': 'pending', 'label': 'Order Placed', 'completed': True, 'date': order.created_at},
+        {'status': 'confirmed', 'label': 'Order Confirmed', 'completed': order.status in ['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered'], 'date': None},
+        {'status': 'processing', 'label': 'Processing', 'completed': order.status in ['processing', 'shipped', 'out_for_delivery', 'delivered'], 'date': None},
+        {'status': 'shipped', 'label': 'Shipped', 'completed': order.status in ['shipped', 'out_for_delivery', 'delivered'], 'date': order.shipped_at if hasattr(order, 'shipped_at') else None},
+        {'status': 'out_for_delivery', 'label': 'Out for Delivery', 'completed': order.status in ['out_for_delivery', 'delivered'], 'date': None},
+        {'status': 'delivered', 'label': 'Delivered', 'completed': order.status == 'delivered', 'date': order.delivered_at},
+    ]
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'current_status': order.status,
+            'tracking_number': order.tracking_number,
+            'history': history_data,
+            'timeline': timeline
+        }
+    })

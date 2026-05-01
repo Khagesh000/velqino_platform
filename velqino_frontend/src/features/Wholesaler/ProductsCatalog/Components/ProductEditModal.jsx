@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Package,
@@ -10,123 +10,169 @@ import {
   Eye,
   Upload,
   Trash2 
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/ProductsCatalog/ProductEditModal.scss'
-import { useCreateProductMutation } from '@/redux/wholesaler/slices/productsSlice'
-import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
-import { toast } from 'react-toastify'
+} from '../../../../utils/icons';
+import '../../../../styles/Wholesaler/ProductsCatalog/ProductEditModal.scss';
+import { useCreateProductMutation, useUpdateProductMutation, useGetProductQuery } from '@/redux/wholesaler/slices/productsSlice';
+import { toast } from 'react-toastify';
 
-export default function ProductEditModal({ product = null, onClose, onSave }) {
-  const [createProduct, { isLoading }] = useCreateProductMutation()
-  const { data: categoriesData } = useGetCategoriesQuery()
-  const [activeTab, setActiveTab] = useState('basic')
-  const [selectedSizes, setSelectedSizes] = useState([])
-  const [selectedImages, setSelectedImages] = useState([])
-  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '40']
-  const [uploading, setUploading] = useState(false)
+export default function ProductEditModal({ product = null, onClose, onSave, categories = [] }) {
+  const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
+  const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
+  const [activeTab, setActiveTab] = useState('basic');
+  const [selectedSizes, setSelectedSizes] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '40'];
+  const [uploading, setUploading] = useState(false);
   
-  // ✅ OPTIMIZED - Only fields that match your backend Product model
-  // Remove the duplicate sku in Inventory section - keep only one at top
-const [formData, setFormData] = useState({
-  name: product?.name || '',
-  sku: product?.sku || '',
-  category_id: product?.category?.id || '',
-  brand: product?.brand || '',
-  description: product?.description || '',
-  price: product?.price || '',
-  compare_price: product?.compare_price || '',
-  cost: product?.cost || '',
- /*  stock: product?.stock || 0, */
-  threshold: product?.threshold || 10,
-  weight: product?.weight || '',
-  status: product?.status || 'draft',
-  sizes: product?.sizes || []  // ✅ ADD THIS
-})
+  const isLoading = isCreating || isUpdating;
+  
+  const { data: fullProductData } = useGetProductQuery(product?.id, {
+    skip: !product?.id
+  });
+  
+  const actualProduct = fullProductData?.data || product;
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    category_id: '',
+    brand: '',
+    description: '',
+    price: '',
+    compare_price: '',
+    cost: '',
+    threshold: 10,
+    weight: '',
+    status: 'draft',
+    pattern: '',
+    primary_color: '',
+  });
+
+  useEffect(() => {
+    if (actualProduct) {
+      setFormData({
+        name: actualProduct.name || '',
+        sku: actualProduct.sku || '',
+        category_id: actualProduct.category_id || actualProduct.category || '',
+        brand: actualProduct.brand || '',
+        description: actualProduct.description || '',
+        price: actualProduct.price || '',
+        compare_price: actualProduct.compare_price || '',
+        cost: actualProduct.cost || '',
+        threshold: actualProduct.threshold || 10,
+        weight: actualProduct.weight || '',
+        status: actualProduct.status || 'draft',
+        pattern: actualProduct.pattern || '',
+        primary_color: actualProduct.primary_color || '',
+      });
+      
+      if (actualProduct.variants && actualProduct.variants.length > 0) {
+        setSelectedSizes(actualProduct.variants.map(v => v.size));
+      } else {
+        setSelectedSizes([]);
+      }
+    } else {
+      setFormData({
+        name: '',
+        sku: '',
+        category_id: '',
+        brand: '',
+        description: '',
+        price: '',
+        compare_price: '',
+        cost: '',
+        threshold: 10,
+        weight: '',
+        status: 'draft',
+        pattern: '',
+        primary_color: '',
+      });
+      setSelectedSizes([]);
+    }
+  }, [actualProduct]);
 
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: Package },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'inventory', label: 'Inventory', icon: Box },
     { id: 'status', label: 'Status', icon: Eye }
-  ]
+  ];
 
-const toggleSize = (size) => {
-  setSelectedSizes(prev => {
-    if (prev.includes(size)) {
-      return prev.filter(s => s !== size)
-    } else {
-      return [...prev, size]  // ✅ This creates flat array
-    }
-  })
-}
+  const toggleSize = (size) => {
+    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+  };
 
-const handleImageSelect = (e) => {
-  const files = Array.from(e.target.files)
-  setSelectedImages(prev => [...prev, ...files])  // ✅ Change from = to spread
-}
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedImages(prev => [...prev, ...files]);
+  };
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
-    }))
-  }
+    }));
+  };
 
-const handleSave = async () => {
-  if (!formData.name) {
-    toast.error('Product name is required')
-    return
-  }
-  if (!formData.price) {
-    toast.error('Price is required')
-    return
-  }
-  
-  setUploading(true)
-  
-  const payload = new FormData()
-  payload.append('name', formData.name)
-  payload.append('price', formData.price)
-  payload.append('sku', '')  // ✅ SEND EMPTY SKU (NOT REMOVE)
-  payload.append('cost', formData.cost || '')
-  payload.append('category_id', formData.category_id || '')
-  payload.append('brand', formData.brand || '')
-  payload.append('description', formData.description || '')
- /*  payload.append('stock', formData.stock.toString())  // ✅ Convert to string */
-  payload.append('threshold', formData.threshold.toString())  // ✅ Convert to string
-  payload.append('weight', formData.weight || '')
-  payload.append('status', formData.status)
-  
-  // ✅ Fix sizes - ensure flat array
-  console.log('Selected sizes before send:', selectedSizes)  // Debug
-  if (selectedSizes.length > 0) {
-    selectedSizes.forEach(size => payload.append('sizes', size))
-  }
-  
-  // ✅ Fix images - ensure files are appended
-  console.log('Selected images before send:', selectedImages.length)  // Debug
-  if (selectedImages.length > 0) {
-    selectedImages.forEach(image => payload.append('images', image))
-  }
-  
-  // ✅ Debug: Log all FormData entries
-  for (let pair of payload.entries()) {
-    console.log(pair[0], pair[1])
-  }
-  
-  try {
-    const result = await createProduct(payload).unwrap()
-    toast.success('Product created successfully!')
-    onSave?.(result)
-    onClose()
-  } catch (error) {
-    console.error('Full error:', error)
-    console.error('Error response:', error.response?.data)
-    toast.error(error.response?.data?.errors?.sku?.[0] || error.response?.data?.message || 'Failed to create product')
-    setUploading(false)
-  }
-}
+  const handleSave = async () => {
+    if (!formData.name) {
+      toast.error('Product name is required');
+      return;
+    }
+    if (!formData.price) {
+      toast.error('Price is required');
+      return;
+    }
+    
+    setUploading(true);
+    
+    const payload = new FormData();
+    payload.append('name', formData.name);
+    payload.append('price', formData.price);
+    payload.append('sku', '');
+    payload.append('cost', formData.cost || '');
+    payload.append('category_id', formData.category_id || '');
+    payload.append('brand', formData.brand || '');
+    payload.append('description', formData.description || '');
+    payload.append('threshold', formData.threshold.toString());
+    payload.append('weight', formData.weight || '');
+    payload.append('status', formData.status);
+    payload.append('pattern', formData.pattern || '');
+    payload.append('primary_color', formData.primary_color || '');
+    
+    if (selectedSizes.length > 0) {
+      selectedSizes.forEach(size => payload.append('sizes', size));
+    }
+    
+    if (selectedImages.length > 0) {
+      selectedImages.forEach(image => payload.append('images', image));
+    }
+    
+    try {
+      let result;
+      
+      if (actualProduct?.id) {
+        console.log('🟡 UPDATING product ID:', actualProduct.id);
+        result = await updateProduct({ 
+          productId: actualProduct.id, 
+          data: payload 
+        }).unwrap();
+        toast.success('Product updated successfully!');
+      } else {
+        console.log('🟢 CREATING new product');
+        result = await createProduct(payload).unwrap();
+        toast.success('Product created successfully!');
+      }
+      
+      onSave?.(result);
+      onClose();
+    } catch (error) {
+      console.error('Full error:', error);
+      toast.error(error?.data?.message || 'Failed to save product');
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="product-edit-modal bg-white h-full flex flex-col pt-[56px] pb-[70px] sm:pt-0 sm:pb-0">
@@ -194,7 +240,7 @@ const handleSave = async () => {
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:gap-4">
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">SKU (Auto if empty)</label>
                 <input
                   type="text"
@@ -204,25 +250,21 @@ const handleSave = async () => {
                   className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                   placeholder="Auto-generated"
                 />
-              </div>
+              </div> */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  name="category_id"
-                  value={formData.category_id}
-                  onChange={handleInputChange}
-                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-primary-500"
-                >
-                  <option value="">Select Category</option>
-                  {Array.isArray(categoriesData) 
-                    ? categoriesData.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))
-                    : categoriesData?.data?.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                </select>
-              </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    name="category_id"
+                    value={formData.category_id}
+                    onChange={handleInputChange}
+                    className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
             </div>
 
             <div>

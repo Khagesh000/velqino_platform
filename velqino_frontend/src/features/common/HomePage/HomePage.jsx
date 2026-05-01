@@ -12,7 +12,6 @@ import ReviewsSection from './Components/ReviewsSection'
 import BenefitsSection from './Components/BenefitsSection'
 import RecentlyViewed from './Components/RecentlyViewed'
 import NewsletterSection from './Components/NewsletterSection'
-import Footer from './Components/Footer'
 import FloatingElements from './Components/FloatingElements'
 
 export default function HomePage() {
@@ -31,7 +30,6 @@ export default function HomePage() {
       <BenefitsSection />
       <RecentlyViewed />
       <NewsletterSection />
-      <Footer />
       <FloatingElements />
     </div>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Bell,
   Mail,
@@ -19,12 +19,16 @@ import {
   Clock,
   Calendar
 } from '../../../../utils/icons'
+import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/NotificationPreferences.scss'
 
-export default function NotificationPreferences() {
+export default function NotificationPreferences({ wholesaler, isLoading: parentLoading }) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [activeTab, setActiveTab] = useState('email')
+
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
 
   const [preferences, setPreferences] = useState({
     email: {
@@ -64,6 +68,19 @@ export default function NotificationPreferences() {
     monthlyDigestTime: '09:00'
   })
 
+  // Load notification preferences from backend
+  useEffect(() => {
+    if (wholesaler?.notification_preferences) {
+      const notifPrefs = wholesaler.notification_preferences
+      setPreferences({
+        email: notifPrefs.email || preferences.email,
+        sms: notifPrefs.sms || preferences.sms,
+        push: notifPrefs.push || preferences.push
+      })
+      setDigestSettings(notifPrefs.digest_settings || digestSettings)
+    }
+  }, [wholesaler])
+
   const handleToggle = (channel, setting) => {
     setPreferences({
       ...preferences,
@@ -74,13 +91,28 @@ export default function NotificationPreferences() {
     })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true)
-    setTimeout(() => {
-      setIsSaving(false)
+    try {
+      const formData = new FormData()
+      formData.append('notification_preferences', JSON.stringify({
+        email: preferences.email,
+        sms: preferences.sms,
+        push: preferences.push,
+        digest_settings: digestSettings
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      
       setSaveSuccess(true)
+      toast.success('Notification preferences saved successfully!')
       setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to save notification preferences')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const tabs = [
@@ -232,14 +264,8 @@ export default function NotificationPreferences() {
               onChange={(e) => setDigestSettings({ ...digestSettings, dailyDigestTime: e.target.value })}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm"
             >
-              <option>09:00</option>
-              <option>10:00</option>
-              <option>11:00</option>
-              <option>12:00</option>
-              <option>13:00</option>
-              <option>14:00</option>
-              <option>15:00</option>
-              <option>16:00</option>
+              <option>09:00</option><option>10:00</option><option>11:00</option><option>12:00</option>
+              <option>13:00</option><option>14:00</option><option>15:00</option><option>16:00</option>
               <option>17:00</option>
             </select>
           </div>
@@ -283,6 +309,17 @@ export default function NotificationPreferences() {
   )
 
   const CurrentIcon = tabs.find(t => t.id === activeTab)?.icon || Mail
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="notification-preferences bg-white rounded-xl border border-gray-200 overflow-hidden">

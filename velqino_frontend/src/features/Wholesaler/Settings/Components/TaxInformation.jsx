@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   FileText,
   Building,
@@ -16,16 +16,21 @@ import {
   Eye,
   TrendingUp
 } from '../../../../utils/icons'
+import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/TaxInformation.scss'
 
-export default function TaxInformation() {
+export default function TaxInformation({ wholesaler, isLoading: parentLoading }) {
   const [isEditing, setIsEditing] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
 
   const [taxDetails, setTaxDetails] = useState({
-    gstNumber: '27AAACV1234E1Z5',
-    panNumber: 'AAACV1234E',
+    gstNumber: '',
+    panNumber: '',
     gstType: 'Regular',
     taxRegime: 'Regular',
     gstRate: 18,
@@ -35,11 +40,11 @@ export default function TaxInformation() {
     tdsApplicable: true,
     tdsRate: 2,
     filingFrequency: 'Monthly',
-    lastFiled: '2024-02-28',
-    nextDueDate: '2024-03-20',
-    taxCollectedYTD: 1245750,
-    taxPaidYTD: 1123450,
-    taxPendingYTD: 122300
+    lastFiled: '',
+    nextDueDate: '',
+    taxCollectedYTD: 0,
+    taxPaidYTD: 0,
+    taxPendingYTD: 0
   })
 
   const [editedDetails, setEditedDetails] = useState(taxDetails)
@@ -48,16 +53,86 @@ export default function TaxInformation() {
   const gstTypes = ['Regular', 'Composition', 'Casual Taxable']
   const taxRegimes = ['Regular', 'Presumptive', 'New Regime']
 
-  const handleSave = () => {
-    setSaveSuccess(false)
+  // Load tax data from backend
+  useEffect(() => {
+    if (wholesaler?.tax_details) {
+      const taxData = wholesaler.tax_details
+      setTaxDetails({
+        gstNumber: taxData.gst_number || '',
+        panNumber: taxData.pan_number || '',
+        gstType: taxData.gst_type || 'Regular',
+        taxRegime: taxData.tax_regime || 'Regular',
+        gstRate: taxData.gst_rate || 18,
+        cgstRate: (taxData.gst_rate || 18) / 2,
+        sgstRate: (taxData.gst_rate || 18) / 2,
+        igstRate: taxData.gst_rate || 18,
+        tdsApplicable: taxData.tds_applicable !== false,
+        tdsRate: taxData.tds_rate || 2,
+        filingFrequency: taxData.filing_frequency || 'Monthly',
+        lastFiled: taxData.last_filed || '',
+        nextDueDate: taxData.next_due_date || '',
+        taxCollectedYTD: taxData.tax_collected_ytd || 0,
+        taxPaidYTD: taxData.tax_paid_ytd || 0,
+        taxPendingYTD: taxData.tax_pending_ytd || 0
+      })
+      setEditedDetails({
+        gstNumber: taxData.gst_number || '',
+        panNumber: taxData.pan_number || '',
+        gstType: taxData.gst_type || 'Regular',
+        taxRegime: taxData.tax_regime || 'Regular',
+        gstRate: taxData.gst_rate || 18,
+        cgstRate: (taxData.gst_rate || 18) / 2,
+        sgstRate: (taxData.gst_rate || 18) / 2,
+        igstRate: taxData.gst_rate || 18,
+        tdsApplicable: taxData.tds_applicable !== false,
+        tdsRate: taxData.tds_rate || 2,
+        filingFrequency: taxData.filing_frequency || 'Monthly',
+        lastFiled: taxData.last_filed || '',
+        nextDueDate: taxData.next_due_date || '',
+        taxCollectedYTD: taxData.tax_collected_ytd || 0,
+        taxPaidYTD: taxData.tax_paid_ytd || 0,
+        taxPendingYTD: taxData.tax_pending_ytd || 0
+      })
+    }
+  }, [wholesaler])
+
+  const handleSave = async () => {
+    setIsSaving(true)
     setSaveError(false)
     
-    setTimeout(() => {
+    try {
+      const formData = new FormData()
+      formData.append('tax_details', JSON.stringify({
+        gst_number: editedDetails.gstNumber,
+        pan_number: editedDetails.panNumber,
+        gst_type: editedDetails.gstType,
+        tax_regime: editedDetails.taxRegime,
+        gst_rate: editedDetails.gstRate,
+        tds_applicable: editedDetails.tdsApplicable,
+        tds_rate: editedDetails.tdsRate,
+        filing_frequency: editedDetails.filingFrequency,
+        last_filed: editedDetails.lastFiled,
+        next_due_date: editedDetails.nextDueDate,
+        tax_collected_ytd: editedDetails.taxCollectedYTD,
+        tax_paid_ytd: editedDetails.taxPaidYTD,
+        tax_pending_ytd: editedDetails.taxPendingYTD
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      
       setTaxDetails(editedDetails)
       setSaveSuccess(true)
+      toast.success('Tax information updated successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+    } catch (error) {
+      setSaveError(true)
+      toast.error(error?.data?.message || 'Failed to update tax information')
+      setTimeout(() => setSaveError(false), 3000)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -71,7 +146,23 @@ export default function TaxInformation() {
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(value)
+    }).format(value || 0)
+  }
+
+  const handleDownloadReturn = () => {
+    toast.info('Downloading tax return...')
+    // Implement actual download API call
+  }
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -99,16 +190,18 @@ export default function TaxInformation() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCancel}
-              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              disabled={isSaving}
+              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1"
+              disabled={isSaving}
+              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1 disabled:opacity-50"
             >
               <Save size={14} />
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -152,7 +245,7 @@ export default function TaxInformation() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 uppercase"
                   />
                 ) : (
-                  <p className="text-sm font-mono text-gray-900">{taxDetails.gstNumber}</p>
+                  <p className="text-sm font-mono text-gray-900">{taxDetails.gstNumber || '-'}</p>
                 )}
               </div>
               <div>
@@ -165,7 +258,7 @@ export default function TaxInformation() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 uppercase"
                   />
                 ) : (
-                  <p className="text-sm font-mono text-gray-900">{taxDetails.panNumber}</p>
+                  <p className="text-sm font-mono text-gray-900">{taxDetails.panNumber || '-'}</p>
                 )}
               </div>
             </div>
@@ -224,12 +317,13 @@ export default function TaxInformation() {
                     type="number"
                     value={editedDetails.gstRate}
                     onChange={(e) => {
-                      const rate = parseInt(e.target.value)
+                      const rate = parseFloat(e.target.value)
                       setEditedDetails({
                         ...editedDetails,
                         gstRate: rate,
                         cgstRate: rate / 2,
-                        sgstRate: rate / 2
+                        sgstRate: rate / 2,
+                        igstRate: rate
                       })
                     }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
@@ -266,7 +360,7 @@ export default function TaxInformation() {
                     <input
                       type="number"
                       value={editedDetails.tdsRate}
-                      onChange={(e) => setEditedDetails({ ...editedDetails, tdsRate: parseInt(e.target.value) })}
+                      onChange={(e) => setEditedDetails({ ...editedDetails, tdsRate: parseFloat(e.target.value) })}
                       className="w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                     />
                   ) : (
@@ -306,7 +400,7 @@ export default function TaxInformation() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Last Filed</label>
-                <p className="text-sm text-gray-900">{taxDetails.lastFiled}</p>
+                <p className="text-sm text-gray-900">{taxDetails.lastFiled || '-'}</p>
               </div>
             </div>
 
@@ -314,13 +408,15 @@ export default function TaxInformation() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Next Due Date</label>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-warning-600">{taxDetails.nextDueDate}</p>
-                  <span className="text-xs text-gray-500">(Due in 5 days)</span>
+                  <p className="text-sm font-semibold text-warning-600">{taxDetails.nextDueDate || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Download Returns</label>
-                <button className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm">
+                <button 
+                  onClick={handleDownloadReturn}
+                  className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm"
+                >
                   <Download size={14} />
                   Download Latest Return
                 </button>

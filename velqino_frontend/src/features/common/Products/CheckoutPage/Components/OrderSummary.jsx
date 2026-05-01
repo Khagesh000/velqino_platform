@@ -38,10 +38,13 @@ export default function OrderSummary({ cartItems, subtotal, discount, shippingCh
                     {item.product_detail.images.slice(0, 6).map((img, idx) => (
                       <img 
                         key={idx}
-                        src={`${BASE_IMAGE_URL}${img.image}`}
-                        alt={item.product_detail?.name}
+                        src={img?.image ? `${BASE_IMAGE_URL}${img.image}` : '/images/placeholder.jpg'}
+                        alt={item.product_detail?.name || 'Product'}
                         className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-gray-100"
-                        onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                        onError={(e) => { 
+                          e.target.onerror = null;
+                          e.target.src = '/images/placeholder.jpg'; 
+                        }}
                       />
                     ))}
                   </div>

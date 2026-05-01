@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   CreditCard,
   FileText,
@@ -19,31 +19,30 @@ import {
   Plus,
   ChevronRight
 } from '../../../../utils/icons'
+import { useFetchProfileQuery, useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/BillingSubscription.scss'
 
-export default function BillingSubscription() {
+export default function BillingSubscription({ wholesaler, isLoading: parentLoading }) {
   const [selectedPlan, setSelectedPlan] = useState('pro')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [upgrading, setUpgrading] = useState(false)
   const [upgradeSuccess, setUpgradeSuccess] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const currentPlan = {
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
+
+  const [currentPlan, setCurrentPlan] = useState({
     name: 'Professional',
     price: 4999,
     billingCycle: 'monthly',
-    features: [
-      'Up to 5000 products',
-      'Unlimited orders',
-      'Advanced analytics',
-      'API access',
-      'Priority support',
-      'Bulk import/export',
-      'Multiple users (5)',
-      'Custom reports'
-    ],
-    nextBillingDate: '2024-04-15',
+    features: [],
+    nextBillingDate: '',
     status: 'Active'
-  }
+  })
+
+  const [invoices, setInvoices] = useState([])
+  const [paymentMethods, setPaymentMethods] = useState([])
 
   const plans = [
     {
@@ -78,26 +77,64 @@ export default function BillingSubscription() {
     }
   ]
 
-  const invoices = [
-    { id: 'INV-2024-003', date: '2024-03-15', amount: 4999, status: 'Paid', download: true },
-    { id: 'INV-2024-002', date: '2024-02-15', amount: 4999, status: 'Paid', download: true },
-    { id: 'INV-2024-001', date: '2024-01-15', amount: 4999, status: 'Paid', download: true },
-    { id: 'INV-2023-012', date: '2023-12-15', amount: 4999, status: 'Paid', download: true }
-  ]
+  // Load billing data from backend
+  useEffect(() => {
+    if (wholesaler?.billing) {
+      const billingData = wholesaler.billing
+      setCurrentPlan({
+        name: billingData.plan_name || 'Professional',
+        price: billingData.plan_price || 4999,
+        billingCycle: billingData.billing_cycle || 'monthly',
+        features: billingData.features || currentPlan.features,
+        nextBillingDate: billingData.next_billing_date || '',
+        status: billingData.status || 'Active'
+      })
+      setInvoices(billingData.invoices || [])
+      setPaymentMethods(billingData.payment_methods || [])
+    }
+  }, [wholesaler])
 
-  const paymentMethods = [
-    { id: 1, type: 'card', last4: '4242', brand: 'Visa', expiry: '05/25', isDefault: true },
-    { id: 2, type: 'upi', id: 'business@okhdfcbank', isDefault: false }
-  ]
-
-  const handleUpgrade = (planId) => {
-    if (planId === currentPlan.name.toLowerCase()) return
+  const handleUpgrade = async (planId) => {
+    const selectedPlanData = plans.find(p => p.id === planId)
+    if (selectedPlanData.name === currentPlan.name) return
+    
     setUpgrading(true)
-    setTimeout(() => {
-      setUpgrading(false)
+    try {
+      const formData = new FormData()
+      formData.append('billing', JSON.stringify({
+        plan_name: selectedPlanData.name,
+        plan_price: selectedPlanData.price,
+        plan_id: planId,
+        status: 'Active'
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      
+      setCurrentPlan({
+        ...currentPlan,
+        name: selectedPlanData.name,
+        price: selectedPlanData.price,
+        status: 'Active'
+      })
+      
       setUpgradeSuccess(true)
+      toast.success(`Upgraded to ${selectedPlanData.name} plan successfully!`)
       setTimeout(() => setUpgradeSuccess(false), 3000)
-    }, 1500)
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to upgrade plan')
+    } finally {
+      setUpgrading(false)
+    }
+  }
+
+  const handleDownloadInvoice = (invoiceId) => {
+    toast.info(`Downloading invoice ${invoiceId}...`)
+    // Implement actual download API call
+  }
+
+  const handleAddPaymentMethod = async () => {
+    toast.info('Payment method addition coming soon...')
   }
 
   const formatCurrency = (value) => {
@@ -116,6 +153,17 @@ export default function BillingSubscription() {
       gray: 'border-gray-300 bg-gray-50'
     }
     return colors[color] || colors.gray
+  }
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -145,7 +193,9 @@ export default function BillingSubscription() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900">{currentPlan.name}</h2>
               <p className="text-sm text-gray-600 mt-1">{formatCurrency(currentPlan.price)}/{currentPlan.billingCycle}</p>
-              <p className="text-xs text-gray-500 mt-2">Next billing date: {currentPlan.nextBillingDate}</p>
+              {currentPlan.nextBillingDate && (
+                <p className="text-xs text-gray-500 mt-2">Next billing date: {currentPlan.nextBillingDate}</p>
+              )}
             </div>
             <button
               onClick={() => setShowPaymentModal(true)}
@@ -173,7 +223,7 @@ export default function BillingSubscription() {
                     isCurrent ? 'border-primary-500 bg-primary-50/30' : 'border-gray-200 hover:border-primary-300'
                   }`}
                 >
-                  {isRecommended && (
+                  {isRecommended && !isCurrent && (
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-warning-500 text-white text-xs rounded-full">
                       Recommended
                     </span>
@@ -214,84 +264,84 @@ export default function BillingSubscription() {
         </div>
 
         {/* Invoice History */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <FileText size={16} className="text-gray-500" />
-              Invoice History
-            </h4>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="border-b border-gray-200">
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Invoice ID</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Amount</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
-                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {invoices.map(invoice => (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">{invoice.id}</td>
-                    <td className="px-4 py-2 text-sm text-gray-600">{invoice.date}</td>
-                    <td className="px-4 py-2 text-sm font-semibold text-gray-900">{formatCurrency(invoice.amount)}</td>
-                    <td className="px-4 py-2">
-                      <span className="inline-block px-2 py-0.5 bg-success-100 text-success-700 text-xs rounded-full">
-                        {invoice.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <button className="p-1 text-gray-400 hover:text-primary-600">
-                        <Download size={16} />
-                      </button>
-                    </td>
+        {invoices.length > 0 && (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <FileText size={16} className="text-gray-500" />
+                Invoice History
+              </h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Invoice ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {invoices.map(invoice => (
+                    <tr key={invoice.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">{invoice.id}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{invoice.date}</td>
+                      <td className="px-4 py-2 text-sm font-semibold text-gray-900">{formatCurrency(invoice.amount)}</td>
+                      <td className="px-4 py-2">
+                        <span className="inline-block px-2 py-0.5 bg-success-100 text-success-700 text-xs rounded-full">
+                          {invoice.status}
+                        </span>
+                       </td>
+                      <td className="px-4 py-2">
+                        <button onClick={() => handleDownloadInvoice(invoice.id)} className="p-1 text-gray-400 hover:text-primary-600">
+                          <Download size={16} />
+                        </button>
+                       </td>
+                     </tr>
+                  ))}
+                </tbody>
+               </table>
+            </div>
           </div>
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50/50">
-            <button className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              View All Invoices
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Payment Methods */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <CreditCard size={16} className="text-gray-500" />
-              Payment Methods
-            </h4>
-            <button className="text-sm text-primary-600 hover:text-primary-700">Add Payment Method</button>
-          </div>
-          <div className="p-4 space-y-3">
-            {paymentMethods.map(method => (
-              <div key={method.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CreditCard size={20} className="text-gray-500" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {method.type === 'card' ? `${method.brand} ending in ${method.last4}` : `UPI: ${method.id}`}
-                    </p>
-                    {method.type === 'card' && <p className="text-xs text-gray-500">Expires {method.expiry}</p>}
+        {paymentMethods.length > 0 && (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <CreditCard size={16} className="text-gray-500" />
+                Payment Methods
+              </h4>
+              <button onClick={handleAddPaymentMethod} className="text-sm text-primary-600 hover:text-primary-700">
+                Add Payment Method
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              {paymentMethods.map(method => (
+                <div key={method.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CreditCard size={20} className="text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {method.type === 'card' ? `${method.brand} ending in ${method.last4}` : `UPI: ${method.id}`}
+                      </p>
+                      {method.type === 'card' && <p className="text-xs text-gray-500">Expires {method.expiry}</p>}
+                    </div>
+                    {method.isDefault && (
+                      <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full ml-2">Default</span>
+                    )}
                   </div>
-                  {method.isDefault && (
-                    <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full ml-2">Default</span>
+                  {!method.isDefault && (
+                    <button className="text-xs text-primary-600 hover:text-primary-700">Set as Default</button>
                   )}
                 </div>
-                {!method.isDefault && (
-                  <button className="text-xs text-primary-600 hover:text-primary-700">Set as Default</button>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Upgrade Success Message */}
         {upgradeSuccess && (

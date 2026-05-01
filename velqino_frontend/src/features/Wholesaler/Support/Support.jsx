@@ -5,9 +5,9 @@ import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
 
 // Lazy load all non-critical components
 const HelpCenter = lazy(() => import('./components/HelpCenter'))
-const ContactSupport = lazy(() => import('./Components/ContactSupport'))
-const TicketHistory = lazy(() => import('./Components/TicketHistory'))
-const SystemStatus = lazy(() => import('./Components/SystemStatus')) 
+const ContactSupport = lazy(() => import('./components/ContactSupport'))
+const TicketHistory = lazy(() => import('./components/TicketHistory'))
+const SystemStatus = lazy(() => import('./components/SystemStatus')) 
 
 // Loading placeholders
 const HelpCenterPlaceholder = () => <div className="w-full h-[500px] bg-gray-50 rounded-xl animate-pulse" />
@@ -78,7 +78,7 @@ export default function Support() {
           {activeTab === 'helpcenter' && (
             <div style={{ minHeight: '500px' }}>
               <Suspense fallback={<HelpCenterPlaceholder />}>
-                <HelpCenter />
+                <HelpCenter isActive={activeTab === 'helpcenter'}/>
               </Suspense>
             </div>
           )}
@@ -86,7 +86,7 @@ export default function Support() {
            {activeTab === 'contact' && (
             <div style={{ minHeight: '450px' }}>
               <Suspense fallback={<ContactPlaceholder />}>
-                <ContactSupport />
+                <ContactSupport isActive={activeTab === 'contact'}/>
               </Suspense>
             </div>
           )} 
@@ -94,7 +94,7 @@ export default function Support() {
            {activeTab === 'tickets' && (
             <div style={{ minHeight: '400px' }}>
               <Suspense fallback={<TicketPlaceholder />}>
-                <TicketHistory />
+                <TicketHistory isActive={activeTab === 'tickets'}/>
               </Suspense>
             </div>
           )} 
@@ -102,10 +102,10 @@ export default function Support() {
          {activeTab === 'status' && (
             <div style={{ minHeight: '350px' }}>
               <Suspense fallback={<StatusPlaceholder />}>
-                <SystemStatus />
+                <SystemStatus isActive={activeTab === 'status'} />
               </Suspense>
             </div>
-          )} 
+          )}
 
         </div>
       </main>

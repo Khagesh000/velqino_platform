@@ -1,25 +1,26 @@
 import API from '../../../utils/apiConfig';
 
 const retailerAPI = {
-    // Retailer Registration
-    registerRetailer: (data) =>
-        API.post('identity/retailer/register/', data),
+    registerRetailer: (data) => API.post('identity/retailer/register/', data),
     
-    // Retailer Login
-    loginRetailer: (data) =>
-        API.post('identity/retailer/login/', data),
+    loginRetailer: (data) => API.post('identity/retailer/login/', data),
     
-    // Get Retailer Profile
-    getRetailerProfile: (userId) =>
-        API.get(`identity/retailer/profile/${userId}/`),
+    getRetailerProfile: (userId) => API.get(`identity/retailer/profile/${userId}/`),
     
-    // Update Retailer Profile
-    updateRetailerProfile: (userId, data) =>
-        API.put(`identity/retailer/profile/${userId}/update/`, data),
+    updateRetailerProfile: (userId, data) => API.put(`identity/retailer/profile/${userId}/update/`, data),
+
+    blockRetailer: (userId) => API.post(`identity/retailer/profile/${userId}/block/`),
+
+    unblockRetailer: (userId) => API.post(`identity/retailer/profile/${userId}/unblock/`),
     
-    // List all retailers (admin only)
-    listRetailers: () =>
-        API.get('identity/retailers/list/'),
+    // ✅ FIXED - Accepts params and builds query string
+    listRetailers: (params = {}) => {
+        console.log('📤 listRetailers called with params:', params);
+        const queryString = new URLSearchParams(params).toString();
+        const url = queryString ? `identity/retailers/list/?${queryString}` : 'identity/retailers/list/';
+        console.log('📍 Final URL:', url);
+        return API.get(url);
+    },
 };
 
 export default retailerAPI;

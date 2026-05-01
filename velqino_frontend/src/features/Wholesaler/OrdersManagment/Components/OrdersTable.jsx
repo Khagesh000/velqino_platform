@@ -1,105 +1,123 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { 
-  MoreVertical, 
-  Download, 
-  Printer,
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/OrdersManagment/OrdersTable.scss'
+  MoreVertical, Download, Printer, Eye, ChevronLeft, ChevronRight,
+  Loader2
+} from '../../../../utils/icons';
+import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
+import '../../../../styles/Wholesaler/OrdersManagment/OrdersTable.scss';
 
-export default function OrdersTable() {
-  const [selectedOrders, setSelectedOrders] = useState([])
-  const [hoveredRow, setHoveredRow] = useState(null)
+export default function OrdersTable({ onSelectOrder, filters = {} }) {
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  const orders = [
-    {
-      id: '#ORD-2024-001',
-      customer: { name: 'Rajesh Kumar', type: 'Wholesaler', email: 'rajesh@example.com', avatar: 'RK' },
-      products: [
-        { name: 'Wireless Headphones', qty: 50, price: 1250 },
-        { name: 'Bluetooth Speaker', qty: 25, price: 2499 }
-      ],
-      total: 124750,
-      payment: { status: 'Paid', method: 'UPI', date: '2024-01-15' },
-      fulfillment: { status: 'Shipped', tracking: 'TRK123456' },
-      orderDate: '2024-01-15',
-      deliveryDate: '2024-01-18',
-      priority: 'High'
-    },
-    {
-      id: '#ORD-2024-002',
-      customer: { name: 'Priya Sharma', type: 'Retailer', email: 'priya@example.com', avatar: 'PS' },
-      products: [
-        { name: 'Cotton T-Shirts', qty: 100, price: 450 },
-        { name: 'Denim Jeans', qty: 40, price: 1299 }
-      ],
-      total: 96960,
-      payment: { status: 'Pending', method: 'Credit', date: '2024-01-16' },
-      fulfillment: { status: 'Processing', tracking: null },
-      orderDate: '2024-01-16',
-      deliveryDate: '2024-01-20',
-      priority: 'Medium'
-    },
-    {
-      id: '#ORD-2024-003',
-      customer: { name: 'Amit Patel', type: 'Distributor', email: 'amit@example.com', avatar: 'AP' },
-      products: [
-        { name: 'Smart Watches', qty: 30, price: 3499 },
-        { name: 'Fitness Bands', qty: 45, price: 1999 }
-      ],
-      total: 194955,
-      payment: { status: 'Paid', method: 'Bank Transfer', date: '2024-01-14' },
-      fulfillment: { status: 'Delivered', tracking: 'TRK789012' },
-      orderDate: '2024-01-14',
-      deliveryDate: '2024-01-17',
-      priority: 'High'
-    }
-  ]
+  // Build query params from filters
+  const queryParams = {
+    page: currentPage,
+    per_page: pageSize,
+    ...(filters.status && filters.status !== 'all' && { status: filters.status }),
+    ...(filters.payment && filters.payment !== 'all' && { payment_status: filters.payment }),
+    ...(filters.searchQuery && { search: filters.searchQuery }),
+    ...(filters.dateRange && filters.dateRange !== '30' && { days: filters.dateRange }),
+    ...(filters.amountRange?.min && { min_amount: filters.amountRange.min }),
+    ...(filters.amountRange?.max && { max_amount: filters.amountRange.max }),
+  };
+
+  const { data: ordersData, isLoading, refetch } = useGetOrdersQuery(queryParams);
+  
+  const orders = ordersData?.data || [];
+  const pagination = ordersData?.pagination || {};
+  const totalOrders = pagination.total || 0;
+  const totalPages = pagination.total_pages || 1;
+  const currentPageNum = pagination.page || 1;
+
+  useEffect(() => {
+    refetch();
+  }, [filters, currentPage, pageSize, refetch]);
 
   const getPaymentBadge = (status) => {
     const styles = {
-      Paid: 'bg-success-50 text-success-700',
-      Pending: 'bg-warning-50 text-warning-700',
-      Failed: 'bg-error-50 text-error-700',
-      Refunded: 'bg-gray-100 text-gray-700'
-    }
-    return styles[status] || 'bg-gray-50 text-gray-700'
-  }
+      paid: 'bg-success-50 text-success-700',
+      pending: 'bg-warning-50 text-warning-700',
+      failed: 'bg-error-50 text-error-700',
+      refunded: 'bg-gray-100 text-gray-700'
+    };
+    return styles[status] || 'bg-gray-50 text-gray-700';
+  };
 
   const getFulfillmentBadge = (status) => {
     const styles = {
-      Delivered: 'bg-success-50 text-success-700',
-      Shipped: 'bg-info-50 text-info-700',
-      Processing: 'bg-warning-50 text-warning-700',
-      Cancelled: 'bg-error-50 text-error-700'
-    }
-    return styles[status] || 'bg-gray-50 text-gray-700'
-  }
+      delivered: 'bg-success-50 text-success-700',
+      shipped: 'bg-info-50 text-info-700',
+      processing: 'bg-warning-50 text-warning-700',
+      pending: 'bg-warning-50 text-warning-700',
+      confirmed: 'bg-primary-50 text-primary-700',
+      cancelled: 'bg-error-50 text-error-700'
+    };
+    return styles[status] || 'bg-gray-50 text-gray-700';
+  };
 
-  const getPriorityBadge = (priority) => {
-    const styles = {
-      High: 'bg-error-50 text-error-700',
-      Medium: 'bg-warning-50 text-warning-700',
-      Low: 'bg-success-50 text-success-700'
-    }
-    return styles[priority] || 'bg-gray-50 text-gray-700'
-  }
+  const getPriorityBadge = (total) => {
+    if (total > 100000) return 'bg-error-50 text-error-700';
+    if (total > 50000) return 'bg-warning-50 text-warning-700';
+    return 'bg-success-50 text-success-700';
+  };
+
+  const getPriorityLabel = (total) => {
+    if (total > 100000) return 'High';
+    if (total > 50000) return 'Medium';
+    return 'Low';
+  };
 
   const toggleSelectAll = () => {
     if (selectedOrders.length === orders.length) {
-      setSelectedOrders([])
+      setSelectedOrders([]);
     } else {
-      setSelectedOrders(orders.map(o => o.id))
+      setSelectedOrders(orders.map(o => o.order_number));
     }
-  }
+  };
 
   const toggleSelectOrder = (orderId) => {
     if (selectedOrders.includes(orderId)) {
-      setSelectedOrders(selectedOrders.filter(id => id !== orderId))
+      setSelectedOrders(selectedOrders.filter(id => id !== orderId));
     } else {
-      setSelectedOrders([...selectedOrders, orderId])
+      setSelectedOrders([...selectedOrders, orderId]);
     }
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-IN');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
+        <p className="text-sm text-gray-500">Loading orders...</p>
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Eye size={32} className="text-gray-400" />
+        </div>
+        <h4 className="text-lg font-semibold text-gray-900 mb-1">No orders found</h4>
+        <p className="text-sm text-gray-500">Try adjusting your filters or search criteria</p>
+      </div>
+    );
   }
 
   return (
@@ -132,19 +150,18 @@ export default function OrdersTable() {
               <th className="w-10 px-4 py-3">
                 <input 
                   type="checkbox"
-                  checked={selectedOrders.length === orders.length}
+                  checked={selectedOrders.length === orders.length && orders.length > 0}
                   onChange={toggleSelectAll}
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fulfillment</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
               <th className="w-10 px-4 py-3"></th>
             </tr>
@@ -152,79 +169,66 @@ export default function OrdersTable() {
           <tbody className="divide-y divide-gray-200">
             {orders.map((order, index) => (
               <tr 
-                key={order.id}
-                className={`orders-table-row ${hoveredRow === order.id ? 'orders-table-row-hover' : ''} ${
-                  selectedOrders.includes(order.id) ? 'bg-primary-50/30' : ''
+                key={order.order_number}
+                className={`orders-table-row cursor-pointer ${hoveredRow === order.order_number ? 'orders-table-row-hover' : ''} ${
+                  selectedOrders.includes(order.order_number) ? 'bg-primary-50/30' : ''
                 }`}
-                onMouseEnter={() => setHoveredRow(order.id)}
+                onMouseEnter={() => setHoveredRow(order.order_number)}
                 onMouseLeave={() => setHoveredRow(null)}
+                onClick={() => onSelectOrder && onSelectOrder(order.order_number)}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <input 
                     type="checkbox"
-                    checked={selectedOrders.includes(order.id)}
-                    onChange={() => toggleSelectOrder(order.id)}
+                    checked={selectedOrders.includes(order.order_number)}
+                    onChange={() => toggleSelectOrder(order.order_number)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm font-medium text-primary-600">{order.id}</span>
+                  <span className="text-sm font-medium text-primary-600">{order.order_number}</span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium text-sm">
-                      {order.customer.avatar}
+                      {order.customer_name?.charAt(0) || 'C'}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{order.customer.name}</p>
-                      <p className="text-xs text-gray-500">{order.customer.type}</p>
+                      <p className="text-sm font-medium text-gray-900">{order.customer_name || 'Customer'}</p>
+                      <p className="text-xs text-gray-500">{order.customer_email || ''}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="space-y-1">
-                    {order.products.slice(0, 2).map((product, i) => (
-                      <p key={i} className="text-sm text-gray-700">
-                        {product.name} × {product.qty}
-                      </p>
-                    ))}
-                    {order.products.length > 2 && (
-                      <p className="text-xs text-gray-500">+{order.products.length - 2} more</p>
-                    )}
-                  </div>
+                  <span className="text-sm text-gray-700">{order.items_count || 0} items</span>
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm font-semibold text-gray-900">
-                    ₹{order.total.toLocaleString()}
+                    ₹{order.total_amount?.toLocaleString()}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="space-y-1">
-                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPaymentBadge(order.payment.status)}`}>
-                      {order.payment.status}
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPaymentBadge(order.payment_status)}`}>
+                      {order.payment_status || 'Pending'}
                     </span>
-                    <p className="text-xs text-gray-500">{order.payment.method}</p>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="space-y-1">
-                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getFulfillmentBadge(order.fulfillment.status)}`}>
-                      {order.fulfillment.status}
-                    </span>
-                    {order.fulfillment.tracking && (
-                      <p className="text-xs text-gray-500">Track: {order.fulfillment.tracking}</p>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">{order.orderDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-700">{order.deliveryDate}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPriorityBadge(order.priority)}`}>
-                    {order.priority}
+                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getFulfillmentBadge(order.status)}`}>
+                    {order.status || 'Pending'}
                   </span>
                 </td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {formatDate(order.created_at)}
+                </td>
                 <td className="px-4 py-3">
+                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPriorityBadge(order.total_amount)}`}>
+                    {getPriorityLabel(order.total_amount)}
+                  </span>
+                </td>
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <button className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-all">
                     <MoreVertical size={16} />
                   </button>
@@ -235,29 +239,71 @@ export default function OrdersTable() {
         </table>
       </div>
 
-      {/* Table Footer */}
-      <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+      {/* Table Footer with Pagination */}
+      <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
-          Showing 1 to {orders.length} of {orders.length} orders
+          Showing {(currentPageNum - 1) * pageSize + 1} to {Math.min(currentPageNum * pageSize, totalOrders)} of {totalOrders} orders
         </p>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">
-            Previous
+          <button 
+            onClick={() => handlePageChange(currentPageNum - 1)}
+            disabled={currentPageNum === 1}
+            className="p-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronLeft size={16} />
           </button>
-          <button className="px-3 py-1 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600">
-            1
+          
+          <div className="flex items-center gap-1">
+            {[...Array(Math.min(5, totalPages))].map((_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPageNum <= 3) {
+                pageNum = i + 1;
+              } else if (currentPageNum >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPageNum - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`w-8 h-8 text-sm rounded-lg transition-all ${
+                    currentPageNum === pageNum
+                      ? 'bg-primary-500 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button 
+            onClick={() => handlePageChange(currentPageNum + 1)}
+            disabled={currentPageNum === totalPages}
+            className="p-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronRight size={16} />
           </button>
-          <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
-            2
-          </button>
-          <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
-            3
-          </button>
-          <button className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
-            Next
-          </button>
+          
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="ml-2 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+          >
+            <option value={10}>10 / page</option>
+            <option value={20}>20 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
         </div>
       </div>
     </div>
-  )
+  );
 }

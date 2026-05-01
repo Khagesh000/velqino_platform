@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
   Download,
   FileText,
@@ -18,131 +18,134 @@ import {
   FilePieChart,
   FileBarChart,
   Check,
-  AlertCircle
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/AnalyticsReports/ReportsSection.scss'
+  AlertCircle,
+  Loader2
+} from '../../../../utils/icons';
+import { useGetWholesalerStatsQuery, useExportReportMutation } from '@/redux/wholesaler/slices/statsSlice';
+import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
+import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
+import '../../../../styles/Wholesaler/AnalyticsReports/ReportsSection.scss';
 
 export default function ReportsSection({ type = 'sales', dateRange, customDate }) {
-  const [selectedReport, setSelectedReport] = useState(type)
-  const [exportFormat, setExportFormat] = useState('pdf')
-  const [showExportOptions, setShowExportOptions] = useState(false)
-  const [selectedColumns, setSelectedColumns] = useState(['all'])
-  const [isExporting, setIsExporting] = useState(false)
-  const [exportSuccess, setExportSuccess] = useState(false)
+  const [selectedReport, setSelectedReport] = useState(type);
+  const [exportFormat, setExportFormat] = useState('pdf');
+  const [showExportOptions, setShowExportOptions] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState(['all']);
+  const [reportData, setReportData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const [exportReport, { isLoading: isExporting }] = useExportReportMutation();
+  const [exportSuccess, setExportSuccess] = useState(false);
+
+  // Fetch data based on report type
+  const { data: statsData } = useGetWholesalerStatsQuery();
+  const { data: productsData } = useGetProductsQuery({ per_page: 100 });
+  const { data: ordersData } = useGetOrdersQuery({ per_page: 100 });
+
+  useEffect(() => {
+    generateReportData();
+  }, [selectedReport, dateRange, customDate, statsData, productsData, ordersData]);
+
+  const generateReportData = () => {
+    setIsLoading(true);
+    let data = [];
+    
+    switch(selectedReport) {
+      case 'sales':
+        const orders = ordersData?.data || [];
+        data = orders.map(order => ({
+          'Date': new Date(order.created_at).toLocaleDateString(),
+          'Order ID': order.order_number,
+          'Amount': order.total_amount,
+          'Status': order.status,
+          'Payment': order.payment_status
+        }));
+        break;
+        
+      case 'inventory':
+        const products = productsData?.data?.products || [];
+        data = products.map(product => ({
+          'SKU': product.sku,
+          'Product': product.name,
+          'Category': product.category_name || '-',
+          'Stock': product.stock,
+          'Threshold': product.threshold,
+          'Status': product.stock <= product.threshold ? 'Low Stock' : 'In Stock'
+        }));
+        break;
+        
+      case 'customer':
+        const customers = ordersData?.data?.reduce((acc, order) => {
+          if (!acc.find(c => c.customer === order.customer_name)) {
+            acc.push({ customer: order.customer_name, orders: 1 });
+          }
+          return acc;
+        }, []) || [];
+        data = customers.map(c => ({
+          'Customer': c.customer,
+          'Orders': c.orders,
+          'Spent': ordersData?.data?.filter(o => o.customer_name === c.customer).reduce((sum, o) => sum + o.total_amount, 0)
+        }));
+        break;
+        
+      default:
+        data = [];
+    }
+    
+    setReportData(data);
+    setIsLoading(false);
+  };
 
   const reports = [
-    {
-      id: 'sales',
-      label: 'Sales Report',
-      icon: DollarSign,
-      color: 'success',
-      description: 'Revenue, orders, AOV, conversion',
-      columns: ['Date', 'Orders', 'Revenue', 'AOV', 'Conversion', 'Refunds']
-    },
-    {
-      id: 'inventory',
-      label: 'Inventory Report',
-      icon: Package,
-      color: 'info',
-      description: 'Stock levels, low stock, out of stock',
-      columns: ['SKU', 'Product', 'Category', 'Stock', 'Threshold', 'Status', 'Last Restock']
-    },
-    {
-      id: 'customer',
-      label: 'Customer Report',
-      icon: Users,
-      color: 'purple',
-      description: 'New vs returning, top customers',
-      columns: ['Customer', 'Orders', 'Spent', 'Avg Order', 'Last Order', 'Type']
-    },
-    {
-      id: 'tax',
-      label: 'Tax Report',
-      icon: FilePieChart,
-      color: 'warning',
-      description: 'Tax collected, by region',
-      columns: ['Period', 'Taxable Sales', 'Tax Rate', 'Tax Collected', 'Region']
-    },
-    {
-      id: 'payout',
-      label: 'Payout Report',
-      icon: DollarSign,
-      color: 'primary',
-      description: 'Vendor payouts, commissions',
-      columns: ['Vendor', 'Orders', 'Sales', 'Commission', 'Payout', 'Status']
-    },
-    {
-      id: 'product',
-      label: 'Product Performance',
-      icon: TrendingUp,
-      color: 'indigo',
-      description: 'Best sellers, revenue by product',
-      columns: ['Product', 'SKU', 'Sales', 'Revenue', 'Stock', 'Views', 'Conversion']
-    }
-  ]
+    { id: 'sales', label: 'Sales Report', icon: DollarSign, color: 'success', description: 'Revenue, orders, AOV, conversion', columns: ['Date', 'Order ID', 'Amount', 'Status', 'Payment'] },
+    { id: 'inventory', label: 'Inventory Report', icon: Package, color: 'info', description: 'Stock levels, low stock, out of stock', columns: ['SKU', 'Product', 'Category', 'Stock', 'Threshold', 'Status'] },
+    { id: 'customer', label: 'Customer Report', icon: Users, color: 'purple', description: 'New vs returning, top customers', columns: ['Customer', 'Orders', 'Spent'] }
+  ];
 
   const formatOptions = [
     { id: 'pdf', label: 'PDF', icon: FileText },
     { id: 'excel', label: 'Excel', icon: FileSpreadsheet },
     { id: 'csv', label: 'CSV', icon: FileBarChart }
-  ]
+  ];
 
-  // Mock data for different reports
-  const getReportData = () => {
-    switch(selectedReport) {
-      case 'sales':
-        return [
-          { date: '2024-03-01', orders: 45, revenue: 125000, aov: 2778, conversion: 3.2, refunds: 2 },
-          { date: '2024-03-02', orders: 52, revenue: 148000, aov: 2846, conversion: 3.5, refunds: 1 },
-          { date: '2024-03-03', orders: 48, revenue: 132000, aov: 2750, conversion: 3.3, refunds: 0 },
-          { date: '2024-03-04', orders: 61, revenue: 178000, aov: 2918, conversion: 3.8, refunds: 3 },
-          { date: '2024-03-05', orders: 58, revenue: 165000, aov: 2845, conversion: 3.6, refunds: 1 }
-        ]
-      case 'inventory':
-        return [
-          { sku: 'WH-001', product: 'Wireless Headphones', category: 'Electronics', stock: 45, threshold: 10, status: 'In Stock', lastRestock: '2024-02-28' },
-          { sku: 'CT-045', product: 'Cotton T-Shirt', category: 'Clothing', stock: 120, threshold: 20, status: 'In Stock', lastRestock: '2024-03-01' },
-          { sku: 'CM-112', product: 'Ceramic Mug', category: 'Home Decor', stock: 8, threshold: 15, status: 'Low Stock', lastRestock: '2024-02-15' },
-          { sku: 'YM-078', product: 'Yoga Mat', category: 'Fitness', stock: 34, threshold: 12, status: 'In Stock', lastRestock: '2024-02-20' },
-          { sku: 'DL-234', product: 'Desk Lamp', category: 'Home Decor', stock: 18, threshold: 8, status: 'In Stock', lastRestock: '2024-02-25' }
-        ]
-      default:
-        return []
-    }
-  }
-
-  const handleExport = () => {
-    setIsExporting(true)
-    setExportSuccess(false)
+  const handleExport = async () => {
+    const params = {
+      type: selectedReport,
+      format: exportFormat,
+      start_date: dateRange === 'custom' ? customDate.start : undefined,
+      end_date: dateRange === 'custom' ? customDate.end : undefined
+    };
     
-    // Simulate export
-    setTimeout(() => {
-      setIsExporting(false)
-      setExportSuccess(true)
+    try {
+      const blob = await exportReport(params).unwrap();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedReport}_report.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
       
-      setTimeout(() => {
-        setExportSuccess(false)
-      }, 3000)
-    }, 2000)
-  }
-
-  const toggleColumn = (column) => {
-    if (column === 'all') {
-      setSelectedColumns(['all'])
-    } else {
-      if (selectedColumns.includes('all')) {
-        setSelectedColumns([column])
-      } else if (selectedColumns.includes(column)) {
-        setSelectedColumns(selectedColumns.filter(c => c !== column))
-      } else {
-        setSelectedColumns([...selectedColumns, column])
-      }
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
     }
-  }
+    setShowExportOptions(false);
+  };
 
-  const currentReport = reports.find(r => r.id === selectedReport)
-  const Icon = currentReport?.icon || FileText
-  const data = getReportData()
+  const currentReport = reports.find(r => r.id === selectedReport);
+  const Icon = currentReport?.icon || FileText;
+  const data = reportData;
+
+  const getStatusColor = (status) => {
+    if (status === 'delivered') return 'text-green-600 bg-green-50';
+    if (status === 'pending') return 'text-yellow-600 bg-yellow-50';
+    if (status === 'cancelled') return 'text-red-600 bg-red-50';
+    return 'text-gray-600 bg-gray-50';
+  };
 
   return (
     <div className="reports-section">
@@ -158,18 +161,17 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
           </div>
         </div>
 
-        {/* Export Button with Options */}
         <div className="relative">
           <button
             className={`px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-lg hover:bg-primary-600 transition-all flex items-center gap-2 ${
               isExporting ? 'opacity-75 cursor-wait' : ''
             }`}
             onClick={() => !isExporting && setShowExportOptions(!showExportOptions)}
-            disabled={isExporting}
+            disabled={isExporting || data.length === 0}
           >
             {isExporting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
                 Exporting...
               </>
             ) : exportSuccess ? (
@@ -185,7 +187,6 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
             )}
           </button>
 
-          {/* Export Options Dropdown */}
           {showExportOptions && !isExporting && (
             <div className="export-dropdown absolute right-0 mt-2 w-72 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-10">
               <div className="p-3 border-b border-gray-200">
@@ -193,7 +194,7 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
               </div>
               <div className="p-2">
                 {formatOptions.map(opt => {
-                  const FormatIcon = opt.icon
+                  const FormatIcon = opt.icon;
                   return (
                     <button
                       key={opt.id}
@@ -206,21 +207,16 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
                     >
                       <FormatIcon size={16} />
                       <span className="flex-1 text-left">{opt.label}</span>
-                      {exportFormat === opt.id && (
-                        <Check size={14} className="text-primary-600" />
-                      )}
+                      {exportFormat === opt.id && <Check size={14} className="text-primary-600" />}
                     </button>
-                  )
+                  );
                 })}
               </div>
 
               <div className="p-3 border-t border-gray-200 bg-gray-50">
                 <button
                   className="w-full px-3 py-2 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-all"
-                  onClick={() => {
-                    handleExport()
-                    setShowExportOptions(false)
-                  }}
+                  onClick={handleExport}
                 >
                   Export as {formatOptions.find(f => f.id === exportFormat)?.label}
                 </button>
@@ -231,10 +227,10 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
       </div>
 
       {/* Report Type Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {reports.map((report, index) => {
-          const ReportIcon = report.icon
-          const isActive = selectedReport === report.id
+          const ReportIcon = report.icon;
+          const isActive = selectedReport === report.id;
           const colorClasses = {
             success: 'border-success-200 bg-success-50 text-success-700',
             info: 'border-info-200 bg-info-50 text-info-700',
@@ -242,12 +238,12 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
             warning: 'border-warning-200 bg-warning-50 text-warning-700',
             primary: 'border-primary-200 bg-primary-50 text-primary-700',
             indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700'
-          }
+          };
 
           return (
             <button
               key={report.id}
-              className={`report-card p-4 rounded-xl border-2 transition-all ${
+              className={`report-card p-4 rounded-xl border-2 transition-all text-left ${
                 isActive
                   ? colorClasses[report.color]
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -263,13 +259,12 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
                 {report.description}
               </p>
             </button>
-          )
+          );
         })}
       </div>
 
       {/* Report Preview */}
       <div className="report-preview bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {/* Preview Header */}
         <div className="preview-header px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icon size={18} className="text-gray-500" />
@@ -291,84 +286,62 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
           </div>
         </div>
 
-        {/* Column Selector */}
-        <div className="column-selector px-4 py-2 border-b border-gray-200 flex items-center gap-4 overflow-x-auto">
-          <span className="text-xs font-medium text-gray-500">Columns:</span>
-          <button
-            className={`px-2 py-1 text-xs rounded-full transition-all ${
-              selectedColumns.includes('all')
-                ? 'bg-primary-100 text-primary-700'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-            onClick={() => toggleColumn('all')}
-          >
-            All
-          </button>
-          {currentReport?.columns.map(col => (
-            <button
-              key={col}
-              className={`px-2 py-1 text-xs rounded-full whitespace-nowrap transition-all ${
-                selectedColumns.includes('all') || selectedColumns.includes(col)
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              onClick={() => toggleColumn(col)}
-            >
-              {col}
-            </button>
-          ))}
-        </div>
-
-        {/* Data Table */}
         <div className="overflow-x-auto">
           <table className="report-table w-full">
             <thead>
-              <tr>
+              <tr className="bg-gray-50 border-b border-gray-200">
                 {currentReport?.columns.map(col => (
-                  (selectedColumns.includes('all') || selectedColumns.includes(col)) && (
-                    <th key={col} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      {col}
-                    </th>
-                  )
+                  <th key={col} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    {col}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {data.map((row, i) => (
-                <tr key={i} className="report-row hover:bg-gray-50">
-                  {Object.values(row).map((value, j) => (
-                    (selectedColumns.includes('all') || selectedColumns.includes(currentReport?.columns[j])) && (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={currentReport?.columns.length} className="px-4 py-8 text-center">
+                    <Loader2 size={24} className="animate-spin text-primary-500 mx-auto" />
+                  </td>
+                </tr>
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan={currentReport?.columns.length} className="px-4 py-8 text-center text-gray-500">
+                    No data available for this report
+                  </td>
+                </tr>
+              ) : (
+                data.slice(0, 10).map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    {Object.values(row).map((value, j) => (
                       <td key={j} className="px-4 py-3 text-sm text-gray-700">
-                        {typeof value === 'number' && value > 1000 
+                        {typeof value === 'number' && (currentReport?.id === 'sales' || currentReport?.id === 'customer')
                           ? `₹${value.toLocaleString()}`
+                          : currentReport?.id === 'sales' && j === 3
+                          ? <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(value)}`}>{value}</span>
                           : value
                         }
                       </td>
-                    )
-                  ))}
-                </tr>
-              ))}
+                    ))}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Preview Footer */}
         <div className="preview-footer px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-2">
             <Calendar size={14} />
             <span>
               {dateRange === 'custom' 
                 ? `${customDate.start} to ${customDate.end}`
-                : dateRange?.replace(/([A-Z])/g, ' $1').toLowerCase()
+                : dateRange?.replace(/([A-Z])/g, ' $1').toLowerCase() || 'All Time'
               }
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Total Records: {data.length}</span>
-            <button className="text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              View Full Report
-              <ChevronDown size={14} className="rotate-270" />
-            </button>
+            <span>Showing {Math.min(data.length, 10)} of {data.length} records</span>
           </div>
         </div>
       </div>
@@ -381,35 +354,17 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
         </div>
         <div className="summary-card bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1">Last Updated</p>
-          <p className="text-sm font-medium text-gray-900">Today 10:30 AM</p>
-        </div>
-        <div className="summary-card bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 mb-1">Report Size</p>
-          <p className="text-sm font-medium text-gray-900">245 KB</p>
+          <p className="text-sm font-medium text-gray-900">{new Date().toLocaleDateString()}</p>
         </div>
         <div className="summary-card bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1">Export Format</p>
           <p className="text-sm font-medium text-gray-900 capitalize">{exportFormat}</p>
         </div>
-      </div>
-
-      {/* Export History (Optional) */}
-      <div className="export-history mt-4 pt-4 border-t border-gray-200">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Exports</h4>
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <FileText size={14} className="text-gray-400" />
-            <span className="text-gray-600">Sales_Report_Mar2024.pdf</span>
-            <span className="text-gray-400">2 min ago</span>
-          </div>
-          <span className="text-gray-300">|</span>
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet size={14} className="text-gray-400" />
-            <span className="text-gray-600">Inventory_Report_Mar2024.xlsx</span>
-            <span className="text-gray-400">1 hour ago</span>
-          </div>
+        <div className="summary-card bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">Report Type</p>
+          <p className="text-sm font-medium text-gray-900 capitalize">{selectedReport}</p>
         </div>
       </div>
     </div>
-  )
+  );
 }

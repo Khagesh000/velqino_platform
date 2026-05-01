@@ -1,6 +1,9 @@
 "use client"
 
 import React, { useState } from 'react'
+import { useCreateTicketMutation, useGetTicketCategoriesQuery, useUploadAttachmentMutation } from '@/redux/wholesaler/slices/supportSlice'
+import { toast } from 'react-toastify'
+
 import {
   MessageCircle,
   Mail,
@@ -19,11 +22,16 @@ import {
 } from '../../../../utils/icons'
 import '../../../../styles/Wholesaler/Support/ContactSupport.scss'
 
-export default function ContactSupport() {
+export default function ContactSupport({ isActive = false }) {
   const [activeChannel, setActiveChannel] = useState('chat')
+  const [createTicket, { isLoading: isCreating }] = useCreateTicketMutation()
+  const { data: categoriesData } = useGetTicketCategoriesQuery(undefined, {
+    skip: !isActive
+  })
+  const [uploadAttachment] = useUploadAttachmentMutation()
   const [ticketForm, setTicketForm] = useState({
     subject: '',
-    category: 'general',
+    category: '',
     message: '',
     priority: 'medium',
     attachments: []
@@ -36,19 +44,21 @@ export default function ContactSupport() {
   const [ticketSubmitted, setTicketSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const categories = [
-    { id: 'general', label: 'General Inquiry' },
-    { id: 'order', label: 'Order Issue' },
-    { id: 'payment', label: 'Payment & Payout' },
-    { id: 'product', label: 'Product Question' },
-    { id: 'account', label: 'Account Settings' },
-    { id: 'technical', label: 'Technical Issue' }
+  // Use API categories or fallback to static
+  const categories = categoriesData?.data?.length ? categoriesData.data : [
+    { id: 'general', name: 'General Inquiry' },
+    { id: 'order', name: 'Order Issue' },
+    { id: 'payment', name: 'Payment & Payout' },
+    { id: 'product', name: 'Product Question' },
+    { id: 'account', name: 'Account Settings' },
+    { id: 'technical', name: 'Technical Issue' }
   ]
 
   const priorities = [
     { id: 'low', label: 'Low', color: 'bg-gray-100 text-gray-700' },
     { id: 'medium', label: 'Medium', color: 'bg-warning-100 text-warning-700' },
-    { id: 'high', label: 'High', color: 'bg-error-100 text-error-700' }
+    { id: 'high', label: 'High', color: 'bg-error-100 text-error-700' },
+    { id: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700' }
   ]
 
   const handleSendMessage = () => {
@@ -70,14 +80,68 @@ export default function ContactSupport() {
     }, 1500)
   }
 
-  const handleTicketSubmit = () => {
-    if (!ticketForm.subject || !ticketForm.message) return
+  const handleTicketSubmit = async () => {
+    if (!ticketForm.subject || !ticketForm.message) {
+      toast.error('Please fill subject and message')
+      return
+    }
+    
     setIsSubmitting(true)
-    setTimeout(() => {
+    try {
+      const result = await createTicket({
+        subject: ticketForm.subject,
+        category: ticketForm.category,
+        message: ticketForm.message,
+        priority: ticketForm.priority
+      }).unwrap()
+      
+      if (result.status === 'success') {
+        setTicketSubmitted(true)
+        toast.success(`Ticket ${result.data?.ticket_id || 'created'} successfully!`)
+        setTicketForm({
+          subject: '',
+          category: '',
+          message: '',
+          priority: 'medium',
+          attachments: []
+        })
+        setTimeout(() => setTicketSubmitted(false), 3000)
+      }
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to submit ticket')
+    } finally {
       setIsSubmitting(false)
-      setTicketSubmitted(true)
-      setTimeout(() => setTicketSubmitted(false), 3000)
-    }, 1500)
+    }
+  }
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB')
+      return
+    }
+    
+    try {
+      const result = await uploadAttachment(file).unwrap()
+      if (result.status === 'success') {
+        setTicketForm({
+          ...ticketForm,
+          attachments: [...ticketForm.attachments, result.data]
+        })
+        toast.success('File uploaded successfully')
+      }
+    } catch (error) {
+      toast.error('Failed to upload file')
+    }
+  }
+
+  const removeAttachment = (index) => {
+    setTicketForm({
+      ...ticketForm,
+      attachments: ticketForm.attachments.filter((_, i) => i !== index)
+    })
   }
 
   const supportHours = [
@@ -253,8 +317,9 @@ export default function ContactSupport() {
                     onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                   >
+                    <option value="">Select Category</option>
                     {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                      <option key={cat.id} value={cat.id}>{cat.name || cat.label}</option>
                     ))}
                   </select>
                 </div>
@@ -287,10 +352,23 @@ export default function ContactSupport() {
                   />
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                     <Paperclip size={14} />
-                    Attach files (Optional)
+                    Attach files (Optional, max 5MB)
+                    <input type="file" onChange={handleFileUpload} className="hidden" />
                   </label>
+                  {ticketForm.attachments.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {ticketForm.attachments.map((att, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
+                          <span>{att.filename}</span>
+                          <button onClick={() => removeAttachment(idx)} className="text-red-500">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handleTicketSubmit}

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Upload,
   Camera,
@@ -18,30 +18,38 @@ import {
   Globe,
   Calendar
 } from '../../../../utils/icons'
+import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/ProfileSettings.scss'
 
-export default function ProfileSettings() {
+export default function ProfileSettings({ wholesaler, isLoading: parentLoading }) {
+  console.log('ProfileSettings received wholesaler:', wholesaler)
+  
   const [isEditing, setIsEditing] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [logoPreview, setLogoPreview] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
 
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
+
+  // Initialize profile from backend data
   const [profile, setProfile] = useState({
     businessLogo: null,
-    businessName: 'VELTRIX Wholesale',
-    businessEmail: 'contact@veltrix.com',
-    businessPhone: '+91 80 1234 5678',
-    businessWebsite: 'www.veltrix.com',
-    establishedYear: '2020',
-    gstNumber: '27AAACV1234E1Z5',
-    panNumber: 'AAACV1234E',
-    aboutUs: 'VELTRIX Wholesale is a leading distributor of premium electronics and lifestyle products, serving retailers across India since 2020.',
+    businessName: '',
+    businessEmail: '',
+    businessPhone: '',
+    businessWebsite: '',
+    establishedYear: '',
+    gstNumber: '',
+    panNumber: '',
+    aboutUs: '',
     address: {
-      line1: '123, MG Road',
-      line2: 'Indiranagar',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      pincode: '560001',
+      line1: '',
+      line2: '',
+      city: '',
+      state: '',
+      pincode: '',
       country: 'India'
     },
     timings: {
@@ -57,9 +65,62 @@ export default function ProfileSettings() {
 
   const [editedProfile, setEditedProfile] = useState(profile)
 
-  const handleLogoUpload = (e) => {
+  // Load data from backend when available
+  useEffect(() => {
+    if (wholesaler) {
+      console.log('Loading wholesaler data into profile:', wholesaler)
+      
+      setProfile({
+        businessLogo: wholesaler.logo || null,
+        businessName: wholesaler.business_name || '',
+        businessEmail: wholesaler.user?.email || '',
+        businessPhone: wholesaler.user?.mobile || '',
+        businessWebsite: wholesaler.website || '',
+        establishedYear: wholesaler.established_year || '',
+        gstNumber: wholesaler.gst_number || '',
+        panNumber: wholesaler.pan_number || '',
+        aboutUs: wholesaler.business_description || '',
+        address: {
+          line1: wholesaler.shop_address || '',
+          line2: wholesaler.landmark || '',
+          city: wholesaler.city || '',
+          state: wholesaler.state || '',
+          pincode: wholesaler.pincode || '',
+          country: wholesaler.country || 'India'
+        },
+        timings: wholesaler.timings || profile.timings
+      })
+      
+      setEditedProfile({
+        businessLogo: wholesaler.logo || null,
+        businessName: wholesaler.business_name || '',
+        businessEmail: wholesaler.user?.email || '',
+        businessPhone: wholesaler.user?.mobile || '',
+        businessWebsite: wholesaler.website || '',
+        establishedYear: wholesaler.established_year || '',
+        gstNumber: wholesaler.gst_number || '',
+        panNumber: wholesaler.pan_number || '',
+        aboutUs: wholesaler.business_description || '',
+        address: {
+          line1: wholesaler.shop_address || '',
+          line2: wholesaler.landmark || '',
+          city: wholesaler.city || '',
+          state: wholesaler.state || '',
+          pincode: wholesaler.pincode || '',
+          country: wholesaler.country || 'India'
+        },
+        timings: wholesaler.timings || profile.timings
+      })
+    }
+  }, [wholesaler])
+
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0]
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Logo size should be less than 2MB')
+        return
+      }
       const reader = new FileReader()
       reader.onloadend = () => {
         setLogoPreview(reader.result)
@@ -69,14 +130,51 @@ export default function ProfileSettings() {
     }
   }
 
-  const handleSave = () => {
-    setSaveSuccess(false)
-    setTimeout(() => {
+  const handleSave = async () => {
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('business_name', editedProfile.businessName)
+      formData.append('phone', editedProfile.businessPhone)
+      formData.append('website', editedProfile.businessWebsite || '')
+      formData.append('established_year', editedProfile.establishedYear || '')
+      formData.append('gst_number', editedProfile.gstNumber || '')
+      formData.append('pan_number', editedProfile.panNumber || '')
+      formData.append('business_description', editedProfile.aboutUs || '')
+      formData.append('shop_address', editedProfile.address.line1 || '')
+      formData.append('landmark', editedProfile.address.line2 || '')
+      formData.append('city', editedProfile.address.city || '')
+      formData.append('state', editedProfile.address.state || '')
+      formData.append('pincode', editedProfile.address.pincode || '')
+      formData.append('country', editedProfile.address.country || 'India')
+      formData.append('timings', JSON.stringify(editedProfile.timings))
+      
+      // Add categories if selected
+      if (wholesaler?.categories) {
+        formData.append('categories', JSON.stringify(wholesaler.categories))
+      }
+      
+      if (editedProfile.businessLogo && typeof editedProfile.businessLogo !== 'string') {
+        formData.append('logo', editedProfile.businessLogo)
+      }
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      console.log('Updating profile for userId:', userId)
+      
+      const result = await updateProfile({ userId: userId, data: formData }).unwrap()
+      console.log('Update result:', result)
+      
       setProfile(editedProfile)
       setSaveSuccess(true)
+      toast.success('Profile updated successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
-    }, 1000)
+    } catch (error) {
+      console.error('Update error:', error)
+      toast.error(error?.data?.message || 'Failed to update profile')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleCancel = () => {
@@ -87,6 +185,18 @@ export default function ProfileSettings() {
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
   const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="w-24 h-24 mx-auto bg-gray-200 rounded-full mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/3 mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="profile-settings bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -113,16 +223,18 @@ export default function ProfileSettings() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCancel}
-              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              disabled={isUploading}
+              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1"
+              disabled={isUploading}
+              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1 disabled:opacity-50"
             >
               <Save size={14} />
-              Save Changes
+              {isUploading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -170,7 +282,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.businessName}</p>
+                <p className="text-sm text-gray-900">{profile.businessName || '-'}</p>
               )}
             </div>
             <div>
@@ -183,7 +295,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.gstNumber}</p>
+                <p className="text-sm text-gray-900">{profile.gstNumber || '-'}</p>
               )}
             </div>
             <div>
@@ -196,7 +308,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.panNumber}</p>
+                <p className="text-sm text-gray-900">{profile.panNumber || '-'}</p>
               )}
             </div>
             <div>
@@ -204,12 +316,13 @@ export default function ProfileSettings() {
               {isEditing ? (
                 <input
                   type="text"
+                  placeholder="e.g., 2020"
                   value={editedProfile.establishedYear}
                   onChange={(e) => setEditedProfile({ ...editedProfile, establishedYear: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.establishedYear}</p>
+                <p className="text-sm text-gray-900">{profile.establishedYear || '-'}</p>
               )}
             </div>
           </div>
@@ -232,7 +345,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.businessEmail}</p>
+                <p className="text-sm text-gray-900">{profile.businessEmail || '-'}</p>
               )}
             </div>
             <div>
@@ -245,7 +358,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.businessPhone}</p>
+                <p className="text-sm text-gray-900">{profile.businessPhone || '-'}</p>
               )}
             </div>
             <div>
@@ -253,12 +366,13 @@ export default function ProfileSettings() {
               {isEditing ? (
                 <input
                   type="text"
+                  placeholder="https://yourwebsite.com"
                   value={editedProfile.businessWebsite}
                   onChange={(e) => setEditedProfile({ ...editedProfile, businessWebsite: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-primary-600">{profile.businessWebsite}</p>
+                <p className="text-sm text-primary-600">{profile.businessWebsite || '-'}</p>
               )}
             </div>
             <div>
@@ -266,12 +380,13 @@ export default function ProfileSettings() {
               {isEditing ? (
                 <textarea
                   rows="2"
+                  placeholder="Tell us about your business..."
                   value={editedProfile.aboutUs}
                   onChange={(e) => setEditedProfile({ ...editedProfile, aboutUs: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-600 line-clamp-2">{profile.aboutUs}</p>
+                <p className="text-sm text-gray-600 line-clamp-2">{profile.aboutUs || '-'}</p>
               )}
             </div>
           </div>
@@ -294,11 +409,11 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.address.line1}</p>
+                <p className="text-sm text-gray-900">{profile.address.line1 || '-'}</p>
               )}
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2 (Landmark)</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -307,7 +422,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.address.line2}</p>
+                <p className="text-sm text-gray-900">{profile.address.line2 || '-'}</p>
               )}
             </div>
             <div>
@@ -320,7 +435,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.address.city}</p>
+                <p className="text-sm text-gray-900">{profile.address.city || '-'}</p>
               )}
             </div>
             <div>
@@ -333,7 +448,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.address.state}</p>
+                <p className="text-sm text-gray-900">{profile.address.state || '-'}</p>
               )}
             </div>
             <div>
@@ -346,7 +461,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.address.pincode}</p>
+                <p className="text-sm text-gray-900">{profile.address.pincode || '-'}</p>
               )}
             </div>
             <div>
@@ -359,7 +474,7 @@ export default function ProfileSettings() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
                 />
               ) : (
-                <p className="text-sm text-gray-900">{profile.address.country}</p>
+                <p className="text-sm text-gray-900">{profile.address.country || '-'}</p>
               )}
             </div>
           </div>
@@ -377,19 +492,22 @@ export default function ProfileSettings() {
                 <span className="text-sm font-medium text-gray-700 w-24">{dayLabels[index]}</span>
                 {isEditing ? (
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={!editedProfile.timings[day].closed}
-                      onChange={(e) => setEditedProfile({
-                        ...editedProfile,
-                        timings: {
-                          ...editedProfile.timings,
-                          [day]: { ...editedProfile.timings[day], closed: !e.target.checked }
-                        }
-                      })}
-                      className="rounded border-gray-300 text-primary-600"
-                    />
-                    {!editedProfile.timings[day].closed ? (
+                    <label className="flex items-center gap-1 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={!editedProfile.timings[day].closed}
+                        onChange={(e) => setEditedProfile({
+                          ...editedProfile,
+                          timings: {
+                            ...editedProfile.timings,
+                            [day]: { ...editedProfile.timings[day], closed: !e.target.checked }
+                          }
+                        })}
+                        className="rounded border-gray-300 text-primary-600"
+                      />
+                      <span className="text-xs">Open</span>
+                    </label>
+                    {!editedProfile.timings[day].closed && (
                       <div className="flex items-center gap-2">
                         <input
                           type="time"
@@ -417,13 +535,14 @@ export default function ProfileSettings() {
                           className="px-2 py-1 border border-gray-200 rounded text-sm"
                         />
                       </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Closed</span>
+                    )}
+                    {editedProfile.timings[day].closed && (
+                      <span className="text-sm text-gray-500 ml-2">Closed</span>
                     )}
                   </div>
                 ) : (
                   <span className="text-sm text-gray-600">
-                    {profile.timings[day].closed ? 'Closed' : `${profile.timings[day].open} - ${profile.timings[day].close}`}
+                    {profile.timings[day]?.closed ? 'Closed' : `${profile.timings[day]?.open || '09:00'} - ${profile.timings[day]?.close || '18:00'}`}
                   </span>
                 )}
               </div>

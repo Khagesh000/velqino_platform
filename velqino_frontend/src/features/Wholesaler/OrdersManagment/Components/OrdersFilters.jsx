@@ -1,56 +1,53 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, 
-  ChevronDown, 
-  Search,
-  Package, 
-  X, 
-  SlidersHorizontal,
-  Wallet,
-  Users,
-  Tag,
-  Clock
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/OrdersManagment/OrdersFilters.scss'
+  Calendar, ChevronDown, Search, Package, X, SlidersHorizontal,
+  Wallet, Users, Tag, Clock, Loader2
+} from '../../../../utils/icons';
+import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
+import '../../../../styles/Wholesaler/OrdersManagment/OrdersFilters.scss';
 
-export default function OrdersFilters() {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [dateRange, setDateRange] = useState('30')
-  const [status, setStatus] = useState('all')
-  const [payment, setPayment] = useState('all')
-  const [customerType, setCustomerType] = useState('all')
-  const [amountRange, setAmountRange] = useState({ min: '', max: '' })
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeFiltersCount, setActiveFiltersCount] = useState(0)
+export default function OrdersFilters({ onFilterChange, totalOrders = 0 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [dateRange, setDateRange] = useState('30');
+  const [status, setStatus] = useState('all');
+  const [payment, setPayment] = useState('all');
+  const [customerType, setCustomerType] = useState('all');
+  const [amountRange, setAmountRange] = useState({ min: '', max: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+
+  // Fetch orders for stats
+  const { data: ordersData, isLoading } = useGetOrdersQuery();
+  const orders = ordersData?.data || [];
+  const totalOrdersCount = totalOrders || orders.length;
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
     { value: 'pending', label: 'Pending' },
+    { value: 'confirmed', label: 'Confirmed' },
     { value: 'processing', label: 'Processing' },
-    { value: 'completed', label: 'Completed' },
+    { value: 'shipped', label: 'Shipped' },
+    { value: 'delivered', label: 'Delivered' },
     { value: 'cancelled', label: 'Cancelled' },
     { value: 'refunded', label: 'Refunded' }
-  ]
+  ];
 
   const paymentOptions = [
     { value: 'all', label: 'All Payments' },
     { value: 'paid', label: 'Paid' },
-    { value: 'unpaid', label: 'Unpaid' },
     { value: 'pending', label: 'Pending' },
     { value: 'failed', label: 'Failed' },
     { value: 'refunded', label: 'Refunded' }
-  ]
+  ];
 
   const customerTypeOptions = [
     { value: 'all', label: 'All Customers' },
-    { value: 'new', label: 'New' },
-    { value: 'returning', label: 'Returning' },
-    { value: 'vip', label: 'VIP' },
+    { value: 'retailer', label: 'Retailer' },
     { value: 'wholesaler', label: 'Wholesaler' },
-    { value: 'retailer', label: 'Retailer' }
-  ]
+    { value: 'customer', label: 'Customer' }
+  ];
 
   const dateOptions = [
     { value: '7', label: 'Last 7 days' },
@@ -58,86 +55,117 @@ export default function OrdersFilters() {
     { value: '90', label: 'Last 3 months' },
     { value: '365', label: 'Last year' },
     { value: 'custom', label: 'Custom range' }
-  ]
+  ];
 
   const clearFilters = () => {
-    setStatus('all')
-    setPayment('all')
-    setCustomerType('all')
-    setAmountRange({ min: '', max: '' })
-    setDateRange('30')
-    setSearchQuery('')
-    setActiveFiltersCount(0)
-  }
+    setStatus('all');
+    setPayment('all');
+    setCustomerType('all');
+    setAmountRange({ min: '', max: '' });
+    setDateRange('30');
+    setSearchQuery('');
+    setActiveFiltersCount(0);
+    applyFiltersToParent({
+      status: 'all',
+      payment: 'all',
+      customerType: 'all',
+      amountRange: { min: '', max: '' },
+      dateRange: '30',
+      searchQuery: ''
+    });
+  };
+
+  const applyFiltersToParent = (filters) => {
+    if (onFilterChange) {
+      onFilterChange(filters);
+    }
+  };
 
   const applyFilters = () => {
-    let count = 0
-    if (status !== 'all') count++
-    if (payment !== 'all') count++
-    if (customerType !== 'all') count++
-    if (amountRange.min || amountRange.max) count++
-    if (dateRange !== '30') count++
-    if (searchQuery) count++
-    setActiveFiltersCount(count)
+    let count = 0;
+    if (status !== 'all') count++;
+    if (payment !== 'all') count++;
+    if (customerType !== 'all') count++;
+    if (amountRange.min || amountRange.max) count++;
+    if (dateRange !== '30') count++;
+    if (searchQuery) count++;
+    setActiveFiltersCount(count);
+    
+    applyFiltersToParent({
+      status,
+      payment,
+      customerType,
+      amountRange,
+      dateRange,
+      searchQuery
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 size={24} className="animate-spin text-primary-500" />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-  {/* Page Heading */}
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-gray-200">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-        <Package size={20} />
+      {/* Page Heading */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
+            <Package size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Orders Management</h1>
+            <p className="text-sm text-gray-500">Manage and track all your orders in one place</p>
+          </div>
+        </div>
+        <div className="text-sm text-gray-500">
+          Total Orders: <span className="font-semibold text-primary-600">{totalOrdersCount}</span>
+        </div>
       </div>
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Orders Management</h1>
-        <p className="text-sm text-gray-500">Manage and track all your orders in one place</p>
-      </div>
-    </div>
-    
-    {/* Optional: Add date or stats here if needed */}
-    <div className="text-sm text-gray-500">
-      Total Orders: <span className="font-semibold text-primary-600">156</span>
-    </div>
-  </div>
 
-  {/* Search Bar - Always Visible */}
-  <div className="flex items-center gap-3">
-    <div className="flex-1 relative">
-      <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-      <input
-        type="text"
-        placeholder="Search by Order ID, Customer, Email or Phone..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
-      />
-      {searchQuery && (
+      {/* Search Bar - Always Visible */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by Order ID, Customer, Email or Phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+          />
+          {searchQuery && (
+            <button 
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-100 transition-all"
+              onClick={() => setSearchQuery('')}
+            >
+              <X size={16} className="text-gray-400" />
+            </button>
+          )}
+        </div>
+        
         <button 
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-100 transition-all"
-          onClick={() => setSearchQuery('')}
+          className={`flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium transition-all hover:bg-primary-50 hover:border-primary-200 hover:text-primary-600 ${
+            isExpanded ? 'bg-primary-50 border-primary-200 text-primary-600' : 'bg-white text-gray-700'
+          }`}
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <X size={16} className="text-gray-400" />
+          <SlidersHorizontal size={18} />
+          <span>Filters</span>
+          {activeFiltersCount > 0 && (
+            <span className="px-1.5 py-0.5 bg-primary-500 text-white text-xs rounded-full">
+              {activeFiltersCount}
+            </span>
+          )}
+          <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
         </button>
-      )}
-    </div>
-    
-    <button 
-      className={`flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium transition-all hover:bg-primary-50 hover:border-primary-200 hover:text-primary-600 ${
-        isExpanded ? 'bg-primary-50 border-primary-200 text-primary-600' : 'bg-white text-gray-700'
-      }`}
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      <SlidersHorizontal size={18} />
-      <span>Filters</span>
-      {activeFiltersCount > 0 && (
-        <span className="px-1.5 py-0.5 bg-primary-500 text-white text-xs rounded-full">
-          {activeFiltersCount}
-        </span>
-      )}
-      <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-    </button>
-  </div>
+      </div>
 
       {/* Expanded Filters Section */}
       {isExpanded && (
@@ -275,10 +303,10 @@ export default function OrdersFilters() {
                         : 'bg-white text-gray-700 border-gray-200 hover:bg-primary-50 hover:border-primary-200'
                     }`}
                     onClick={() => {
-                      if (i === 0) setDateRange('today')
-                      if (i === 1) setDateRange('yesterday')
-                      if (i === 2) setDateRange('7')
-                      if (i === 3) setDateRange('30')
+                      if (i === 0) setDateRange('today');
+                      if (i === 1) setDateRange('yesterday');
+                      if (i === 2) setDateRange('7');
+                      if (i === 3) setDateRange('30');
                     }}
                   >
                     {label}
@@ -378,5 +406,5 @@ export default function OrdersFilters() {
         </div>
       )}
     </div>
-  )
+  );
 }

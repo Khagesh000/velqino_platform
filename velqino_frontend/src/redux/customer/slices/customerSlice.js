@@ -4,7 +4,7 @@ import customerAPI from '../Api/customerAPI';
 export const customerApi = createApi({
     reducerPath: 'customerApi',
     baseQuery: fakeBaseQuery(),
-    tagTypes: ['Customer', 'Customers'],
+    tagTypes: ['Customer', 'Profile'],
     endpoints: (builder) => ({
         // Register Customer
         registerCustomer: builder.mutation({
@@ -55,6 +55,54 @@ export const customerApi = createApi({
             },
             invalidatesTags: (result, error, { userId }) => [{ type: 'Customer', id: userId }]
         }),
+
+                    // Add merge cart mutation
+            mergeCart: builder.mutation({
+                async queryFn(sessionId) {
+                    try {
+                        const response = await customerAPI.mergeCart(sessionId);
+                        return { data: response.data };
+                    } catch (error) {
+                        return { error };
+                    }
+                },
+            }),
+
+            changePassword: builder.mutation({
+            async queryFn(data) {
+                try {
+                    const response = await customerAPI.changePassword(data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+        }),
+
+                getProfile: builder.query({
+            async queryFn({ userId, userRole }) {
+                try {
+                    const response = await customerAPI.getProfile(userId, userRole);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['Profile'],  // ✅ This requires 'Profile' in tagTypes
+        }),
+        
+        updateProfile: builder.mutation({
+            async queryFn({ userId, userRole, data }) {
+                try {
+                    const response = await customerAPI.updateProfile(userId, userRole, data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Profile']
+        }),
+
     })
 });
 
@@ -63,4 +111,8 @@ export const {
     useLoginCustomerMutation,
     useGetCustomerProfileQuery,
     useUpdateCustomerProfileMutation,
+    useMergeCartMutation,
+    useChangePasswordMutation,
+    useGetProfileQuery,        
+    useUpdateProfileMutation,
 } = customerApi;

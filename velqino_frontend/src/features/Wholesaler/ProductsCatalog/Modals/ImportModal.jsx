@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Upload, X } from '../../../../utils/icons'
 import productsAPI from '../../../../redux/wholesaler/Api/productsAPI'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-export default function ImportModal({ onClose }) {
+export default function ImportModal({ onClose, categories = [] }) {
 
   const [video, setVideo] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -17,7 +17,7 @@ export default function ImportModal({ onClose }) {
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
-
+  const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     number_of_products: '',
     common_price: '',
@@ -302,9 +302,11 @@ export default function ImportModal({ onClose }) {
               value={formData.category_id}
             >
               <option value="">Select Category</option>
-              <option value="1">Shirt</option>
-              <option value="2">Pant</option>
-              <option value="3">T-Shirt</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
 
             <textarea 

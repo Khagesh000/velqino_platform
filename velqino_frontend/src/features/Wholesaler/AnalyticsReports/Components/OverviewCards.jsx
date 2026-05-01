@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   ShoppingBag,
@@ -11,32 +11,65 @@ import {
   ArrowUp,
   ArrowDown,
   MoreVertical
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/AnalyticsReports/OverviewCards.scss'
+} from '../../../../utils/icons';
+import '../../../../styles/Wholesaler/AnalyticsReports/OverviewCards.scss';
 
-export default function OverviewCards({ dateRange, customDate, isLoading = false }) {
-  const [metrics, setMetrics] = useState({
-    totalRevenue: { value: 0, change: 0, trend: 'up' },
-    totalOrders: { value: 0, change: 0, trend: 'up' },
-    avgOrderValue: { value: 0, change: 0, trend: 'up' },
-    conversionRate: { value: 0, change: 0, trend: 'down' },
-    topProduct: { value: 'Loading...', change: 0, trend: 'up' },
-    newCustomers: { value: 0, change: 0, trend: 'up' }
-  })
-
-  // Simulate data loading
-  useEffect(() => {
-    if (!isLoading) {
-      setMetrics({
-        totalRevenue: { value: 1245750, change: 12.5, trend: 'up' },
-        totalOrders: { value: 345, change: 8.2, trend: 'up' },
-        avgOrderValue: { value: 3610, change: 3.8, trend: 'up' },
-        conversionRate: { value: 3.2, change: 0.5, trend: 'down' },
-        topProduct: { value: 'Wireless Headphones', change: 23, trend: 'up' },
-        newCustomers: { value: 89, change: 15.3, trend: 'up' }
-      })
+export default function OverviewCards({ dateRange, customDate, isLoading = false, statsData }) {
+  // ✅ Use real API data from statsData prop
+  const apiData = statsData?.data || {};
+  
+  // Format date range for display
+  const getDateRangeText = () => {
+    if (dateRange === 'custom' && customDate.start && customDate.end) {
+      return `${customDate.start} to ${customDate.end}`;
     }
-  }, [isLoading, dateRange, customDate])
+    const rangeMap = {
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'last7days': 'Last 7 days',
+      'last30days': 'Last 30 days',
+      'thisMonth': 'This Month',
+      'lastMonth': 'Last Month',
+      'thisQuarter': 'This Quarter',
+      'lastQuarter': 'Last Quarter',
+      'thisYear': 'This Year',
+      'lastYear': 'Last Year'
+    };
+    return rangeMap[dateRange] || 'All Time';
+  };
+
+  const metrics = {
+    totalRevenue: { 
+      value: apiData.total_revenue || 0, 
+      change: apiData.revenue_change || 0, 
+      trend: apiData.revenue_trend || 'up' 
+    },
+    totalOrders: { 
+      value: apiData.completed_orders || 0, 
+      change: 0, 
+      trend: 'up' 
+    },
+    avgOrderValue: { 
+      value: apiData.avg_order_value || 0, 
+      change: 0, 
+      trend: apiData.avg_order_value > 0 ? 'up' : 'down' 
+    },
+    conversionRate: { 
+      value: apiData.completion_rate || 0, 
+      change: 0, 
+      trend: apiData.completion_rate > 0 ? 'up' : 'down' 
+    },
+    topProduct: { 
+      value: 'N/A', 
+      change: 0, 
+      trend: 'up' 
+    },
+    newCustomers: { 
+      value: apiData.total_customers || 0, 
+      change: apiData.customers_change || 0, 
+      trend: apiData.customers_change >= 0 ? 'up' : 'down' 
+    }
+  };
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-IN', {
@@ -44,21 +77,21 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(value)
-  }
+    }).format(value);
+  };
 
   const formatNumber = (value) => {
-    return new Intl.NumberFormat('en-IN').format(value)
-  }
+    return new Intl.NumberFormat('en-IN').format(value);
+  };
 
   const getTrendIcon = (trend) => {
-    return trend === 'up' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-  }
+    return trend === 'up' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+  };
 
   const getTrendColor = (trend, isPositive = true) => {
-    if (trend === 'up') return isPositive ? 'text-success-600' : 'text-error-600'
-    return isPositive ? 'text-error-600' : 'text-success-600'
-  }
+    if (trend === 'up') return isPositive ? 'text-success-600' : 'text-error-600';
+    return isPositive ? 'text-error-600' : 'text-success-600';
+  };
 
   const cards = [
     {
@@ -69,17 +102,17 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
       trend: metrics.totalRevenue.trend,
       icon: DollarSign,
       color: 'primary',
-      period: 'vs last period'
+      period: getDateRangeText()
     },
     {
       id: 'orders',
-      title: 'Total Orders',
+      title: 'Completed Orders',
       value: formatNumber(metrics.totalOrders.value),
       change: metrics.totalOrders.change,
       trend: metrics.totalOrders.trend,
       icon: ShoppingBag,
       color: 'success',
-      period: 'vs last period'
+      period: getDateRangeText()
     },
     {
       id: 'avgOrder',
@@ -89,40 +122,40 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
       trend: metrics.avgOrderValue.trend,
       icon: TrendingUp,
       color: 'info',
-      period: 'vs last period'
+      period: getDateRangeText()
     },
     {
       id: 'conversion',
-      title: 'Conversion Rate',
+      title: 'Completion Rate',
       value: `${metrics.conversionRate.value}%`,
       change: metrics.conversionRate.change,
       trend: metrics.conversionRate.trend,
       icon: Percent,
       color: 'warning',
-      period: 'vs last period',
-      invertTrend: true // Lower conversion rate is bad
-    },
-    {
-      id: 'topProduct',
-      title: 'Top Product',
-      value: metrics.topProduct.value,
-      change: metrics.topProduct.change,
-      trend: metrics.topProduct.trend,
-      icon: Star,
-      color: 'purple',
-      period: 'sales increase'
+      period: getDateRangeText(),
+      invertTrend: true
     },
     {
       id: 'customers',
-      title: 'New Customers',
+      title: 'Total Customers',
       value: formatNumber(metrics.newCustomers.value),
       change: metrics.newCustomers.change,
       trend: metrics.newCustomers.trend,
       icon: Users,
       color: 'indigo',
-      period: 'vs last period'
+      period: getDateRangeText()
+    },
+    {
+      id: 'products',
+      title: 'Total Products',
+      value: formatNumber(apiData.total_products || 0),
+      change: apiData.products_change || 0,
+      trend: apiData.products_change >= 0 ? 'up' : 'down',
+      icon: Star,
+      color: 'purple',
+      period: 'active products'
     }
-  ]
+  ];
 
   const getCardColorClasses = (color) => {
     const colors = {
@@ -168,9 +201,9 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
         border: 'border-indigo-200',
         hover: 'hover:border-indigo-300'
       }
-    }
-    return colors[color] || colors.primary
-  }
+    };
+    return colors[color] || colors.primary;
+  };
 
   if (isLoading) {
     return (
@@ -181,17 +214,17 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="overview-cards">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {cards.map((card, index) => {
-          const Icon = card.icon
-          const colors = getCardColorClasses(card.color)
-          const isPositive = card.trend === 'up'
-          const trendColor = getTrendColor(card.trend, card.invertTrend ? !isPositive : isPositive)
+          const Icon = card.icon;
+          const colors = getCardColorClasses(card.color);
+          const isPositive = card.trend === 'up';
+          const trendColor = getTrendColor(card.trend, card.invertTrend ? !isPositive : isPositive);
 
           return (
             <div
@@ -199,7 +232,6 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
               className={`overview-card relative bg-white rounded-xl border-2 ${colors.border} ${colors.hover} p-4 transition-all group`}
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center ${colors.icon}`}>
                   <Icon size={20} />
@@ -209,7 +241,6 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
                 </button>
               </div>
 
-              {/* Value */}
               <div className="mb-2">
                 <h4 className="text-2xl font-bold text-gray-900">
                   {card.value}
@@ -217,26 +248,23 @@ export default function OverviewCards({ dateRange, customDate, isLoading = false
                 <p className="text-xs text-gray-500 mt-1">{card.title}</p>
               </div>
 
-              {/* Change Indicator */}
               <div className="flex items-center gap-2">
                 <div className={`flex items-center gap-0.5 text-xs font-medium ${trendColor}`}>
                   {getTrendIcon(card.trend)}
-                  <span>{card.change}%</span>
+                  <span>{Math.abs(card.change)}%</span>
                 </div>
                 <span className="text-xs text-gray-400">{card.period}</span>
               </div>
 
-              {/* Sparkline (decorative) */}
               <div className="absolute bottom-4 right-4 opacity-20">
                 {card.trend === 'up' ? '📈' : '📉'}
               </div>
 
-              {/* Hover Glow Effect */}
               <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-10 blur-xl pointer-events-none transition-opacity ${colors.bg}`} />
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

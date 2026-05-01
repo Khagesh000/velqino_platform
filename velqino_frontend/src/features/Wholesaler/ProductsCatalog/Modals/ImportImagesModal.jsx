@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { X, Upload, ImageIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Upload, ImageIcon, PackageIcon } from '../../../../utils/icons'
 import { toast } from 'react-toastify'
 import productsAPI from '../../../../redux/wholesaler/Api/productsAPI'
 
-export default function ImportImagesModal({ onClose }) {
+export default function ImportImagesModal({ onClose, categories = [] }) {
 
   const [images, setImages] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -13,7 +13,7 @@ export default function ImportImagesModal({ onClose }) {
   const [progressMessage, setProgressMessage] = useState('')
   const [selectedSizes, setSelectedSizes] = useState([])
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
-
+  const [isOpen, setIsOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     common_price: '',
@@ -24,18 +24,19 @@ export default function ImportImagesModal({ onClose }) {
     description: ''
   })
 
-      // Add this useEffect right after all useState declarations
-    useEffect(() => {
-      if (isOpen) {
-        // Reset only when modal opens from closed state
-        setMode(null);
-        setShowForm(false);
-        setImages([]);
-        setSelectedSizes([]);
-        setProgress(0);
-        setProgressMessage('');
-      }
-    }, [isOpen]);
+        // Add this useEffect right after all useState declarations
+      // ✅ Add this instead - only resets when modal first mounts
+  useEffect(() => {
+    return () => {
+      // Cleanup when component unmounts
+      setMode(null);
+      setShowForm(false);
+      setImages([]);
+      setSelectedSizes([]);
+      setProgress(0);
+      setProgressMessage('');
+    };
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -388,9 +389,11 @@ export default function ImportImagesModal({ onClose }) {
               value={formData.category_id}
             >
               <option value="">Select Category</option>
-              <option value="1">Shirt</option>
-              <option value="2">Pant</option>
-              <option value="3">T-Shirt</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
 
             <textarea

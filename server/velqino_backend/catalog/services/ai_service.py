@@ -712,6 +712,7 @@ class AIService:
         import cv2
         import numpy as np
         from PIL import Image
+        import io  # ✅ ADD THIS IMPORT
 
         products = []
         front_frame = frames.get('front')
@@ -861,6 +862,17 @@ class AIService:
                 'row':   idx // grid_columns,
                 'col':   idx %  grid_columns,
             })
+
+        # ✅ ✅ ✅ ADD THIS CONVERSION - Convert PIL Images to Bytes ✅ ✅ ✅
+        for product in products:
+            if product.get('front') and hasattr(product['front'], 'save'):
+                img_byte_arr = io.BytesIO()
+                product['front'].save(img_byte_arr, format='PNG')
+                product['front'] = img_byte_arr.getvalue()
+            if product.get('back') and hasattr(product['back'], 'save'):
+                img_byte_arr = io.BytesIO()
+                product['back'].save(img_byte_arr, format='PNG')
+                product['back'] = img_byte_arr.getvalue()
 
         return products
 

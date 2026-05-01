@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, ProductImage, ProductVariant
+from .models import Category, Product, ProductImage, ProductVariant, Wishlist
 
 
 @admin.register(Category)
@@ -58,4 +58,12 @@ class ProductVariantAdmin(admin.ModelAdmin):
     list_display = ['id', 'product', 'color', 'size', 'sku', 'stock', 'price']
     list_filter = ['product']
     search_fields = ['sku', 'product__name']
+
+
+@admin.register(Wishlist)
+class WishlistAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'product', 'added_at']
+    list_filter = ['added_at']
+    search_fields = ['user__email', 'product__name']
+    readonly_fields = ['added_at']
 

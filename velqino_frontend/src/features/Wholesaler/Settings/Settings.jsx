@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, lazy, Suspense, useEffect } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
+import { useFetchProfileQuery } from '@/redux/wholesaler/slices/wholesalerSlice'
 
 // Lazy load all non-critical components
 const ProfileSettings = lazy(() => import('./components/ProfileSettings'))
@@ -13,7 +14,7 @@ const TeamManagement = lazy(() => import('./Components/TeamManagement'))
 const APIAccess = lazy(() => import('./Components/APIAccess'))
 const ShippingSettings = lazy(() => import('./Components/ShippingSettings'))
 const BillingSubscription = lazy(() => import('./Components/BillingSubscription'))
-const StoreCustomization = lazy(() => import('./Components/StoreCustomization')) 
+const StoreCustomization = lazy(() => import('./Components/StoreCustomization'))
 
 // Loading placeholders
 const ProfilePlaceholder = () => <div className="w-full h-[500px] bg-gray-50 rounded-xl animate-pulse" />
@@ -25,11 +26,54 @@ const TeamPlaceholder = () => <div className="w-full h-[420px] bg-gray-50 rounde
 const APIPlaceholder = () => <div className="w-full h-[380px] bg-gray-50 rounded-xl animate-pulse" />
 const ShippingPlaceholder = () => <div className="w-full h-[350px] bg-gray-50 rounded-xl animate-pulse" />
 const BillingPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const StorePlaceholder = () => <div className="w-full h-[380px] bg-gray-50 rounded-xl animate-pulse" /> 
+const StorePlaceholder = () => <div className="w-full h-[380px] bg-gray-50 rounded-xl animate-pulse" />
 
 export default function Settings() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [activeTab, setActiveTab] = useState('profile')
+  const [userId, setUserId] = useState(null)  // ✅ Add this line
+
+  console.log('🔵 [Settings] Component mounted')
+
+  useEffect(() => {
+  console.log('🔵 [Settings] useEffect running - getting userId from token')
+  
+  // ✅ Use 'access' instead of 'access_token'
+  const token = localStorage.getItem('access')
+  console.log('🔵 [Settings] Token exists?', token ? 'Yes' : 'No')
+  
+  if (token) {
+    try {
+      const base64Payload = token.split('.')[1]
+      const payload = JSON.parse(atob(base64Payload))
+      console.log('🔵 [Settings] user_id from token:', payload.user_id)
+      setUserId(payload.user_id)
+    } catch (error) {
+      console.error('🔴 [Settings] Error decoding token:', error)
+    }
+  }
+}, [])
+
+  console.log('🔵 [Settings] Current userId state:', userId)
+
+  const { data: wholesalerData, isLoading: wholesalerLoading, error: wholesalerError } = useFetchProfileQuery(userId, {
+    skip: !userId
+  })
+
+  console.log('🔵 [Settings] Query state:', {
+    userId,
+    skip: !userId,
+    isLoading: wholesalerLoading,
+    hasData: !!wholesalerData,
+    error: wholesalerError
+  })
+
+  if (wholesalerData) {
+    console.log('🔵 [Settings] wholesalerData received:', wholesalerData)
+  }
+
+  const wholesaler = wholesalerData?.data || null
+  console.log('🔵 [Settings] Final wholesaler object:', wholesaler)
 
   const tabs = [
     { id: 'profile', label: 'Profile Settings' },
@@ -74,7 +118,7 @@ export default function Settings() {
           </div>
 
           {/* Tabs */}
-          <div className="overflow-x-auto scrollbar-hide  mb-6">
+          <div className="overflow-x-auto scrollbar-hide mb-6">
             <div className="flex items-center gap-1 border-b border-gray-200 min-w-max pb-px">
               {tabs.map(tab => (
                 <button
@@ -92,19 +136,19 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Tab Content */}
+          {/* Tab Content - Pass wholesaler data as props */}
           {activeTab === 'profile' && (
             <div style={{ minHeight: '500px' }}>
               <Suspense fallback={<ProfilePlaceholder />}>
-                <ProfileSettings />
+                <ProfileSettings wholesaler={wholesaler} isLoading={wholesalerLoading} />
               </Suspense>
             </div>
           )}
 
-           {activeTab === 'security' && (
+          {activeTab === 'security' && (
             <div style={{ minHeight: '400px' }}>
               <Suspense fallback={<SecurityPlaceholder />}>
-                <AccountSecurity />
+                <AccountSecurity user={wholesaler?.user} />
               </Suspense>
             </div>
           )}
@@ -112,7 +156,7 @@ export default function Settings() {
           {activeTab === 'bank' && (
             <div style={{ minHeight: '350px' }}>
               <Suspense fallback={<BankPlaceholder />}>
-                <BankDetails />
+                <BankDetails wholesaler={wholesaler} />
               </Suspense>
             </div>
           )}
@@ -120,7 +164,7 @@ export default function Settings() {
           {activeTab === 'tax' && (
             <div style={{ minHeight: '400px' }}>
               <Suspense fallback={<TaxPlaceholder />}>
-                <TaxInformation />
+                <TaxInformation wholesaler={wholesaler} />
               </Suspense>
             </div>
           )}
@@ -171,7 +215,7 @@ export default function Settings() {
                 <StoreCustomization />
               </Suspense>
             </div>
-          )} 
+          )}
 
         </div>
       </main>

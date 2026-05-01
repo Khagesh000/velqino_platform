@@ -133,7 +133,7 @@ export default function CartSummary({ cartItems, summary, onApplyCoupon, onRemov
     Proceed to Checkout
   </button>
     
-  <Link href="/products" className="block text-center text-primary-500 hover:text-primary-600 font-medium text-sm sm:text-base">
+  <Link href="/product/productlistingpage" className="block text-center text-primary-500 hover:text-primary-600 font-medium text-sm sm:text-base">
     Continue Shopping
   </Link>
 </div>

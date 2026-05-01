@@ -25,11 +25,14 @@ export default function OrderDetailsTable({ items }) {
                 <td className="p-4">
                   <div className="flex items-center gap-3">
                     <img 
-                      src={item.product_image ? `${BASE_IMAGE_URL}${item.product_image}` : '/images/placeholder.jpg'}
-                      alt={item.product_name}
-                      className="w-12 h-12 rounded-lg object-cover bg-gray-100"
-                      onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-                    />
+                    src={item.product_image ? `${BASE_IMAGE_URL}${item.product_image}` : '/images/placeholder.jpg'}
+                    alt={item.product_name || 'Product'}
+                    className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0"
+                    onError={(e) => { 
+                      e.target.onerror = null;
+                      e.target.src = '/images/placeholder.jpg'; 
+                    }}
+                  />
                     <div>
                       <p className="font-medium text-gray-800 text-sm">{item.product_name}</p>
                       <p className="text-xs text-gray-400">SKU: {item.product_sku}</p>

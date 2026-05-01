@@ -2,7 +2,7 @@
 
 import React, { useState, lazy, Suspense, useEffect } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
-
+import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice'
 // Lazy load all non-critical components
 const OrdersFilters = lazy(() => import('./Components/OrdersFilters'))
 const OrdersTable = lazy(() => import('./Components/OrdersTable'))
@@ -18,6 +18,8 @@ const BulkActionsPlaceholder = () => <div className="w-full h-[200px] bg-gray-50
 export default function Management() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const { data: ordersData } = useGetOrdersQuery();
+  const [activeFilters, setActiveFilters] = useState({});
 
   // Add this to watch state changes
   useEffect(() => {
@@ -41,7 +43,13 @@ export default function Management() {
           {/* Filters Section */}
           <div style={{ minHeight: '120px' }}>
             <Suspense fallback={<FiltersPlaceholder />}>
-              <OrdersFilters />
+              <OrdersFilters 
+              onFilterChange={(filters) => {
+                console.log('Filters applied:', filters);
+                // Pass filters to OrdersTable
+              }}
+              totalOrders={ordersData?.data?.length || 0}
+              />
             </Suspense>
           </div>
 
@@ -60,7 +68,10 @@ export default function Management() {
           {/* Orders Table - Full width */}
           <div className="mt-4 sm:mt-6" style={{ minHeight: '500px' }}>
             <Suspense fallback={<TablePlaceholder />}>
-              <OrdersTable onSelectOrder={setSelectedOrder} />
+              <OrdersTable 
+                onSelectOrder={(orderId) => setSelectedOrder(orderId)}
+                filters={activeFilters}
+              />
             </Suspense>
           </div>
 
@@ -83,7 +94,7 @@ export default function Management() {
     <div className="absolute inset-y-0 right-0 w-full sm:w-[480px] md:w-[560px] lg:w-[640px] xl:w-[720px] pt-[56px] pb-[70px] sm:pt-0 sm:pb-0">
       <Suspense fallback={<DetailsPanelPlaceholder />}>
         <OrderDetailsPanel 
-          order={selectedOrder} 
+          orderId={selectedOrder} 
           onClose={() => {
             console.log('🟢 onClose called from panel')
             setSelectedOrder(null)

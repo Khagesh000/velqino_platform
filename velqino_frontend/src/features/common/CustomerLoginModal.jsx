@@ -4,19 +4,20 @@ import React, { useState } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, LogIn, User, Heart, ShoppingBag } from '../../utils/icons';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useLoginCustomerMutation } from '@/redux/customer/slices/customerSlice';
+import { useLoginCustomerMutation, useMergeCartMutation } from '../../redux/customer/slices/customerSlice';
 import { toast } from 'react-toastify';
 
 export default function CustomerLoginModal({ isOpen, onClose, onLogin }) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   });
   const [error, setError] = useState('');
+  const [loginCustomer, { isLoading }] = useLoginCustomerMutation();
+  const [mergeCart] = useMergeCartMutation();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -28,52 +29,50 @@ export default function CustomerLoginModal({ isOpen, onClose, onLogin }) {
   };
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      toast.error('Please enter both email and password');
-      return;
+  e.preventDefault();
+  if (!formData.email || !formData.password) {
+    toast.error('Please enter both email and password');
+    return;
+  }
+  
+  try {
+    const response = await loginCustomer({ 
+      email: formData.email, 
+      password: formData.password 
+    }).unwrap();
+    
+    console.log('🔍 Login Response:', response);  // ✅ DEBUG
+    
+    localStorage.setItem('access', response.access);
+    localStorage.setItem('refresh', response.refresh);
+    localStorage.setItem('user_role', 'customer');
+    localStorage.setItem('user_name', response.data?.full_name || formData.email.split('@')[0]);
+    
+    // ✅ FIX: Try different paths to get user_id
+    const userId = response.data?.id || response.user_id || response.id;
+    localStorage.setItem('user_id', userId);
+    
+    console.log('✅ Saved user_id:', userId);  // ✅ DEBUG
+    
+    const sessionId = localStorage.getItem('guest_session_id');
+    if (sessionId) {
+      try {
+        await mergeCart(sessionId).unwrap();
+        localStorage.removeItem('guest_session_id');
+      } catch (mergeError) {
+        console.log('Cart merge failed:', mergeError);
+      }
     }
     
-    setIsLoading(true);
-    try {
-      const response = await loginCustomer({ 
-        email: formData.email, 
-        password: formData.password 
-      }).unwrap();
-      
-      localStorage.setItem('access', response.access);
-      localStorage.setItem('refresh', response.refresh);
-      localStorage.setItem('user_role', 'customer');
-      localStorage.setItem('user_name', response.data?.full_name || formData.email.split('@')[0]);
-      
-      // ✅ MERGE GUEST CART AFTER LOGIN
-      const sessionId = localStorage.getItem('guest_session_id');
-      if (sessionId) {
-        try {
-          await fetch('http://localhost:8000/api/commerce/cart/merge/', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${response.access}`,
-              'Content-Type': 'application/json',
-              'X-Session-ID': sessionId
-            }
-          });
-          localStorage.removeItem('guest_session_id');
-        } catch (mergeError) {
-          console.log('Cart merge failed:', mergeError);
-        }
-      }
-      
-      toast.success('Login successful! Redirecting...');
-      onClose();
-      setTimeout(() => router.push('/'), 1000);
-      
-    } catch (err) {
-      toast.error(err?.data?.message || 'Invalid credentials');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    toast.success('Login successful! Redirecting...');
+    onClose();
+    setTimeout(() => router.push('/customer/dashboard'), 1000);
+    
+  } catch (err) {
+    console.log("❌ Error:", err);
+    toast.error(err?.data?.message || 'Invalid credentials');
+  }
+};
 
   if (!isOpen) return null;
 

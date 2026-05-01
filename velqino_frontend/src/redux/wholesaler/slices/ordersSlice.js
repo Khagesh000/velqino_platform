@@ -19,18 +19,20 @@ export const ordersApi = createApi({
             invalidatesTags: ['Orders']
         }),
         
-        // Get all orders
         getOrders: builder.query({
-            async queryFn() {
-                try {
-                    const response = await ordersAPI.getOrders();
-                    return { data: response.data };
-                } catch (error) {
-                    return { error };
-                }
-            },
-            providesTags: ['Orders']
-        }),
+    async queryFn(params) {
+        try {
+            console.log('📤 ordersSlice.getOrders called with params:', params);
+            // ✅ Make sure we pass the params to the API
+            const response = await ordersAPI.getOrders(params || {});
+            return { data: response.data };
+        } catch (error) {
+            console.error('❌ Error:', error);
+            return { error };
+        }
+    },
+    providesTags: ['Orders']
+}),
         
         // Get single order
         getOrder: builder.query({

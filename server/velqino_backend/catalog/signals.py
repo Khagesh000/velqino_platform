@@ -1,20 +1,29 @@
 # catalog/signals.py
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.core.cache import cache
+from commerce.models import Order, OrderItem
+from catalog.models import Product  # ✅ ADD THIS
+from analytics_engine.tasks import update_stats_on_order_created
 
-# ✅ COMMENT OUT THE SIGNAL FOR NOW (since orders app doesn't exist yet)
-"""
-@receiver(post_save, sender='orders.OrderItem')
-def update_product_stock_on_order(sender, instance, created, **kwargs):
-    if created:
-        product = instance.product
-        if product.stock == 1:
-            product.stock = 0
-            product.save()
-            cache.delete(f"product:{product.id}")
-            cache.delete_pattern(f"product:list:*")
-"""
-
-# ✅ Just print that signals are ready (temporary)
 print("✅ Signals file loaded - Waiting for orders app")
+
+# ✅ ADD THIS - Auto clear product cache when products change
+@receiver([post_save, post_delete], sender=Product)
+def clear_product_cache(sender, instance, **kwargs):
+    """Clear product cache when product is created, updated, or deleted"""
+    cache.delete_pattern('product:list:*')
+    cache.delete(f"product:{instance.id}")
+    print(f"✅ Product cache cleared for ID: {instance.id}")
+
+
+@receiver(post_save, sender=Order)
+def order_post_save(sender, instance, created, **kwargs):
+    if created and instance.wholesaler:
+        update_stats_on_order_created.delay(instance.id)
+
+
+@receiver(post_save, sender=OrderItem)
+def orderitem_post_save(sender, instance, created, **kwargs):
+    if created and instance.order and instance.order.wholesaler:
+        update_stats_on_order_created.delay(instance.order.id)

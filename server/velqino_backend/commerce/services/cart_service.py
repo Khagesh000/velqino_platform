@@ -71,9 +71,6 @@ class CartService:
                 price = float(product.retail_price) if product.retail_price else float(product.price)
             elif cart.user_type in ['wholesaler', 'retailer']:
                 price = float(product.price)
-                # Check minimum order quantity
-                if product.min_order_qty > quantity:
-                    raise ValueError(f"Minimum order quantity is {product.min_order_qty}")
             else:
                 price = float(product.price)
             

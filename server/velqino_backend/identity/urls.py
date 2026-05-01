@@ -17,14 +17,20 @@ urlpatterns = [
     path('retailer/register/', views.register_retailer, name='register-retailer'),
     path('retailer/login/', views.retailer_login, name='retailer-login'),
     path('retailer/profile/<int:user_id>/', views.retailer_profile, name='retailer-profile'),
+    path('retailer/profile/<int:user_id>/update/', views.update_retailer_profile, name='update-retailer-profile'),
     path('retailers/list/', views.list_retailers, name='list-retailers'),
+    path('retailer/profile/<int:id>/block/', views.block_retailer, name='block-retailer'),
+    path('retailer/profile/<int:id>/unblock/', views.unblock_retailer, name='unblock-retailer'),
 
     path('customer/register/', views.register_customer, name='register-customer'),
     path('customer/login/', views.customer_login, name='customer-login'),
     path('customer/profile/<int:user_id>/', views.customer_profile, name='customer-profile'),
+    path('customer/profile/<int:user_id>/update/', views.update_customer_profile, name='update-customer-profile'),
     path('customers/list/', views.list_customers, name='list-customers'),
     
     path('addresses/', views.user_addresses, name='user-addresses'),
     path('addresses/<int:address_id>/', views.address_detail, name='address-detail'),
+
+    path('change-password/', views.change_password, name='change-password'),
     
 ]

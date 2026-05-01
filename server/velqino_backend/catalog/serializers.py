@@ -1,20 +1,21 @@
 import uuid
 from rest_framework import serializers
-from .models import Category, Product, ProductImage, ProductVariant
+from .models import Category, Product, ProductImage, ProductVariant, Wishlist
 
 
-# catalog/serializers.py - UPDATE CategorySerializer
+
+class RecursiveField(serializers.Serializer):
+    def to_representation(self, value):
+        serializer = self.parent.parent.__class__(value, context=self.context)
+        return serializer.data
+
 class CategorySerializer(serializers.ModelSerializer):
-    children = serializers.SerializerMethodField()
+    children = RecursiveField(many=True, allow_null=True, required=False)
     parent_name = serializers.CharField(source='parent.name', read_only=True)
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'parent', 'parent_name', 'description', 'children']
-    
-    def get_children(self, obj):
-        children = obj.category_set.all()  # Categories that have this as parent
-        return CategorySerializer(children, many=True).data
+        fields = ['id', 'name', 'slug', 'parent', 'parent_name', 'description', 'is_active', 'children', 'created_at']
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -32,25 +33,52 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
-    
+    category_id = serializers.IntegerField(source='category.id', read_only=True)
     # ✅ ADD THESE FIELDS
     display_price = serializers.SerializerMethodField()
     display_min_order = serializers.SerializerMethodField()
+
+    is_wishlisted = serializers.SerializerMethodField()
+
+    images = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
         fields = ['id', 'name', 'slug', 'sku', 'price', 'retail_price', 'display_price', 
-                  'stock', 'status', 'primary_image', 'category_name', 'pattern', 
-                  'primary_color', 'min_order_qty', 'display_min_order']
+                  'stock', 'status', 'primary_image', 'category_name', 'pattern', 'images',
+                  'primary_color', 'min_order_qty', 'display_min_order', 'is_wishlisted', 'category_id',]
+        
+    def get_images(self, obj):
+        """Return all product images for bulk products"""
+        return [{'id': img.id, 'image': img.image.url, 'is_primary': img.is_primary} 
+                for img in obj.images.all()]
+        
+    def get_is_wishlisted(self, obj):
+        request = self.context.get('request')
+        
+        if not request:
+            return False
+        
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        
+        from catalog.models import Wishlist
+        return Wishlist.objects.filter(user=user, product=obj).exists()
     
     def get_display_price(self, obj):
         request = self.context.get('request')
         
-        # Guest (no login) or Customer - show retail price
-        if not request or not request.user.is_authenticated:
+        # ✅ FIX: Handle None user correctly
+        if not request:
             return float(obj.retail_price) if obj.retail_price else float(obj.price)
         
-        if request.user.role == 'customer':
+        # Check if user exists and is authenticated
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return float(obj.retail_price) if obj.retail_price else float(obj.price)
+        
+        if user.role == 'customer':
             return float(obj.retail_price) if obj.retail_price else float(obj.price)
         
         # Wholesaler or Retailer - show wholesale price
@@ -59,10 +87,15 @@ class ProductListSerializer(serializers.ModelSerializer):
     def get_display_min_order(self, obj):
         request = self.context.get('request')
         
-        if not request or not request.user.is_authenticated:
+        # ✅ FIX: Handle None user correctly
+        if not request:
             return 1
         
-        if request.user.role == 'customer':
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return 1
+        
+        if user.role == 'customer':
             return 1
         
         return obj.min_order_qty
@@ -77,9 +110,59 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     
+    # ✅ ADD THESE FIELDS (same as ProductListSerializer)
+    display_price = serializers.SerializerMethodField()
+    display_min_order = serializers.SerializerMethodField()
+    is_wishlisted = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
+    
     class Meta:
         model = Product
         fields = '__all__'
+    
+    def get_display_price(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return float(obj.retail_price) if obj.retail_price else float(obj.price)
+        
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return float(obj.retail_price) if obj.retail_price else float(obj.price)
+        
+        if user.role == 'customer':
+            return float(obj.retail_price) if obj.retail_price else float(obj.price)
+        
+        return float(obj.price)
+    
+    def get_display_min_order(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return 1
+        
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return 1
+        
+        if user.role == 'customer':
+            return 1
+        
+        return obj.min_order_qty
+    
+    def get_is_wishlisted(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return False
+        
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        
+        from catalog.models import Wishlist
+        return Wishlist.objects.filter(user=user, product=obj).exists()
+    
+    def get_primary_image(self, obj):
+        primary = obj.images.filter(is_primary=True).first()
+        return primary.image.url if primary else None
 
 
 # ============= NEW BULK UPLOAD SERIALIZERS =============
@@ -153,9 +236,17 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
 class ProductUpdateSerializer(serializers.ModelSerializer):
     """Update existing product"""
+    compare_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    threshold = serializers.IntegerField(default=10, required=False)
+    weight = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    pattern = serializers.CharField(required=False, allow_blank=True)
+    primary_color = serializers.CharField(required=False, allow_blank=True)
+    
     class Meta:
         model = Product
-        fields = ['name', 'price', 'cost', 'stock', 'status', 'description']
+        fields = ['name', 'price', 'cost', 'stock', 'status', 'description', 
+                  'brand', 'category_id', 'compare_price', 'threshold', 'weight',
+                  'pattern', 'primary_color', 'min_order_qty']
 
 
 # ADD this to existing serializers.py
@@ -174,3 +265,30 @@ class SingleProductCreateSerializer(serializers.Serializer):
     threshold = serializers.IntegerField(default=10)
     weight = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     status = serializers.ChoiceField(choices=['active', 'draft'], default='draft')
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_slug = serializers.CharField(source='product.slug', read_only=True)
+    product_price = serializers.DecimalField(source='product.price', read_only=True, max_digits=10, decimal_places=2)
+    product_compare_price = serializers.DecimalField(source='product.compare_price', read_only=True, max_digits=10, decimal_places=2)
+    product_primary_image = serializers.SerializerMethodField()
+    product_stock = serializers.IntegerField(source='product.stock', read_only=True)
+    product_images = serializers.SerializerMethodField()  # ✅ ADD THIS
+    
+    class Meta:
+        model = Wishlist
+        fields = [
+            'id', 'product_id', 'product_name', 'product_slug',
+            'product_price', 'product_compare_price', 'product_primary_image',
+            'product_images', 'product_stock', 'added_at'
+        ]
+    
+    def get_product_primary_image(self, obj):
+        primary = obj.product.images.filter(is_primary=True).first()
+        return primary.image.url if primary else None
+    
+    def get_product_images(self, obj):
+        """Return all product images URLs"""
+        return [img.image.url for img in obj.product.images.all()]

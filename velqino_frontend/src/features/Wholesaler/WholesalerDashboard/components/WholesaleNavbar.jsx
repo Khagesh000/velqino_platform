@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, Package, Grid, BarChart3, Users, Wallet, Settings, PlusCircle } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
-
+import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
+import { useListRetailersQuery } from '@/redux/retailer/slices/retailerSlice';
 export default function WholesaleNavbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
@@ -16,6 +17,12 @@ export default function WholesaleNavbar() {
   const notificationsRef = useRef(null)
   const mobileMenuRef = useRef(null)
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
+
+  const { data: ordersData } = useGetOrdersQuery();
+  const pendingOrdersCount = ordersData?.data?.filter(order => order.status === 'pending' || order.status === 'confirmed').length || 0;
+
+  const { data: retailersData } = useListRetailersQuery();
+  const customersCount = retailersData?.data?.length || 0;
 
   // Handle click outside for dropdowns
   useEffect(() => {
@@ -71,10 +78,10 @@ export default function WholesaleNavbar() {
   // Navigation items for sidebar
   const navItems = [
     { icon: <Home size={20} />, label: 'Home Dashboard', href: '/wholesaler/wholesalerdashboard', badge: null },
-    { icon: <Package size={20} />, label: 'Orders Management', href: '/wholesaler/ordermanagment', badge: '12' },
+    { icon: <Package size={20} />, label: 'Orders Management', href: '/wholesaler/ordermanagment', badge: pendingOrdersCount > 0 ? pendingOrdersCount.toString() : null },
     { icon: <Grid size={20} />, label: 'Products Catalog', href: '/wholesaler/productcatalog', badge: null },
     { icon: <BarChart3 size={20} />, label: 'Analytics & Reports', href: '/wholesaler/analyticsreports', badge: null },
-    { icon: <Users size={20} />, label: 'Customers', href: '/wholesaler/customers', badge: '3' },
+     { icon: <Users size={20} />, label: 'Customers', href: '/wholesaler/customers', badge: customersCount > 0 ? customersCount.toString() : null },
     { icon: <Wallet size={20} />, label: 'Payments & Payouts', href: '/wholesaler/paymentsandpayouts', badge: null },
     { icon: <Settings size={20} />, label: 'Settings', href: '/wholesaler/settings', badge: null },
   ]
@@ -89,24 +96,28 @@ export default function WholesaleNavbar() {
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Left Section: Logo & Mobile Menu Toggle */}
             <div className="flex items-center gap-3">
-              {/* Mobile Menu Toggle */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
-              >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
+                {/* Mobile Menu Toggle */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="lg:hidden p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
+                >
+                  {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
 
-              {/* Logo */}
-              <Link href="/wholesale" className="flex items-center gap-2">
-                <span className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  VELTRIX
-                </span>
-                <span className="hidden sm:inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-semibold rounded-full">
-                  WHOLESALE
-                </span>
-              </Link>
-            </div>
+                {/* Logo - Navigates to Home */}
+                <Link href="/" className="flex items-center gap-2">
+                  <span className="text-2xl font-bold bg-primary bg-clip-text text-primary-50">
+                    VELTRIX
+                  </span>
+                </Link>
+
+                {/* Wholesale Badge - Navigates to Dashboard */}
+                <Link href="/wholesaler/wholesalerdashboard">
+                  <span className="hidden sm:inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-semibold rounded-full cursor-pointer hover:bg-accent-200 transition-colors">
+                    WHOLESALE
+                  </span>
+                </Link>
+              </div>
 
             {/* Center: Global Search - Hidden on Mobile */}
             <div className="hidden md:flex flex-1 max-w-xl mx-8">
@@ -121,22 +132,22 @@ export default function WholesaleNavbar() {
             </div>
 
             {/* Right Section: Icons & Profile */}
-            <div className="flex items-center gap-2 lg:gap-3">
-  {/* Mobile Search Icon */}
-  <div className="md:hidden">
-    <button
-      onClick={() => setIsMobileSearchOpen(true)}
-      className="p-2.5 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-fast"
-    >
-      <Search size={20} />
-    </button>
-  </div>
+                      <div className="flex items-center gap-2 lg:gap-3">
+            {/* Mobile Search Icon */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileSearchOpen(true)}
+                className="p-2.5 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-fast"
+              >
+                <Search size={20} />
+              </button>
+            </div>
 
-  {/* Quick Add Product Button - Desktop */}
-  <button className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-inverse px-4 py-2 rounded-xl text-sm font-medium transition-fast shadow-sm hover:shadow-md">
-    <PlusCircle size={18} />
-    <span>Add Product</span>
-  </button>
+            {/* Quick Add Product Button - Desktop */}
+            <button className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-inverse px-4 py-2 rounded-xl text-sm font-medium transition-fast shadow-sm hover:shadow-md">
+              <PlusCircle size={18} />
+              <span>Add Product</span>
+            </button>
 
               {/* Notifications */}
               <div className="relative" ref={notificationsRef}>

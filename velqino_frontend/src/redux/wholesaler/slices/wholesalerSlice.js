@@ -65,6 +65,16 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                 }
             }
         }),
+        changePassword: builder.mutation({
+            async queryFn(data) {
+                try {
+                    const response = await wholesalerAPI.changePassword(data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+        }),
     })
 });
 
@@ -74,5 +84,6 @@ export const {
     useFetchProfileQuery,
     useUpdateProfileMutation,
     useDeleteProfileMutation,
-    useFetchAllWholesalersQuery
+    useFetchAllWholesalersQuery,
+    useChangePasswordMutation,
 } = wholesalerApi;

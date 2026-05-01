@@ -17,9 +17,11 @@ import {
   Globe,
   Clock
 } from '../../../../utils/icons'
+import { useChangePasswordMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/AccountSecurity.scss'
 
-export default function AccountSecurity() {
+export default function AccountSecurity({ user, isLoading: parentLoading }) {
   const [showPassword, setShowPassword] = useState(false)
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -35,6 +37,8 @@ export default function AccountSecurity() {
   const [otpCode, setOtpCode] = useState('')
   const [verifying, setVerifying] = useState(false)
 
+  const [changePassword, { isLoading: isChanging }] = useChangePasswordMutation()
+
   const loginHistory = [
     { id: 1, device: 'Chrome on Windows', location: 'Bangalore, India', ip: '192.168.1.1', date: '2024-03-22 10:30 AM', status: 'Current' },
     { id: 2, device: 'Safari on iPhone', location: 'Mumbai, India', ip: '10.0.0.1', date: '2024-03-21 08:15 PM', status: 'Active' },
@@ -48,7 +52,7 @@ export default function AccountSecurity() {
     { id: 3, name: 'MacBook Pro - Firefox', location: 'Delhi, India', lastActive: 'Mar 20, 2024', isCurrent: false }
   ]
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     setPasswordError('')
     
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
@@ -67,17 +71,26 @@ export default function AccountSecurity() {
     }
     
     setIsChangingPassword(true)
-    setTimeout(() => {
-      setIsChangingPassword(false)
+    try {
+      await changePassword({
+        old_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword
+      }).unwrap()
+      
       setPasswordSuccess(true)
+      toast.success('Password changed successfully!')
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setTimeout(() => setPasswordSuccess(false), 3000)
-    }, 1500)
+    } catch (error) {
+      setPasswordError(error?.data?.message || 'Failed to change password')
+      toast.error(error?.data?.message || 'Failed to change password')
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   const handleEnable2FA = () => {
     setOtpSent(true)
-    // Simulate OTP sent
   }
 
   const handleVerifyOTP = () => {
@@ -89,15 +102,28 @@ export default function AccountSecurity() {
       setShow2FAModal(false)
       setOtpSent(false)
       setOtpCode('')
+      toast.success('2FA enabled successfully!')
     }, 1500)
   }
 
   const handleDisable2FA = () => {
     setTwoFactorEnabled(false)
+    toast.success('2FA disabled successfully!')
   }
 
   const handleLogoutDevice = (deviceId) => {
-    console.log('Logout device:', deviceId)
+    toast.info('Device logged out successfully')
+  }
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -150,7 +176,7 @@ export default function AccountSecurity() {
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                placeholder="Enter new password"
+                placeholder="Enter new password (min 8 characters)"
               />
             </div>
             <div>

@@ -4,17 +4,19 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from .models import Product, Category, ProductImage, ProductVariant
+from .models import Product, Category, ProductImage, ProductVariant, Wishlist
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer,
     BulkImageUploadSerializer, BulkVideoUploadSerializer,
-    CategorySerializer, ProductCreateSerializer, ProductUpdateSerializer
+    CategorySerializer, ProductCreateSerializer, ProductUpdateSerializer,
+    WishlistSerializer
 )
 from .services.product_service import ProductService
+from catalog.services.wishlist_service import WishlistService
 from .utils.product_helpers import ProductHelpers
 import logging
 from django.http import HttpResponse
-
+from django.db import IntegrityError
 logger = logging.getLogger(__name__)
 
 
@@ -175,10 +177,8 @@ def product_list(request):
 def product_detail(request, product_id):
     """Get, update or delete a single product"""
     
-    # ✅ GET method - PUBLIC (no authentication required)
     if request.method == 'GET':
         product = get_object_or_404(Product, id=product_id)
-        
         cache_key = f"product:{product_id}"
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -188,7 +188,6 @@ def product_detail(request, product_id):
         cache.set(cache_key, serializer.data, timeout=1800)
         return Response({'status': 'success', 'data': serializer.data})
     
-    # ✅ PUT and DELETE - PRIVATE (authentication required)
     elif request.method == 'PUT' or request.method == 'DELETE':
         if not request.user.is_authenticated:
             return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
@@ -199,10 +198,50 @@ def product_detail(request, product_id):
         if request.method == 'PUT':
             serializer = ProductUpdateSerializer(product, data=request.data, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                updated_product = serializer.save()
+                
+                # ✅ Handle sizes - works for both JSON and FormData
+                sizes_data = []
+                if hasattr(request.data, 'getlist'):
+                    # FormData (multipart) case
+                    sizes_data = request.data.getlist('sizes')
+                elif isinstance(request.data, dict):
+                    # JSON case
+                    sizes = request.data.get('sizes', [])
+                    if isinstance(sizes, list):
+                        sizes_data = sizes
+                
+                # ✅ Update variant prices when product price changes
+                if 'price' in request.data or (hasattr(request.data, 'get') and request.data.get('price')):
+                    new_price = updated_product.price
+                    updated_product.variants.update(price=new_price)
+                    print(f"✅ Updated {updated_product.variants.count()} variants to price {new_price}")
+                
+                # ✅ Update sizes if provided
+                if sizes_data:
+                    existing_sizes = list(updated_product.variants.values_list('size', flat=True))
+                    
+                    # Remove sizes not in new list
+                    for variant in updated_product.variants.all():
+                        if variant.size not in sizes_data:
+                            variant.delete()
+                    
+                    # Add new sizes
+                    for size in sizes_data:
+                        if size and size not in existing_sizes:
+                            from catalog.models import ProductVariant
+                            ProductVariant.objects.create(
+                                product=updated_product,
+                                size=size,
+                                sku=f"{updated_product.sku}-{size}",
+                                stock=updated_product.stock,
+                                price=updated_product.price
+                            )
+                    print(f"✅ Updated sizes: {sizes_data}")
+                
                 cache.delete(f"product:{product_id}")
                 cache.delete_pattern(f"product:list:{seller_id}:*")
-                return Response({'status': 'success', 'data': ProductDetailSerializer(product).data})
+                return Response({'status': 'success', 'data': ProductDetailSerializer(updated_product).data})
             return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         
         elif request.method == 'DELETE':
@@ -387,7 +426,8 @@ def category_list(request):
         if cached_data:
             return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
         
-        categories = Category.objects.all()
+        # ✅ Only fetch root categories (parent=None) - this prevents recursion
+        categories = Category.objects.filter(parent=None, is_active=True)
         serializer = CategorySerializer(categories, many=True)
         cache.set(cache_key, serializer.data, timeout=86400)
         
@@ -479,3 +519,110 @@ def export_products(request):
             
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_wishlist(request):
+    """Get user's wishlist with pagination"""
+    user = request.user
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+    
+    result = WishlistService.get_wishlist_with_products(user, page, per_page)
+    
+    return Response({
+        'status': 'success',
+        'data': result['items'],
+        'pagination': result['pagination']
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_wishlist(request):
+    """Add product to wishlist"""
+    user = request.user
+    product_id = request.data.get('product_id')
+    
+    if not product_id:
+        return Response({
+            'status': 'error',
+            'message': 'product_id is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        result = WishlistService.add_to_wishlist(user, product_id)
+        
+        return Response({
+            'status': 'success',
+            'message': 'Product added to wishlist' if result['created'] else 'Product already in wishlist',
+            'data': result
+        }, status=status.HTTP_201_CREATED if result['created'] else status.HTTP_200_OK)
+        
+    except ValueError as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_wishlist(request):
+    """Remove product from wishlist"""
+    user = request.user
+    product_id = request.data.get('product_id')
+    
+    if not product_id:
+        return Response({
+            'status': 'error',
+            'message': 'product_id is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    removed = WishlistService.remove_from_wishlist(user, product_id)
+    
+    if removed:
+        return Response({
+            'status': 'success',
+            'message': 'Product removed from wishlist'
+        }, status=status.HTTP_200_OK)
+    
+    return Response({
+        'status': 'error',
+        'message': 'Product not found in wishlist'
+    }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_add_to_wishlist(request):
+    """Add multiple products to wishlist"""
+    user = request.user
+    product_ids = request.data.get('product_ids', [])
+    
+    if not product_ids:
+        return Response({
+            'status': 'error',
+            'message': 'product_ids list is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    results = WishlistService.bulk_add_to_wishlist(user, product_ids)
+    
+    return Response({
+        'status': 'success',
+        'data': results
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def wishlist_stats(request):
+    """Get wishlist statistics"""
+    user = request.user
+    stats = WishlistService.get_wishlist_stats(user.id)
+    
+    return Response({
+        'status': 'success',
+        'data': stats
+    })

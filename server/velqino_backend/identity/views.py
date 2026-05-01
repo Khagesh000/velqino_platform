@@ -25,7 +25,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
-
+from commerce.models import Order
+from django.db.models import Sum, Count, Max
 
 logger = logging.getLogger(__name__)
 
@@ -281,54 +282,7 @@ def get_wholesaler_profile(request, user_id):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def update_wholesaler_profile(request, user_id):
-    """
-    Update wholesaler profile
-    """
-    try:
-        # Check if user is updating their own profile
-        if request.user.id != user_id:
-            return Response({
-                'status': 'error',
-                'message': 'Unauthorized access'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        profile = WholesalerProfile.objects.get(user_id=user_id)
-        serializer = WholesalerProfileUpdateSerializer(profile, data=request.data, partial=True)
-        
-        if serializer.is_valid():
-            serializer.save()
-            
-            # Invalidate cache
-            CacheService.invalidate_profile(user_id)
-            
-            # Return updated data
-            response_serializer = WholesalerProfileSerializer(profile)
-            
-            return Response({
-                'status': 'success',
-                'message': 'Profile updated successfully',
-                'data': response_serializer.data
-            })
-        else:
-            return Response({
-                'status': 'error',
-                'errors': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-    except WholesalerProfile.DoesNotExist:
-        return Response({
-            'status': 'error',
-            'message': 'Profile not found'
-        }, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger.error(f"Update failed: {e}")
-        return Response({
-            'status': 'error',
-            'message': str(e)
-        }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @api_view(['GET'])
@@ -377,6 +331,24 @@ def list_wholesalers(request):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_wholesaler_profile(request, user_id):
+    """Update wholesaler profile"""
+    try:
+        profile = WholesalerProfile.objects.get(user_id=user_id)
+    except WholesalerProfile.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Profile not found'}, status=404)
+    
+    if request.user.id != user_id and request.user.role != 'admin':
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    serializer = WholesalerProfileSerializer(profile, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status': 'success', 'data': serializer.data})
+    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
 
 
 @api_view(['DELETE'])
@@ -578,37 +550,99 @@ def retailer_profile(request, user_id):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_retailer_profile(request, user_id):
+    """Update retailer profile"""
+    try:
+        profile = RetailerProfile.objects.get(user_id=user_id)
+    except RetailerProfile.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Profile not found'}, status=404)
+    
+    if request.user.id != user_id and request.user.role != 'admin':
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    serializer = RetailerProfileSerializer(profile, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status': 'success', 'data': serializer.data})
+    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_retailers(request):
-    """
-    List all retailers (for wholesaler, admin, support to see)
-    """
     try:
-        # Allow wholesalers, admin, and support to view retailers
         if request.user.role not in ['wholesaler', 'admin', 'support']:
             return Response({
                 'status': 'error',
                 'message': 'Only wholesalers, admin, or support can view retailers'
             }, status=status.HTTP_403_FORBIDDEN)
-        
+
+        retailers = RetailerProfile.objects.select_related('user').all()
+
+        # ✅ Basic filters
+        city = request.GET.get('city')
+        if city and city != 'all':
+            retailers = retailers.filter(city__iexact=city)
+
+        status_filter = request.GET.get('status')
+        if status_filter and status_filter not in ['', 'all']:
+            is_active = status_filter == 'active'
+            retailers = retailers.filter(is_active=is_active)
+
+        # ✅ Annotate with order count and total spent
+        retailers = retailers.annotate(
+            order_count=Count('user__retailer_orders'),
+            total_spent=Sum('user__retailer_orders__total_amount'),
+            last_order_date=Max('user__retailer_orders__created_at')
+        )
+
+        # ✅ Filter by orders
+        min_orders = request.GET.get('min_orders')
+        max_orders = request.GET.get('max_orders')
+        if min_orders:
+            retailers = retailers.filter(order_count__gte=int(min_orders))
+        if max_orders:
+            retailers = retailers.filter(order_count__lte=int(max_orders))
+
+        # ✅ Filter by spent
+        min_spent = request.GET.get('min_spent')
+        max_spent = request.GET.get('max_spent')
+        if min_spent:
+            retailers = retailers.filter(total_spent__gte=float(min_spent))
+        if max_spent:
+            retailers = retailers.filter(total_spent__lte=float(max_spent))
+
+        # ✅ Filter by last order days
+        last_order_days = request.GET.get('last_order_days')
+        if last_order_days:
+            from django.utils import timezone
+            from datetime import timedelta
+            cutoff = timezone.now() - timedelta(days=int(last_order_days))
+            retailers = retailers.filter(last_order_date__gte=cutoff)
+
+        # ✅ Search
+        search = request.GET.get('search')
+        if search:
+            retailers = retailers.filter(
+                business_name__icontains=search
+            ) | retailers.filter(
+                user__email__icontains=search
+            )
+
+        retailers = retailers.order_by('-created_at')
+
         # Pagination
         page = int(request.GET.get('page', 1))
-        per_page = int(request.GET.get('per_page', 20))
-        
-        retailers = RetailerProfile.objects.select_related('user').filter(
-            is_active=True
-        ).order_by('-created_at')
-        
-        # Paginate
+        per_page = int(request.GET.get('per_page', 500))
         start = (page - 1) * per_page
         end = start + per_page
         paginated = retailers[start:end]
-        
+
         serializer = RetailerProfileSerializer(paginated, many=True)
-        
+
         return Response({
             'status': 'success',
             'data': serializer.data,
@@ -619,13 +653,51 @@ def list_retailers(request):
                 'total_pages': (retailers.count() + per_page - 1) // per_page
             }
         })
-        
+
     except Exception as e:
         logger.error(f"List retailers error: {e}")
         return Response({
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def block_retailer(request, id):
+    """Block a retailer"""
+    try:
+        if request.user.role not in ['wholesaler', 'admin']:
+            return Response({'status': 'error', 'message': 'Permission denied'}, status=403)
+        
+        # ✅ FIX: Use 'id' instead of 'user_id'
+        retailer = RetailerProfile.objects.get(id=id)  # ← Change here
+        retailer.is_active = False
+        retailer.save()
+        
+        return Response({'status': 'success', 'message': 'Retailer blocked successfully'})
+        
+    except RetailerProfile.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Retailer not found'}, status=404)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unblock_retailer(request, id):
+    """Unblock a retailer"""
+    try:
+        if request.user.role not in ['wholesaler', 'admin']:
+            return Response({'status': 'error', 'message': 'Permission denied'}, status=403)
+        
+        # ✅ FIX: Use 'id' instead of 'user_id'
+        retailer = RetailerProfile.objects.get(id=id)  # ← Change here
+        retailer.is_active = True
+        retailer.save()
+        
+        return Response({'status': 'success', 'message': 'Retailer unblocked successfully'})
+        
+    except RetailerProfile.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Retailer not found'}, status=404)
     
 
 # identity/views.py
@@ -768,6 +840,25 @@ def customer_profile(request, user_id):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_customer_profile(request, user_id):
+    """Update customer profile"""
+    try:
+        profile = CustomerProfile.objects.get(user_id=user_id)
+    except CustomerProfile.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Profile not found'}, status=404)
+    
+    if request.user.id != user_id and request.user.role != 'admin':
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    serializer = CustomerProfileSerializer(profile, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status': 'success', 'data': serializer.data})
+    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
 
 
 @api_view(['GET'])
@@ -922,3 +1013,23 @@ def address_detail(request, address_id):
     elif request.method == 'DELETE':
         address.delete()
         return Response({'status': 'success', 'message': 'Address deleted'})
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """Change user password"""
+    user = request.user
+    current_password = request.data.get('current_password')
+    new_password = request.data.get('new_password')
+    
+    if not user.check_password(current_password):
+        return Response({'status': 'error', 'message': 'Current password is incorrect'}, status=400)
+    
+    if len(new_password) < 8:
+        return Response({'status': 'error', 'message': 'Password must be at least 8 characters'}, status=400)
+    
+    user.set_password(new_password)
+    user.save()
+    
+    return Response({'status': 'success', 'message': 'Password changed successfully'})

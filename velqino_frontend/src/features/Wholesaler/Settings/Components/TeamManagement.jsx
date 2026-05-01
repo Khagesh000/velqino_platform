@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Users,
   UserPlus,
@@ -19,78 +19,24 @@ import {
   Crown,
   Settings,
   Activity,
-  Calendar
+  Calendar,
+  X
 } from '../../../../utils/icons'
+import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
+import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/TeamManagement.scss'
 
-export default function TeamManagement() {
+export default function TeamManagement({ wholesaler, isLoading: parentLoading }) {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showRoleModal, setShowRoleModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMember, setSelectedMember] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const [teamMembers, setTeamMembers] = useState([
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      email: 'rajesh@veltrix.com',
-      role: 'Owner',
-      roleLevel: 'admin',
-      avatar: 'RK',
-      status: 'Active',
-      lastActive: 'Today 10:30 AM',
-      joined: 'Jan 15, 2023',
-      permissions: ['all']
-    },
-    {
-      id: 2,
-      name: 'Priya Sharma',
-      email: 'priya@veltrix.com',
-      role: 'Admin',
-      roleLevel: 'admin',
-      avatar: 'PS',
-      status: 'Active',
-      lastActive: 'Today 09:15 AM',
-      joined: 'Feb 20, 2023',
-      permissions: ['orders', 'products', 'customers', 'reports']
-    },
-    {
-      id: 3,
-      name: 'Amit Patel',
-      email: 'amit@veltrix.com',
-      role: 'Manager',
-      roleLevel: 'manager',
-      avatar: 'AP',
-      status: 'Active',
-      lastActive: 'Yesterday 04:45 PM',
-      joined: 'Mar 10, 2023',
-      permissions: ['orders', 'products', 'inventory']
-    },
-    {
-      id: 4,
-      name: 'Neha Singh',
-      email: 'neha@veltrix.com',
-      role: 'Support',
-      roleLevel: 'support',
-      avatar: 'NS',
-      status: 'Inactive',
-      lastActive: 'Mar 15, 2024',
-      joined: 'Jun 05, 2023',
-      permissions: ['orders', 'customers']
-    },
-    {
-      id: 5,
-      name: 'Vikram Mehta',
-      email: 'vikram@veltrix.com',
-      role: 'Viewer',
-      roleLevel: 'viewer',
-      avatar: 'VM',
-      status: 'Pending',
-      lastActive: 'Invitation sent',
-      joined: 'Mar 20, 2024',
-      permissions: ['reports']
-    }
-  ])
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
+
+  const [teamMembers, setTeamMembers] = useState([])
+  const [activityLog, setActivityLog] = useState([])
 
   const [inviteData, setInviteData] = useState({
     email: '',
@@ -106,14 +52,118 @@ export default function TeamManagement() {
     { id: 'viewer', label: 'Viewer', icon: Eye, description: 'Read-only access to reports', level: 1 }
   ]
 
-  const activityLog = [
-    { id: 1, user: 'Rajesh Kumar', action: 'Added new team member', target: 'Priya Sharma', date: '2024-03-20 10:30 AM', type: 'add' },
-    { id: 2, user: 'Priya Sharma', action: 'Updated product inventory', target: 'Wireless Headphones', date: '2024-03-19 03:45 PM', type: 'update' },
-    { id: 3, user: 'Amit Patel', action: 'Processed order', target: '#ORD-2024-001', date: '2024-03-19 11:20 AM', type: 'order' },
-    { id: 4, user: 'Rajesh Kumar', action: 'Changed role', target: 'Neha Singh → Support', date: '2024-03-18 09:15 AM', type: 'role' },
-    { id: 5, user: 'System', action: 'New customer registration', target: 'Suresh Reddy', date: '2024-03-17 04:30 PM', type: 'customer' },
-    { id: 6, user: 'Priya Sharma', action: 'Generated report', target: 'Monthly Sales Report', date: '2024-03-16 02:00 PM', type: 'report' }
-  ]
+  // Load team data from backend
+  useEffect(() => {
+    if (wholesaler?.team_settings) {
+      const teamData = wholesaler.team_settings
+      setTeamMembers(teamData.team_members || [])
+      setActivityLog(teamData.activity_log || [])
+    }
+  }, [wholesaler])
+
+  const saveTeamData = async (updatedMembers, updatedLog) => {
+    setIsSaving(true)
+    try {
+      const formData = new FormData()
+      formData.append('team_settings', JSON.stringify({
+        team_members: updatedMembers,
+        activity_log: updatedLog
+      }))
+
+      const userId = wholesaler?.user_id || wholesaler?.id
+      await updateProfile({ userId: userId, data: formData }).unwrap()
+      toast.success('Team settings updated successfully!')
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update team settings')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleInvite = () => {
+    const newMember = {
+      id: Date.now(),
+      name: inviteData.name || inviteData.email.split('@')[0],
+      email: inviteData.email,
+      role: roles.find(r => r.id === inviteData.role)?.label || 'Viewer',
+      roleLevel: inviteData.role,
+      avatar: inviteData.name?.substring(0, 2).toUpperCase() || inviteData.email.substring(0, 2).toUpperCase(),
+      status: 'Pending',
+      lastActive: 'Invitation sent',
+      joined: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      permissions: []
+    }
+    
+    const newActivity = {
+      id: Date.now(),
+      user: wholesaler?.business_name || 'Owner',
+      action: 'Invited new team member',
+      target: newMember.name,
+      date: new Date().toLocaleString(),
+      type: 'add'
+    }
+    
+    const updatedMembers = [...teamMembers, newMember]
+    const updatedLog = [newActivity, ...activityLog]
+    
+    setTeamMembers(updatedMembers)
+    setActivityLog(updatedLog)
+    saveTeamData(updatedMembers, updatedLog)
+    
+    setShowInviteModal(false)
+    setInviteData({ email: '', role: 'viewer', name: '' })
+    toast.success(`Invitation sent to ${inviteData.email}`)
+  }
+
+  const handleRemoveMember = (memberId, memberName) => {
+    if (confirm(`Are you sure you want to remove ${memberName} from the team?`)) {
+      const updatedMembers = teamMembers.filter(m => m.id !== memberId)
+      const newActivity = {
+        id: Date.now(),
+        user: wholesaler?.business_name || 'Owner',
+        action: 'Removed team member',
+        target: memberName,
+        date: new Date().toLocaleString(),
+        type: 'remove'
+      }
+      const updatedLog = [newActivity, ...activityLog]
+      
+      setTeamMembers(updatedMembers)
+      setActivityLog(updatedLog)
+      saveTeamData(updatedMembers, updatedLog)
+      toast.success(`${memberName} removed from team`)
+    }
+  }
+
+  const handleUpdateRole = (memberId, newRoleId) => {
+    const member = teamMembers.find(m => m.id === memberId)
+    if (!member) return
+    
+    const updatedMembers = teamMembers.map(m => 
+      m.id === memberId 
+        ? { 
+            ...m, 
+            role: roles.find(r => r.id === newRoleId)?.label, 
+            roleLevel: newRoleId 
+          } 
+        : m
+    )
+    
+    const newActivity = {
+      id: Date.now(),
+      user: wholesaler?.business_name || 'Owner',
+      action: 'Updated role',
+      target: `${member.name} → ${roles.find(r => r.id === newRoleId)?.label}`,
+      date: new Date().toLocaleString(),
+      type: 'role'
+    }
+    const updatedLog = [newActivity, ...activityLog]
+    
+    setTeamMembers(updatedMembers)
+    setActivityLog(updatedLog)
+    saveTeamData(updatedMembers, updatedLog)
+    toast.success(`${member.name}'s role updated`)
+  }
 
   const getRoleIcon = (roleLevel) => {
     const role = roles.find(r => r.id === roleLevel)
@@ -130,29 +180,22 @@ export default function TeamManagement() {
     return styles[status] || 'bg-gray-100 text-gray-700'
   }
 
-  const handleInvite = () => {
-    const newMember = {
-      id: teamMembers.length + 1,
-      name: inviteData.name || inviteData.email.split('@')[0],
-      email: inviteData.email,
-      role: roles.find(r => r.id === inviteData.role)?.label || 'Viewer',
-      roleLevel: inviteData.role,
-      avatar: inviteData.name?.substring(0, 2).toUpperCase() || inviteData.email.substring(0, 2).toUpperCase(),
-      status: 'Pending',
-      lastActive: 'Invitation sent',
-      joined: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      permissions: []
-    }
-    setTeamMembers([...teamMembers, newMember])
-    setShowInviteModal(false)
-    setInviteData({ email: '', role: 'viewer', name: '' })
-  }
-
   const filteredMembers = teamMembers.filter(member =>
-    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.role.toLowerCase().includes(searchQuery.toLowerCase())
+    member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.role?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  if (parentLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="team-management bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -204,49 +247,63 @@ export default function TeamManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredMembers.map((member, index) => (
-              <tr key={member.id} className="hover:bg-gray-50 transition-all" style={{ animationDelay: `${index * 0.05}s` }}>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium text-sm">
-                      {member.avatar}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                      <p className="text-xs text-gray-500">{member.email}</p>
-                    </div>
-                  </div>
-                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    {getRoleIcon(member.roleLevel)}
-                    <span className="text-sm text-gray-700">{member.role}</span>
-                  </div>
-                 </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(member.status)}`}>
-                    {member.status}
-                  </span>
-                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{member.lastActive}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{member.joined}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                      <Edit size={14} />
-                    </button>
-                    {member.roleLevel !== 'owner' && (
-                      <button className="p-1 text-gray-400 hover:text-error-600 rounded-lg">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                    <button className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
-                      <MoreVertical size={14} />
-                    </button>
-                  </div>
-                 </td>
+            {filteredMembers.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                  No team members found
+                </td>
               </tr>
-            ))}
+            ) : (
+              filteredMembers.map((member, index) => (
+                <tr key={member.id} className="hover:bg-gray-50 transition-all" style={{ animationDelay: `${index * 0.05}s` }}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium text-sm">
+                        {member.avatar}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                        <p className="text-xs text-gray-500">{member.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      {getRoleIcon(member.roleLevel)}
+                      <select
+                        value={member.roleLevel}
+                        onChange={(e) => handleUpdateRole(member.id, e.target.value)}
+                        className="text-sm text-gray-700 border-none bg-transparent focus:outline-none focus:ring-0"
+                        disabled={member.roleLevel === 'owner'}
+                      >
+                        {roles.map(role => (
+                          <option key={role.id} value={role.id}>{role.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(member.status)}`}>
+                      {member.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{member.lastActive}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{member.joined}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {member.roleLevel !== 'owner' && (
+                        <button 
+                          onClick={() => handleRemoveMember(member.id, member.name)}
+                          className="p-1 text-gray-400 hover:text-error-600 rounded-lg"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -277,35 +334,32 @@ export default function TeamManagement() {
       </div>
 
       {/* Activity Log */}
-      <div className="border-t border-gray-200">
-        <div className="px-4 sm:px-6 py-3 bg-gray-50/50 border-b border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <Activity size={16} />
-            Activity Log
-          </h4>
-        </div>
-        <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
-          {activityLog.map(activity => (
-            <div key={activity.id} className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                {activity.type === 'add' && <UserPlus size={14} />}
-                {activity.type === 'update' && <Edit size={14} />}
-                {activity.type === 'order' && <RefreshCw size={14} />}
-                {activity.type === 'role' && <Shield size={14} />}
-                {activity.type === 'customer' && <Users size={14} />}
-                {activity.type === 'report' && <Eye size={14} />}
+      {activityLog.length > 0 && (
+        <div className="border-t border-gray-200">
+          <div className="px-4 sm:px-6 py-3 bg-gray-50/50 border-b border-gray-200">
+            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Activity size={16} />
+              Activity Log
+            </h4>
+          </div>
+          <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+            {activityLog.slice(0, 10).map(activity => (
+              <div key={activity.id} className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                  <Activity size={14} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">{activity.user}</span> {activity.action}{' '}
+                    <span className="font-medium">{activity.target}</span>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{activity.date}</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-700">
-                  <span className="font-medium">{activity.user}</span> {activity.action}{' '}
-                  <span className="font-medium">{activity.target}</span>
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">{activity.date}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Invite Member Modal */}
       {showInviteModal && (
@@ -353,10 +407,10 @@ export default function TeamManagement() {
               </div>
               <button
                 onClick={handleInvite}
-                disabled={!inviteData.email}
+                disabled={!inviteData.email || isSaving}
                 className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
               >
-                Send Invitation
+                {isSaving ? 'Sending...' : 'Send Invitation'}
               </button>
             </div>
           </div>

@@ -213,6 +213,11 @@ import {
   Citrus,
   Hash,
   IndianRupeeIcon,
+  LogOut,
+
+
+  Edit2,
+  PackageIcon,
 
 
 } from 'lucide-react';
@@ -414,6 +419,11 @@ export {
   Citrus,
   Hash,
   IndianRupeeIcon,
+  LogOut,
+
+ 
+  Edit2,
+  PackageIcon,
 
 
 

@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef } from 'react';
 import {
   Upload,
   Download,
@@ -9,131 +9,155 @@ import {
   Check,
   X,
   AlertCircle,
-  DownloadCloud,
+  RefreshCw,
   FileJson,
-  FileImage,
-  ChevronDown,
-  RefreshCw
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/Customers/ImportExport.scss'
+  Loader2
+} from '../../../../utils/icons';
 
 export default function ImportExport({ selectedCount = 0, onImport, onExport }) {
-  const [isImportOpen, setIsImportOpen] = useState(false)
-  const [isExportOpen, setIsExportOpen] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadSuccess, setUploadSuccess] = useState(false)
-  const [uploadError, setUploadError] = useState(null)
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [exportFormat, setExportFormat] = useState('csv')
-  const [exportColumns, setExportColumns] = useState(['all'])
-  const fileInputRef = useRef(null)
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [exportFormat, setExportFormat] = useState('csv');
+  const [exportColumns, setExportColumns] = useState(['all']);
+  const fileInputRef = useRef(null);
 
   const importFormats = [
     { id: 'csv', label: 'CSV', icon: FileSpreadsheet, description: 'Comma separated values' },
     { id: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'XLSX, XLS format' },
     { id: 'json', label: 'JSON', icon: FileJson, description: 'JavaScript Object Notation' }
-  ]
+  ];
 
   const exportFormats = [
     { id: 'csv', label: 'CSV', icon: FileSpreadsheet, description: 'Comma separated values' },
     { id: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'XLSX format' },
     { id: 'pdf', label: 'PDF', icon: FileText, description: 'PDF document' }
-  ]
+  ];
 
   const columns = [
-    { id: 'name', label: 'Name' },
+    { id: 'name', label: 'Business Name' },
     { id: 'email', label: 'Email' },
     { id: 'phone', label: 'Phone' },
-    { id: 'company', label: 'Company' },
-    { id: 'type', label: 'Customer Type' },
-    { id: 'location', label: 'Location' },
+    { id: 'city', label: 'City' },
+    { id: 'state', label: 'State' },
     { id: 'orders', label: 'Total Orders' },
     { id: 'spent', label: 'Total Spent' },
-    { id: 'status', label: 'Status' },
-    { id: 'loyalty', label: 'Loyalty Tier' },
-    { id: 'lastOrder', label: 'Last Order Date' }
-  ]
+    { id: 'last_order', label: 'Last Order Date' },
+    { id: 'status', label: 'Status' }
+  ];
 
   const handleDrag = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
+      setDragActive(true);
     } else if (e.type === 'dragleave') {
-      setDragActive(false)
+      setDragActive(false);
     }
-  }
+  };
 
   const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
     
-    const files = e.dataTransfer.files
+    const files = e.dataTransfer.files;
     if (files && files[0]) {
-      handleFile(files[0])
+      handleFile(files[0]);
     }
-  }
+  };
 
   const handleFileSelect = (e) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files && files[0]) {
-      handleFile(files[0])
+      handleFile(files[0]);
     }
-  }
+  };
 
   const handleFile = (file) => {
-    setSelectedFile(file)
-    setUploadError(null)
+    setSelectedFile(file);
+    setUploadError(null);
     
-    const validTypes = ['.csv', '.xlsx', '.xls', '.json']
-    const fileExt = '.' + file.name.split('.').pop().toLowerCase()
+    const validTypes = ['.csv', '.xlsx', '.xls', '.json'];
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
     
     if (!validTypes.includes(fileExt)) {
-      setUploadError('Invalid file format. Please upload CSV, Excel, or JSON file.')
-      setSelectedFile(null)
-      return
+      setUploadError('Invalid file format. Please upload CSV, Excel, or JSON file.');
+      setSelectedFile(null);
+      return;
     }
-  }
+  };
 
-  const handleImport = () => {
-    if (!selectedFile) return
-    
-    setUploading(true)
-    setUploadError(null)
-    
-    setTimeout(() => {
-      setUploading(false)
-      setUploadSuccess(true)
-      onImport?.(selectedFile)
+  // Replace handleImport function (around line 80)
+    const handleImport = async () => {
+      if (!selectedFile) return;
       
-      setTimeout(() => {
-        setUploadSuccess(false)
-        setIsImportOpen(false)
-        setSelectedFile(null)
-      }, 2000)
-    }, 2000)
-  }
+      setUploading(true);
+      setUploadError(null);
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        
+        // ✅ Replace with your actual API call
+        const response = await fetch('/api/catalog/products/bulk-upload-images/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          },
+          body: formData
+        });
+        
+        if (!response.ok) throw new Error('Import failed');
+        
+        setUploadSuccess(true);
+        onImport?.(selectedFile);
+        
+        setTimeout(() => {
+          setUploadSuccess(false);
+          setIsImportOpen(false);
+          setSelectedFile(null);
+        }, 2000);
+      } catch (error) {
+        setUploadError(error?.message || 'Import failed. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    };
 
-  const handleExport = () => {
-    onExport?.({ format: exportFormat, columns: exportColumns })
-    setIsExportOpen(false)
-  }
+    // Replace handleExport function (around line 110)
+    const handleExport = () => {
+      const columnsToExport = exportColumns.includes('all') 
+        ? columns.map(c => c.id) 
+        : exportColumns;
+      
+      // ✅ Build export URL with params
+      const exportUrl = `/api/analytics/wholesaler/export-report/?format=${exportFormat}&columns=${columnsToExport.join(',')}`;
+      
+      // Open in new tab or download
+      window.open(exportUrl, '_blank');
+      
+      onExport?.({ format: exportFormat, columns: columnsToExport });
+      setIsExportOpen(false);
+    };
 
   const toggleColumn = (columnId) => {
     if (columnId === 'all') {
-      setExportColumns(['all'])
+      setExportColumns(['all']);
     } else {
       if (exportColumns.includes('all')) {
-        setExportColumns([columnId])
+        setExportColumns([columnId]);
       } else if (exportColumns.includes(columnId)) {
-        setExportColumns(exportColumns.filter(c => c !== columnId))
+        setExportColumns(exportColumns.filter(c => c !== columnId));
       } else {
-        setExportColumns([...exportColumns, columnId])
+        setExportColumns([...exportColumns, columnId]);
       }
     }
-  }
+  };
 
   return (
     <div className="import-export flex items-center gap-2 sm:gap-3">
@@ -245,13 +269,13 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
               <p className="text-xs font-medium text-gray-700 mb-2">Supported formats:</p>
               <div className="flex flex-wrap gap-2">
                 {importFormats.map(format => {
-                  const Icon = format.icon
+                  const Icon = format.icon;
                   return (
                     <div key={format.id} className="flex items-center gap-1 text-xxs text-gray-500">
                       <Icon size={12} />
                       <span>{format.label}</span>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -281,13 +305,13 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
                 Cancel
               </button>
               <button
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center gap-2"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center gap-2 disabled:opacity-50"
                 onClick={handleImport}
                 disabled={!selectedFile || uploading}
               >
                 {uploading ? (
                   <>
-                    <RefreshCw size={14} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                     Importing...
                   </>
                 ) : (
@@ -335,8 +359,8 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
               <label className="block text-xs font-medium text-gray-700 mb-2">Export Format</label>
               <div className="grid grid-cols-3 gap-2">
                 {exportFormats.map(format => {
-                  const Icon = format.icon
-                  const isActive = exportFormat === format.id
+                  const Icon = format.icon;
+                  const isActive = exportFormat === format.id;
                   return (
                     <button
                       key={format.id}
@@ -351,7 +375,7 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
                       <p className="text-xs font-medium">{format.label}</p>
                       <p className="text-xxs text-gray-500">{format.description}</p>
                     </button>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -406,5 +430,5 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
         </div>
       )}
     </div>
-  )
+  );
 }
