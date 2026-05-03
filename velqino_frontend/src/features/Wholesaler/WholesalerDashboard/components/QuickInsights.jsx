@@ -5,22 +5,15 @@ import {
   TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight, 
   Calendar, DollarSign, ShoppingBag, Users, Package, Loader2 
 } from '../../../../utils/icons';
-import { useGetWholesalerStatsQuery, useGetOrderStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
 import '../../../../styles/Wholesaler/WholesalerDashboard/QuickInsights.scss';
 
-export default function QuickInsights() {
+export default function QuickInsights({ stats, orderStats, isLoading }) {
   const [hoveredCard, setHoveredCard] = useState(null);
   
-  // ✅ Fetch only once - data already cached by Redux
-  const { data: statsData, isLoading: statsLoading } = useGetWholesalerStatsQuery();
-  const { data: orderStatsData, isLoading: ordersLoading } = useGetOrderStatsQuery();
-  
-  const isLoading = statsLoading || ordersLoading;
-  
   // ✅ Extract real data
-  const totalRevenue = statsData?.data?.total_revenue || 0;
-  const totalOrders = orderStatsData?.data?.total || 0;
-  const totalCustomers = statsData?.data?.total_customers || 0;
+  const totalRevenue = stats?.total_revenue || 0;
+  const totalOrders = orderStats?.total || 0;
+  const totalCustomers = stats?.total_customers || 0;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   
   // ✅ Mock previous week data (from cache or calculate)

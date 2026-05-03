@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import '../../../../styles/Wholesaler/WholesalerDashboard/KPIstatscards.scss'
 import { TrendingUp,  Package,  Wallet, Clock,  MoreHorizontal, ArrowUpRight, ArrowDownRight, Info } from '../../../../utils/icons';
-import { useGetWholesalerStatsQuery } from '../../../../redux/wholesaler/slices/statsSlice';
 
-export default function KPIStatsCards() {
+export default function KPIStatsCards({ stats, isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredCard, setHoveredCard] = useState(null)
   const [showTooltip, setShowTooltip] = useState(null)
-  const { data: statsData, isLoading, error } = useGetWholesalerStatsQuery()
+
   // Handle hydration
   useEffect(() => {
     setMounted(true)
@@ -19,7 +18,7 @@ export default function KPIStatsCards() {
     return null
   }
 
-    const stats = statsData?.data || {}
+
 
     const statsDataList = [
       {

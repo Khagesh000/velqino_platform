@@ -41,7 +41,7 @@ class AnalyticsService:
         date_filter = AnalyticsService._build_date_filter(start_date, end_date, range_type)
         
         # ==================== ORDER STATS ====================
-        orders = Order.objects.filter(wholesaler=user)
+        orders = Order.objects.filter(items__product__seller=user).distinct()
         if date_filter:
             orders = orders.filter(**date_filter)
         
@@ -54,7 +54,7 @@ class AnalyticsService:
         # Previous period for revenue change
         prev_date_filter = AnalyticsService._get_previous_period_filter(start_date, end_date, range_type)
         if prev_date_filter:
-            prev_orders = Order.objects.filter(wholesaler=user, status='delivered', **prev_date_filter)
+            prev_orders = Order.objects.filter(items__product__seller=user, status='delivered', **prev_date_filter).distinct()
             prev_revenue = prev_orders.aggregate(total=Sum('grand_total'))['total'] or Decimal('0')
             revenue_change = round(((total_revenue - prev_revenue) / prev_revenue) * 100, 1) if prev_revenue > 0 else 0
             revenue_trend = 'up' if revenue_change >= 0 else 'down'
@@ -138,7 +138,7 @@ class AnalyticsService:
     def _get_previous_period_filter(start_date=None, end_date=None, range_type=None):
         """Get filter for previous period for comparison"""
         from django.utils import timezone
-        from datetime import timedelta
+        from datetime import timedelta, datetime
         
         if start_date and end_date:
             duration = (datetime.strptime(end_date, '%Y-%m-%d') - datetime.strptime(start_date, '%Y-%m-%d')).days
@@ -174,7 +174,8 @@ class AnalyticsService:
         week_start = today - timedelta(days=7)
         month_start = today - timedelta(days=30)
         
-        orders = Order.objects.filter(wholesaler=user)
+        # ✅ FIXED: Use items__product__seller instead of wholesaler
+        orders = Order.objects.filter(items__product__seller=user).distinct()
         
         return {
             'today': orders.filter(created_at__date=today).count(),
@@ -192,7 +193,8 @@ class AnalyticsService:
         week_start = today - timedelta(days=7)
         month_start = today - timedelta(days=30)
         
-        delivered_orders = Order.objects.filter(wholesaler=user, status='delivered')
+        # ✅ FIXED: Use items__product__seller instead of wholesaler
+        delivered_orders = Order.objects.filter(items__product__seller=user, status='delivered').distinct()
         
         today_revenue = delivered_orders.filter(created_at__date=today).aggregate(
             total=Sum('grand_total')
@@ -220,6 +222,7 @@ class AnalyticsService:
         """Get product statistics"""
         from catalog.models import Product
         
+        # ✅ This is correct - no change needed
         products = Product.objects.filter(seller=user)
         
         return {

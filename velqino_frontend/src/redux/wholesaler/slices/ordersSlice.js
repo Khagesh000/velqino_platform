@@ -72,14 +72,22 @@ export const ordersApi = createApi({
             },
         }),
         
-        // Download invoice
         downloadInvoice: builder.mutation({
             async queryFn(orderId) {
                 try {
                     const response = await ordersAPI.downloadInvoice(orderId);
-                    return { data: response.data };
+                    // Handle blob here, never store it in Redux
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', `invoice-${orderId}.pdf`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                    return { data: { success: true, orderId } };
                 } catch (error) {
-                    return { error };
+                    return { error: { status: error.response?.status, message: error.message } };
                 }
             },
         }),

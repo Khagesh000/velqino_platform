@@ -152,11 +152,11 @@ def sales_analytics(request):
             end_date = next_month
         
         total = Order.objects.filter(
-            wholesaler=user,
+            items__product__seller=user,  # ← Changed from wholesaler=user
             status='delivered',
             created_at__date__gte=start_date,
             created_at__date__lt=end_date
-        ).aggregate(total=Sum('grand_total'))['total'] or 0
+        ).distinct().aggregate(total=Sum('grand_total'))['total'] or 0
         
         sales_data.append(float(total))
     
@@ -189,9 +189,9 @@ class CategoryPerformanceAPIView(APIView):
         
         # Get all order items from wholesaler's delivered orders
         order_items = OrderItem.objects.filter(
-            order__wholesaler=user,
+            order__items__product__seller=user,  # ← Changed from order__wholesaler=user
             order__status='delivered'
-        ).select_related('product__category')
+        ).distinct()
         
         # Aggregate by category
         category_data = {}
@@ -295,8 +295,8 @@ class RecentOrdersAPIView(APIView):
         per_page = int(request.GET.get('per_page', 10))
         
         orders = Order.objects.filter(
-            wholesaler=user
-        ).select_related('customer').order_by('-created_at')
+            items__product__seller=user  # ← Changed from wholesaler=user
+        ).distinct().select_related('customer').order_by('-created_at')
         
         paginator = Paginator(orders, per_page)
         page_obj = paginator.get_page(page)
@@ -360,7 +360,7 @@ class RecentActivityAPIView(APIView):
         activities = []
         
         # Get recent orders
-        recent_orders = Order.objects.filter(wholesaler=user).order_by('-created_at')[:20]
+        recent_orders = Order.objects.filter(items__product__seller=user).distinct().order_by('-created_at')[:20]
         for order in recent_orders:
             activities.append({
                 'id': f"order_{order.id}",
@@ -424,7 +424,10 @@ class TopCustomersAPIView(APIView):
         
         # Get all retailers who bought from this wholesaler
         customers_data = {}
-        orders = Order.objects.filter(wholesaler=user, status='delivered').select_related('customer')
+        orders = Order.objects.filter(
+            items__product__seller=user,  # ← Changed from wholesaler=user
+            status='delivered'
+        ).distinct().select_related('customer')
         
         for order in orders:
             customer = order.customer
@@ -493,7 +496,7 @@ class PendingTasksAPIView(APIView):
         # Pending Orders
         if task_type in ['all', 'orders']:
             pending_orders = Order.objects.filter(
-                wholesaler=user,
+                items__product__seller=user,
                 status__in=['pending', 'confirmed']
             ).order_by('-created_at')[:20]
             
@@ -603,9 +606,9 @@ class WithdrawalStatsAPIView(APIView):
         # Calculate available balance (total_revenue - total_withdrawn)
         from commerce.models import Order
         total_revenue = Order.objects.filter(
-            wholesaler=user,
+            items__product__seller=user,
             status='delivered'
-        ).aggregate(total=models.Sum('grand_total'))['total'] or Decimal('0')
+        ).distinct().aggregate(total=models.Sum('grand_total'))['total'] or Decimal('0')
         
         available_balance = total_revenue - total_withdrawn
         
@@ -632,9 +635,9 @@ class TopProductsAPIView(APIView):
         
         # Get delivered order items
         top_products = OrderItem.objects.filter(
-            order__wholesaler=user,
+            order__items__product__seller=user,
             order__status='delivered'
-        ).values('product_id', 'product_name').annotate(
+        ).distinct().values('product_id', 'product_name').annotate(
             total_sold=Sum('quantity'),
             total_revenue=Sum('total')
         ).order_by('-total_sold')[:10]
@@ -655,9 +658,9 @@ class GeographicSalesAPIView(APIView):
             return Response({'error': 'Unauthorized'}, status=403)
         
         geo_sales = Order.objects.filter(
-            wholesaler=user,
+            items__product__seller=user,
             status='delivered'
-        ).values('shipping_city').annotate(
+        ).distinct().values('shipping_city').annotate(
             total=Sum('grand_total'),
             orders=Count('id')
         ).order_by('-total')[:10]
@@ -683,11 +686,11 @@ class HourlySalesAPIView(APIView):
         hourly_data = []
         for hour in range(24):
             total = Order.objects.filter(
-                wholesaler=user,
+                items__product__seller=user,
                 status='delivered',
                 created_at__hour=hour,
                 created_at__gte=thirty_days_ago
-            ).aggregate(total=Sum('grand_total'))['total'] or 0
+            ).distinct().aggregate(total=Sum('grand_total'))['total'] or 0
             
             hourly_data.append({
                 'hour': f"{hour}:00",
@@ -734,7 +737,7 @@ class ExportReportAPIView(APIView):
             date_filter = {'created_at__date__range': [start_date, end_date]}
         
         if report_type == 'sales':
-            orders = Order.objects.filter(wholesaler=user, **date_filter)
+            orders = Order.objects.filter(items__product__seller=user, **date_filter).distinct()
             return [{
                 'Date': o.created_at.strftime('%Y-%m-%d'),
                 'Order ID': o.order_number,
@@ -755,7 +758,7 @@ class ExportReportAPIView(APIView):
             } for p in products]
         
         elif report_type == 'customer':
-            customers = Order.objects.filter(wholesaler=user).values('customer__email').distinct()
+            customers = Order.objects.filter(items__product__seller=user).distinct().values('customer__email').distinct()
             return [{'Customer': c['customer__email'], 'Orders': 0} for c in customers]
         
         return []

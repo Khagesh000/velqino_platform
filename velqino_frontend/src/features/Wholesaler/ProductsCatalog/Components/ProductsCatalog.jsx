@@ -454,79 +454,79 @@ console.log('selectedCategory:', selectedCategory); */
               </div>
 
               <div className="w-full h-32 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden mb-3 relative group">
-  {product.images && product.images.length > 0 ? (
-    <>
-      {/* Image Slider Container */}
-      <div 
-        ref={el => {
-          if (!imageScrollRefs.current) imageScrollRefs.current = {};
-          imageScrollRefs.current[product.id] = el;
-        }}
-        className="flex overflow-x-auto scroll-smooth h-full snap-x snap-mandatory hide-scrollbar"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {product.images.map((img, idx) => (
-          <img 
-            key={idx}
-            src={`${BASE_IMAGE_URL}${img.image}`}
-            alt={product.name}
-            className="w-full h-full object-cover flex-shrink-0 snap-start"
-            onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-          />
-        ))}
-      </div>
-      
-      {/* Left Scroll Button */}
-      {product.images.length > 1 && (
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const container = imageScrollRefs.current[product.id];
-            if (container) {
-              const scrollAmount = container.clientWidth;
-              container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-            }
-          }}
-          className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      )}
-      
-      {/* Right Scroll Button */}
-      {product.images.length > 1 && (
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const container = imageScrollRefs.current[product.id];
-            if (container) {
-              const scrollAmount = container.clientWidth;
-              container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-            }
-          }}
-          className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      )}
-      
-      {/* Image Counter Badge */}
-      {product.images.length > 1 && (
-        <div className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-full">
-          {product.images.length}
-        </div>
-      )}
-    </>
-  ) : (
-    <span className="text-4xl">📦</span>
-  )}
-</div>
+              {product.images && product.images.length > 0 ? (
+                <>
+                  {/* Image Slider Container */}
+                  <div 
+                    ref={el => {
+                      if (!imageScrollRefs.current) imageScrollRefs.current = {};
+                      imageScrollRefs.current[product.id] = el;
+                    }}
+                    className="flex overflow-x-auto scroll-smooth h-full snap-x snap-mandatory hide-scrollbar"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {product.images.map((img, idx) => (
+                      <img 
+                        key={idx}
+                        src={`${BASE_IMAGE_URL}${img.image}`}
+                        alt={product.name}
+                        className="w-full h-full object-cover flex-shrink-0 snap-start"
+                        onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Left Scroll Button */}
+                  {product.images.length > 1 && (
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const container = imageScrollRefs.current[product.id];
+                        if (container) {
+                          const scrollAmount = container.clientWidth;
+                          container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                        }
+                      }}
+                      className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {/* Right Scroll Button */}
+                  {product.images.length > 1 && (
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const container = imageScrollRefs.current[product.id];
+                        if (container) {
+                          const scrollAmount = container.clientWidth;
+                          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                        }
+                      }}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {/* Image Counter Badge */}
+                  {product.images.length > 1 && (
+                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-full">
+                      {product.images.length}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span className="text-4xl">📦</span>
+              )}
+            </div>
 
               <div className="mb-3">
                 <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>

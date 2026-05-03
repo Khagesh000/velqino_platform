@@ -68,11 +68,12 @@ class ProductService:
             queryset = Product.objects.select_related('category').all()
             
         elif user.role == 'customer':
-            # CUSTOMER - see only RETAILER products
+            # CUSTOMER - see only RETAILER products from RetailerProduct table
             cache_key = f"product:list:customer:{hash(str(filters))}:{page}:{per_page}"
-            queryset = Product.objects.filter(
-                seller__role='retailer'
-            ).select_related('category', 'seller')
+            from catalog.models import RetailerProduct
+            queryset = RetailerProduct.objects.filter(
+                is_active=True
+            ).select_related('retailer')
             
         elif user.role == 'retailer':
             # RETAILER - see only WHOLESALER products

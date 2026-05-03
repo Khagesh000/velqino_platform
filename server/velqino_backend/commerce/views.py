@@ -157,23 +157,29 @@ def create_order(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_orders(request):
-    """Get user orders"""
+    """Get user orders based on role"""
     from .models import Order
+    from django.db.models import Q
     
     user = request.user
     
     if user.role in ['admin', 'support']:
         orders = Order.objects.all().order_by('-created_at')
+    
     elif user.role == 'customer':
-        orders = Order.objects.filter(customer=user)
+        orders = Order.objects.filter(customer=user).order_by('-created_at')
+    
     elif user.role == 'retailer':
-        orders = Order.objects.filter(retailer=user)
+        orders = Order.objects.filter(retailer=user).order_by('-created_at')
+    
     elif user.role == 'wholesaler':
-        orders = Order.objects.filter(wholesaler=user)
+        # ✅ FIX: Wholesaler sees orders where ANY product belongs to them
+        orders = Order.objects.filter(
+            items__product__seller=user
+        ).distinct().order_by('-created_at')
+    
     else:
         orders = Order.objects.none()
-    
-    orders = orders.order_by('-created_at')
     
     data = []
     for order in orders:
@@ -294,6 +300,108 @@ def get_order(request, order_id):
         'status': 'success',
         'data': data
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_order(request, order_id):
+    """Cancel an order with stock restoration and status history"""
+    from .models import Order, OrderStatusHistory
+    from django.db import transaction
+    
+    user = request.user
+    CANCELLABLE_STATUSES = ['pending', 'confirmed', 'processing']
+
+    # Fetch order with prefetched items and products in one query
+    try:
+        if str(order_id).startswith('ORD-'):
+            order = (
+                Order.objects
+                .select_related('customer', 'retailer', 'wholesaler')
+                .prefetch_related('items__product')
+                .get(order_number=order_id)
+            )
+        else:
+            order = (
+                Order.objects
+                .select_related('customer', 'retailer', 'wholesaler')
+                .prefetch_related('items__product')
+                .get(id=order_id)
+            )
+    except Order.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    # Role-based permission check
+    if user.role == 'customer' and order.customer_id != user.id:
+        return Response({
+            'status': 'error',
+            'message': 'You are not authorized to cancel this order'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    elif user.role == 'retailer' and (not order.retailer or order.retailer_id != user.id):
+        return Response({
+            'status': 'error',
+            'message': 'You are not authorized to cancel this order'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    elif user.role == 'wholesaler':
+        # Wholesaler can cancel only if they own at least one product in the order
+        owns_item = order.items.filter(product__seller=user).exists()
+        if not owns_item:
+            return Response({
+                'status': 'error',
+                'message': 'You are not authorized to cancel this order'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+    # Check if order is in a cancellable state
+    if order.status not in CANCELLABLE_STATUSES:
+        return Response({
+            'status': 'error',
+            'message': f'Order cannot be cancelled. Current status: {order.status}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Already cancelled
+    if order.status == 'cancelled':
+        return Response({
+            'status': 'error',
+            'message': 'Order is already cancelled'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    cancel_reason = request.data.get('reason', 'Cancelled by user')
+
+    # Atomic transaction — cancel + restore stock together
+    with transaction.atomic():
+        # Restore stock for each item
+        for item in order.items.all():
+            product = item.product
+            product.stock += item.quantity
+            product.save(update_fields=['stock'])
+
+        # Update order status
+        order.status = 'cancelled'
+        order.save(update_fields=['status', 'updated_at'])
+
+        # Log status history
+        OrderStatusHistory.objects.create(
+            order=order,
+            status='cancelled',
+            notes=cancel_reason,
+            created_by=user
+        )
+
+    return Response({
+        'status': 'success',
+        'message': 'Order cancelled successfully',
+        'data': {
+            'order_number': order.order_number,
+            'status': order.status,
+            'reason': cancel_reason
+        }
+    }, status=status.HTTP_200_OK)
+
 
 
 @api_view(['POST'])

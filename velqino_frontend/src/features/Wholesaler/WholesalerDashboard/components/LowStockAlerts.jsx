@@ -1,19 +1,24 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useGetLowStockAlertsQuery } from '@/redux/wholesaler/slices/statsSlice';
+import React, { useState } from 'react'
 import { Package, AlertTriangle, RefreshCw, ChevronRight } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/LowStockAlerts.scss';
+import { toast } from 'react-toastify';
+import { useUpdateProductMutation } from '@/redux/wholesaler/slices/productsSlice';
 
-export default function LowStockAlerts() {
+export default function LowStockAlerts({ items, isLoading, page, onPageChange, refetch }) {
   const [hoveredItem, setHoveredItem] = useState(null);
-  const [page, setPage] = useState(1);
-  const { data: alertsData, isLoading, refetch } = useGetLowStockAlertsQuery({ page, per_page: 8 });
-
-  const lowStockItems = alertsData?.data || [];
-  const hasMore = alertsData?.has_next || false;
-  const totalCount = alertsData?.count || 0;
+  const [updateProduct] = useUpdateProductMutation();
   
+  const hasMore = items?.has_next || false;
+  const totalCount = items?.count || 0;
+  const currentPage = items?.page || 1;
+  const totalPages = items?.total_pages || 1;
+  const [showReorderModal, setShowReorderModal] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [reorderQuantity, setReorderQuantity] = useState(0)
+  const [isReordering, setIsReordering] = useState(false)
+
   const loadMore = () => {
       if (hasMore) {
           setPage(prev => prev + 1);
@@ -33,11 +38,46 @@ export default function LowStockAlerts() {
     return 'bg-accent-500';
   };
 
+  const handleReorder = (product) => {
+  setSelectedProduct(product)
+  setReorderQuantity(product.threshold * 2 || 10)
+  setShowReorderModal(true)
+}
+
+  const confirmReorder = async () => {
+  const productId = Number(selectedProduct?.id)
+  
+  if (!productId || reorderQuantity <= 0) {
+    toast.error('Invalid product or quantity')
+    return
+  }
+  
+  setIsReordering(true)
+  try {
+    const newStock = (selectedProduct.stock || 0) + reorderQuantity
+    
+    // ✅ Use productId (NOT id)
+    await updateProduct({ 
+      productId: productId, 
+      data: { stock: newStock } 
+    }).unwrap()
+    
+    toast.success(`Added ${reorderQuantity} units to ${selectedProduct.name}`)
+    setShowReorderModal(false)
+    refetch()
+  } catch (error) {
+    console.log('❌ Error:', error)
+    toast.error(error?.data?.message || 'Failed to update stock')
+  } finally {
+    setIsReordering(false)
+  }
+}
+
   if (isLoading) {
     return <div className="bg-white rounded-2xl p-6">Loading...</div>;
   }
 
-  if (lowStockItems.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-light p-6 text-center">
         <AlertTriangle size={32} className="text-success-500 mx-auto mb-3" />
@@ -66,7 +106,7 @@ export default function LowStockAlerts() {
         </button>
       </div>
 
-      {lowStockItems.length === 0 && (
+      {items.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Package size={32} className="text-green-500" />
@@ -77,10 +117,10 @@ export default function LowStockAlerts() {
       )}
 
       {/* Low Stock Grid */}
-      {lowStockItems.length > 0 && (
+      {items.length > 0 && (
   <>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
-        {lowStockItems.map((item) => (
+        {items.map((item) => (
           <div
             key={item.id}
             className={`group relative bg-surface-1 rounded-xl p-4 border border-light transition-all hover:shadow-md ${
@@ -132,7 +172,10 @@ export default function LowStockAlerts() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium rounded-lg transition-all hover:shadow-md">
+              <button 
+                onClick={() => handleReorder(item)}
+                className="flex-1 flex items-center justify-center gap-1 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium rounded-lg transition-all hover:shadow-md"
+              >
                 <Package size={14} />
                 <span>Reorder</span>
               </button>
@@ -154,17 +197,47 @@ export default function LowStockAlerts() {
       <div className="flex items-center justify-center mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-light">
         {hasMore && (
             <button onClick={loadMore} className="flex items-center gap-1 text-xs lg:text-sm text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
-                <span>Load more ({lowStockItems.length}/{totalCount})</span>
+                <span>Load more ({items.length}/{totalCount})</span>
                 <ChevronRight size={14} />
             </button>
         )}
 
-        {!hasMore && lowStockItems.length > 0 && (
+        {!hasMore && items.length > 0 && (
             <p className="text-xs text-tertiary text-center">All low stock products loaded</p>
         )}
       </div>
       </>
 )}
+
+{showReorderModal && selectedProduct && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="bg-white rounded-xl max-w-md w-full p-6">
+      <h3 className="text-lg font-semibold mb-2">Reorder Product</h3>
+      <p className="text-sm text-gray-500 mb-4">Product: <span className="font-medium">{selectedProduct.name}</span></p>
+      <p className="text-sm mb-2">Current Stock: <span className="font-medium">{selectedProduct.stock}</span></p>
+      <p className="text-sm mb-2">Threshold: <span className="font-medium">{selectedProduct.threshold}</span></p>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Quantity to Add</label>
+        <input
+          type="number"
+          value={reorderQuantity}
+          onChange={(e) => setReorderQuantity(parseInt(e.target.value) || 0)}
+          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-primary-500"
+          min="1"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => setShowReorderModal(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+        <button onClick={confirmReorder} disabled={isReordering} className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          {isReordering ? 'Processing...' : 'Confirm Reorder'}
+        </button>
+      </div>
     </div>
+  </div>
+)}
+
+    </div>
+
+    
   );
 }

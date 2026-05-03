@@ -16,7 +16,7 @@ urlpatterns = [
     path('orders/create/', views.create_order, name='create-order'),
     path('orders/', views.get_orders, name='get-orders'),
     path('orders/<str:order_id>/', views.get_order, name='get-order'),
-    
+    path('orders/<str:order_id>/cancel/', views.cancel_order, name='cancel-order'),
     # Customer orders
     path('orders/customer/create/', views.create_customer_order, name='create-customer-order'),
     path('orders/customer/list/', views.get_customer_orders, name='customer-orders'),
@@ -26,6 +26,8 @@ urlpatterns = [
     path('retailer/customers/', views.get_retailer_customers, name='retailer-customers'),
 
     path('orders/<str:order_id>/invoice/', views.download_invoice, name='download-invoice'),
+    path('orders/<str:order_id>/status/', views.update_order_status, name='update-order-status'),
+    path('orders/<str:order_id>/status-history/', views.get_order_status_history, name='order-status-history'),
 
     path('orders/<str:order_id>/status/', views.update_order_status, name='update-order-status'),
     path('orders/<str:order_id>/status-history/', views.get_order_status_history, name='order-status-history'),

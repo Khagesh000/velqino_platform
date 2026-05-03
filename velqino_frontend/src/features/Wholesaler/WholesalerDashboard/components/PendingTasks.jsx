@@ -1,28 +1,18 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useGetPendingTasksQuery } from '@/redux/wholesaler/slices/statsSlice';
 import { ClipboardList, Package, Clock, Wallet, AlertCircle, CheckCircle, ArrowRight, Timer, Loader2 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/PendingTasks.scss';
 
-export default function PendingTasks() {
+export default function PendingTasks({ tasks, isLoading, activeTab, page, onTabChange, onPageChange }) {
   const [hoveredTask, setHoveredTask] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
-  const [page, setPage] = useState(1);
   const perPage = 8;
   
-  const { data: tasksData, isLoading, refetch } = useGetPendingTasksQuery({ 
-    page, 
-    per_page: perPage, 
-    type: activeTab 
-  });
-  
-  const displayedTasks = tasksData?.data || [];
-  const hasMore = tasksData?.has_next || false;
-  const totalCount = tasksData?.count || 0;
-  const currentPage = tasksData?.page || 1;
-  const totalPages = tasksData?.total_pages || 1;
-  const stats = tasksData?.stats || { high: 0, medium: 0, low: 0, total: 0 };
+  const hasMore = tasks?.has_next || false;
+  const totalCount = tasks?.count || 0;
+  const currentPage = tasks?.page || 1;
+  const totalPages = tasks?.total_pages || 1;
+  const stats = tasks?.stats || {};
 
   const getPriorityIcon = (priority) => {
     switch(priority) {
@@ -66,13 +56,13 @@ export default function PendingTasks() {
 
   const loadMore = () => {
     if (hasMore) {
-      setPage(prev => prev + 1);
+      onPageChange(prev => prev + 1);
     }
   };
 
   const loadPrevious = () => {
     if (currentPage > 1) {
-      setPage(prev => prev - 1);
+      onPageChange(prev => prev - 1);
     }
   };
 
@@ -108,8 +98,8 @@ export default function PendingTasks() {
                   : 'text-tertiary hover:text-secondary'
               }`}
               onClick={() => {
-                setActiveTab(tab.id);
-                setPage(1);
+                onTabChange(tab.id);
+                onPageChange(1);
               }}
             >
               {tab.icon}
@@ -125,7 +115,7 @@ export default function PendingTasks() {
       </div>
 
       {/* Empty State */}
-      {displayedTasks.length === 0 && (
+      {tasks.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={32} className="text-green-500" />
@@ -136,13 +126,13 @@ export default function PendingTasks() {
       )}
 
       {/* Tasks Timeline */}
-      {displayedTasks.length > 0 && (
+      {tasks.length > 0 && (
         <>
           <div className="relative">
             <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-gradient-to-b from-primary-200 via-accent-200 to-success-200 rounded-full" />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 relative">
-              {displayedTasks.map((task) => (
+              {tasks.map((task) => (
                 <div
                   key={task.id}
                   className={`group relative flex items-start gap-3 pl-8 ${
@@ -225,7 +215,7 @@ export default function PendingTasks() {
           {totalCount > perPage && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-light">
               <div className="text-xs text-tertiary">
-                Showing {displayedTasks.length} of {totalCount} tasks
+                Showing {tasks.length} of {totalCount} tasks
               </div>
               <div className="flex items-center gap-2">
                 <button

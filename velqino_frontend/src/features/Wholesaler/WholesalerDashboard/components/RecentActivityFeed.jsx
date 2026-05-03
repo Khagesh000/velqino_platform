@@ -1,23 +1,19 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useGetRecentActivityQuery } from '@/redux/wholesaler/slices/statsSlice';
 import { Bell, Package, Wallet, MessageCircle, ShoppingBag, ChevronRight, Clock, Loader2 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/RecentActivityFeed.scss';
 
-export default function RecentActivityFeed() {
+export default function RecentActivityFeed({ activities, isLoading, page, onPageChange }) {
   const [hoveredItem, setHoveredItem] = useState(null);
-  const [page, setPage] = useState(1);
   const perPage = 8;
   
-  const { data: activityData, isLoading, refetch } = useGetRecentActivityQuery({ page, per_page: perPage });
-  
-  const activities = activityData?.data || [];
-  const hasMore = activityData?.has_next || false;
-  const totalCount = activityData?.count || 0;
-  const currentPage = activityData?.page || 1;
-  const totalPages = activityData?.total_pages || 1;
 
+  const hasMore = activities?.has_next || false;
+  const totalCount = activities?.count || 0;
+  const currentPage = activities?.page || 1;
+  const totalPages = activities?.total_pages || 1;
+  
   const getActivityIcon = (activity) => {
     const color = activity.color || 'primary';
     return (

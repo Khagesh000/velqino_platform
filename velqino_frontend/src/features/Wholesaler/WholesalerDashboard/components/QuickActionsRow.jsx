@@ -1,10 +1,26 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { PlusCircle, PackageCheck, BarChart3, Wallet, ArrowRight, Sparkles } from '../../../../utils/icons';
+import { useRouter } from 'next/navigation';
 import '../../../../styles/Wholesaler/WholesalerDashboard/QuickActions.scss'
 
-export default function QuickActionsRow() {
+export default function QuickActionsRow({ products, orders, stats }) {
   const [hoveredAction, setHoveredAction] = useState(null)
+  const router = useRouter();
+
+  // Calculate real stats
+  const productsAddedThisWeek = products.filter(p => {
+    const createdDate = new Date(p.created_at);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return createdDate >= weekAgo;
+  }).length;
+
+  const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length;
+  const urgentOrders = orders.filter(o => o.status === 'pending').length;
+
+  const revenueGrowth = stats?.revenue_change || 0;
+  const availableBalance = stats?.total_revenue || 0;
 
   const actions = [
     {
@@ -14,16 +30,18 @@ export default function QuickActionsRow() {
       color: 'primary',
       description: 'List new products',
       shortcut: '⌘ N',
-      stats: '12 added this week'
+      stats: `${productsAddedThisWeek} added this week`,
+      onClick: () => router.push('/wholesaler/productcatalog')
     },
     {
       id: 'process',
       label: 'Process Orders',
       icon: <PackageCheck size={22} />,
       color: 'success',
-      description: '12 pending orders',
+      description: `${pendingOrders} pending orders`,
       shortcut: '⌘ O',
-      stats: '5 urgent'
+      stats: `${urgentOrders} urgent`,
+      onClick: () => router.push('/wholesaler/ordermanagment')
     },
     {
       id: 'reports',
@@ -32,15 +50,17 @@ export default function QuickActionsRow() {
       color: 'accent',
       description: 'Analytics & insights',
       shortcut: '⌘ R',
-      stats: '↑ 23% growth'
+      stats: `${revenueGrowth > 0 ? '↑' : '↓'} ${Math.abs(revenueGrowth)}% growth`,
+      onClick: () => router.push('/wholesaler/analyticsreports')
     },
     {
       id: 'withdraw',
       label: 'Withdraw Earnings',
       icon: <Wallet size={22} />,
       color: 'warning',
-      description: '₹85,000 available',
-      stats: 'Settle by Mar 21'
+      description: `₹${availableBalance.toLocaleString()} available`,
+      stats: 'Settle by payout date',
+      onClick: () => router.push('/wholesaler/paymentsandpayouts')
     }
   ]
 
@@ -57,7 +77,6 @@ export default function QuickActionsRow() {
             <p className="header-subtitle">Frequently used tasks at your fingertips</p>
           </div>
         </div>
-       
       </div>
 
       {/* Actions Grid */}
@@ -68,7 +87,7 @@ export default function QuickActionsRow() {
             className={`action-card action-${action.color}`}
             onMouseEnter={() => setHoveredAction(action.id)}
             onMouseLeave={() => setHoveredAction(null)}
-            onClick={() => console.log(`Navigate to ${action.id}`)}
+            onClick={action.onClick}
           >
             {/* Background Gradient */}
             <div className="action-bg" />
@@ -94,9 +113,10 @@ export default function QuickActionsRow() {
                   <div 
                     className={`stats-progress stats-progress-${action.color}`}
                     style={{ 
-                      width: action.id === 'add' ? '65%' : 
-                             action.id === 'process' ? '40%' : 
-                             action.id === 'reports' ? '80%' : '30%' 
+                      width: action.id === 'add' ? `${Math.min(100, (productsAddedThisWeek / 20) * 100)}%` : 
+                             action.id === 'process' ? `${Math.min(100, (pendingOrders / 50) * 100)}%` : 
+                             action.id === 'reports' ? `${Math.min(100, Math.abs(revenueGrowth))}%` : 
+                             `${Math.min(100, (availableBalance / 100000) * 100)}%`
                     }}
                   />
                 </div>
@@ -120,15 +140,15 @@ export default function QuickActionsRow() {
       <div className="quick-tips">
         <div className="tip-item">
           <span className="tip-dot" />
-          <span className="tip-text">Recently added: 3 products</span>
+          <span className="tip-text">Recently added: {productsAddedThisWeek} products</span>
         </div>
         <div className="tip-item">
           <span className="tip-dot" />
-          <span className="tip-text">Orders processing: 5 items</span>
+          <span className="tip-text">Orders processing: {urgentOrders} items</span>
         </div>
         <div className="tip-item">
           <span className="tip-dot" />
-          <span className="tip-text">Reports ready: Monthly summary</span>
+          <span className="tip-text">Revenue {revenueGrowth > 0 ? 'up' : 'down'} {Math.abs(revenueGrowth)}% this period</span>
         </div>
       </div>
     </div>

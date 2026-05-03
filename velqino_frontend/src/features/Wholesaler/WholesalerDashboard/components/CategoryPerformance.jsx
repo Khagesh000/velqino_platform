@@ -3,14 +3,12 @@
 import React, { useState } from 'react'
 import { PieChart, Grid, TrendingUp, ArrowUpRight } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/CategoryPerformance.scss'
-import { useGetCategoryPerformanceQuery } from '@/redux/wholesaler/slices/statsSlice';
 
-export default function CategoryPerformance() {
+
+export default function CategoryPerformance({ data, isLoading }) {
   const [hoveredCategory, setHoveredCategory] = useState(null);
-  const { data: performanceData, isLoading } = useGetCategoryPerformanceQuery();
-  
-  const categories = performanceData?.data?.categories || [];
-  const totalRevenue = performanceData?.data?.total_revenue || '₹0';
+  const categories = data?.categories || [];
+  const totalRevenue = data?.total_revenue || '₹0';
   
   if (isLoading) {
     return (

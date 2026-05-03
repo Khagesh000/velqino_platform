@@ -1,24 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useGetTopCustomersQuery } from '@/redux/wholesaler/slices/statsSlice';
 import { Users, Mail, Phone, ChevronRight, Award, TrendingUp, Loader2 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/TopCustomersList.scss';
 
-export default function TopCustomersList() {
+export default function TopCustomersList({ customers, isLoading, currentPage, totalPages, totalCount, totalSpent, growth, onPageChange }) {
   const [hoveredCustomer, setHoveredCustomer] = useState(null);
-  const [page, setPage] = useState(1);
   const perPage = 6;
-  
-  const { data: customersData, isLoading, refetch } = useGetTopCustomersQuery({ page, per_page: perPage });
-  
-  const customers = customersData?.data || [];
-  const hasMore = customersData?.has_next || false;
-  const totalCount = customersData?.count || 0;
-  const currentPage = customersData?.page || 1;
-  const totalPages = customersData?.total_pages || 1;
-  const totalSpent = customersData?.total_spent || '₹0';
-  const growth = customersData?.growth || '0%';
+
+  const hasMore = currentPage < totalPages;
 
   const getAvatarBg = (color) => {
     switch(color) {
@@ -51,7 +41,7 @@ export default function TopCustomersList() {
     }
   };
 
-  if (isLoading && page === 1) {
+  if (isLoading && currentPage === 1) {
     return (
       <div className="bg-white rounded-2xl border border-light p-6 text-center">
         <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />

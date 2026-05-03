@@ -2,22 +2,28 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, Package, Grid, BarChart3, Users, Wallet, Settings, PlusCircle } from '../../../../utils/icons';
+import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, Package, Grid, BarChart3, Users, Wallet, Settings, PlusCircle, Upload } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
 import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import { useListRetailersQuery } from '@/redux/retailer/slices/retailerSlice';
-export default function WholesaleNavbar() {
+import ImportImagesModal from '../../ProductsCatalog/Modals/ImportImagesModal';
+import ImportModal from '../../ProductsCatalog/Modals/ImportModal';
+
+
+export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0);
   const navbarRef = useRef(null);
   const profileDropdownRef = useRef(null)
   const notificationsRef = useRef(null)
   const mobileMenuRef = useRef(null)
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
-
+  const [showImportDropdown, setShowImportDropdown] = useState(false)
+  const [showAddProductModal, setShowAddProductModal] = useState(false)
+  const [showImportImagesModal, setShowImportImagesModal] = useState(false)
+  const [showImportVideoModal, setShowImportVideoModal] = useState(false)
   const { data: ordersData } = useGetOrdersQuery();
   const pendingOrdersCount = ordersData?.data?.filter(order => order.status === 'pending' || order.status === 'confirmed').length || 0;
 
@@ -40,30 +46,28 @@ export default function WholesaleNavbar() {
   }, [])
 
   useEffect(() => {
-  const handleScroll = () => {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    
-    if (navbarRef.current) {
-      if (scrollTop > lastScrollTop && scrollTop > 80) {
-        // Scrolling down - hide navbar
-        navbarRef.current.classList.add('navbar-hidden');
-        navbarRef.current.classList.remove('navbar-visible');
-      } else {
-        // Scrolling up - show navbar
-        navbarRef.current.classList.add('navbar-visible');
-        navbarRef.current.classList.remove('navbar-hidden');
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (navbarRef.current) {
+        if (scrollTop > lastScrollTop && scrollTop > 80) {
+          navbarRef.current.classList.add('navbar-hidden');
+          navbarRef.current.classList.remove('navbar-visible');
+        } else {
+          navbarRef.current.classList.add('navbar-visible');
+          navbarRef.current.classList.remove('navbar-hidden');
+        }
       }
-    }
-    
-    setLastScrollTop(scrollTop <= 0 ? 0 : scrollTop);
-  };
+      
+      setLastScrollTop(scrollTop <= 0 ? 0 : scrollTop);
+    };
 
-  window.addEventListener('scroll', handleScroll);
-  
-  return () => {
-    window.removeEventListener('scroll', handleScroll);
-  };
-}, [lastScrollTop]);
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollTop]);
 
   // Notification data
   const notifications = [
@@ -81,43 +85,57 @@ export default function WholesaleNavbar() {
     { icon: <Package size={20} />, label: 'Orders Management', href: '/wholesaler/ordermanagment', badge: pendingOrdersCount > 0 ? pendingOrdersCount.toString() : null },
     { icon: <Grid size={20} />, label: 'Products Catalog', href: '/wholesaler/productcatalog', badge: null },
     { icon: <BarChart3 size={20} />, label: 'Analytics & Reports', href: '/wholesaler/analyticsreports', badge: null },
-     { icon: <Users size={20} />, label: 'Customers', href: '/wholesaler/customers', badge: customersCount > 0 ? customersCount.toString() : null },
+    { icon: <Users size={20} />, label: 'Customers', href: '/wholesaler/customers', badge: customersCount > 0 ? customersCount.toString() : null },
     { icon: <Wallet size={20} />, label: 'Payments & Payouts', href: '/wholesaler/paymentsandpayouts', badge: null },
     { icon: <Settings size={20} />, label: 'Settings', href: '/wholesaler/settings', badge: null },
   ]
+
+  const handleAddProduct = () => {
+    setShowAddProductModal(true)
+  }
+
+  const handleImportImages = () => {
+  setShowImportDropdown(false)
+  setShowImportImagesModal(true)
+}
+
+const handleImportVideo = () => {
+  setShowImportDropdown(false)
+  setShowImportVideoModal(true)
+}
 
   return (
     <>
       {/* Top Navigation Bar */}
       <nav
-      ref={navbarRef}
-      className="bg-card border-b border-light sticky top-0 z-navbar shadow-sm">
+        ref={navbarRef}
+        className="bg-card border-b border-light sticky top-0 z-navbar shadow-sm">
         <div className="px-4 lg:px-6">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Left Section: Logo & Mobile Menu Toggle */}
             <div className="flex items-center gap-3">
-                {/* Mobile Menu Toggle */}
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="lg:hidden p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
-                >
-                  {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+              {/* Mobile Menu Toggle */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
+              >
+                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
 
-                {/* Logo - Navigates to Home */}
-                <Link href="/" className="flex items-center gap-2">
-                  <span className="text-2xl font-bold bg-primary bg-clip-text text-primary-50">
-                    VELTRIX
-                  </span>
-                </Link>
+              {/* Logo - Navigates to Home */}
+              <Link href="/" className="flex items-center gap-2">
+                <span className="text-2xl font-bold bg-primary bg-clip-text text-primary-50">
+                  VELTRIX
+                </span>
+              </Link>
 
-                {/* Wholesale Badge - Navigates to Dashboard */}
-                <Link href="/wholesaler/wholesalerdashboard">
-                  <span className="hidden sm:inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-semibold rounded-full cursor-pointer hover:bg-accent-200 transition-colors">
-                    WHOLESALE
-                  </span>
-                </Link>
-              </div>
+              {/* Wholesale Badge - Navigates to Dashboard */}
+              <Link href="/wholesaler/wholesalerdashboard">
+                <span className="hidden sm:inline-block px-2 py-1 bg-accent-100 text-accent-700 text-xs font-semibold rounded-full cursor-pointer hover:bg-accent-200 transition-colors">
+                  WHOLESALE
+                </span>
+              </Link>
+            </div>
 
             {/* Center: Global Search - Hidden on Mobile */}
             <div className="hidden md:flex flex-1 max-w-xl mx-8">
@@ -132,22 +150,48 @@ export default function WholesaleNavbar() {
             </div>
 
             {/* Right Section: Icons & Profile */}
-                      <div className="flex items-center gap-2 lg:gap-3">
-            {/* Mobile Search Icon */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMobileSearchOpen(true)}
-                className="p-2.5 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-fast"
-              >
-                <Search size={20} />
-              </button>
-            </div>
+            <div className="flex items-center gap-2 lg:gap-3">
+              {/* Mobile Search Icon */}
+              <div className="md:hidden">
+                <button
+                  onClick={() => setIsMobileSearchOpen(true)}
+                  className="p-2.5 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-fast"
+                >
+                  <Search size={20} />
+                </button>
+              </div>
 
-            {/* Quick Add Product Button - Desktop */}
-            <button className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-inverse px-4 py-2 rounded-xl text-sm font-medium transition-fast shadow-sm hover:shadow-md">
-              <PlusCircle size={18} />
-              <span>Add Product</span>
-            </button>
+              {/* Quick Add Product Button - Desktop */}
+              <div className="flex items-center gap-2">
+            <div className="relative">
+  {/* Add Product Button with Dropdown */}
+  <button 
+    onClick={() => setShowImportDropdown(!showImportDropdown)}
+    className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-fast shadow-sm"
+  >
+    <PlusCircle size={16} />
+    <span>Add Product</span>
+  </button>
+  
+  {showImportDropdown && (
+    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+      <button 
+        onClick={handleImportImages}
+        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg"
+      >
+        📷 Bulk Images
+      </button>
+      <button 
+        onClick={handleImportVideo}
+        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg"
+      >
+        🎥 Bulk Video
+      </button>
+    </div>
+  )}
+</div>
+                
+              </div>
 
               {/* Notifications */}
               <div className="relative" ref={notificationsRef}>
@@ -257,33 +301,31 @@ export default function WholesaleNavbar() {
               </button>
             </div>
           </div>
-
-          
         </div>
       </nav>
 
       {/* Mobile Search Overlay */}
-{isMobileSearchOpen && (
-  <div className="md:hidden fixed inset-x-0 top-16 z-[100] bg-card border-b border-light px-4 py-3 animate-slide-down">
-    <div className="flex items-center gap-2">
-      <div className="flex-1 relative">
-        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" />
-        <input
-          type="text"
-          placeholder="Search orders, products, customers..."
-          className="w-full pl-10 pr-4 py-2.5 bg-surface-1 border border-medium rounded-xl text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-          autoFocus
-        />
-      </div>
-      <button
-        onClick={() => setIsMobileSearchOpen(false)}
-        className="p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
-      >
-        <X size={20} />
-      </button>
-    </div>
-  </div>
-)}
+      {isMobileSearchOpen && (
+        <div className="md:hidden fixed inset-x-0 top-16 z-[100] bg-card border-b border-light px-4 py-3 animate-slide-down">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 relative">
+              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" />
+              <input
+                type="text"
+                placeholder="Search orders, products, customers..."
+                className="w-full pl-10 pr-4 py-2.5 bg-surface-1 border border-medium rounded-xl text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                autoFocus
+              />
+            </div>
+            <button
+              onClick={() => setIsMobileSearchOpen(false)}
+              className="p-2 text-secondary hover:text-primary-600 hover:bg-primary-100 rounded-lg transition-fast"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar & Main Content Wrapper */}
       <div className="flex">
@@ -293,18 +335,13 @@ export default function WholesaleNavbar() {
           bg-card border-r border-light transition-all duration-300 z-sticky
           ${isSidebarCollapsed ? 'w-20' : 'w-64'}
         `}>
-          {/* Sidebar Toggle */}
-         {/*  <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="absolute -right-3 top-6 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center text-inverse shadow-md hover:bg-primary-600 transition-fast"
-          >
-            <ChevronDown size={14} className={`transform transition-transform ${isSidebarCollapsed ? 'rotate-90' : '-rotate-90'}`} />
-          </button> */}
-
           {/* Navigation Items */}
           <div className="py-6 px-3">
             {/* Quick Add Product - Mobile Inside Sidebar */}
-            <button className="lg:hidden w-full mb-4 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-inverse px-4 py-3 rounded-xl text-sm font-medium transition-fast">
+            <button 
+              onClick={handleAddProduct}
+              className="lg:hidden w-full mb-4 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-3 rounded-xl text-sm font-medium transition-fast"
+            >
               <PlusCircle size={18} />
               <span>Add Product</span>
             </button>
@@ -323,14 +360,14 @@ export default function WholesaleNavbar() {
                     <>
                       <span className="text-sm font-medium flex-1">{item.label}</span>
                       {item.badge && (
-                        <span className="px-2 py-0.5 bg-primary-500 text-inverse text-xs rounded-full">
+                        <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
                           {item.badge}
                         </span>
                       )}
                     </>
                   )}
                   {isSidebarCollapsed && item.badge && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-inverse text-xs rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
                       {item.badge}
                     </span>
                   )}
@@ -363,7 +400,7 @@ export default function WholesaleNavbar() {
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           `}>
             <div className="p-4 border-b border-light flex items-center justify-between">
-              <Link href="/wholesale" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <Link href="/" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 VELTRIX
               </Link>
               <button
@@ -386,7 +423,7 @@ export default function WholesaleNavbar() {
                     <span className="text-secondary">{item.icon}</span>
                     <span className="text-sm font-medium flex-1">{item.label}</span>
                     {item.badge && (
-                      <span className="px-2 py-0.5 bg-primary-500 text-inverse text-xs rounded-full">
+                      <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
                         {item.badge}
                       </span>
                     )}
@@ -405,52 +442,78 @@ export default function WholesaleNavbar() {
             </div>
           </aside>
         </div>
-
-        {/* Main Content Area with Dynamic Margin */}
-        <main className={`
-          flex-1 transition-all duration-300
-          lg:ml-${isSidebarCollapsed ? '20' : '64'}
-          w-full
-        `}>
-          {/* Your dashboard content goes here */}
-          <div className="p-4 lg:p-6">
-            {/* Page content */}
-          </div>
-        </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-light z-sticky ">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-light z-sticky">
         <div className="flex items-center justify-around px-2 py-1">
-          <Link href="/wholesale" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
+          <Link href="/wholesaler/wholesalerdashboard" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
             <Home size={20} />
             <span className="text-xs mt-1">Home</span>
           </Link>
-          <Link href="/wholesale/orders" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast relative">
+          <Link href="/wholesaler/ordermanagment" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast relative">
             <Package size={20} />
             <span className="text-xs mt-1">Orders</span>
-            <span className="absolute top-0 right-0 w-4 h-4 bg-primary-500 text-inverse text-xs rounded-full flex items-center justify-center">
-              12
-            </span>
+            {pendingOrdersCount > 0 && (
+              <span className="absolute top-0 right-0 w-4 h-4 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
+                {pendingOrdersCount}
+              </span>
+            )}
           </Link>
-          <button className="flex flex-col items-center p-2 -mt-5">
-            <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center text-inverse shadow-lg">
-              <PlusCircle size={24} />
-            </div>
-            <span className="text-xs mt-1">Add</span>
-          </button>
-          <Link href="/wholesale/products" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
+          <div className="relative">
+  <button 
+    onClick={() => setShowImportDropdown(!showImportDropdown)}
+    className="flex flex-col items-center p-2 -mt-5"
+  >
+    <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center text-white shadow-lg">
+      <PlusCircle size={24} />
+    </div>
+    <span className="text-xs mt-1">Add</span>
+  </button>
+  
+  {showImportDropdown && (
+    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+      <button 
+        onClick={handleImportImages}
+        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg"
+      >
+        📷 Bulk Images
+      </button>
+      <button 
+        onClick={handleImportVideo}
+        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg"
+      >
+        🎥 Bulk Video
+      </button>
+    </div>
+  )}
+</div>
+          <Link href="/wholesaler/productcatalog" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
             <Grid size={20} />
             <span className="text-xs mt-1">Products</span>
           </Link>
-          <Link href="/wholesale/profile" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
-            <User size={20} />
-            <span className="text-xs mt-1">Profile</span>
+          <Link href="/wholesaler/customers" className="flex flex-col items-center p-2 text-secondary hover:text-primary-600 transition-fast">
+            <Users size={20} />
+            <span className="text-xs mt-1">Customers</span>
           </Link>
         </div>
       </div>
 
-      
+      {/* Import Images Modal */}
+{showImportImagesModal && (
+  <ImportImagesModal 
+    onClose={() => setShowImportImagesModal(false)} 
+    categories={[]}
+  />
+)}
+
+{/* Import Video Modal */}
+{showImportVideoModal && (
+  <ImportModal 
+    onClose={() => setShowImportVideoModal(false)} 
+    categories={[]}
+  />
+)}
     </>
   )
 }
