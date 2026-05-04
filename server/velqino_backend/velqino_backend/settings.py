@@ -25,6 +25,13 @@ CORS_ALLOWED_ORIGINS = [
     "https://velqino-platform.vercel.app",
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "https://velqino-platform.vercel.app",
+    "https://velqino-backend.onrender.com",
+]
+
+
 AUTH_USER_MODEL = 'identity.User'
 
 SIMPLE_JWT = {

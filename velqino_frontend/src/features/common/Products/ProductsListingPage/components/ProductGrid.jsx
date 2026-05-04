@@ -243,6 +243,7 @@ export default function ProductGrid() {
   const loaderRef = useRef(null);
   const initialLoadDone = useRef(false);
   const [addToCart] = useAddToCartMutation();
+  const isMounted = useRef(false);
 
   const { data, isLoading, isFetching } = useGetProductsQuery({
     page: page,
@@ -253,12 +254,16 @@ export default function ProductGrid() {
   const totalPages = data?.data?.pagination?.total_pages || 1;
 
   // Append new products when data changes
-  useEffect(() => {
-    if (products.length > 0) {
+    useEffect(() => {
+    if (!isMounted.current && products.length > 0) {
+      isMounted.current = true;
+      setAllProducts(products);
+      setHasMore(page < totalPages);
+    } else if (products.length > 0) {
       setAllProducts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newProducts = products.filter(p => !existingIds.has(p.id));
-        return [...prev, ...newProducts];
+        return page === 1 ? products : [...prev, ...newProducts];
       });
       setHasMore(page < totalPages);
     }
