@@ -21,6 +21,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React/Next.js frontend
     "http://127.0.0.1:3000",
     "http://localhost:8000",
+    "https://velqino-backend.onrender.com",
 ]
 
 AUTH_USER_MODEL = 'identity.User'
