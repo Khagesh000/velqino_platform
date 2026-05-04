@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import DashboardHeader from './Components/DashboardHeader';
-import DashboardSidebar from './Components/DashboardSidebar';
-import StatsCards from './Components/StatsCards';
-import RecentOrdersTable from './Components/RecentOrdersTable';
-import QuickActions from './Components/QuickActions';
-import AccountActivity from './Components/AccountActivity';
-import ProfileOverviewCard from './Components/ProfileOverviewCard';
+import DashboardHeader from './components/DashboardHeader';
+import DashboardSidebar from './components/DashboardSidebar';
+import StatsCards from './components/StatsCards';
+import RecentOrdersTable from './components/RecentOrdersTable';
+import QuickActions from './components/QuickActions';
+import AccountActivity from './components/AccountActivity';
+import ProfileOverviewCard from './components/ProfileOverviewCard';
 import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import { useGetUserAddressesQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { useGetWishlistQuery } from '@/redux/wholesaler/slices/wishlistSlice';

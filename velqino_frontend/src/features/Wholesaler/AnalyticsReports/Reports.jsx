@@ -5,11 +5,11 @@ import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
 import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice'
 
 // Lazy load all non-critical components
-const OverviewCards = lazy(() => import('./Components/OverviewCards'))
-const ChartsSection = lazy(() => import('./Components/ChartsSection'))
-const ReportsSection = lazy(() => import('./Components/ReportsSection'))
-const DateRangeSelector = lazy(() => import('./Components/DateRangeSelector'))
-const ComparisonTool = lazy(() => import('./Components/ComparisonTool')) 
+const OverviewCards = lazy(() => import('./components/OverviewCards'))
+const ChartsSection = lazy(() => import('./components/ChartsSection'))
+const ReportsSection = lazy(() => import('./components/ReportsSection'))
+const DateRangeSelector = lazy(() => import('./components/DateRangeSelector'))
+const ComparisonTool = lazy(() => import('./components/ComparisonTool')) 
 
 // Loading placeholders with EXACT heights to prevent layout shift
 const OverviewPlaceholder = () => <div className="w-full h-[140px] bg-gray-50 rounded-xl animate-pulse" />

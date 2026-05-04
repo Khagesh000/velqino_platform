@@ -4,13 +4,13 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const CustomersList = lazy(() => import('./Components/CustomersList'))
-const LoyaltyProgram = lazy(() => import('./Components/LoyaltyProgram'))
-const CustomerDetails = lazy(() => import('./Components/CustomerDetails'))
-const WalkInTracker = lazy(() => import('./Components/WalkInTracker'))
-const FeedbackReviews = lazy(() => import('./Components/FeedbackReviews'))
-const BirthdayAnniversary = lazy(() => import('./Components/BirthdayAnniversary'))
-const QuickActions = lazy(() => import('./Components/QuickActions')) 
+const CustomersList = lazy(() => import('./components/CustomersList'))
+const LoyaltyProgram = lazy(() => import('./components/LoyaltyProgram'))
+const CustomerDetails = lazy(() => import('./components/CustomerDetails'))
+const WalkInTracker = lazy(() => import('./components/WalkInTracker'))
+const FeedbackReviews = lazy(() => import('./components/FeedbackReviews'))
+const BirthdayAnniversary = lazy(() => import('./components/BirthdayAnniversary'))
+const QuickActions = lazy(() => import('./components/QuickActions')) 
 
 // Loading placeholders
 const TablePlaceholder = () => <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />

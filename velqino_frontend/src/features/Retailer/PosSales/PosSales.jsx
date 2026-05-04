@@ -1,16 +1,16 @@
 "use client"
 
 import React, { useState, lazy, Suspense } from 'react'
-import RetailerNavbar from '../RetailerDashboard/Components/RetailerNavbar'
+import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all POS components
-const QuickSale = lazy(() => import('./Components/QuickSale'))
-const CartSection = lazy(() => import('./Components/CartSection'))
-const PaymentMethods = lazy(() => import('./Components/PaymentMethods'))
-const CustomerInfo = lazy(() => import('./Components/CustomerInfo'))
-const BillSummary = lazy(() => import('./Components/BillSummary'))
-const RecentSale = lazy(() => import('./Components/RecentSale'))
-const HoldCart = lazy(() => import('./Components/HoldCart')) 
+const QuickSale = lazy(() => import('./components/QuickSale'))
+const CartSection = lazy(() => import('./components/CartSection'))
+const PaymentMethods = lazy(() => import('./components/PaymentMethods'))
+const CustomerInfo = lazy(() => import('./components/CustomerInfo'))
+const BillSummary = lazy(() => import('./components/BillSummary'))
+const RecentSale = lazy(() => import('./components/RecentSale'))
+const HoldCart = lazy(() => import('./components/HoldCart')) 
 
 // Loading placeholders
 const QuickSalePlaceholder = () => <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />

@@ -2,11 +2,11 @@
 
 import { useEffect } from 'react';
 import { useGetProductQuery } from '@/redux/wholesaler/slices/productsSlice';
-import ProductGallery from './Components/ProductGallery';
-import ProductInfo from './Components/ProductInfo';
-import ProductTabs from './Components/ProductTabs';
-import RelatedProducts from './Components/RelatedProducts';
-import RecentlyViewed, { addToRecentlyViewed } from './Components/RecentlyViewed';
+import ProductGallery from './components/ProductGallery';
+import ProductInfo from './components/ProductInfo';
+import ProductTabs from './components/ProductTabs';
+import RelatedProducts from './components/RelatedProducts';
+import RecentlyViewed, { addToRecentlyViewed } from './components/RecentlyViewed';
 
 export default function ProductDetailPage({ productId }) {
   console.log('Received productId:', productId);

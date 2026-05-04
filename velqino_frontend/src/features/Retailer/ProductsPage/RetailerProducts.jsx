@@ -4,13 +4,13 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const ProductsGrid = lazy(() => import('./Components/ProductsGrid'))
-const QuickActionsBar = lazy(() => import('./Components/QuickActionsBar'))
-const StockAlerts = lazy(() => import('./Components/StockAlerts'))
-const Categories = lazy(() => import('./Components/Categories'))
-const ProductDetails = lazy(() => import('./Components/ProductDetails'))
-const BulkPriceUpdate = lazy(() => import('./Components/BulkPriceUpdate'))
-const BarcodePrinting = lazy(() => import('./Components/BarcodePrinting')) 
+const ProductsGrid = lazy(() => import('./components/ProductsGrid'))
+const QuickActionsBar = lazy(() => import('./components/QuickActionsBar'))
+const StockAlerts = lazy(() => import('./components/StockAlerts'))
+const Categories = lazy(() => import('./components/Categories'))
+const ProductDetails = lazy(() => import('./components/ProductDetails'))
+const BulkPriceUpdate = lazy(() => import('./components/BulkPriceUpdate'))
+const BarcodePrinting = lazy(() => import('./components/BarcodePrinting')) 
 
 // Loading placeholders
 const GridPlaceholder = () => <div className="w-full h-[500px] bg-gray-100 rounded-xl animate-pulse" />

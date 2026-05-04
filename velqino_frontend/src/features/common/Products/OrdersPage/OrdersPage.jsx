@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import { ShoppingBag, Package, Filter, X } from '../../../../utils/icons';
-import OrderCard from './Components/OrderCard';
+import OrderCard from './components/OrderCard';
 
 export default function OrdersPage() {
   const router = useRouter();

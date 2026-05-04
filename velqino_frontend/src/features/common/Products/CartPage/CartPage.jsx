@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGetCartQuery, useUpdateCartItemMutation, useRemoveCartItemMutation, useApplyCouponMutation, useRemoveCouponMutation } from '@/redux/wholesaler/slices/cartSlice';
-import CartItemsList from './Components/CartItemsList';
-import CartSummary from './Components/CartSummary';
-import EmptyCart from './Components/EmptyCart';
-import RecommendedProducts from './Components/RecommendedProducts';
+import CartItemsList from './components/CartItemsList';
+import CartSummary from './components/CartSummary';
+import EmptyCart from './components/EmptyCart';
+import RecommendedProducts from './components/RecommendedProducts';
 import { toast } from 'react-toastify';
 
 export default function CartPage() {

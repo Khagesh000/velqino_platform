@@ -4,13 +4,13 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const SalesReport = lazy(() => import('./Components/SalesReport'))
-const ProductReport = lazy(() => import('./Components/ProductReport'))
-const CustomerReport = lazy(() => import('./Components/CustomerReport'))
-const ProfitLoss = lazy(() => import('./Components/ProfitLoss'))
-const TaxReport = lazy(() => import('./Components/TaxReport'))
-const StaffPerformance = lazy(() => import('./Components/StaffPerformance'))
-const ExportOptions = lazy(() => import('./Components/ExportOptions')) 
+const SalesReport = lazy(() => import('./components/SalesReport'))
+const ProductReport = lazy(() => import('./components/ProductReport'))
+const CustomerReport = lazy(() => import('./components/CustomerReport'))
+const ProfitLoss = lazy(() => import('./components/ProfitLoss'))
+const TaxReport = lazy(() => import('./components/TaxReport'))
+const StaffPerformance = lazy(() => import('./components/StaffPerformance'))
+const ExportOptions = lazy(() => import('./components/ExportOptions')) 
 
 // Loading placeholders
 const ChartPlaceholder = () => <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />

@@ -4,11 +4,11 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const SuppliersList = lazy(() => import('./Components/SuppliersList'))
-const SupplierDetails = lazy(() => import('./Components/SupplierDetails'))
-const PurchaseOrders = lazy(() => import('./Components/PurchaseOrders'))
-const ReorderSuggestions = lazy(() => import('./Components/ReorderSuggestions'))
-const PaymentTracking = lazy(() => import('./Components/PaymentTracking'))
+const SuppliersList = lazy(() => import('./components/SuppliersList'))
+const SupplierDetails = lazy(() => import('./components/SupplierDetails'))
+const PurchaseOrders = lazy(() => import('./components/PurchaseOrders'))
+const ReorderSuggestions = lazy(() => import('./components/ReorderSuggestions'))
+const PaymentTracking = lazy(() => import('./components/PaymentTracking'))
 
 // Loading placeholders
 const TablePlaceholder = () => <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />

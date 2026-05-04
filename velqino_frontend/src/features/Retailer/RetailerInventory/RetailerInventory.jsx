@@ -4,13 +4,13 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const StockOverview = lazy(() => import('./Components/StockOverview'))
-const StockMovement = lazy(() => import('./Components/StockMovement'))
-const ReorderList = lazy(() => import('./Components/ReorderList'))
-const SupplierInfo = lazy(() => import('./Components/SupplierInfo'))
-const StockTake = lazy(() => import('./Components/StockTake'))
-const ExpiryTracking = lazy(() => import('./Components/ExpiryTracking'))
-const InwardStock = lazy(() => import('./Components/InwardStock')) 
+const StockOverview = lazy(() => import('./components/StockOverview'))
+const StockMovement = lazy(() => import('./components/StockMovement'))
+const ReorderList = lazy(() => import('./components/ReorderList'))
+const SupplierInfo = lazy(() => import('./components/SupplierInfo'))
+const StockTake = lazy(() => import('./components/StockTake'))
+const ExpiryTracking = lazy(() => import('./components/ExpiryTracking'))
+const InwardStock = lazy(() => import('./components/InwardStock')) 
 
 // Loading placeholders
 const CardPlaceholder = () => <div className="w-full h-[180px] bg-gray-100 rounded-xl animate-pulse" />

@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import ProductTopBar from './Components/ProductTopBar'
-import ProductFilters from './Components/ProductFilters'
-import ProductGrid from './Components/ProductGrid'
+import ProductTopBar from './components/ProductTopBar'
+import ProductFilters from './components/ProductFilters'
+import ProductGrid from './components/ProductGrid'
 import { X } from '../../../../utils/icons'
 
 export default function ProductListingPage() {

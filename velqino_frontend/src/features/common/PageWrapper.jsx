@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import Navbar from './Navbar';
-import Footer from './HomePage/Components/Footer';
+import Footer from './HomePage/components/Footer';
 
 export default function PageWrapper({ children }) {
   const [navbarHeight, setNavbarHeight] = useState(0);

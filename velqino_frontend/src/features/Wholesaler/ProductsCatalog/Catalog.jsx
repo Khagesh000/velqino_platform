@@ -9,12 +9,12 @@ import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice'
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
 
 // Lazy load all non-critical components
-const ProductsCatalog = lazy(() => import('./Components/ProductsCatalog'))
-const QuickActionsBar = lazy(() => import('./Components/QuickActionsBar'))
-const ProductsTable = lazy(() => import('./Components/ProductTables'))
-const ProductEditModal = lazy(() => import('./Components/ProductEditModal'))
-const CategoriesManager = lazy(() => import('./Components/CategoriesManager'))
-const BulkEditTool = lazy(() => import('./Components/BulkEditTool')) 
+const ProductsCatalog = lazy(() => import('./components/ProductsCatalog'))
+const QuickActionsBar = lazy(() => import('./components/QuickActionsBar'))
+const ProductsTable = lazy(() => import('./components/ProductTables'))
+const ProductEditModal = lazy(() => import('./components/ProductEditModal'))
+const CategoriesManager = lazy(() => import('./components/CategoriesManager'))
+const BulkEditTool = lazy(() => import('./components/BulkEditTool')) 
 
 // Loading placeholders with EXACT heights to prevent layout shift
 const CatalogPlaceholder = () => <div className="w-full h-[600px] bg-gray-50 rounded-xl animate-pulse" />

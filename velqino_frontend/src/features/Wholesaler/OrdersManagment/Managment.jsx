@@ -4,10 +4,10 @@ import React, { useState, lazy, Suspense, useEffect } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
 import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice'
 // Lazy load all non-critical components
-const OrdersFilters = lazy(() => import('./Components/OrdersFilters'))
-const OrdersTable = lazy(() => import('./Components/OrdersTable'))
-const OrderDetailsPanel = lazy(() => import('./Components/OrderDetailsPanel'))
-const BulkActions = lazy(() => import('./Components/BulkActions'))
+const OrdersFilters = lazy(() => import('./components/OrdersFilters'))
+const OrdersTable = lazy(() => import('./components/OrdersTable'))
+const OrderDetailsPanel = lazy(() => import('./components/OrderDetailsPanel'))
+const BulkActions = lazy(() => import('./components/BulkActions'))
 
 // Loading placeholders with EXACT heights to prevent layout shift
 const FiltersPlaceholder = () => <div className="w-full h-[120px] bg-gray-50 rounded-xl animate-pulse" />

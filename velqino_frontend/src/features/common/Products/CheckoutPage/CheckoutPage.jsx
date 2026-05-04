@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
 import { useCreateOrderMutation } from '@/redux/wholesaler/slices/ordersSlice';
 import { ArrowLeft, ShoppingCart } from '../../../../utils/icons';
-import CheckoutSteps from './Components/CheckoutSteps';
-import AddressSection from './Components/AddressSection';
-import DeliverySection from './Components/DeliverySection';
-import PaymentSection from './Components/PaymentSection';
-import OrderSummary from './Components/OrderSummary';
-import OrderConfirmation from './Components/OrderConfirmation';
+import CheckoutSteps from './components/CheckoutSteps';
+import AddressSection from './components/AddressSection';
+import DeliverySection from './components/DeliverySection';
+import PaymentSection from './components/PaymentSection';
+import OrderSummary from './components/OrderSummary';
+import OrderConfirmation from './components/OrderConfirmation';
 import { toast } from 'react-toastify';
 
 export default function CheckoutPage() {

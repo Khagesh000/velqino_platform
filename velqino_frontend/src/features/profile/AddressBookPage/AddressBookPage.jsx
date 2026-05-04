@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useGetUserAddressesQuery, useDeleteAddressMutation } from '../../../redux/wholesaler/slices/productsSlice';
 import { MapPin, Plus, Loader2 } from '../../../utils/icons';
-import AddressCard from './Components/AddressCard';
-import AddressFormModal from './Components/AddressFormModal';
+import AddressCard from './components/AddressCard';
+import AddressFormModal from './components/AddressFormModal';
 import { toast } from 'react-toastify';
 
 export default function AddressBookPage() {

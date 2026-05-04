@@ -4,14 +4,14 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const StoreProfile = lazy(() => import('./Components/StoreProfile'))
-const PosSettings = lazy(() => import('./Components/PosSettings'))
-const TaxSettings = lazy(() => import('./Components/TaxSettings'))
-const DiscountSettings = lazy(() => import('./Components/DiscountSettings'))
-const ReceiptCustomization = lazy(() => import('./Components/ReceiptCustomization'))
-const BackupRestore = lazy(() => import('./Components/BackupRestore'))
-const StaffAccess = lazy(() => import('./Components/StaffAccess'))
-const NotificationPreferences = lazy(() => import('./Components/NotificationPreferences'))
+const StoreProfile = lazy(() => import('./components/StoreProfile'))
+const PosSettings = lazy(() => import('./components/PosSettings'))
+const TaxSettings = lazy(() => import('./components/TaxSettings'))
+const DiscountSettings = lazy(() => import('./components/DiscountSettings'))
+const ReceiptCustomization = lazy(() => import('./components/ReceiptCustomization'))
+const BackupRestore = lazy(() => import('./components/BackupRestore'))
+const StaffAccess = lazy(() => import('./components/StaffAccess'))
+const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'))
 
 // Loading placeholders
 const CardPlaceholder = () => <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />

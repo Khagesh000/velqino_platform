@@ -6,15 +6,15 @@ import { useFetchProfileQuery } from '@/redux/wholesaler/slices/wholesalerSlice'
 
 // Lazy load all non-critical components
 const ProfileSettings = lazy(() => import('./components/ProfileSettings'))
-const AccountSecurity = lazy(() => import('./Components/AccountSecurity'))
-const BankDetails = lazy(() => import('./Components/BankDetails'))
-const TaxInformation = lazy(() => import('./Components/TaxInformation'))
-const NotificationPreferences = lazy(() => import('./Components/NotificationPreferences'))
-const TeamManagement = lazy(() => import('./Components/TeamManagement'))
-const APIAccess = lazy(() => import('./Components/APIAccess'))
-const ShippingSettings = lazy(() => import('./Components/ShippingSettings'))
-const BillingSubscription = lazy(() => import('./Components/BillingSubscription'))
-const StoreCustomization = lazy(() => import('./Components/StoreCustomization'))
+const AccountSecurity = lazy(() => import('./components/AccountSecurity'))
+const BankDetails = lazy(() => import('./components/BankDetails'))
+const TaxInformation = lazy(() => import('./components/TaxInformation'))
+const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'))
+const TeamManagement = lazy(() => import('./components/TeamManagement'))
+const APIAccess = lazy(() => import('./components/APIAccess'))
+const ShippingSettings = lazy(() => import('./components/ShippingSettings'))
+const BillingSubscription = lazy(() => import('./components/BillingSubscription'))
+const StoreCustomization = lazy(() => import('./components/StoreCustomization'))
 
 // Loading placeholders
 const ProfilePlaceholder = () => <div className="w-full h-[500px] bg-gray-50 rounded-xl animate-pulse" />

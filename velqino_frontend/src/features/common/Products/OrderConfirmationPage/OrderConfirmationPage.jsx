@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useGetOrderQuery, useDownloadInvoiceMutation } from '@/redux/wholesaler/slices/ordersSlice';
 import { Download, ShoppingBag, FileText, CheckCircle, Loader2 } from '../../../../utils/icons';
-import SuccessAnimation from './Components/SuccessAnimation';
-import OrderDetailsTable from './Components/OrderDetailsTable';
-import ShippingCard from './Components/ShippingCard';
-import PriceBreakdown from './Components/PriceBreakdown';
+import SuccessAnimation from './components/SuccessAnimation';
+import OrderDetailsTable from './components/OrderDetailsTable';
+import ShippingCard from './components/ShippingCard';
+import PriceBreakdown from './components/PriceBreakdown';
 import { toast } from 'react-toastify';
 
 export default function OrderConfirmationPage({ orderId }) {

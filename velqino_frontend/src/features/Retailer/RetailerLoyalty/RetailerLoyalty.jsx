@@ -4,11 +4,11 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const ProgramSettings = lazy(() => import('./Components/ProgramSettings'))
-const MemberList = lazy(() => import('./Components/MemberList'))
-const PointsTransaction = lazy(() => import('./Components/PointsTransaction'))
-const RewardsCatalog = lazy(() => import('./Components/RewardsCatalog'))
-const Campaigns = lazy(() => import('./Components/Campaigns'))
+const ProgramSettings = lazy(() => import('./components/ProgramSettings'))
+const MemberList = lazy(() => import('./components/MemberList'))
+const PointsTransaction = lazy(() => import('./components/PointsTransaction'))
+const RewardsCatalog = lazy(() => import('./components/RewardsCatalog'))
+const Campaigns = lazy(() => import('./components/Campaigns'))
 
 // Loading placeholders
 const TablePlaceholder = () => <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />

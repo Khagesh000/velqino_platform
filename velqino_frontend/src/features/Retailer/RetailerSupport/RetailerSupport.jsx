@@ -4,10 +4,10 @@ import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 
 // Lazy load all components
-const HelpCenter = lazy(() => import('./Components/HelpCenter'))
-const ContactSupport = lazy(() => import('./Components/ContactSupport'))
-const KnowledgeBase = lazy(() => import('./Components/KnowledgeBase'))
-const SystemStatus = lazy(() => import('./Components/SystemStatus'))
+const HelpCenter = lazy(() => import('./components/HelpCenter'))
+const ContactSupport = lazy(() => import('./components/ContactSupport'))
+const KnowledgeBase = lazy(() => import('./components/KnowledgeBase'))
+const SystemStatus = lazy(() => import('./components/SystemStatus'))
 
 // Loading placeholders
 const CardPlaceholder = () => <div className="w-full h-[350px] bg-gray-100 rounded-xl animate-pulse" />

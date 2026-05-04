@@ -3,16 +3,16 @@
 import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from './components/RetailerNavbar'
 import RetailerKPIStatsCards from './components/RetailerKPIStatsCards'
-import RetailerQuickActionsRow from './Components/RetailerQuickActionsRow' 
+import RetailerQuickActionsRow from './components/RetailerQuickActionsRow' 
 
 // Lazy load all non-critical components
-const DailySalesChart = lazy(() => import('./Components/DailySalesChart'))
-const TopSellingProducts = lazy(() => import('./Components/TopSellingProducts'))
-const RecentTransactions = lazy(() => import('./Components/RecentTransactions'))
-const LowStockAlerts = lazy(() => import('./Components/LowStockAlerts'))
-const CustomerActivity = lazy(() => import('./Components/CustomerActivity'))
-const TodaysSummary = lazy(() => import('./Components/TodaysSummary'))
-const QuickReorder = lazy(() => import('./Components/QuickReorder')) 
+const DailySalesChart = lazy(() => import('./components/DailySalesChart'))
+const TopSellingProducts = lazy(() => import('./components/TopSellingProducts'))
+const RecentTransactions = lazy(() => import('./components/RecentTransactions'))
+const LowStockAlerts = lazy(() => import('./components/LowStockAlerts'))
+const CustomerActivity = lazy(() => import('./components/CustomerActivity'))
+const TodaysSummary = lazy(() => import('./components/TodaysSummary'))
+const QuickReorder = lazy(() => import('./components/QuickReorder')) 
 
 // Loading placeholders with EXACT heights to prevent layout shift
 const ChartPlaceholder = () => <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />
