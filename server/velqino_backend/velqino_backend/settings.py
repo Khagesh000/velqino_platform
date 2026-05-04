@@ -154,8 +154,7 @@ WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 import dj_database_url
 
 DATABASE_URL = os.getenv('DATABASE_URL')
-print(f"🔍 DATABASE_URL VALUE: {DATABASE_URL}")
-print(f"🔍 ALL ENV KEYS: {[k for k in os.environ.keys() if 'DATA' in k or 'DB' in k or 'MYSQL' in k]}")
+
 
 if DATABASE_URL:
     DATABASES = {
