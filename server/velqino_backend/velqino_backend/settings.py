@@ -31,8 +31,33 @@ CSRF_TRUSTED_ORIGINS = [
     "https://velqino-backend.onrender.com",
 ]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# CSRF cookie settings (must match what we saw)
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_AGE = 31449600  # 1 year in seconds
+CSRF_COOKIE_DOMAIN = None  # Allow all subdomains
+CSRF_COOKIE_PATH = '/'
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False  # MUST be False
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+CSRF_USE_SESSIONS = False
+CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
 
 AUTH_USER_MODEL = 'identity.User'
+
+
+# Important: Disable CSRF token regeneration on each request
+CSRF_COOKIE_REFRESH_ON_EACH_REQUEST = False  # Django 4.1+ only
+
+# If using Django 4.0+, also add:
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+
 
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
