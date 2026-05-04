@@ -151,21 +151,35 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 
-# Database Configuration
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'veltrix_db'),
-        'USER': os.getenv('DB_USER', 'veltrix_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'veltrix@123'),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '3306'),
-        'CONN_MAX_AGE': 300,
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+import dj_database_url
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    # Railway MySQL on Render
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=300,
+            engine='django.db.backends.mysql'
+        )
+    }
+else:
+    # Local MySQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', 'veltrix_db'),
+            'USER': os.getenv('DB_USER', 'veltrix_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'veltrix@123'),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+            'CONN_MAX_AGE': 300,
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            }
         }
     }
-}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
