@@ -160,29 +160,67 @@ def get_orders(request):
     """Get user orders based on role"""
     from .models import Order
     from django.db.models import Q
-    
+    from django.core.paginator import Paginator
+
     user = request.user
-    
+
     if user.role in ['admin', 'support']:
-        orders = Order.objects.all().order_by('-created_at')
-    
+        orders = Order.objects.all()
     elif user.role == 'customer':
-        orders = Order.objects.filter(customer=user).order_by('-created_at')
-    
+        orders = Order.objects.filter(customer=user)
     elif user.role == 'retailer':
-        orders = Order.objects.filter(retailer=user).order_by('-created_at')
-    
+        orders = Order.objects.filter(retailer=user)
     elif user.role == 'wholesaler':
-        # ✅ FIX: Wholesaler sees orders where ANY product belongs to them
-        orders = Order.objects.filter(
-            items__product__seller=user
-        ).distinct().order_by('-created_at')
-    
+        orders = Order.objects.filter(items__product__seller=user).distinct()
     else:
         orders = Order.objects.none()
-    
+
+    # Filter by status
+    status_filter = request.query_params.get('status')
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+
+    # Filter by payment status
+    payment_filter = request.query_params.get('payment_status')
+    print('payment_filter:', payment_filter)  # remove after fix
+    if payment_filter:
+        orders = orders.filter(payment_status=payment_filter)
+
+    # Filter by search
+    search = request.query_params.get('search')
+    if search:
+        orders = orders.filter(
+            Q(order_number__icontains=search) |
+            Q(customer__email__icontains=search) |
+            Q(shipping_name__icontains=search)
+        )
+
+    # Filter by date range
+    days = request.query_params.get('days')
+    if days and days != 'custom':
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(days=int(days))
+        orders = orders.filter(created_at__gte=cutoff)
+
+    # Filter by amount range
+    min_amount = request.query_params.get('min_amount')
+    max_amount = request.query_params.get('max_amount')
+    if min_amount:
+        orders = orders.filter(grand_total__gte=float(min_amount))
+    if max_amount:
+        orders = orders.filter(grand_total__lte=float(max_amount))
+
+    orders = orders.order_by('-created_at')
+
+    # Pagination
+    page = int(request.query_params.get('page', 1))
+    per_page = int(request.query_params.get('per_page', 10))
+    paginator = Paginator(orders, per_page)
+    page_obj = paginator.get_page(page)
+
     data = []
-    for order in orders:
+    for order in page_obj.object_list:
         data.append({
             'id': order.id,
             'order_number': order.order_number,
@@ -192,10 +230,18 @@ def get_orders(request):
             'created_at': order.created_at,
             'items_count': order.items.count()
         })
-    
+
     return Response({
         'status': 'success',
-        'data': data
+        'data': data,
+        'pagination': {
+            'total': paginator.count,
+            'total_pages': paginator.num_pages,
+            'page': page,
+            'per_page': per_page,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous(),
+        }
     })
 
 @api_view(['GET'])

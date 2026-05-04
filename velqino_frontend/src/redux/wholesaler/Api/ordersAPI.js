@@ -6,8 +6,7 @@ const ordersAPI = {
         API.post('commerce/orders/create/', data),
     
     // Get all user orders
-    getOrders: () =>
-        API.get('commerce/orders/'),
+    getOrders: (params) => API.get('commerce/orders/', { params }),
     
     // Get single order by ID or order number
     getOrder: (orderId) =>

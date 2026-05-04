@@ -45,8 +45,8 @@ export default function Management() {
             <Suspense fallback={<FiltersPlaceholder />}>
               <OrdersFilters 
               onFilterChange={(filters) => {
-                console.log('Filters applied:', filters);
-                // Pass filters to OrdersTable
+                setActiveFilters(filters);
+                
               }}
               totalOrders={ordersData?.data?.length || 0}
               />
