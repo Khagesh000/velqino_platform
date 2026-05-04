@@ -67,7 +67,7 @@ CORS_ALLOW_HEADERS = [
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-8^63izdm-0w%(67-v(r7jp5h)2(8idy4mse+y-t4gi-0c7zuuh')
+SECRET_KEY = os.getenv('SECRET_KEY', 'i9!k6b_xqtab_)c5l3exew!z7-5*4p06lqxau!^ny9st#9_$_4')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
