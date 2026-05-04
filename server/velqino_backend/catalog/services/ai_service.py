@@ -8,6 +8,11 @@ import tempfile
 import logging
 import cv2
 import numpy as np
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 from django.core.files.base import ContentFile
@@ -20,7 +25,6 @@ from catalog.models import Product, ProductVariant, ProductImage
 from PIL import ImageFilter
 try:
     from realesrgan import RealESRGANer
-    import torch
     REALESRGAN_AVAILABLE = True
 except ImportError:
     REALESRGAN_AVAILABLE = False
