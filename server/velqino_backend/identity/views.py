@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.db import transaction
 from .models import User, WholesalerProfile, RetailerProfile, Address
 from .serializers import (
@@ -137,6 +138,7 @@ def get_all_users(request):
 
 @api_view(['POST'])
 @ratelimit(key='ip', rate='5/hour', method='POST')
+@permission_classes([AllowAny])
 def register_wholesaler(request):
     """
     Register a new wholesaler (automatically sets role)
