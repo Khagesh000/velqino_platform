@@ -7,14 +7,18 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
 
 
 print("=" * 60)
-print(f"✅ SETTINGS.PY IS BEING LOADED from: {__file__}")
-print(f"✅ PYTHONPATH: {sys.path}")
+print("🚀 SETTINGS.PY LOADING STARTED")
+print(f"📁 File path: {__file__}")
+print(f"📂 Current directory: {os.getcwd()}")
+print(f"🐍 Python path: {sys.path}")
+print(f"🔧 DJANGO_SETTINGS_MODULE env: {os.environ.get('DJANGO_SETTINGS_MODULE', 'NOT SET')}")
 print("=" * 60)
 
 # Redis Configuration
@@ -183,14 +187,21 @@ CHANNEL_LAYERS = {
     },
 }
 
+print("=" * 60)
+print("🔐 APPLYING REST_FRAMEWORK SETTINGS")
+print("=" * 60)
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # ✅ Add ONLY this line
+        'rest_framework.permissions.AllowAny',
     ],
 }
+
+print("✅ REST_FRAMEWORK configured with AllowAny")
+print("=" * 60)
 
 WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 
