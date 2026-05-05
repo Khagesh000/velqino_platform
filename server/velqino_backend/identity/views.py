@@ -141,6 +141,18 @@ def register_wholesaler(request):
     """
     Register a new wholesaler (automatically sets role)
     """
+
+    
+    print("=" * 60, flush=True)
+    print("🔵 REGISTER ENDPOINT HIT", flush=True)
+    print(f"📌 Request Method: {request.method}", flush=True)
+    print(f"📌 Request Path: {request.path}", flush=True)
+    print(f"📌 Content-Type: {request.headers.get('Content-Type')}", flush=True)
+    print(f"📌 Is Authenticated: {request.user.is_authenticated if request.user else 'No'}", flush=True)
+    print(f"📌 CSRF Token in Header: {'X-CSRFToken' in request.headers}", flush=True)
+    print("=" * 60, flush=True)
+
+
     try:
         # Use serializer for validation and creation
         serializer = WholesalerProfileCreateSerializer(data=request.data)

@@ -38,7 +38,7 @@ USE_X_FORWARDED_HOST = True
 # CSRF cookie settings (must match what we saw)
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_AGE = 31449600  # 1 year in seconds
-CSRF_COOKIE_DOMAIN = None  # Allow all subdomains
+CSRF_COOKIE_DOMAIN = '.onrender.com'  # Allow all subdomains
 CSRF_COOKIE_PATH = '/'
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False  # MUST be False
@@ -68,8 +68,7 @@ SIMPLE_JWT = {
 }
 
 
-# Or if you want to allow all (for development only)
-CORS_ALLOW_ALL_ORIGINS = True  # Only for development!
+
 
 # Allow credentials (cookies, authorization headers)
 CORS_ALLOW_CREDENTIALS = True
