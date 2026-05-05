@@ -11,6 +11,12 @@ import dj_database_url
 # Load environment variables from .env file
 load_dotenv()
 
+
+print("=" * 60)
+print(f"✅ SETTINGS.PY IS BEING LOADED from: {__file__}")
+print(f"✅ PYTHONPATH: {sys.path}")
+print("=" * 60)
+
 # Redis Configuration
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
