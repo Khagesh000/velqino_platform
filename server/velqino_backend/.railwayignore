@@ -1,0 +1,13 @@
+@"
+weights/
+yolov8n.pt
+staticfiles/
+media/
+__pycache__/
+*.pth
+*.pyc
+logs/
+temp_product.png
+temp_video.mp4
+.venv/
+"@ | Out-File -FilePath .railwayignore -Encoding utf8
