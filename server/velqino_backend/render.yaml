@@ -3,8 +3,8 @@ services:
   - type: web
     name: velqino-backend
     runtime: python
-    rootDir: server/velqino_backend
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    rootDir: server/velqino_backend/velqino_backend  # ✅ CHANGE THIS
+    buildCommand: "pip install -r ../requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
     startCommand: "daphne -b 0.0.0.0 -p $PORT velqino_backend.asgi:application"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
@@ -29,8 +29,8 @@ services:
   - type: worker
     name: velqino-celery
     runtime: python
-    rootDir: server/velqino_backend
-    buildCommand: "pip install -r requirements.txt"
+    rootDir: server/velqino_backend/velqino_backend  # ✅ CHANGE THIS
+    buildCommand: "pip install -r ../requirements.txt"
     startCommand: "celery -A velqino_backend worker --loglevel=info"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
