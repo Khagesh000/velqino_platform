@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+import dj_database_url
 
 # Load environment variables from .env file
 load_dotenv()
@@ -181,11 +182,14 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # ✅ Add ONLY this line
+    ],
 }
 
 WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 
-import dj_database_url
+
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
