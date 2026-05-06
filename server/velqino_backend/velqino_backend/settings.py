@@ -8,6 +8,10 @@ from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
 import sys
+from decouple import config
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Load environment variables from .env file
 load_dotenv()
@@ -139,6 +143,9 @@ INSTALLED_APPS = [
     'intelligence',
     'analytics_engine',
     'media_pipeline',
+
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -335,11 +342,12 @@ LOGGING = {
     },
 }
 
-# ============================================================
-# MEDIA FILES
-# ============================================================
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Media Storage Configuration
+if not DEBUG:  # For production (Render)
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:  # For local development
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # ============================================================
 # AI API KEYS
@@ -358,3 +366,11 @@ RATELIMIT_ENABLE = False
 if IS_PRODUCTION:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
+
+
+cloudinary.config(
+    cloud_name=config('CLOUDINARY_CLOUD_NAME'),
+    api_key=config('CLOUDINARY_API_KEY'),
+    api_secret=config('CLOUDINARY_API_SECRET'),
+)
+
