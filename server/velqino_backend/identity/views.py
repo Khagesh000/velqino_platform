@@ -145,14 +145,14 @@ def register_wholesaler(request):
     """
 
     
-    print("=" * 60, flush=True)
-    print("🔵 REGISTER ENDPOINT HIT", flush=True)
-    print(f"📌 Request Method: {request.method}", flush=True)
-    print(f"📌 Request Path: {request.path}", flush=True)
-    print(f"📌 Content-Type: {request.headers.get('Content-Type')}", flush=True)
-    print(f"📌 Is Authenticated: {request.user.is_authenticated if request.user else 'No'}", flush=True)
-    print(f"📌 CSRF Token in Header: {'X-CSRFToken' in request.headers}", flush=True)
-    print("=" * 60, flush=True)
+    #print("=" * 60, flush=True)
+    #print("🔵 REGISTER ENDPOINT HIT", flush=True)
+    #print(f"📌 Request Method: {request.method}", flush=True)
+    #print(f"📌 Request Path: {request.path}", flush=True)
+    #print(f"📌 Content-Type: {request.headers.get('Content-Type')}", flush=True)
+    #print(f"📌 Is Authenticated: {request.user.is_authenticated if request.user else 'No'}", flush=True)
+    #print(f"📌 CSRF Token in Header: {'X-CSRFToken' in request.headers}", flush=True)
+    #print("=" * 60, flush=True)
 
 
     try:
@@ -165,10 +165,16 @@ def register_wholesaler(request):
                 profile = serializer.save()
                 
                 # Trigger verification asynchronously
-                verify_wholesaler_profile.delay(profile.id)
+                try:
+                    verify_wholesaler_profile.delay(profile.id)
+                except Exception:
+                    pass
                 
                 # Cache the new profile
-                CacheService.get_wholesaler_profile(profile.user.id)
+                try:
+                    CacheService.get_wholesaler_profile(profile.user.id)
+                except Exception:
+                    pass
                 
                 # Generate JWT token
                 refresh = RefreshToken.for_user(profile.user)
@@ -931,11 +937,11 @@ def user_addresses(request):
     
     # ✅ Get session_id from header
     session_id = request.headers.get('X-Session-ID')
-    print(f"🔑 Session ID: {session_id}")
+    #print(f"🔑 Session ID: {session_id}")
     
     # ✅ GET method
     if request.method == 'GET':
-        print(f"📥 GET request - User authenticated: {request.user.is_authenticated}")
+       # print(f"📥 GET request - User authenticated: {request.user.is_authenticated}")
         
         if not request.user.is_authenticated:
             # Guest: Get address from cache using session_id
