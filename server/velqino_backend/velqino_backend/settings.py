@@ -12,24 +12,33 @@ import sys
 # Load environment variables from .env file
 load_dotenv()
 
+# ============================================================
+# ENVIRONMENT DETECTION
+# ============================================================
+IS_PRODUCTION = 'RENDER' in os.environ
+IS_DEVELOPMENT = not IS_PRODUCTION
 
-print("=" * 60)
-print("🚀 SETTINGS.PY LOADING STARTED")
+""" print("=" * 60)
+print(f"🚀 ENVIRONMENT: {'PRODUCTION (Render)' if IS_PRODUCTION else 'DEVELOPMENT (Local)'}")
 print(f"📁 File path: {__file__}")
 print(f"📂 Current directory: {os.getcwd()}")
 print(f"🐍 Python path: {sys.path}")
 print(f"🔧 DJANGO_SETTINGS_MODULE env: {os.environ.get('DJANGO_SETTINGS_MODULE', 'NOT SET')}")
-print("=" * 60)
+print("=" * 60) """
 
-# Redis Configuration
+# ============================================================
+# REDIS CONFIGURATION
+# ============================================================
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 REDIS_DB = int(os.environ.get('REDIS_DB', 0))
 REDIS_MAX_CONNECTIONS = int(os.environ.get('REDIS_MAX_CONNECTIONS', 20))
 
-# CORS Configuration - Add these lines
+# ============================================================
+# CORS CONFIGURATION
+# ============================================================
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React/Next.js frontend
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "https://velqino-backend.onrender.com",
@@ -42,82 +51,71 @@ CSRF_TRUSTED_ORIGINS = [
     "https://velqino-backend.onrender.com",
 ]
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
+CORS_ALLOW_HEADERS = [
+    'accept', 'accept-encoding', 'authorization', 'content-type',
+    'dnt', 'origin', 'user-agent', 'x-csrftoken', 'x-requested-with', 'x-session-id'
+]
 
-# CSRF cookie settings (must match what we saw)
+# ============================================================
+# SECURITY & CSRF SETTINGS (Environment-specific)
+# ============================================================
+if IS_PRODUCTION:
+    # Production (Render) - HTTPS
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_DOMAIN = None  # Let Django handle automatically
+else:
+    # Development (Local) - HTTP
+    SECURE_PROXY_SSL_HEADER = None
+    USE_X_FORWARDED_HOST = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_DOMAIN = None
+
+# Common CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_AGE = 31449600  # 1 year in seconds
-CSRF_COOKIE_DOMAIN = '.onrender.com'  # Allow all subdomains
 CSRF_COOKIE_PATH = '/'
-CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTPONLY = False  # MUST be False
+CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
-
-SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_SAMESITE = 'Lax'
-
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
+CSRF_COOKIE_REFRESH_ON_EACH_REQUEST = False
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
 AUTH_USER_MODEL = 'identity.User'
 
-
-# Important: Disable CSRF token regeneration on each request
-CSRF_COOKIE_REFRESH_ON_EACH_REQUEST = False  # Django 4.1+ only
-
-# If using Django 4.0+, also add:
-CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
-
-
+# ============================================================
+# SIMPLE JWT
+# ============================================================
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),   # ← ADD THIS
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30), # ← ADD THIS
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
-
-
-
-# Allow credentials (cookies, authorization headers)
-CORS_ALLOW_CREDENTIALS = True
-
-# Allowed methods
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-
-# Allowed headers
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'x-session-id',
-]
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# ============================================================
+# BUILD PATHS
+# ============================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings
+# ============================================================
+# SECURITY SETTINGS
+# ============================================================
 SECRET_KEY = os.getenv('SECRET_KEY', 'i9!k6b_xqtab_)c5l3exew!z7-5*4p06lqxau!^ny9st#9_$_4')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,velqino-backend.onrender.com').split(',')
 
-# Application definition
+# ============================================================
+# INSTALLED APPS
+# ============================================================
 INSTALLED_APPS = [
-
     'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -125,14 +123,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
     # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'channels',
     
-
     # Custom apps
     'identity',
     'catalog',
@@ -146,6 +143,9 @@ INSTALLED_APPS = [
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
+# ============================================================
+# MIDDLEWARE
+# ============================================================
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -160,6 +160,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'velqino_backend.urls'
 
+# ============================================================
+# TEMPLATES
+# ============================================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -175,7 +178,9 @@ TEMPLATES = [
     },
 ]
 
-# Channels Configuration
+# ============================================================
+# CHANNELS & ASGI
+# ============================================================
 ASGI_APPLICATION = 'velqino_backend.asgi.application'
 
 CHANNEL_LAYERS = {
@@ -187,9 +192,12 @@ CHANNEL_LAYERS = {
     },
 }
 
-print("=" * 60)
+# ============================================================
+# REST FRAMEWORK
+# ============================================================
+""" print("=" * 60)
 print("🔐 APPLYING REST_FRAMEWORK SETTINGS")
-print("=" * 60)
+print("=" * 60) """
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -200,15 +208,15 @@ REST_FRAMEWORK = {
     ],
 }
 
-print("✅ REST_FRAMEWORK configured with AllowAny")
-print("=" * 60)
+""" print("✅ REST_FRAMEWORK configured with AllowAny")
+print("=" * 60) """
 
 WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 
-
-
+# ============================================================
+# DATABASE
+# ============================================================
 DATABASE_URL = os.getenv('DATABASE_URL')
-
 
 if DATABASE_URL:
     DATABASES = {
@@ -234,37 +242,35 @@ else:
         }
     }
 
-# Password validation
+# ============================================================
+# PASSWORD VALIDATION
+# ============================================================
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+# ============================================================
+# INTERNATIONALIZATION
+# ============================================================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+# ============================================================
+# STATIC FILES
+# ============================================================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Celery Configuration
+# ============================================================
+# CELERY
+# ============================================================
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/1')
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -272,7 +278,9 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 
-# Cache Configuration
+# ============================================================
+# CACHE
+# ============================================================
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -286,11 +294,12 @@ CACHES = {
 
 CACHE_TTL = int(os.getenv('CACHE_TTL', 300))
 
-# Create logs directory if it doesn't exist
+# ============================================================
+# LOGGING
+# ============================================================
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
-# Logging Configuration
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -326,15 +335,20 @@ LOGGING = {
     },
 }
 
+# ============================================================
+# MEDIA FILES
+# ============================================================
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-print("GOOGLE_VISION_API_KEY:", bool(os.getenv('GOOGLE_VISION_API_KEY')))
+# ============================================================
+# AI API KEYS
+# ============================================================
+""" print("GOOGLE_VISION_API_KEY:", bool(os.getenv('GOOGLE_VISION_API_KEY')))
 print("REMOVE_BG_API_KEY:", bool(os.getenv('REMOVE_BG_API_KEY')))
-print("REPLICATE_API_TOKEN:", bool(os.getenv('REPLICATE_API_TOKEN'))) 
-print("HUGGINGFACE_API_TOKEN:", bool(os.getenv('HUGGINGFACE_API_TOKEN')))
+print("REPLICATE_API_TOKEN:", bool(os.getenv('REPLICATE_API_TOKEN')))
+print("HUGGINGFACE_API_TOKEN:", bool(os.getenv('HUGGINGFACE_API_TOKEN'))) """
 
-# AI API Keys
 GOOGLE_VISION_API_KEY = os.environ.get('GOOGLE_VISION_API_KEY', '')
 REMOVE_BG_API_KEY = os.environ.get('REMOVE_BG_API_KEY', '')
 REPLICATE_API_TOKEN = os.environ.get('REPLICATE_API_TOKEN', '')

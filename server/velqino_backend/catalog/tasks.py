@@ -57,10 +57,18 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
 @shared_task(bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
 def process_bulk_images_task(self, seller_id, images_data, common_price, common_cost,
                              category_id, common_name_prefix, brand, description, 
-                             upload_mode='bulk_single_product', sizes=None):
+                             upload_mode='bulk_single_product', sizes=None, task_id=None):
     """Process bulk images - creates ONE product with all images by default"""
     try:
         from catalog.services.ai_service import AIService
+
+        # ✅ ADD THIS DEBUG LINE
+        print(f"\n🔴🔴🔴 TASK - upload_mode value: '{upload_mode}'")
+        print(f"🔴🔴🔴 TASK - upload_mode type: {type(upload_mode)}")
+        print(f"🔴🔴🔴 TASK - Force to bulk_single_product for testing")
+        
+        # ✅ FORCE THE MODE HERE (TEMPORARY FIX)
+        upload_mode = 'bulk_single_product'  # ← ADD THIS LINE
 
         print(f"🖼️ Processing bulk images for seller {seller_id}")
         print(f"📌 Mode: {upload_mode}")
@@ -75,7 +83,7 @@ def process_bulk_images_task(self, seller_id, images_data, common_price, common_
             name_prefix=common_name_prefix,
             brand=brand,
             description=description,
-            upload_mode=upload_mode,
+            upload_mode=upload_mode,  # ← This will now be 'bulk_single_product'
             sizes=sizes or [],
             task_id=self.request.id
         )

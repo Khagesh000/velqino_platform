@@ -137,7 +137,7 @@ def get_all_users(request):
 
 
 @api_view(['POST'])
-@ratelimit(key='ip', rate='5/hour', method='POST')
+#@ratelimit(key='ip', rate='5/hour', method='POST')
 @permission_classes([AllowAny])
 def register_wholesaler(request):
     """
@@ -428,7 +428,7 @@ def login(request):
 
 #Retialers
 @api_view(['POST'])
-@ratelimit(key='ip', rate='10/hour', method='POST')
+#@ratelimit(key='ip', rate='10/hour', method='POST')
 def register_retailer(request):
     """
     Register a new retailer (automatically sets role='retailer')
@@ -718,7 +718,7 @@ def unblock_retailer(request, id):
 
 # ✅ ADD Customer Registration
 @api_view(['POST'])
-@ratelimit(key='ip', rate='10/hour', method='POST')
+#@ratelimit(key='ip', rate='10/hour', method='POST')
 def register_customer(request):
     """
     Register a new customer (automatically sets role='customer')

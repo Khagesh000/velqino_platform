@@ -42,7 +42,7 @@ export default function Navbar() {
 
   // Fetch cart count
   const { data: cartData, refetch: refetchCart } = useGetCartQuery();
-  const cartCount = cartData?.data?.item_count || 0;
+  const cartCount = cartData?.summary?.item_count || 0;
 
   useEffect(() => {
     setMounted(true);

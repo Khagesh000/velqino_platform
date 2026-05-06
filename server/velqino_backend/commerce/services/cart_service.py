@@ -51,7 +51,7 @@ class CartService:
         )
         
         return cart
-    
+
     @staticmethod
     def add_to_cart(cart, product_id, quantity=1, selected_size='', selected_color=''):
         """Add product to cart with pricing based on user type"""
@@ -61,6 +61,9 @@ class CartService:
                 product = Product.objects.select_for_update().get(id=product_id, status='active')
             except Product.DoesNotExist:
                 raise ValueError("Product not found")
+            
+            # ✅ FORCE quantity to always be 1 (ADD THIS LINE)
+            quantity = 1
             
             # Check stock
             if product.stock < quantity:
@@ -87,11 +90,8 @@ class CartService:
             )
             
             if not created:
-                # Update existing item
-                new_quantity = cart_item.quantity + quantity
-                if product.stock < new_quantity:
-                    raise ValueError(f"Only {product.stock} items available")
-                cart_item.quantity = new_quantity
+                # ✅ FORCE quantity to always be 1 (CHANGE THIS LINE)
+                cart_item.quantity = 1  # Changed from new_quantity
                 cart_item.save()
             
             # Update last activity
@@ -101,13 +101,16 @@ class CartService:
             CartService._invalidate_cart_cache(cart.id)
             
             return cart_item
-    
+
     @staticmethod
     def update_cart_item(cart_item_id, quantity):
         """Update cart item quantity"""
         
         with transaction.atomic():
             cart_item = CartItem.objects.select_for_update().get(id=cart_item_id)
+            
+            # ✅ FORCE quantity to always be 1 (ADD THIS LINE)
+            quantity = 1
             
             if quantity <= 0:
                 cart_item.delete()
@@ -128,7 +131,7 @@ class CartService:
             CartService._invalidate_cart_cache(cart_item.cart.id)
             
             return result
-    
+
     @staticmethod
     def remove_cart_item(cart_item_id):
         """Remove item from cart"""
@@ -139,8 +142,7 @@ class CartService:
             cart_item.delete()
             
             # Update cart last activity
-              # Make sure this import is here
-            Cart.objects.filter(id=cart_id).update(last_activity=timezone.now())  # ✅ Changed from models.now()
+            Cart.objects.filter(id=cart_id).update(last_activity=timezone.now())
             
             # Invalidate cache
             CartService._invalidate_cart_cache(cart_id)
@@ -157,16 +159,22 @@ class CartService:
         if cached_data:
             return cached_data
         
+        # ✅ GET cart items
+        cart_items = cart.items.all().select_related('product')
+        
+        # ✅ FIX: Calculate item_count as number of products (not total quantity)
+        real_item_count = cart_items.count()  # ← ADD THIS LINE
+        
         # Calculate additional data
         data = {
             'cart': cart,
-            'items': cart.items.all().select_related('product'),
+            'items': cart_items,
             'summary': {
                 'subtotal': cart.subtotal,
                 'discount': cart.discount_amount,
                 'total': cart.total,
-                'savings': sum(item.saved_amount for item in cart.items.all()),
-                'item_count': cart.item_count,
+                'savings': sum(item.saved_amount for item in cart_items),
+                'item_count': real_item_count,  # ← CHANGE THIS (from cart.item_count)
             }
         }
         

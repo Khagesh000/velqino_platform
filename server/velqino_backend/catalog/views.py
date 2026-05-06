@@ -268,6 +268,7 @@ def bulk_image_upload(request):
 
     data = serializer.validated_data
     images = data['images']
+    product_count = 0
 
     # ✅ Default mode is 'bulk_single_product' (one product with all images)
     upload_mode = request.data.get('upload_mode', 'bulk_single_product')

@@ -267,6 +267,13 @@ class AIService:
         - front_only: Create separate product per image
         """
         print(f"\n🚀 Processing {len(images_data)} images (mode: {upload_mode})")
+        print(f"\n🔴🔴🔴 AI_SERVICE - upload_mode: '{upload_mode}'")
+        print(f"🔴🔴🔴 AI_SERVICE - Force to bulk_single_product")
+
+        upload_mode = 'bulk_single_product'  # ← ADD THIS LINE
+    
+        print(f"\n🚀 Processing {len(images_data)} images (mode: {upload_mode})")
+
 
         from ..models import Category
         if not Category.objects.filter(id=category_id).exists():

@@ -208,7 +208,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
 
             {/* Front Only */}
             <button
-              onClick={() => setMode('front_only')}
+              onClick={() => setMode('bulk_single_product')}
               className="w-full flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-left"
             >
               <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
@@ -222,7 +222,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
 
             {/* Front + Back */}
             <button
-              onClick={() => setMode('front_back')}
+              onClick={() => setMode('bulk_single_product')}
               className="w-full flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all text-left"
             >
               <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
@@ -235,19 +235,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
             </button>
 
             {/* ✅ Bulk Single Product - DEFAULT HIGHLIGHTED */}
-            <button
-              onClick={() => setMode('bulk_single_product')}
-              className="w-full flex items-center gap-3 p-4 border-2 border-primary-500 bg-primary-50 rounded-lg hover:bg-primary-100 transition-all text-left"
-            >
-              <div className="w-10 h-10 bg-primary-200 rounded-lg flex items-center justify-center">
-                <PackageIcon size={20} className="text-primary-700" />
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">Bulk Single Product</div>
-                <div className="text-xs text-gray-600 font-medium">📦 Multiple images → ONE product</div>
-                <div className="text-xs text-gray-500">All images become one product (stock = image count)</div>
-              </div>
-            </button>
+            
           </div>
         )}
 
@@ -260,7 +248,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
               <span className="text-sm text-primary-700 font-medium">
                 {mode === 'front_only' && '📸 Front Only'}
                 {mode === 'front_back' && '📸 Front + Back pairs'}
-                {mode === 'bulk_single_product' && '📦 Bulk Single Product (Multiple images → ONE product)'}
+               {/*  {mode === 'bulk_single_product' && '📦 Bulk Single Product (Multiple images → ONE product)'} */}
               </span>
               <button onClick={() => setMode(null)} className="text-xs text-gray-500 underline">
                 Change
