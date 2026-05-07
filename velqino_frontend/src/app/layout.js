@@ -47,7 +47,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ReduxProvider>
-          <ClientOnly> {/* ✅ ALL children now protected */}
+          <ClientOnly fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
             {children}
 
             <ToastContainer 

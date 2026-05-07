@@ -29,6 +29,10 @@ try:
 except ImportError:
     REALESRGAN_AVAILABLE = False
 
+import cloudinary.uploader
+from io import BytesIO
+from datetime import datetime
+
 logger = logging.getLogger(__name__)
 
 
@@ -126,9 +130,17 @@ class AIService:
                 
                 # Save front image
                 if front_cleaned:
+                    front_bytes = BytesIO(front_cleaned)  # ✅ USE front_cleaned
+                    front_result = cloudinary.uploader.upload(
+                        front_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(front_cleaned, name=f"{product.sku}_item_{idx+1}_front.png"),
+                        image=front_result['secure_url'],
                         is_primary=(idx == 0),
                         is_front=True,
                         order=idx * 2
@@ -136,9 +148,17 @@ class AIService:
                 
                 # Save back image
                 if back_cleaned:
+                    back_bytes = BytesIO(back_cleaned)
+                    back_result = cloudinary.uploader.upload(
+                        back_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(back_cleaned, name=f"{product.sku}_item_{idx+1}_back.png"),
+                        image=back_result['secure_url'],
                         is_primary=False,
                         is_front=False,
                         order=idx * 2 + 1
@@ -214,18 +234,34 @@ class AIService:
                 
                 # Save images
                 if front_cleaned:
+                    front_bytes = BytesIO(front_cleaned)
+                    front_result = cloudinary.uploader.upload(
+                        front_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_front",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(front_cleaned, name=f"{product.sku}_front.png"),
+                        image=front_result['secure_url'],
                         is_primary=True,
                         is_front=True,
                         order=0
                     )
                 
                 if back_cleaned:
+                    back_bytes = BytesIO(back_cleaned)
+                    back_result = cloudinary.uploader.upload(
+                        back_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_back",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(back_cleaned, name=f"{product.sku}_back.png"),
+                        image=back_result['secure_url'],
                         is_primary=False,
                         is_front=False,
                         order=1
@@ -329,9 +365,17 @@ class AIService:
                 cleaned_img = AIService._process_final_image(img_data)
                 
                 if cleaned_img:
+                    img_bytes = BytesIO(cleaned_img)
+                    upload_result = cloudinary.uploader.upload(
+                        img_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image_{idx+1}",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(cleaned_img, name=f"{product.sku}_image_{idx+1}.png"),
+                        image=upload_result['secure_url'],
                         is_primary=(idx == 0),
                         is_front=True,
                         order=idx
@@ -403,18 +447,34 @@ class AIService:
 
                 # Save images
                 if front_cleaned:
+                    front_bytes = BytesIO(front_cleaned)
+                    front_result = cloudinary.uploader.upload(
+                        front_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_front",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(front_cleaned, name=f"{product.sku}_front.png"),
+                        image=front_result['secure_url'],
                         is_primary=True,
                         is_front=True,
                         order=0
                     )
 
                 if back_cleaned:
+                    back_bytes = BytesIO(back_cleaned)
+                    back_result = cloudinary.uploader.upload(
+                        back_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_back",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(back_cleaned, name=f"{product.sku}_back.png"),
+                        image=back_result['secure_url'],
                         is_primary=False,
                         is_front=False,
                         order=1
@@ -478,9 +538,17 @@ class AIService:
 
                 # Save image
                 if cleaned_img:
+                    img_bytes = BytesIO(cleaned_img)
+                    upload_result = cloudinary.uploader.upload(
+                        img_bytes,
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    
                     ProductImage.objects.create(
                         product=product,
-                        image=ContentFile(cleaned_img, name=f"{product.sku}_image.png"),
+                        image=upload_result['secure_url'],
                         is_primary=True,
                         is_front=True,
                         order=0

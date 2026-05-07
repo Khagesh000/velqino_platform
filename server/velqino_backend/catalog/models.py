@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
+from cloudinary.models import CloudinaryField
 
 
 class Category(models.Model):
@@ -130,7 +131,12 @@ class Product(models.Model):
 class ProductImage(models.Model):
     """Multiple images per product"""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='products/%Y/%m/')
+    image = CloudinaryField(
+    'image',
+    folder='products',
+    overwrite=True,
+    invalidate=True
+    )
     is_primary = models.BooleanField(default=False)
     order = models.IntegerField(default=0)
     is_front = models.BooleanField(default=True, help_text="Is this front view?")
