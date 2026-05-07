@@ -369,6 +369,8 @@ class AIService:
                     upload_result = cloudinary.uploader.upload(
                         img_bytes,
                         public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image_{idx+1}",
+                        use_filename=True,
+                        unique_filename=False,
                         overwrite=True,
                         invalidate=True
                     )
@@ -542,6 +544,8 @@ class AIService:
                     upload_result = cloudinary.uploader.upload(
                         img_bytes,
                         public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image",
+                        use_filename=True,
+                        unique_filename=False,
                         overwrite=True,
                         invalidate=True
                     )
