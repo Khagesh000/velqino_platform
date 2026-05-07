@@ -345,6 +345,12 @@ LOGGING = {
 # Media Storage Configuration
 if not DEBUG:  # For production (Render)
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': config('CLOUDINARY_API_KEY'),
+        'API_SECRET': config('CLOUDINARY_API_SECRET'),
+    }
+    MEDIA_URL = f'https://res.cloudinary.com/{config("CLOUDINARY_CLOUD_NAME")}/'
 else:  # For local development
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
