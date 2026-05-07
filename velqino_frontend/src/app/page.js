@@ -1,5 +1,10 @@
 import PageWrapper from '@/features/common/PageWrapper';
-import HomePage from '@/features/common/HomePage/HomePage';
+import dynamic from 'next/dynamic';
+
+const HomePage = dynamic(() => import('@/features/common/HomePage/HomePage'), {
+  ssr: false,
+  loading: () => null
+});
 
 export const viewport = {
   width: "device-width",
