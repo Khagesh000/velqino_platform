@@ -3,9 +3,14 @@ services:
   - type: web
     name: velqino-backend
     runtime: python
-    rootDir: server/velqino_backend/velqino_backend  # ✅ CHANGE THIS
-    buildCommand: "pip install -r ../requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
-    startCommand: "daphne -b 0.0.0.0 -p 8000 velqino_backend.asgi:application"
+    rootDir: server/velqino_backend
+    buildCommand: |
+      apt-get update
+      apt-get install -y gfortran g++ libatlas-base-dev liblapack-dev pkg-config
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: "daphne -b 0.0.0.0 -p 10000 velqino_backend.asgi:application"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: velqino_backend.settings
@@ -29,8 +34,11 @@ services:
   - type: worker
     name: velqino-celery
     runtime: python
-    rootDir: server/velqino_backend/velqino_backend  # ✅ CHANGE THIS
-    buildCommand: "pip install -r ../requirements.txt"
+    rootDir: server/velqino_backend
+    buildCommand: |
+      apt-get update
+      apt-get install -y gfortran g++ libatlas-base-dev liblapack-dev pkg-config
+      pip install -r requirements.txt
     startCommand: "celery -A velqino_backend worker --loglevel=info"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
