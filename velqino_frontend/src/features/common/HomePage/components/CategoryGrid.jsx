@@ -6,20 +6,6 @@ import Image from 'next/image';
 import { ChevronRight, TrendingUp, Package, Star } from '../../../../utils/icons';
 import '../../../../styles/common/HomePage/CategoryGrid.scss'
 
-const categories = [
-  { id: 1, name: 'Electronics', slug: 'electronics', image: '/images/categories/electronics.jpg', productCount: 245, icon: '📱', color: 'from-blue-500 to-cyan-500' },
-  { id: 2, name: 'Clothing', slug: 'clothing', image: '/images/categories/clothing.jpg', productCount: 189, icon: '👕', color: 'from-pink-500 to-rose-500' },
-  { id: 3, name: 'Home & Living', slug: 'home-living', image: '/images/categories/home.jpg', productCount: 156, icon: '🏠', color: 'from-emerald-500 to-teal-500' },
-  { id: 4, name: 'Beauty & Health', slug: 'beauty-health', image: '/images/categories/beauty.jpg', productCount: 98, icon: '💄', color: 'from-purple-500 to-fuchsia-500' },
-  { id: 5, name: 'Sports & Fitness', slug: 'sports-fitness', image: '/images/categories/sports.jpg', productCount: 76, icon: '⚽', color: 'from-orange-500 to-red-500' },
-  { id: 6, name: 'Toys & Games', slug: 'toys-games', image: '/images/categories/toys.jpg', productCount: 112, icon: '🎮', color: 'from-yellow-500 to-amber-500' },
-  { id: 7, name: 'Books & Media', slug: 'books-media', image: '/images/categories/books.jpg', productCount: 234, icon: '📚', color: 'from-indigo-500 to-blue-500' },
-  { id: 8, name: 'Food & Grocery', slug: 'food-grocery', image: '/images/categories/food.jpg', productCount: 167, icon: '🍕', color: 'from-green-500 to-lime-500' },
-  { id: 9, name: 'Books & Media', slug: 'books-media', image: '/images/categories/books.jpg', productCount: 234, icon: '📚', color: 'from-indigo-500 to-blue-500' },
-  { id: 10, name: 'Food & Grocery', slug: 'food-grocery', image: '/images/categories/food.jpg', productCount: 167, icon: '🍕', color: 'from-green-500 to-lime-500' },
-  { id: 11, name: 'Books & Media', slug: 'books-media', image: '/images/categories/books.jpg', productCount: 234, icon: '📚', color: 'from-indigo-500 to-blue-500' },
-  { id: 12, name: 'Food & Grocery', slug: 'food-grocery', image: '/images/categories/food.jpg', productCount: 167, icon: '🍕', color: 'from-green-500 to-lime-500' },
-];
 
 const CategoryCard = React.memo(({ category, index }) => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -88,10 +74,50 @@ const CategoryCard = React.memo(({ category, index }) => {
 
 CategoryCard.displayName = 'CategoryCard';
 
-export default function CategoryGrid() {
+export default function CategoryGrid({ categories = [], productsData = {}, loading = false }) {
   const [visibleCategories, setVisibleCategories] = useState([]);
   const [isInView, setIsInView] = useState(false);
   const sectionRef = React.useRef(null);
+
+  // Helper function to get icon based on category name
+  const getCategoryIcon = (categoryName) => {
+    const iconMap = {
+      'shirt': '👕', 'pant': '👖', 'tshirt': '👕', 'track pants': '🏃',
+      'sarees': '🥻', 'dresses': '👗', 'jackets': '🧥', 'shorts': '🩳',
+      'electronics': '📱', 'mobiles': '📱', 'laptops': '💻',
+      'home': '🏠', 'furniture': '🛋️', 'beauty': '💄',
+      'sports': '⚽', 'fitness': '💪', 'toys': '🎮',
+      'books': '📚', 'food': '🍕', 'default': '📁'
+    };
+    const lowerName = categoryName?.toLowerCase() || '';
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (lowerName.includes(key)) return icon;
+    }
+    return iconMap.default;
+  };
+
+    // Transform backend categories and assign a product image to each category
+  const formattedCategories = React.useMemo(() => {
+    if (!categories || categories.length === 0) return [];
+    const categoryList = categories.data || categories.results || categories;
+    if (!Array.isArray(categoryList)) return [];
+    
+    return categoryList.slice(0, 12).map((category, index) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      // Use product image from your productsData - assign different product to each category
+      image: productsData?.data?.products?.[index]?.primary_image || 
+       productsData?.data?.products?.[index]?.images?.[0]?.image ||
+       '/images/categories/placeholder.jpg',
+      productCount: productsData?.data?.products?.filter(p => p.category_id === category.id).length || 0,
+      icon: category.icon || getCategoryIcon(category.name),
+      color: 'from-blue-500 to-cyan-500'
+    }));
+  }, [categories, productsData]);
+  console.log('Image object:', productsData?.products?.[0]?.images?.[0]);
+  console.log('productsData received:', productsData);
+console.log('Products array:', productsData?.products);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -112,17 +138,35 @@ export default function CategoryGrid() {
     return () => observer.disconnect();
   }, []);
 
-  // Progressive loading of categories
-  useEffect(() => {
-    if (isInView) {
-      // Load first 4 immediately, then rest
-      setVisibleCategories(categories.slice(0, 4));
+    // Progressive loading of categories - Load immediately without waiting for isInView
+    useEffect(() => {
+    if (formattedCategories.length > 0 && visibleCategories.length === 0) {
+      setVisibleCategories(formattedCategories.slice(0, 4));
       const timer = setTimeout(() => {
-        setVisibleCategories(categories);
+        setVisibleCategories(formattedCategories);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isInView]);
+  }, [formattedCategories, visibleCategories.length]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="category-grid container mx-auto px-4 py-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(12)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-200 rounded-2xl h-32"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (formattedCategories.length === 0) {
+    return null;
+  }
 
   return (
     <section ref={sectionRef} className="category-grid-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
