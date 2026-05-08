@@ -22,6 +22,15 @@ class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = ['id', 'image', 'is_primary', 'order', 'is_front']
+    
+    def to_representation(self, instance):
+        return {
+            'id': instance.id,
+            'image': str(instance.image).replace('image/upload/', ''),  # ✅ Clean the URL
+            'is_primary': instance.is_primary,
+            'order': instance.order,
+            'is_front': instance.is_front
+        }
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -162,7 +171,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     
     def get_primary_image(self, obj):
         primary = obj.images.filter(is_primary=True).first()
-        return primary.image.url if primary else None
+        if primary:
+            return str(primary.image)  # ✅ Change .url to str()
+        return None
 
 
 # ============= NEW BULK UPLOAD SERIALIZERS =============

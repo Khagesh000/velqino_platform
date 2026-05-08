@@ -50,6 +50,11 @@ const nextConfig = {
         hostname: 'localhost',
         port: '8000',
       },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/dfv1k6imi/image/upload/**',
+      },
     ],
   },
 };

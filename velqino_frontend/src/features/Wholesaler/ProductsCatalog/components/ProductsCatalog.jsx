@@ -195,6 +195,8 @@ export default function ProductsCatalog({
     return pages;
   };
 
+  
+
   /* console.log('Filtered products count:', filteredProducts.length);
 console.log('Total products:', products.length);
 console.log('selectedCategory:', selectedCategory); */
@@ -465,15 +467,22 @@ console.log('selectedCategory:', selectedCategory); */
                     className="flex overflow-x-auto scroll-smooth h-full snap-x snap-mandatory hide-scrollbar"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
-                    {product.images.map((img, idx) => (
-                      <img 
-                        key={idx}
-                        src={`${BASE_IMAGE_URL}${img.image}`}
-                        alt={product.name}
-                        className="w-full h-full object-cover flex-shrink-0 snap-start"
-                        onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-                      />
-                    ))}
+                    {product.images.map((img, idx) => {
+                      
+                      return (
+                        <img 
+                          key={idx}
+                          src={`${BASE_IMAGE_URL}${img.image}`}
+                          alt={product.name}
+                          className="w-full h-full object-cover flex-shrink-0 snap-start"
+                          onError={(e) => { 
+                            console.log('❌ IMAGE FAILED TO LOAD:', e.target.src);
+                            e.target.src = '/images/placeholder.jpg'; 
+                          }}
+                          onLoad={() => console.log('✅ IMAGE LOADED SUCCESSFULLY:', `${BASE_IMAGE_URL}${img.image}`)}
+                        />
+                      );
+                    })}
                   </div>
                   
                   {/* Left Scroll Button */}

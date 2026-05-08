@@ -2,8 +2,8 @@ import axios from 'axios';
 
 //const BASE_URL = 'http://localhost:8000/api/';
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/` : 'http://localhost:8000/api/';
-const BASE_IMAGE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
-
+//const BASE_IMAGE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
+const BASE_IMAGE_URL = '';
 // ✅ Generate or get persistent session_id
 const getSessionId = () => {
     if (typeof window === 'undefined') return null;

@@ -21,12 +21,43 @@ export default function ProductGallery({ product }) {
     }
   };
 
-  // Get images from product data
-  const images = product?.images?.map((img, idx) => ({
-    id: idx,
-    url: `${BASE_IMAGE_URL}${img.image}`,
-    alt: product.name
-  })) || [];
+  const images = product?.images?.map((img, idx) => {
+    // LOG 1: Raw value from database
+    console.log(`🟢 IMAGE ${idx} - Raw img.image FROM DATABASE:`, img.image);
+    console.log(`🟢 IMAGE ${idx} - Type of img.image:`, typeof img.image);
+    
+    // LOG 2: Check BASE_IMAGE_URL value
+    console.log(`🟢 IMAGE ${idx} - BASE_IMAGE_URL:`, BASE_IMAGE_URL);
+    
+    // SIMPLE approach - exactly like ProductCatalog
+    const imageUrl = `${BASE_IMAGE_URL}${img.image}`;
+    
+    // LOG 3: Final URL after concatenation
+    console.log(`🟢 IMAGE ${idx} - FINAL URL:`, imageUrl);
+    
+    // LOG 4: Check if URL starts correctly
+    if (imageUrl.startsWith('http')) {
+        console.log(`🟢 IMAGE ${idx} - URL starts with http ✅`);
+    } else {
+        console.log(`🔴 IMAGE ${idx} - URL does NOT start with http! Starts with:`, imageUrl.substring(0, 30));
+    }
+    
+    // LOG 5: Test if URL is accessible
+    fetch(imageUrl, { method: 'HEAD', mode: 'no-cors' })
+        .then(() => console.log(`🟢 IMAGE ${idx} - Fetch SUCCESS`))
+        .catch(() => console.log(`🔴 IMAGE ${idx} - Fetch FAILED`));
+    
+    return {
+        id: idx,
+        url: imageUrl,
+        alt: product.name,
+        loading: idx === 0 ? "eager" : "lazy"
+    };
+}) || [];
+
+console.log('🟢 FINAL images array:', images);
+console.log('🟢 Product ID:', product?.id);
+console.log('🟢 Product SKU:', product?.sku);
 
   // If no images, use placeholder
   if (images.length === 0) {
