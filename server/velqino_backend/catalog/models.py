@@ -93,9 +93,10 @@ class Product(models.Model):
     dimensions = models.CharField(max_length=50, blank=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
-
+  
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    total_sold = models.IntegerField(default=0, db_index=True, help_text="Total number sold")
 
     class Meta:
         indexes = [
