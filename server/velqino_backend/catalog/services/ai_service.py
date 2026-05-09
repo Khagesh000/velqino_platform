@@ -152,6 +152,8 @@ class AIService:
                     back_result = cloudinary.uploader.upload(
                         back_bytes,
                         public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                        use_filename=True,
+                        unique_filename=False,
                         overwrite=True,
                         invalidate=True
                     )
@@ -452,7 +454,9 @@ class AIService:
                     front_bytes = BytesIO(front_cleaned)
                     front_result = cloudinary.uploader.upload(
                         front_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_front",
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
+                        use_filename=True,
+                        unique_filename=False,
                         overwrite=True,
                         invalidate=True
                     )
@@ -469,7 +473,9 @@ class AIService:
                     back_bytes = BytesIO(back_cleaned)
                     back_result = cloudinary.uploader.upload(
                         back_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_back",
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                        use_filename=True,
+                        unique_filename=False,
                         overwrite=True,
                         invalidate=True
                     )

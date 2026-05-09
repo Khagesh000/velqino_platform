@@ -5,7 +5,7 @@ import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
 import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
 
-// Lazy load components (only load when visible)
+// Lazy load components
 const CategoriesMegaMenu = lazy(() => import('./components/CategoriesMegaMenu'));
 const HeroBanner = lazy(() => import('./components/HeroBanner'));
 const CategoryGrid = lazy(() => import('./components/CategoryGrid'));
@@ -31,120 +31,138 @@ const HeroPlaceholder = () => (
 );
 
 export default function HomePage() {
-  const [shouldFetch, setShouldFetch] = useState(false);
+  // ============ MULTIPLE PARALLEL API CALLS ============
+  // All fetch simultaneously - NO WAITING
   
-  // Use Intersection Observer to load data only when component is visible
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setShouldFetch(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    const sentinel = document.getElementById('homepage-sentinel');
-    if (sentinel) observer.observe(sentinel);
-    
-    return () => observer.disconnect();
-  }, []);
-  
-  // Fetch products with different params for different sections
-  const { data: allProductsData, isLoading: productsLoading } = useGetProductsQuery(
-    { page: 1, per_page: 20 },
-    { skip: !shouldFetch }
+  // 1. Best Selling Products (sorted by total_sold)
+  const { data: bestSellingResponse, isLoading: bestSellingLoading } = useGetProductsQuery(
+    { sort: '-total_sold', limit: 8 },
+    { refetchOnMountOrArgChange: true }
   );
   
-  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery(
-    undefined,
-    { skip: !shouldFetch }
-  );
-
-  const { data: statsData } = useGetWholesalerStatsQuery(undefined, { skip: !shouldFetch });
-
-  
-  // Memoize filtered data from the same products endpoint
-  const memoizedProducts = useMemo(() => allProductsData?.products || [], [allProductsData]);
-  
-  // Filter deals (products with discount > 0)
-  const memoizedDeals = useMemo(() => 
-    memoizedProducts.filter(product => product.discount_percentage > 0 || product.sale_price),
-    [memoizedProducts]
+  // 2. New Arrivals (sorted by created_at)
+  const { data: newArrivalsResponse, isLoading: newArrivalsLoading } = useGetProductsQuery(
+    { sort: '-created_at', limit: 8 },
+    { refetchOnMountOrArgChange: true }
   );
   
-  // Filter best selling (sort by sold count)
-  const memoizedBestSelling = useMemo(() => 
-    [...memoizedProducts].sort((a, b) => (b.sold_count || 0) - (a.sold_count || 0)).slice(0, 8),
-    [memoizedProducts]
+  // 3. Deals of the Day (discount = true)
+  const { data: dealsResponse, isLoading: dealsLoading } = useGetProductsQuery(
+    { discount: true, limit: 8 },
+    { refetchOnMountOrArgChange: true }
   );
   
-  // Filter new arrivals (sort by created date)
-  const memoizedNewArrivals = useMemo(() => 
-    [...memoizedProducts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 8),
-    [memoizedProducts]
+  // 4. Summer Collection (season = summer)
+  const { data: summerResponse, isLoading: summerLoading } = useGetProductsQuery(
+    { season: 'summer', limit: 8 },
+    { refetchOnMountOrArgChange: true }
   );
   
-  const memoizedCategories = useMemo(() => categoriesData?.categories || categoriesData || [], [categoriesData]);
+  // 5. Winter Collection (season = winter)
+  const { data: winterResponse, isLoading: winterLoading } = useGetProductsQuery(
+    { season: 'winter', limit: 8 },
+    { refetchOnMountOrArgChange: true }
+  );
   
-  // Check if any data is still loading for initial render
-  const isInitialLoading = !shouldFetch || productsLoading;
+  // 6. Festive Collection (season = festive)
+  const { data: festiveResponse, isLoading: festiveLoading } = useGetProductsQuery(
+    { season: 'festive', limit: 8 },
+    { refetchOnMountOrArgChange: true }
+  );
   
-
+  // 7. Categories (for mega menu and grid)
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery();
+  
+  // 8. All Products (for Recently Viewed and other sections)
+  const { data: allProductsResponse, isLoading: allProductsLoading } = useGetProductsQuery(
+    { page: 1, per_page: 50 },
+    { refetchOnMountOrArgChange: true }
+  );
+  
+  // ============ EXTRACT DATA FROM RESPONSES ============
+  const bestSellingProducts = useMemo(() => bestSellingResponse?.data?.products || [], [bestSellingResponse]);
+  const newArrivalsProducts = useMemo(() => newArrivalsResponse?.data?.products || [], [newArrivalsResponse]);
+  const dealsProducts = useMemo(() => dealsResponse?.data?.products || [], [dealsResponse]);
+  const summerProducts = useMemo(() => summerResponse?.data?.products || [], [summerResponse]);
+  const winterProducts = useMemo(() => winterResponse?.data?.products || [], [winterResponse]);
+  const festiveProducts = useMemo(() => festiveResponse?.data?.products || [], [festiveResponse]);
+  const allProducts = useMemo(() => allProductsResponse?.data?.products || [], [allProductsResponse]);
+  
+  const memoizedCategories = useMemo(() => {
+    const categoryList = categoriesData?.data || categoriesData;
+    return Array.isArray(categoryList) ? categoryList : [];
+  }, [categoriesData]);
+  
+  // Combine all seasonal collections for Featured Collections
+  const seasonalCollections = useMemo(() => [
+    { name: 'Summer Breeze', season: 'summer', products: summerProducts, icon: '☀️', gradient: 'from-orange-500 to-yellow-500' },
+    { name: 'Winter Warmers', season: 'winter', products: winterProducts, icon: '❄️', gradient: 'from-blue-500 to-cyan-500' },
+    { name: 'Festive Dhamaka', season: 'festive', products: festiveProducts, icon: '🎁', gradient: 'from-red-500 to-pink-500' }
+  ], [summerProducts, winterProducts, festiveProducts]);
+  
   const quickLinksData = useMemo(() => ({
-  trending_count: statsData?.trending_products_count || statsData?.trending_count || 0,
-  new_arrivals_count: statsData?.new_arrivals_count || 0,
-  best_sellers_count: statsData?.best_sellers_count || 0,
-  deals_count: statsData?.deals_count || statsData?.active_deals_count || 0,
-  brands_count: statsData?.brands_count || 0,
-}), [statsData]);
-
-
+    trending_count: allProducts.length,
+    new_arrivals_count: newArrivalsProducts.length,
+    best_sellers_count: bestSellingProducts.length,
+    deals_count: dealsProducts.length,
+    brands_count: memoizedCategories.length,
+  }), [allProducts, newArrivalsProducts, bestSellingProducts, dealsProducts, memoizedCategories]);
+  
+  // Check if essential data is still loading
+  const isInitialLoading = categoriesLoading || allProductsLoading;
+  
+  // Show loading skeleton only for first load
+  if (isInitialLoading) {
+    return <SectionPlaceholder height="h-screen" />;
+  }
+  
+  // ============ RENDER COMPONENTS WITH THEIR SPECIFIC DATA ============
   return (
     <div>
-      {/* Sentinel to trigger data fetching when homepage is visible */}
-      <div id="homepage-sentinel" style={{ position: 'absolute', top: 0, height: '1px' }} />
-      
-      {/* CategoriesMegaMenu - Load immediately (no lazy for above fold) */}
+      {/* CategoriesMegaMenu */}
       <Suspense fallback={<SectionPlaceholder height="h-20" />}>
         <CategoriesMegaMenu 
-            categories={memoizedCategories} 
-            quickLinksData={quickLinksData}
-            loading={categoriesLoading} 
-          />
-      </Suspense>
-      
-      {/* HeroBanner - Load immediately */}
-      <Suspense fallback={<HeroPlaceholder />}>
-        <HeroBanner />
-      </Suspense>
-      
-      {/* CategoryGrid - Load with data */}
-      <Suspense fallback={<SectionPlaceholder height="h-96" />}>
-       <CategoryGrid 
           categories={memoizedCategories} 
-          productsData={allProductsData}  // ← Add this
+          quickLinksData={quickLinksData}
           loading={categoriesLoading} 
         />
       </Suspense>
       
-      {/* DealsOfTheDay - Load with filtered deals */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <DealsOfTheDay deals={memoizedDeals} loading={isInitialLoading} />
+      {/* HeroBanner */}
+      <Suspense fallback={<HeroPlaceholder />}>
+        <HeroBanner />
       </Suspense>
       
-      {/* BestSellingProducts - Load with sorted products */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <BestSellingProducts products={memoizedBestSelling} loading={isInitialLoading} />
+      {/* CategoryGrid - Uses categories only */}
+      <Suspense fallback={<SectionPlaceholder height="h-96" />}>
+        <CategoryGrid 
+          categories={memoizedCategories} 
+          productsData={allProductsResponse?.data || {}} 
+          loading={categoriesLoading} 
+        />
       </Suspense>
       
-      {/* NewArrivals - Load with sorted products */}
+      {/* DealsOfTheDay - Uses dealsProducts only */}
       <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <NewArrivals products={memoizedNewArrivals} loading={isInitialLoading} />
+        <DealsOfTheDay deals={dealsProducts} loading={dealsLoading} />
       </Suspense>
       
-      {/* Static components below fold - lazy load with delay */}
+      {/* BestSellingProducts - Uses bestSellingProducts only */}
+      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+        <BestSellingProducts products={bestSellingProducts} loading={bestSellingLoading} />
+      </Suspense>
+      
+      {/* NewArrivals - Uses newArrivalsProducts only */}
+      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+        <NewArrivals products={newArrivalsProducts} loading={newArrivalsLoading} />
+      </Suspense>
+      
+      {/* FeaturedCollections - Uses seasonal collections */}
+      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+        <FeaturedCollections collections={seasonalCollections} />
+      </Suspense>
+      
+      {/* Static components */}
       <Suspense fallback={<SectionPlaceholder height="h-60" />}>
         <TopBrands />
       </Suspense>
@@ -153,26 +171,27 @@ export default function HomePage() {
         <PromotionBanners />
       </Suspense>
       
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <FeaturedCollections products={memoizedProducts} />
-      </Suspense>
-      
+      {/* ReviewsSection */}
       <Suspense fallback={<SectionPlaceholder height="h-96" />}>
         <ReviewsSection />
       </Suspense>
       
+      {/* BenefitsSection */}
       <Suspense fallback={<SectionPlaceholder height="h-32" />}>
         <BenefitsSection />
       </Suspense>
       
+      {/* RecentlyViewed - Uses allProducts */}
       <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <RecentlyViewed />
+        <RecentlyViewed products={allProducts} loading={allProductsLoading} />
       </Suspense>
       
+      {/* NewsletterSection */}
       <Suspense fallback={<SectionPlaceholder height="h-48" />}>
         <NewsletterSection />
       </Suspense>
       
+      {/* FloatingElements */}
       <Suspense fallback={null}>
         <FloatingElements />
       </Suspense>

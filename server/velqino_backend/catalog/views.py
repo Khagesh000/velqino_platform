@@ -27,8 +27,6 @@ def product_list(request):
     """List all products or create new product"""
     
     if request.method == 'GET':
-        # ✅ PUBLIC - Anyone can view products
-
         user = request.user
         if user.is_authenticated and user.role in ['admin', 'support']:
             products = Product.objects.all()
@@ -40,6 +38,13 @@ def product_list(request):
         
         if cached_data:
             return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
+        
+        # ✅ ADD THESE NEW PARAMETERS
+        sort_by = request.query_params.get('sort')
+        discount = request.query_params.get('discount')
+        limit = request.query_params.get('limit')
+        category_id = request.query_params.get('category_id')
+        season = request.query_params.get('season')
         
         filters = {
             'category': request.query_params.get('category'),
@@ -54,17 +59,54 @@ def product_list(request):
         page = int(request.query_params.get('page', 1))
         per_page = int(request.query_params.get('per_page', 20))
         
-        # ✅ Pass None for seller_id (get ALL products)
+        # ✅ OVERRIDE per_page if limit is provided
+        if limit:
+            per_page = int(limit)
+        
         result = ProductService.get_products_with_filters(request.user, filters, page, per_page)
-        serializer = ProductListSerializer(result['products'], many=True, context={'request': request})
+        
+        # ✅ APPLY SORTING
+        products = result['products']
+        
+        if sort_by == '-total_sold':
+            products = products.order_by('-total_sold')
+        elif sort_by == '-created_at':
+            products = products.order_by('-created_at')
+        elif sort_by == '-price':
+            products = products.order_by('-price')
+        elif sort_by == 'price':
+            products = products.order_by('price')
+        
+        # ✅ APPLY DISCOUNT FILTER
+        if discount == 'true':
+            from django.db.models import F, Q
+            products = products.filter(
+                Q(retail_price__gt=F('price')) | Q(compare_price__gt=F('price'))
+            )
+        
+        # ✅ APPLY CATEGORY FILTER
+        if category_id:
+            products = products.filter(category_id=category_id)
+        
+        # ✅ APPLY SEASON FILTER (based on created_at months)
+        if season:
+            current_year = datetime.now().year
+            if season == 'summer':
+                products = products.filter(created_at__month__in=[3, 4, 5, 6])
+            elif season == 'winter':
+                products = products.filter(created_at__month__in=[11, 12, 1, 2])
+            elif season == 'festive':
+                products = products.filter(created_at__month__in=[8, 9, 10])
+        
+        serializer = ProductListSerializer(products, many=True, context={'request': request})
         
         response_data = {
             'products': serializer.data,
             'pagination': {
-                'total': result['total'],
-                'page': result['page'],
-                'per_page': result['per_page'],
-                'total_pages': result['total_pages']
+                'total': products.count(),
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (products.count() + per_page - 1) // per_page
             }
         }
         

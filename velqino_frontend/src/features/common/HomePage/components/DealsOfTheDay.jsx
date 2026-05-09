@@ -6,87 +6,6 @@ import Image from 'next/image';
 import { ShoppingCart, Clock, Zap, TrendingUp, Eye, ChevronRight } from '../../../../utils/icons';
 import '../../../../styles/common/HomePage/DealsOfTheDay.scss'
 
-const dealsData = [
-  {
-    id: 1,
-    name: 'Premium Wireless Headphones',
-    slug: 'wireless-headphones',
-    originalPrice: 4999,
-    discountedPrice: 2999,
-    discount: 40,
-    image: '/images/products/headphones.jpg',
-    stock: 45,
-    totalStock: 100,
-    sold: 55,
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: 'Smart Watch Pro',
-    slug: 'smart-watch-pro',
-    originalPrice: 12999,
-    discountedPrice: 7999,
-    discount: 38,
-    image: '/images/products/smartwatch.jpg',
-    stock: 28,
-    totalStock: 80,
-    sold: 52,
-    rating: 4.9
-  },
-  {
-    id: 3,
-    name: 'Running Shoes',
-    slug: 'running-shoes',
-    originalPrice: 3999,
-    discountedPrice: 1999,
-    discount: 50,
-    image: '/images/products/shoes.jpg',
-    stock: 15,
-    totalStock: 60,
-    sold: 45,
-    rating: 4.7
-  },
-  {
-    id: 4,
-    name: 'Smart LED TV 55"',
-    slug: 'smart-tv',
-    originalPrice: 49999,
-    discountedPrice: 34999,
-    discount: 30,
-    image: '/images/products/tv.jpg',
-    stock: 8,
-    totalStock: 25,
-    sold: 17,
-    rating: 4.6
-  },
-  {
-    id: 5,
-    name: 'Wireless Earbuds',
-    slug: 'wireless-earbuds',
-    originalPrice: 2999,
-    discountedPrice: 1499,
-    discount: 50,
-    image: '/images/products/earbuds.jpg',
-    stock: 32,
-    totalStock: 100,
-    sold: 68,
-    rating: 4.5
-  },
-  {
-    id: 6,
-    name: 'Gaming Keyboard',
-    slug: 'gaming-keyboard',
-    originalPrice: 5999,
-    discountedPrice: 3499,
-    discount: 42,
-    image: '/images/products/keyboard.jpg',
-    stock: 12,
-    totalStock: 50,
-    sold: 38,
-    rating: 4.8
-  }
-];
-
 // Timer Component with performance optimization
 const CountdownTimer = memo(({ targetDate }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -148,7 +67,7 @@ CountdownTimer.displayName = 'CountdownTimer';
 const ProductCard = memo(({ product, index }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const soldPercentage = (product.sold / product.totalStock) * 100;
+  const soldPercentage = product.totalStock ? (product.sold / product.totalStock) * 100 : 0;
 
   return (
     <div
@@ -175,9 +94,11 @@ const ProductCard = memo(({ product, index }) => {
         />
         
         {/* Discount Badge */}
-        <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
-          -{product.discount}%
-        </div>
+        {product.discount > 0 && (
+          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
+            -{product.discount}%
+          </div>
+        )}
         
         {/* Quick View Button */}
         <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
@@ -210,22 +131,26 @@ const ProductCard = memo(({ product, index }) => {
         {/* Price */}
         <div className="flex items-center gap-2 mb-2">
           <span className="text-lg sm:text-xl font-bold text-primary-600">₹{product.discountedPrice}</span>
-          <span className="text-xs sm:text-sm text-gray-400 line-through">₹{product.originalPrice}</span>
+          {product.originalPrice > product.discountedPrice && (
+            <span className="text-xs sm:text-sm text-gray-400 line-through">₹{product.originalPrice}</span>
+          )}
         </div>
 
         {/* Stock Progress Bar */}
-        <div className="mb-3">
-          <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 mb-1">
-            <span>Sold: {product.sold}</span>
-            <span>Available: {product.stock}</span>
+        {product.totalStock && (
+          <div className="mb-3">
+            <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 mb-1">
+              <span>Sold: {product.sold}</span>
+              <span>Available: {product.stock}</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary-500 rounded-full transition-all duration-500"
+                style={{ width: `${soldPercentage}%` }}
+              />
+            </div>
           </div>
-          <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary-500 rounded-full transition-all duration-500"
-              style={{ width: `${soldPercentage}%` }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Add to Cart Button */}
         <button className="w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2">
@@ -239,15 +164,33 @@ const ProductCard = memo(({ product, index }) => {
 
 ProductCard.displayName = 'ProductCard';
 
-export default function DealsOfTheDay() {
+export default function DealsOfTheDay({ deals = [], loading = false }) {
   const [visibleDeals, setVisibleDeals] = useState([]);
   const [isInView, setIsInView] = useState(false);
   const sectionRef = useRef(null);
   
-  // Set end time (24 hours from now)
+  // Remove shouldFetch - not needed
+  
   const endTime = new Date().getTime() + 24 * 60 * 60 * 1000;
 
-  // Intersection Observer for lazy loading
+  const formattedDeals = React.useMemo(() => {
+    if (!deals || deals.length === 0) return [];
+    return deals.slice(0, 6).map((deal) => ({
+      id: deal.id,
+      name: deal.name,
+      slug: deal.slug,
+      originalPrice: parseFloat(deal.retail_price) || parseFloat(deal.price) || 0,
+      discountedPrice: parseFloat(deal.price) || 0,
+      discount: deal.discount_percentage || Math.round(((parseFloat(deal.retail_price) - parseFloat(deal.price)) / parseFloat(deal.retail_price)) * 100) || 0,
+      image: deal.primary_image || deal.images?.[0]?.image || '/images/products/placeholder.jpg',
+      stock: deal.stock || 0,
+      totalStock: deal.total_stock || deal.stock || 100,
+      sold: (deal.total_stock || 100) - (deal.stock || 0),
+      rating: deal.rating || 4.5
+    }));
+  }, [deals]);
+
+  // Intersection Observer for isInView
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -258,25 +201,46 @@ export default function DealsOfTheDay() {
       },
       { threshold: 0.1 }
     );
-
     if (sectionRef.current) {
       observer.observe(sectionRef.current);
     }
-
     return () => observer.disconnect();
   }, []);
 
   // Progressive loading of deals
   useEffect(() => {
-    if (isInView) {
-      // Load first 3 immediately, then rest
-      setVisibleDeals(dealsData.slice(0, 3));
+    if (isInView && formattedDeals.length > 0 && visibleDeals.length === 0) {
+      setVisibleDeals(formattedDeals.slice(0, 3));
       const timer = setTimeout(() => {
-        setVisibleDeals(dealsData);
+        setVisibleDeals(formattedDeals);
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, [isInView]);
+  }, [isInView, formattedDeals, visibleDeals.length]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <section className="deals-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-gray-200 rounded-xl h-80"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (formattedDeals.length === 0) {
+    return null;
+  }
+
+  
 
   return (
     <section ref={sectionRef} className="deals-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
@@ -309,7 +273,7 @@ export default function DealsOfTheDay() {
         <div className="text-center mt-8 sm:mt-12">
           <Link
             href="/deals"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-500 hover:text-primary-500 transition-all duration-300 group"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-500 hover:text-white transition-all duration-300 group"
           >
             <span>View All Deals</span>
             <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />

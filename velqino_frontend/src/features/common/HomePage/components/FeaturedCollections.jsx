@@ -1,61 +1,28 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect, useRef, memo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Heart, Eye, Star, Sparkles, ChevronRight, TrendingUp, Gift, Sun, Snowflake } from '../../../../utils/icons';
 
-const collections = [
-  {
-    id: 1,
-    name: 'Summer Breeze',
-    season: 'summer',
-    icon: <Sun size={20} />,
-    gradient: 'from-orange-500 to-yellow-500',
-    description: 'Beat the heat with our summer collection',
-    curatorNote: 'Light, breathable fabrics perfect for sunny days',
-    products: [
-      { id: 1, name: 'Linen Shirt', price: 899, originalPrice: 1799, image: '/images/products/linen-shirt.jpg', rating: 4.8 },
-      { id: 2, name: 'Cotton Shorts', price: 499, originalPrice: 999, image: '/images/products/cotton-shorts.jpg', rating: 4.7 },
-      { id: 3, name: 'Summer Hat', price: 299, originalPrice: 599, image: '/images/products/summer-hat.jpg', rating: 4.6 },
-      { id: 4, name: 'Flip Flops', price: 399, originalPrice: 799, image: '/images/products/flip-flops.jpg', rating: 4.5 },
-    ]
-  },
-  {
-    id: 2,
-    name: 'Winter Warmers',
-    season: 'winter',
-    icon: <Snowflake size={20} />,
-    gradient: 'from-blue-500 to-cyan-500',
-    description: 'Stay cozy this winter season',
-    curatorNote: 'Premium wool blends for ultimate comfort',
-    products: [
-      { id: 5, name: 'Wool Sweater', price: 1499, originalPrice: 2999, image: '/images/products/wool-sweater.jpg', rating: 4.9 },
-      { id: 6, name: 'Thermal Gloves', price: 299, originalPrice: 599, image: '/images/products/thermal-gloves.jpg', rating: 4.7 },
-      { id: 7, name: 'Winter Jacket', price: 2499, originalPrice: 4999, image: '/images/products/winter-jacket.jpg', rating: 4.8 },
-      { id: 8, name: 'Woolen Scarf', price: 399, originalPrice: 799, image: '/images/products/woolen-scarf.jpg', rating: 4.6 },
-    ]
-  },
-  {
-    id: 3,
-    name: 'Festive Dhamaka',
-    season: 'festive',
-    icon: <Gift size={20} />,
-    gradient: 'from-red-500 to-pink-500',
-    description: 'Celebrate with exclusive offers',
-    curatorNote: 'Perfect gifts for your loved ones',
-    products: [
-      { id: 9, name: 'Gift Hamper', price: 999, originalPrice: 1999, image: '/images/products/gift-hamper.jpg', rating: 4.9 },
-      { id: 10, name: 'Decorative Lights', price: 499, originalPrice: 999, image: '/images/products/decorative-lights.jpg', rating: 4.7 },
-      { id: 11, name: 'Pooja Thali', price: 599, originalPrice: 1199, image: '/images/products/pooja-thali.jpg', rating: 4.8 },
-      { id: 12, name: 'Rangoli Colors', price: 199, originalPrice: 399, image: '/images/products/rangoli-colors.jpg', rating: 4.5 },
-    ]
-  }
-];
-
 const ProductCard = memo(({ product }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isWishlist, setIsWishlist] = useState(false);
+
+  // Get image URL from backend product data
+  const getImageUrl = () => {
+    return product?.primary_image || 
+           product?.images?.[0]?.image || 
+           '/images/placeholder.jpg';
+  };
+
+  const getPrice = () => {
+    return product?.display_price || product?.price || 0;
+  };
+
+  const getOriginalPrice = () => {
+    return product?.retail_price || product?.compare_price || null;
+  };
 
   return (
     <div
@@ -70,13 +37,14 @@ const ProductCard = memo(({ product }) => {
           </div>
         )}
         <img
-          src={product.image}
-          alt={product.name}
+          src={getImageUrl()}
+          alt={product?.name}
           loading="lazy"
           className={`w-full h-full object-cover transition-transform duration-500 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           } ${isHovered ? 'scale-110' : 'scale-100'}`}
           onLoad={() => setIsLoaded(true)}
+          onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
         />
         <button
           onClick={() => setIsWishlist(!isWishlist)}
@@ -86,10 +54,12 @@ const ProductCard = memo(({ product }) => {
         </button>
       </div>
       <div className="p-2">
-        <h4 className="text-xs font-medium text-gray-800 truncate">{product.name}</h4>
+        <h4 className="text-xs font-medium text-gray-800 truncate">{product?.name}</h4>
         <div className="flex items-center gap-1 mt-1">
-          <span className="text-xs font-bold text-primary-600">₹{product.price}</span>
-          <span className="text-[9px] text-gray-400 line-through">₹{product.originalPrice}</span>
+          <span className="text-xs font-bold text-primary-600">₹{getPrice()}</span>
+          {getOriginalPrice() && (
+            <span className="text-[9px] text-gray-400 line-through">₹{getOriginalPrice()}</span>
+          )}
         </div>
         <button className="w-full mt-2 py-1 bg-primary-500 text-white rounded text-[10px] font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-1">
           <ShoppingCart size={10} />
@@ -102,12 +72,13 @@ const ProductCard = memo(({ product }) => {
 
 ProductCard.displayName = 'ProductCard';
 
-export default function FeaturedCollections() {
+export default function FeaturedCollections({ collections = [] }) {
   const [activeSeason, setActiveSeason] = useState('summer');
   const [isInView, setIsInView] = useState(false);
   const [visibleProducts, setVisibleProducts] = useState([]);
   const sectionRef = useRef(null);
 
+  // Get current collection from props (passed from HomePage)
   const currentCollection = collections.find(c => c.season === activeSeason);
 
   const seasons = [
@@ -137,7 +108,7 @@ export default function FeaturedCollections() {
 
   // Progressive loading
   useEffect(() => {
-    if (isInView && currentCollection) {
+    if (isInView && currentCollection?.products) {
       setVisibleProducts(currentCollection.products.slice(0, 2));
       const timer = setTimeout(() => {
         setVisibleProducts(currentCollection.products);
@@ -145,6 +116,11 @@ export default function FeaturedCollections() {
       return () => clearTimeout(timer);
     }
   }, [isInView, currentCollection]);
+
+  // If no collections data, don't render
+  if (!collections.length || !currentCollection?.products?.length) {
+    return null;
+  }
 
   return (
     <section ref={sectionRef} className="featured-collections-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
@@ -192,7 +168,7 @@ export default function FeaturedCollections() {
                   </div>
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-white">{currentCollection.name}</h3>
-                    <p className="text-white/80 text-sm">{currentCollection.description}</p>
+                    <p className="text-white/80 text-sm">{currentCollection.description || 'Seasonal collection'}</p>
                   </div>
                 </div>
                 <Link
@@ -209,7 +185,7 @@ export default function FeaturedCollections() {
               <div className="flex items-center gap-2">
                 <TrendingUp size={14} className="text-primary-500" />
                 <span className="text-xs text-gray-600">
-                  <span className="font-semibold">Curator's Pick:</span> {currentCollection.curatorNote}
+                  <span className="font-semibold">Curator's Pick:</span> {currentCollection.curatorNote || 'Trending this season'}
                 </span>
               </div>
             </div>

@@ -102,6 +102,7 @@ class Product(models.Model):
             models.Index(fields=['seller', 'status']),
             models.Index(fields=['category', 'status']),
             models.Index(fields=['-created_at']),
+            models.Index(fields=['-total_sold']),
             models.Index(fields=['sku']),
             models.Index(fields=['brand']),
         ]

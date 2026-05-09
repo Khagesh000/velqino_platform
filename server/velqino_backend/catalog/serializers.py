@@ -1,7 +1,7 @@
 import uuid
 from rest_framework import serializers
 from .models import Category, Product, ProductImage, ProductVariant, Wishlist
-
+from commerce.models import OrderItem
 
 
 class RecursiveField(serializers.Serializer):
@@ -55,7 +55,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'slug', 'sku', 'price', 'retail_price', 'display_price', 
                   'stock', 'status', 'primary_image', 'category_name', 'pattern', 'images',
-                  'primary_color', 'min_order_qty', 'display_min_order', 'is_wishlisted', 'category_id',]
+                  'primary_color', 'min_order_qty', 'display_min_order', 'is_wishlisted', 'category_id',
+                  ]
         
     def get_images(self, obj):
         """Return all product images for bulk products"""

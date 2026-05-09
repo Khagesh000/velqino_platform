@@ -96,25 +96,31 @@ export default function CategoryGrid({ categories = [], productsData = {}, loadi
     return iconMap.default;
   };
 
-    // Transform backend categories and assign a product image to each category
   const formattedCategories = React.useMemo(() => {
-    if (!categories || categories.length === 0) return [];
-    const categoryList = categories.data || categories.results || categories;
-    if (!Array.isArray(categoryList)) return [];
+  if (!categories || categories.length === 0) return [];
+  const categoryList = categories.data || categories.results || categories;
+  if (!Array.isArray(categoryList)) return [];
+  
+  // Get products from correct path - now productsData has { products, pagination }
+  const products = productsData?.products || [];
+  
+  return categoryList.slice(0, 12).map((category) => {
+    // Find a product that belongs to THIS specific category
+    const categoryProduct = products.find(p => p.category_id === category.id || p.category_name === category.name);
     
-    return categoryList.slice(0, 12).map((category, index) => ({
+    return {
       id: category.id,
       name: category.name,
       slug: category.slug,
-      // Use product image from your productsData - assign different product to each category
-      image: productsData?.data?.products?.[index]?.primary_image || 
-       productsData?.data?.products?.[index]?.images?.[0]?.image ||
-       '/images/categories/placeholder.jpg',
-      productCount: productsData?.data?.products?.filter(p => p.category_id === category.id).length || 0,
-      icon: category.icon || getCategoryIcon(category.name),
+      image: categoryProduct?.primary_image || 
+             categoryProduct?.images?.[0]?.image ||
+             '/images/categories/placeholder.jpg',
+      productCount: products.filter(p => p.category_id === category.id).length,
+      icon: getCategoryIcon(category.name),
       color: 'from-blue-500 to-cyan-500'
-    }));
-  }, [categories, productsData]);
+    };
+  });
+}, [categories, productsData]);
   console.log('Image object:', productsData?.products?.[0]?.images?.[0]);
   console.log('productsData received:', productsData);
 console.log('Products array:', productsData?.products);
@@ -140,14 +146,18 @@ console.log('Products array:', productsData?.products);
 
     // Progressive loading of categories - Load immediately without waiting for isInView
     useEffect(() => {
-    if (formattedCategories.length > 0 && visibleCategories.length === 0) {
-      setVisibleCategories(formattedCategories.slice(0, 4));
-      const timer = setTimeout(() => {
-        setVisibleCategories(formattedCategories);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [formattedCategories, visibleCategories.length]);
+  if (formattedCategories.length > 0 && visibleCategories.length === 0) {
+    // Load first 4
+    setVisibleCategories(formattedCategories.slice(0, 4));
+    
+    // Load remaining after delay
+    const timer = setTimeout(() => {
+      setVisibleCategories(formattedCategories);
+    }, 500); // Increased from 100ms to 500ms
+    
+    return () => clearTimeout(timer);
+  }
+}, [formattedCategories]);
 
   // Loading state
   if (loading) {
