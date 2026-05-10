@@ -48,9 +48,9 @@ export default function HomePage() {
   
   // 3. Deals of the Day (discount = true)
   const { data: dealsResponse, isLoading: dealsLoading } = useGetProductsQuery(
-    { discount: true, limit: 8 },
+    { deals_of_day: true, limit: 8 },
     { refetchOnMountOrArgChange: true }
-  );
+);
   
   // 4. Summer Collection (season = summer)
   const { data: summerResponse, isLoading: summerLoading } = useGetProductsQuery(

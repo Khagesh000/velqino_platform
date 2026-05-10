@@ -2,9 +2,12 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from datetime import datetime
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from .models import Product, Category, ProductImage, ProductVariant, Wishlist
+from django.db.models import F, Q
+from django.core.paginator import Paginator
+from .models import Product, Category, ProductImage, ProductVariant, Wishlist, DealOfTheDay
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer,
     BulkImageUploadSerializer, BulkVideoUploadSerializer,
@@ -33,13 +36,52 @@ def product_list(request):
             serializer = ProductListSerializer(products, many=True, context={'request': request})
             return Response({'status': 'success', 'data': {'products': serializer.data}})
         
+
+        if request.query_params.get('deals_of_day') == 'true':
+            from django.utils import timezone
+            from .models import DealOfTheDay
+            
+            limit = int(request.query_params.get('limit', 8))
+            now = timezone.now()
+            
+            deals = DealOfTheDay.objects.filter(
+                is_active=True,
+                start_date__lte=now,
+                end_date__gte=now
+            ).select_related('product').order_by('display_order', 'start_date')[:limit]
+            
+            products_data = []
+            for deal in deals:
+                product_data = ProductListSerializer(deal.product, context={'request': request}).data
+                product_data['deal_price'] = str(deal.deal_price)
+                product_data['original_price'] = str(deal.original_price_was)
+                product_data['discount_percentage'] = round(
+                    ((deal.original_price_was - deal.deal_price) / deal.original_price_was) * 100
+                )
+                product_data['deal_end_time'] = deal.end_date.isoformat()
+                products_data.append(product_data)
+            
+            return Response({
+                'status': 'success',
+                'data': {
+                    'products': products_data,
+                    'pagination': {
+                        'total': len(products_data),
+                        'page': 1,
+                        'per_page': limit,
+                        'total_pages': 1
+                    }
+                }
+            })
+        
+        
         cache_key = f"product:list:public:{request.GET.urlencode()}"
         cached_data = cache.get(cache_key)
         
         if cached_data:
             return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
         
-        # ✅ ADD THESE NEW PARAMETERS
+        # ✅ GET QUERY PARAMETERS
         sort_by = request.query_params.get('sort')
         discount = request.query_params.get('discount')
         limit = request.query_params.get('limit')
@@ -63,50 +105,51 @@ def product_list(request):
         if limit:
             per_page = int(limit)
         
-        result = ProductService.get_products_with_filters(request.user, filters, page, per_page)
-        
-        # ✅ APPLY SORTING
-        products = result['products']
-        
-        if sort_by == '-total_sold':
-            products = products.order_by('-total_sold')
-        elif sort_by == '-created_at':
-            products = products.order_by('-created_at')
-        elif sort_by == '-price':
-            products = products.order_by('-price')
-        elif sort_by == 'price':
-            products = products.order_by('price')
+        # ✅ START WITH BASE QUERYSET (NOT paginated yet)
+        queryset = Product.objects.all()
         
         # ✅ APPLY DISCOUNT FILTER
         if discount == 'true':
-            from django.db.models import F, Q
-            products = products.filter(
+            queryset = queryset.filter(
                 Q(retail_price__gt=F('price')) | Q(compare_price__gt=F('price'))
             )
         
         # ✅ APPLY CATEGORY FILTER
         if category_id:
-            products = products.filter(category_id=category_id)
+            queryset = queryset.filter(category_id=category_id)
         
         # ✅ APPLY SEASON FILTER (based on created_at months)
         if season:
-            current_year = datetime.now().year
             if season == 'summer':
-                products = products.filter(created_at__month__in=[3, 4, 5, 6])
+                queryset = queryset.filter(created_at__month__in=[3, 4, 5, 6])
             elif season == 'winter':
-                products = products.filter(created_at__month__in=[11, 12, 1, 2])
+                queryset = queryset.filter(created_at__month__in=[11, 12, 1, 2])
             elif season == 'festive':
-                products = products.filter(created_at__month__in=[8, 9, 10])
+                queryset = queryset.filter(created_at__month__in=[8, 9, 10])
         
-        serializer = ProductListSerializer(products, many=True, context={'request': request})
+        # ✅ APPLY SORTING
+        if sort_by == '-total_sold':
+            queryset = queryset.order_by('-total_sold')
+        elif sort_by == '-created_at':
+            queryset = queryset.order_by('-created_at')
+        elif sort_by == '-price':
+            queryset = queryset.order_by('-price')
+        elif sort_by == 'price':
+            queryset = queryset.order_by('price')
+        
+        # ✅ NOW APPLY PAGINATION
+        paginator = Paginator(queryset, per_page)
+        products_page = paginator.get_page(page)
+        
+        serializer = ProductListSerializer(products_page, many=True, context={'request': request})
         
         response_data = {
             'products': serializer.data,
             'pagination': {
-                'total': products.count(),
+                'total': paginator.count,
                 'page': page,
                 'per_page': per_page,
-                'total_pages': (products.count() + per_page - 1) // per_page
+                'total_pages': paginator.num_pages
             }
         }
         

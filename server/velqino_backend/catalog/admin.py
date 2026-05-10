@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, ProductImage, ProductVariant, Wishlist
+from .models import Category, Product, ProductImage, ProductVariant, Wishlist, DealOfTheDay
 
 
 @admin.register(Category)
@@ -67,3 +67,21 @@ class WishlistAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'product__name']
     readonly_fields = ['added_at']
 
+@admin.register(DealOfTheDay)
+class DealOfTheDayAdmin(admin.ModelAdmin):
+    list_display = ('product', 'wholesaler', 'deal_price', 'start_date', 'end_date', 'is_active')
+    list_filter = ('wholesaler', 'is_active', 'start_date')
+    search_fields = ('product__name', 'wholesaler__email')
+    date_hierarchy = 'start_date'
+    
+    fieldsets = (
+        ('Product Information', {
+            'fields': ('product', 'wholesaler', 'deal_price')
+        }),
+        ('Schedule', {
+            'fields': ('start_date', 'end_date', 'is_active')
+        }),
+        ('Display', {
+            'fields': ('display_order',)
+        })
+    )
