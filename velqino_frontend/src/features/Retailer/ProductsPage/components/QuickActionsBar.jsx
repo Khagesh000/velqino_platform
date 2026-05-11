@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Scan, Upload, Printer, Download, Filter, Grid, List, Search, X } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerProducts/QuickActionsBar.scss'
 
-export default function QuickActionsBar({ onAddProduct, onScanBarcode, onImport, onPrintLabels, onViewChange, currentView }) {
+export default function QuickActionsBar({ onAddProduct, onScanBarcode, onImport, onPrintLabels, onViewChange, currentView, onExportClick }) {
   const [mounted, setMounted] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [barcodeValue, setBarcodeValue] = useState('')
@@ -24,11 +24,70 @@ export default function QuickActionsBar({ onAddProduct, onScanBarcode, onImport,
   }
 
   const actions = [
-    { id: 'add', label: 'Add Product', icon: <Plus size={18} />, color: 'primary', onClick: onAddProduct },
-    { id: 'scan', label: 'Scan Barcode', icon: <Scan size={18} />, color: 'blue', onClick: () => setShowScanner(true) },
-    { id: 'import', label: 'Import Products', icon: <Upload size={18} />, color: 'green', onClick: onImport },
-    { id: 'print', label: 'Print Labels', icon: <Printer size={18} />, color: 'purple', onClick: onPrintLabels },
-  ]
+  { 
+    id: 'add', 
+    label: 'Add Product', 
+    icon: <Plus size={18} />, 
+    color: 'primary', 
+    onClick: () => {
+      // Show dropdown with three options
+      const dropdown = document.createElement('div');
+      dropdown.className = 'absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[160px]';
+      dropdown.innerHTML = `
+        <div class="py-1">
+          <button class="add-single-product w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Single Product
+          </button>
+          <button class="add-bulk-images w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            Bulk Images
+          </button>
+          <button class="add-bulk-video w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            Bulk Video
+          </button>
+        </div>
+      `;
+      
+      const btn = document.querySelector('.action-btn-primary');
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.top = `${rect.bottom + 5}px`;
+        dropdown.style.left = `${rect.left}px`;
+        document.body.appendChild(dropdown);
+        
+        const closeDropdown = (e) => {
+          if (!dropdown.contains(e.target) && e.target !== btn) {
+            dropdown.remove();
+            document.removeEventListener('click', closeDropdown);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        
+        dropdown.querySelector('.add-single-product')?.addEventListener('click', () => {
+          onAddProduct?.('single');
+          dropdown.remove();
+        });
+        dropdown.querySelector('.add-bulk-images')?.addEventListener('click', () => {
+          onAddProduct?.('bulk-images');
+          dropdown.remove();
+        });
+        dropdown.querySelector('.add-bulk-video')?.addEventListener('click', () => {
+          onAddProduct?.('bulk-video');
+          dropdown.remove();
+        });
+      }
+    } 
+  },
+  { id: 'scan', label: 'Scan Barcode', icon: <Scan size={18} />, color: 'blue', onClick: () => setShowScanner(true) },
+  { id: 'import', label: 'Import Products', icon: <Upload size={18} />, color: 'green', onClick: onImport },
+  { id: 'print', label: 'Print Labels', icon: <Printer size={18} />, color: 'purple', onClick: onPrintLabels },
+];
+
+
+
 
   return (
     <div className="quick-actions-bar bg-white rounded-xl shadow-sm border border-gray-100">
@@ -49,10 +108,13 @@ export default function QuickActionsBar({ onAddProduct, onScanBarcode, onImport,
           </div>
 
           {/* Export Button */}
-          <button className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2">
-            <Download size={16} />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+          <button 
+          onClick={onExportClick}
+          className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
+        >
+          <Download size={16} />
+          <span className="hidden sm:inline">Export</span>
+        </button>
         </div>
       </div>
 

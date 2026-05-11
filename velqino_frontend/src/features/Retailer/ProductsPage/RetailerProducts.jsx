@@ -2,6 +2,11 @@
 
 import React, { useState, lazy, Suspense } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
+import AddProductModal from './modals/AddProductModal'
+import BulkImagesModal from './modals/BulkImagesModal'
+import BulkVideoModal from './modals/BulkVideoModal'
+import ImportProductsModal from './modals/ImportProductsModal'
+import ExportProductsModal from './modals/ExportProductsModal'
 
 // Lazy load all components
 const ProductsGrid = lazy(() => import('./components/ProductsGrid'))
@@ -21,6 +26,69 @@ export default function RetailerProducts() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [currentView, setCurrentView] = useState('grid');
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [showBulkImagesModal, setShowBulkImagesModal] = useState(false);
+  const [showBulkVideoModal, setShowBulkVideoModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  
+
+      const handleAddProduct = (type) => {
+      if (type === 'single') {
+        setShowAddProductModal(true);
+      } else if (type === 'bulk-images') {
+        setShowBulkImagesModal(true);
+      } else if (type === 'bulk-video') {
+        setShowBulkVideoModal(true);
+      }
+    };
+
+    const handleSaveProduct = async (formData) => {
+    // Your API call to save product
+    console.log('Saving product:', formData);
+    // Call your API here
+  };
+
+  const handleBulkSave = async (formData) => {
+    // Your API call to save product
+    console.log('Saving product:', formData);
+    // Call your API here
+  };
+
+  const handleBulkVideoSave = async (formData) => {
+    // Your API call to save product
+    console.log('Saving product:', formData);
+    // Call your API here
+  };
+
+  const handleImportProducts = async (formData) => {
+    // Your API call to save product
+    console.log('Saving product:', formData);
+    // Call your API here
+  };
+
+  const handleExportProducts = async (formData) => {
+    // Your API call to save product
+    console.log('Saving product:', formData);
+    // Call your API here
+  };
+
+    const handleScanBarcode = (barcode) => {
+      console.log('Scanned:', barcode);
+    };
+
+    const handleImport = () => {
+      setShowImportModal(true);
+    };
+
+    const handlePrintLabels = () => {
+      setShowPrintLabelsModal(true);
+    };
+
+
+
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
@@ -44,9 +112,17 @@ export default function RetailerProducts() {
           {/* Quick Actions Bar */}
           <div className="mb-6" style={{ minHeight: '80px' }}>
             <Suspense fallback={<AlertsPlaceholder />}>
-              <QuickActionsBar />
+              <QuickActionsBar 
+                onAddProduct={handleAddProduct}
+                onScanBarcode={handleScanBarcode}
+                onImport={handleImport}
+                onPrintLabels={handlePrintLabels}
+                onViewChange={setCurrentView}
+                currentView={currentView}
+                onExportClick={() => setShowExportModal(true)}
+              />
             </Suspense>
-          </div> 
+          </div>
 
           {/* Stock Alerts */}
           <div className="mb-6" style={{ minHeight: '100px' }}>
@@ -102,6 +178,54 @@ export default function RetailerProducts() {
                 <BarcodePrinting />
               </Suspense>
             </div> 
+
+                        {/* Add Product Modal */}
+            {showAddProductModal && (
+              <AddProductModal 
+                isOpen={showAddProductModal}
+                onClose={() => setShowAddProductModal(false)} 
+                onSave={handleSaveProduct}
+                categories={categories}
+              />
+            )}
+
+            {/* Import Images Modal */}
+           {showBulkImagesModal && (
+              <BulkImagesModal 
+                isOpen={showBulkImagesModal}
+                onClose={() => setShowBulkImagesModal(false)} 
+                onSave={handleBulkSave}
+                categories={categories}
+              />
+            )}
+
+            {/* Import Video Modal */}
+           {showBulkVideoModal && (
+              <BulkVideoModal 
+                isOpen={showBulkVideoModal}
+                onClose={() => setShowBulkVideoModal(false)} 
+                onSave={handleBulkVideoSave}
+                categories={categories}
+              />
+            )}
+
+            {showImportModal && (
+              <ImportProductsModal 
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)} 
+                onImport={handleImportProducts}
+              />
+            )}
+
+            {/* Export Modal */}
+            {showExportModal && (
+              <ExportProductsModal 
+                isOpen={showExportModal}
+                onClose={() => setShowExportModal(false)} 
+                onExport={handleExportProducts}
+               // totalProducts={products?.length || 0}
+              />
+            )}
 
           </div> 
         </div>

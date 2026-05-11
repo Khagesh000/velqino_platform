@@ -218,6 +218,7 @@ import {
 
   Edit2,
   PackageIcon,
+  Pause,
 
 
 } from 'lucide-react';
@@ -424,6 +425,7 @@ export {
  
   Edit2,
   PackageIcon,
+  Pause,
 
 
 
