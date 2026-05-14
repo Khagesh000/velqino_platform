@@ -7,7 +7,10 @@ import BulkImagesModal from './modals/BulkImagesModal'
 import BulkVideoModal from './modals/BulkVideoModal'
 import ImportProductsModal from './modals/ImportProductsModal'
 import ExportProductsModal from './modals/ExportProductsModal'
+import { toast } from 'react-toastify';
 
+import { useCreateRetailerProductMutation, useGetRetailerProductsQuery } from '@/redux/retailer/slices/retailerProductsSlice'
+import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
 // Lazy load all components
 const ProductsGrid = lazy(() => import('./components/ProductsGrid'))
 const QuickActionsBar = lazy(() => import('./components/QuickActionsBar'))
@@ -28,12 +31,16 @@ export default function RetailerProducts() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [currentView, setCurrentView] = useState('grid');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [categories, setCategories] = useState([]);
   const [showBulkImagesModal, setShowBulkImagesModal] = useState(false);
   const [showBulkVideoModal, setShowBulkVideoModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery();
+  const categories = categoriesData?.data || categoriesData || [];
+
+  const [createProduct, { isLoading: isCreating }] = useCreateRetailerProductMutation();
+  const { data: productsData, refetch } = useGetRetailerProductsQuery({ page: 1, per_page: 50 });
 
       const handleAddProduct = (type) => {
       if (type === 'single') {
@@ -46,34 +53,70 @@ export default function RetailerProducts() {
     };
 
     const handleSaveProduct = async (formData) => {
-    // Your API call to save product
-    console.log('Saving product:', formData);
-    // Call your API here
+    console.log('🔵 Calling API with:', formData);
+    try {
+      const response = await createProduct(formData).unwrap();
+      console.log('🔵 API Success:', response);
+      toast.success('Product added successfully');
+      setShowAddProductModal(false);
+      refetch();
+      return response;
+    } catch (error) {
+      console.error('🔴 API Error:', error);
+      toast.error(error?.data?.message || 'Failed to add product');
+      throw error;
+    }
   };
 
-  const handleBulkSave = async (formData) => {
-    // Your API call to save product
-    console.log('Saving product:', formData);
-    // Call your API here
-  };
+  const handleBulkImagesSave = async (formData) => {
+    try {
+        const response = await bulkImagesSame(formData).unwrap();
+        toast.success('Products uploaded successfully');
+        setShowBulkImagesModal(false);
+        refetch();
+        return response;
+    } catch (error) {
+        toast.error(error?.data?.message || 'Failed to upload products');
+        throw error;
+    }
+};
 
   const handleBulkVideoSave = async (formData) => {
-    // Your API call to save product
-    console.log('Saving product:', formData);
-    // Call your API here
-  };
+    try {
+        const response = await bulkVideo(formData).unwrap();
+        toast.success('Products uploaded successfully');
+        setShowBulkVideoModal(false);
+        refetch();
+        return response;
+    } catch (error) {
+        toast.error(error?.data?.message || 'Failed to upload products');
+        throw error;
+    }
+};
 
   const handleImportProducts = async (formData) => {
-    // Your API call to save product
-    console.log('Saving product:', formData);
-    // Call your API here
-  };
+    try {
+        const response = await importProducts(formData).unwrap();
+        toast.success('Products imported successfully');
+        setShowImportModal(false);
+        refetch();
+        return response;
+    } catch (error) {
+        toast.error(error?.data?.message || 'Failed to import products');
+        throw error;
+    }
+};
 
-  const handleExportProducts = async (formData) => {
-    // Your API call to save product
-    console.log('Saving product:', formData);
-    // Call your API here
-  };
+  const handleExportProducts = async (params) => {
+    try {
+        const response = await exportProducts(params).unwrap();
+        toast.success('Products exported successfully');
+        return response;
+    } catch (error) {
+        toast.error(error?.data?.message || 'Failed to export products');
+        throw error;
+    }
+};
 
     const handleScanBarcode = (barcode) => {
       console.log('Scanned:', barcode);
@@ -194,7 +237,7 @@ export default function RetailerProducts() {
               <BulkImagesModal 
                 isOpen={showBulkImagesModal}
                 onClose={() => setShowBulkImagesModal(false)} 
-                onSave={handleBulkSave}
+                onSave={handleBulkImagesSave}
                 categories={categories}
               />
             )}
@@ -219,12 +262,12 @@ export default function RetailerProducts() {
 
             {/* Export Modal */}
             {showExportModal && (
-              <ExportProductsModal 
-                isOpen={showExportModal}
-                onClose={() => setShowExportModal(false)} 
-                onExport={handleExportProducts}
-               // totalProducts={products?.length || 0}
-              />
+                <ExportProductsModal 
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)} 
+                    onExport={handleExportProducts}
+                    totalProducts={productsData?.data?.products?.length || 0}
+                />
             )}
 
           </div> 

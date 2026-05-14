@@ -277,13 +277,13 @@ export default function ProductsGrid({ selectedProduct, setSelectedProduct, refr
                   >
                     <td className="px-3 py-2 w-8" onClick={(e) => e.stopPropagation()}>
                      <input
-  type="checkbox"
-  checked={selectedProductIds.includes(product.id)}
-  onChange={(e) => handleSelectProduct(product.id, e.target.checked)}
-  onClick={(e) => e.stopPropagation()}
-  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#386e71' }}
-  className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-/>
+                        type="checkbox"
+                        checked={selectedProductIds.includes(product.id)}
+                        onChange={(e) => handleSelectProduct(product.id, e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#386e71' }}
+                        className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                      />
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">

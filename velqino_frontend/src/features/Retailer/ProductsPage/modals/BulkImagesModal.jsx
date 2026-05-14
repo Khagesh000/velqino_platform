@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Upload, ImageIcon, Package, DollarSign, Tag, Box, Archive, FileText, Save, Plus } from '../../../../utils/icons';
+import { useBulkImagesSameMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
 export default function BulkImagesModal({ onClose, onSave, categories = [], isOpen }) {
@@ -25,6 +26,7 @@ export default function BulkImagesModal({ onClose, onSave, categories = [], isOp
 
   const [selectedSizes, setSelectedSizes] = useState([]);
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+  const [bulkImagesSame, { isLoading: isBulkUploading }] = useBulkImagesSameMutation();
 
   // Reset form when modal opens
   useEffect(() => {
@@ -93,16 +95,16 @@ export default function BulkImagesModal({ onClose, onSave, categories = [], isOp
 
   const handleSubmit = async () => {
     if (!formData.common_price) {
-      toast.error('Please enter price');
-      return;
+        toast.error('Please enter price');
+        return;
     }
     if (!formData.common_name_prefix) {
-      toast.error('Please enter product name prefix');
-      return;
+        toast.error('Please enter product name prefix');
+        return;
     }
     if (images.length === 0) {
-      toast.error('Please select at least one image');
-      return;
+        toast.error('Please select at least one image');
+        return;
     }
 
     setUploading(true);
@@ -110,46 +112,44 @@ export default function BulkImagesModal({ onClose, onSave, categories = [], isOp
     setProgressMessage('Preparing upload...');
     
     try {
-      const submitData = new FormData();
-      submitData.append('common_price', formData.common_price);
-      submitData.append('common_cost', formData.common_cost || 0);
-      submitData.append('category_id', formData.category_id || '');
-      submitData.append('common_name_prefix', formData.common_name_prefix);
-      submitData.append('brand', formData.brand || '');
-      submitData.append('description', formData.description || '');
-      submitData.append('stock', formData.stock || 1);
-      submitData.append('threshold', formData.threshold);
-      submitData.append('status', formData.status);
-      submitData.append('upload_mode', 'bulk_single_product');
-      
-      images.forEach(img => {
-        submitData.append('images', img);
-      });
-      
-      if (selectedSizes.length > 0) {
-        selectedSizes.forEach(size => {
-          submitData.append('sizes', size);
+        const submitData = new FormData();
+        submitData.append('common_price', formData.common_price);
+        submitData.append('common_cost', formData.common_cost || 0);
+        submitData.append('category_id', formData.category_id || '');
+        submitData.append('common_name_prefix', formData.common_name_prefix);
+        submitData.append('brand', formData.brand || '');
+        submitData.append('description', formData.description || '');
+        submitData.append('stock', formData.stock || 1);
+        submitData.append('threshold', formData.threshold);
+        submitData.append('status', formData.status);
+        
+        images.forEach(img => {
+            submitData.append('images', img);
         });
-      }
-      
-      setProgress(30);
-      setProgressMessage('Uploading images to Cloudinary...');
-      
-      if (onSave) {
-        await onSave(submitData);
-      }
-      
-      setProgress(100);
-      setProgressMessage('Complete!');
-      toast.success(`${images.length} products uploaded successfully`);
-      onClose();
+        
+        if (selectedSizes.length > 0) {
+            selectedSizes.forEach(size => {
+                submitData.append('sizes', size);
+            });
+        }
+        
+        setProgress(30);
+        setProgressMessage('Uploading images to Cloudinary...');
+        
+        // ✅ Call the API mutation
+        const response = await bulkImagesSame(submitData).unwrap();
+        
+        setProgress(100);
+        setProgressMessage('Complete!');
+        toast.success(`${images.length} products uploaded successfully`);
+        onClose();
     } catch (error) {
-      toast.error('Failed to upload products');
-      console.error(error);
+        toast.error(error?.data?.message || 'Failed to upload products');
+        console.error(error);
     } finally {
-      setUploading(false);
+        setUploading(false);
     }
-  };
+};
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">

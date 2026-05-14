@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Tag, DollarSign, Box, Archive, FileText, Save, Package } from '../../../../utils/icons';
+import { useCreateRetailerProductMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
 export default function AddProductModal({ onClose, onSave, categories = [], isOpen }) {
@@ -13,7 +14,6 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
   
   const [formData, setFormData] = useState({
     name: '',
-    sku: '',
     price: '',
     cost: '',
     category_id: '',
@@ -29,7 +29,6 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
     if (isOpen) {
       setFormData({
         name: '',
-        sku: '',
         price: '',
         cost: '',
         category_id: '',
@@ -41,6 +40,7 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
       });
       setSelectedImage(null);
       setImagePreview(null);
+      setSelectedSizes([]);
     }
   }, [isOpen]);
 
@@ -72,6 +72,8 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
   };
 
   const handleSubmit = async () => {
+    console.log('🔵 Submitting product...');
+    
     if (!formData.name) {
       toast.error('Please enter product name');
       return;
@@ -83,11 +85,6 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
     if (!selectedImage) {
       toast.error('Please select product image');
       return;
-    }
-    if (selectedSizes.length > 0) {
-    selectedSizes.forEach(size => {
-        submitData.append('sizes', size);
-    });
     }
 
     setUploading(true);
@@ -102,18 +99,34 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
       submitData.append('stock', formData.stock || 1);
       submitData.append('threshold', formData.threshold);
       submitData.append('status', formData.status);
+      
+      // Append image
       if (selectedImage) {
         submitData.append('images', selectedImage);
       }
       
-      if (onSave) {
-        await onSave(submitData);
+      // Append sizes
+      if (selectedSizes.length > 0) {
+        selectedSizes.forEach(size => {
+          submitData.append('sizes', size);
+        });
       }
-      toast.success('Product added successfully');
-      onClose();
+      
+      // Log FormData contents for debugging
+      console.log('🔵 FormData entries:');
+      for (let pair of submitData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+      
+      if (onSave) {
+        const response = await onSave(submitData);
+        console.log('🔵 Response:', response);
+        toast.success('Product added successfully');
+        onClose();
+      }
     } catch (error) {
-      toast.error('Failed to add product');
-      console.error(error);
+      console.error('🔴 Error:', error);
+      toast.error(error?.data?.message || 'Failed to add product');
     } finally {
       setUploading(false);
     }
@@ -151,26 +164,27 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
                 </label>
                 <div className="relative">
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    id="product-image"
-                  />
-                  <label
-                    htmlFor="product-image"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-all bg-gray-50"
-                  >
-                    {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className="h-full object-contain rounded-lg" />
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <Upload size={24} className="text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-500">Click to upload image</span>
-                        <span className="text-xs text-gray-400">JPG, PNG, WEBP (Max 5MB)</span>
-                      </div>
-                    )}
-                  </label>
+    type="file"
+    accept="image/*"
+    onChange={handleImageSelect}
+    className="hidden"
+    id="product-image"
+/>
+<label
+    htmlFor="product-image"
+    onClick={() => document.getElementById('product-image').click()}  // ✅ ADD THIS
+    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-all bg-gray-50"
+>
+    {imagePreview ? (
+        <img src={imagePreview} alt="Preview" className="h-full object-contain rounded-lg" />
+    ) : (
+        <div className="flex flex-col items-center">
+            <Upload size={24} className="text-gray-400 mb-2" />
+            <span className="text-sm text-gray-500">Click to upload image</span>
+            <span className="text-xs text-gray-400">JPG, PNG, WEBP (Max 5MB)</span>
+        </div>
+    )}
+</label>
                 </div>
               </div>
 
@@ -189,18 +203,7 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
                 />
               </div>
 
-              {/* SKU */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SKU (Optional)</label>
-                <input
-                  type="text"
-                  name="sku"
-                  value={formData.sku}
-                  onChange={handleChange}
-                  placeholder="e.g., CT-001"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
+      
 
               {/* Price and Cost Row */}
               <div className="grid grid-cols-2 gap-4">

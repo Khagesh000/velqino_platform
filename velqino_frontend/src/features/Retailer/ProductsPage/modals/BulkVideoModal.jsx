@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Video, Package, DollarSign, Tag, Box, Archive, FileText, Save, Play, Pause } from '../../../../utils/icons';
+import { useBulkVideoMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
 export default function BulkVideoModal({ onClose, onSave, categories = [], isOpen }) {
@@ -30,6 +31,7 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
 
   const [selectedSizes, setSelectedSizes] = useState([]);
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+  const [bulkVideo, { isLoading: isVideoUploading }] = useBulkVideoMutation();
 
   // Reset form when modal opens
   useEffect(() => {
@@ -96,24 +98,24 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
 
   const handleSubmit = async () => {
     if (!formData.common_price) {
-      toast.error('Please enter price');
-      return;
+        toast.error('Please enter price');
+        return;
     }
     if (!formData.common_name_prefix) {
-      toast.error('Please enter product name prefix');
-      return;
+        toast.error('Please enter product name prefix');
+        return;
     }
     if (!videoFile) {
-      toast.error('Please select a video file');
-      return;
+        toast.error('Please select a video file');
+        return;
     }
     if (!formData.product_count) {
-      toast.error('Please enter number of products in video');
-      return;
+        toast.error('Please enter number of products in video');
+        return;
     }
     if (!formData.grid_rows || !formData.grid_columns) {
-      toast.error('Please enter grid layout (rows and columns)');
-      return;
+        toast.error('Please enter grid layout (rows and columns)');
+        return;
     }
 
     setUploading(true);
@@ -121,46 +123,44 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
     setProgressMessage('Processing video...');
     
     try {
-      const submitData = new FormData();
-      submitData.append('common_price', formData.common_price);
-      submitData.append('common_cost', formData.common_cost || 0);
-      submitData.append('category_id', formData.category_id || '');
-      submitData.append('common_name_prefix', formData.common_name_prefix);
-      submitData.append('brand', formData.brand || '');
-      submitData.append('description', formData.description || '');
-      submitData.append('stock', formData.stock || 1);
-      submitData.append('threshold', formData.threshold);
-      submitData.append('status', formData.status);
-      submitData.append('upload_mode', 'bulk_single_product');
-      submitData.append('product_count', formData.product_count);
-      submitData.append('grid_rows', formData.grid_rows);
-      submitData.append('grid_columns', formData.grid_columns);
-      submitData.append('video', videoFile);
-      
-      if (selectedSizes.length > 0) {
-        selectedSizes.forEach(size => {
-          submitData.append('sizes', size);
-        });
-      }
-      
-      setProgress(30);
-      setProgressMessage('Uploading video to Cloudinary...');
-      
-      if (onSave) {
-        await onSave(submitData);
-      }
-      
-      setProgress(100);
-      setProgressMessage('Complete!');
-      toast.success('Products from video uploaded successfully');
-      onClose();
+        const submitData = new FormData();
+        submitData.append('common_price', formData.common_price);
+        submitData.append('common_cost', formData.common_cost || 0);
+        submitData.append('category_id', formData.category_id || '');
+        submitData.append('common_name_prefix', formData.common_name_prefix);
+        submitData.append('brand', formData.brand || '');
+        submitData.append('description', formData.description || '');
+        submitData.append('stock', formData.stock || 1);
+        submitData.append('threshold', formData.threshold);
+        submitData.append('status', formData.status);
+        submitData.append('product_count', formData.product_count);
+        submitData.append('grid_rows', formData.grid_rows);
+        submitData.append('grid_columns', formData.grid_columns);
+        submitData.append('video', videoFile);
+        
+        if (selectedSizes.length > 0) {
+            selectedSizes.forEach(size => {
+                submitData.append('sizes', size);
+            });
+        }
+        
+        setProgress(30);
+        setProgressMessage('Uploading video to Cloudinary...');
+        
+        // ✅ Call the API mutation
+        const response = await bulkVideo(submitData).unwrap();
+        
+        setProgress(100);
+        setProgressMessage('Complete!');
+        toast.success('Products from video uploaded successfully');
+        onClose();
     } catch (error) {
-      toast.error('Failed to process video');
-      console.error(error);
+        toast.error(error?.data?.message || 'Failed to process video');
+        console.error(error);
     } finally {
-      setUploading(false);
+        setUploading(false);
     }
-  };
+};
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">

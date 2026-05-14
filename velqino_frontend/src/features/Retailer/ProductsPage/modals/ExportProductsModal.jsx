@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Download, Calendar, FileSpreadsheet, FileText, CheckCircle, AlertCircle, Package, Filter } from '../../../../utils/icons';
+import { useExportProductsMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
 export default function ExportProductsModal({ onClose, onExport, isOpen, totalProducts = 0 }) {
@@ -12,6 +13,7 @@ export default function ExportProductsModal({ onClose, onExport, isOpen, totalPr
   const [endDate, setEndDate] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [exportProducts, { isLoading: isExporting }] = useExportProductsMutation();
   const [includeFields, setIncludeFields] = useState({
     id: true,
     name: true,
@@ -89,27 +91,37 @@ export default function ExportProductsModal({ onClose, onExport, isOpen, totalPr
     return {};
   };
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const params = {
-        format: exportFormat,
-        ...getDateFilterParams(),
-        fields: Object.keys(includeFields).filter(field => includeFields[field]).join(',')
-      };
-      
-      if (onExport) {
-        await onExport(params);
+    const handleExport = async () => {
+      setExporting(true);
+      try {
+          const params = {
+              format: exportFormat,
+              ...getDateFilterParams(),
+              fields: Object.keys(includeFields).filter(field => includeFields[field]).join(',')
+          };
+          
+          // ✅ Call the API mutation
+          const response = await exportProducts(params).unwrap();
+          
+          // Create download link if response contains file URL or blob
+          if (response?.data?.file_url) {
+              window.open(response.data.file_url, '_blank');
+          } else if (response?.data?.content) {
+              // If response contains base64 content
+              const link = document.createElement('a');
+              link.href = `data:application/${exportFormat === 'excel' ? 'vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'csv'};charset=utf-8,${encodeURIComponent(response.data.content)}`;
+              link.download = `products_export_${new Date().toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : 'csv'}`;
+              link.click();
+          }
+          
+          toast.success(`Products exported successfully as ${exportFormat.toUpperCase()}`);
+          setTimeout(() => onClose(), 1500);
+      } catch (error) {
+          toast.error(error?.data?.message || 'Failed to export products');
+          console.error(error);
+      } finally {
+          setExporting(false);
       }
-      
-      toast.success(`Products exported successfully as ${exportFormat.toUpperCase()}`);
-      setTimeout(() => onClose(), 1500);
-    } catch (error) {
-      toast.error('Failed to export products');
-      console.error(error);
-    } finally {
-      setExporting(false);
-    }
   };
 
   return (

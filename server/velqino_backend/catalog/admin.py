@@ -13,9 +13,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'sku', 'price', 'stock', 'status', 
+    list_display = ['id', 'name', 'sku', 'seller_type', 'price', 'stock', 'status', 
                    'pattern', 'primary_color', 'seller', 'created_at']
-    list_filter = ['status', 'category', 'pattern', 'primary_color', 'seller', 'created_at']
+    list_filter = ['status', 'category', 'seller_type', 'pattern', 'primary_color', 'seller', 'created_at']
     search_fields = ['name', 'sku', 'brand', 'description']
     readonly_fields = ['created_at', 'updated_at']
     list_select_related = ['category', 'seller']

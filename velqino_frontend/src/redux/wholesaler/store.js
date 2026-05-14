@@ -5,7 +5,10 @@ import { categoriesApi } from './slices/categoriesSlice';
 import { ordersApi } from './slices/ordersSlice';
 import { cartApi } from './slices/cartSlice';  
 import { customerApi } from '../customer/slices/customerSlice';
+
 import { retailerApi } from '../retailer/slices/retailerSlice';
+import { retailerProductsApi } from '../retailer/slices/retailerProductsSlice';
+
 import { wishlistApi } from './slices/wishlistSlice';
 import { statsApi } from './slices/statsSlice';
 import { supportApi } from './slices/supportSlice';
@@ -18,7 +21,11 @@ export const store = configureStore({
         [cartApi.reducerPath]: cartApi.reducer,
         [ordersApi.reducerPath]:ordersApi.reducer,
         [customerApi.reducerPath]:customerApi.reducer,
+
         [retailerApi.reducerPath]:retailerApi.reducer,
+        [retailerProductsApi.reducerPath]:retailerProductsApi.reducer,
+
+
         [wishlistApi.reducerPath]:wishlistApi.reducer,
         [statsApi.reducerPath]:statsApi.reducer,
         [supportApi.reducerPath]:supportApi.reducer,
@@ -31,7 +38,10 @@ export const store = configureStore({
             cartApi.middleware,
             ordersApi.middleware,
             customerApi.middleware,
+
             retailerApi.middleware,
+            retailerProductsApi.middleware,
+            
             wishlistApi.middleware,
             statsApi.middleware,
             supportApi.middleware,

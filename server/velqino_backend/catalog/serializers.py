@@ -2,7 +2,8 @@ import uuid
 from rest_framework import serializers
 from .models import Category, Product, ProductImage, ProductVariant, Wishlist
 from commerce.models import OrderItem
-
+from cloudinary.uploader import upload
+from datetime import datetime
 
 class RecursiveField(serializers.Serializer):
     def to_representation(self, value):
@@ -56,6 +57,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug', 'sku', 'price', 'retail_price', 'display_price', 
                   'stock', 'status', 'primary_image', 'category_name', 'pattern', 'images',
                   'primary_color', 'min_order_qty', 'display_min_order', 'is_wishlisted', 'category_id',
+                  'seller_type'
                   ]
         
     def get_images(self, obj):
@@ -304,3 +306,89 @@ class WishlistSerializer(serializers.ModelSerializer):
     def get_product_images(self, obj):
         """Return all product images URLs"""
         return [img.image.url for img in obj.product.images.all()]
+    
+
+
+    # Retailer Product List Serializer
+class RetailerProductListSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    display_price = serializers.SerializerMethodField()
+    is_wishlisted = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'slug', 'sku', 'price', 'retail_price', 
+                  'display_price', 'stock', 'status', 'primary_image', 
+                  'category_name', 'pattern', 'images', 'primary_color',
+                  'min_order_qty', 'display_min_order', 'is_wishlisted',
+                  'variants', 'created_at', 'seller_type']
+    
+    def get_display_price(self, obj):
+        return float(obj.price)
+    
+    def get_is_wishlisted(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        from catalog.models import Wishlist
+        return Wishlist.objects.filter(user=request.user, product=obj).exists()
+
+# Retailer Product Create Serializer
+class RetailerProductCreateSerializer(serializers.ModelSerializer):
+    sizes = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
+    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False, allow_empty=True)
+    
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'sku', 'price', 'cost', 'category_id', 'brand', 
+                  'description', 'stock', 'threshold', 'status', 'sizes', 'images',
+                  'primary_color', 'pattern', 'seller_type']
+    
+    def create(self, validated_data):
+        sizes = validated_data.pop('sizes', [])
+        images = validated_data.pop('images', [])
+        validated_data['seller_type'] = 'retailer'
+        
+        # Generate SKU if not provided
+        if not validated_data.get('sku'):
+            import uuid
+            validated_data['sku'] = f"RET-{uuid.uuid4().hex[:8].upper()}"
+        
+        product = super().create(validated_data)
+        
+        # Create variants
+        for size in sizes:
+            if size and size.strip():
+                ProductVariant.objects.create(
+                    product=product,
+                    size=size.strip(),
+                    color=validated_data.get('primary_color', ''),
+                    sku=f"{product.sku}-{size.strip()}",
+                    stock=product.stock,
+                    price=product.price
+                )
+        
+        # Create images
+        
+        from io import BytesIO
+        
+        for idx, img in enumerate(images):
+            upload_result = upload(
+                img,
+                public_id=f"retailer/products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image_{idx+1}",
+                use_filename=True,
+                unique_filename=False,
+                overwrite=True,
+                invalidate=True
+            )
+            ProductImage.objects.create(
+                product=product,
+                image=upload_result['secure_url'],
+                is_primary=(idx == 0),
+                is_front=True,
+                order=idx
+            )
+        
+        return product

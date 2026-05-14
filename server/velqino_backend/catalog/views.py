@@ -16,6 +16,11 @@ from .serializers import (
 )
 from .services.product_service import ProductService
 from catalog.services.wishlist_service import WishlistService
+from catalog.services.retailer_service import RetailerProductService
+from catalog.services.retailer_bulk_service import (
+    retailer_bulk_same_details_task, 
+    retailer_bulk_different_task
+)
 from .utils.product_helpers import ProductHelpers
 import logging
 from django.http import HttpResponse
@@ -712,3 +717,517 @@ def wishlist_stats(request):
         'status': 'success',
         'data': stats
     })
+
+
+
+
+
+@api_view(['GET', 'POST'])
+def retailer_product_list(request):
+    """List all retailer products or create new retailer product"""
+    
+    if request.method == 'GET':
+        response = RetailerProductService.get_retailer_products(request)
+        return Response(response)
+    
+    elif request.method == 'POST':
+        if not request.user.is_authenticated or request.user.role != 'retailer':
+            return Response({'status': 'error', 'message': 'Only retailers can create products'}, status=401)
+        
+        try:
+            from catalog.serializers import RetailerProductCreateSerializer, ProductDetailSerializer
+            
+            # ✅ Debug: Print received data
+            print("=== POST DATA ===")
+            print("POST:", request.POST)
+            print("FILES:", request.FILES)
+            print("Content-Type:", request.content_type)
+            
+            # ✅ Get data safely
+            name = request.POST.get('name') or request.data.get('name')
+            price = request.POST.get('price') or request.data.get('price')
+            
+            print(f"Name: {name}, Price: {price}")
+            
+            if not name or not price:
+                return Response({
+                    'status': 'error', 
+                    'message': f'Name and price are required. Name: {name}, Price: {price}'
+                }, status=400)
+            
+            serializer_data = {
+                'name': name,
+                'price': price,
+                'cost': request.POST.get('cost', 0) or request.data.get('cost', 0),
+                'category_id': request.POST.get('category_id') or request.data.get('category_id'),
+                'brand': request.POST.get('brand', '') or request.data.get('brand', ''),
+                'description': request.POST.get('description', '') or request.data.get('description', ''),
+                'stock': request.POST.get('stock', 1) or request.data.get('stock', 1),
+                'threshold': request.POST.get('threshold', 10) or request.data.get('threshold', 10),
+                'status': request.POST.get('status', 'active') or request.data.get('status', 'active'),
+                'primary_color': request.POST.get('primary_color', '') or request.data.get('primary_color', ''),
+                'pattern': request.POST.get('pattern', '') or request.data.get('pattern', ''),
+                'sizes': request.POST.getlist('sizes') or request.data.get('sizes', []),
+                'images': request.FILES.getlist('images') or ([request.FILES['images']] if 'images' in request.FILES else []),
+            }
+            
+            serializer = RetailerProductCreateSerializer(data=serializer_data, context={'request': request})
+            
+            if serializer.is_valid():
+                product = serializer.save(seller=request.user)
+                return Response({
+                    'status': 'success',
+                    'data': ProductDetailSerializer(product, context={'request': request}).data
+                }, status=201)
+            else:
+                print("Serializer errors:", serializer.errors)
+                return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+                
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+def retailer_product_detail(request, product_id):
+    """Get, update or delete a single retailer product"""
+    
+    if request.method == 'GET':
+        # ✅ PUBLIC - Anyone can view
+        try:
+            product = Product.objects.get(id=product_id, seller_type='retailer', status='active')
+            from catalog.serializers import ProductDetailSerializer
+            serializer = ProductDetailSerializer(product, context={'request': request})
+            return Response({'status': 'success', 'data': serializer.data})
+        except Product.DoesNotExist:
+            return Response({'status': 'error', 'message': 'Product not found'}, status=404)
+    
+    elif request.method == 'PUT':
+        # ✅ PRIVATE - Only owner
+        if not request.user.is_authenticated:
+            return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
+        
+        response = RetailerProductService.update_retailer_product(product_id, request)
+        status_code = 200 if response['status'] == 'success' else 404
+        return Response(response, status=status_code)
+    
+    elif request.method == 'DELETE':
+        # ✅ PRIVATE - Only owner
+        if not request.user.is_authenticated:
+            return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
+        
+        response = RetailerProductService.delete_retailer_product(product_id, request)
+        status_code = 200 if response['status'] == 'success' else 404
+        return Response(response, status=status_code)
+    
+
+
+@api_view(['POST'])
+def retailer_bulk_images_same(request):
+    """Bulk upload: Same details for all images"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can upload'}, status=401)
+    
+    try:
+        images = request.FILES.getlist('images')
+        if not images:
+            return Response({'status': 'error', 'message': 'No images provided'}, status=400)
+        
+        # Convert images to bytes for Celery
+        images_data = []
+        for img in images:
+            images_data.append({
+                'name': img.name,
+                'content': img.read(),
+                'content_type': img.content_type
+            })
+        
+        # Start Celery task
+        task = retailer_bulk_same_details_task.delay(
+            seller_id=request.user.id,
+            images_data=images_data,
+            common_name_prefix=request.data.get('common_name_prefix'),
+            common_price=request.data.get('common_price'),
+            common_cost=request.data.get('common_cost', 0),
+            category_id=request.data.get('category_id'),
+            brand=request.data.get('brand', ''),
+            description=request.data.get('description', ''),
+            stock=int(request.data.get('stock', 1)),
+            threshold=int(request.data.get('threshold', 10)),
+            sizes=request.data.getlist('sizes'),
+            primary_color=request.data.get('primary_color', ''),
+            pattern=request.data.get('pattern', '')
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': 'Bulk upload started',
+            'task_id': task.id
+        }, status=202)
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
+@api_view(['POST'])
+def retailer_bulk_images_different(request):
+    """Bulk upload: Different details for each product"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can upload'}, status=401)
+    
+    try:
+        products_data = request.data.get('products', [])
+        if not products_data:
+            return Response({'status': 'error', 'message': 'No product data provided'}, status=400)
+        
+        # Start Celery task
+        task = retailer_bulk_different_task.delay(
+            seller_id=request.user.id,
+            products_data=products_data
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': 'Bulk upload started',
+            'task_id': task.id
+        }, status=202)
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
+@api_view(['GET'])
+def retailer_bulk_status(request, task_id):
+    """Check bulk upload task status"""
+    
+    from celery.result import AsyncResult
+    
+    task = AsyncResult(task_id)
+    
+    if task.state == 'PENDING':
+        response = {'status': 'pending', 'progress': 0}
+    elif task.state == 'PROGRESS':
+        response = {'status': 'processing', 'progress': task.info.get('progress', 0)}
+    elif task.state == 'SUCCESS':
+        response = {'status': 'success', 'data': task.result}
+    elif task.state == 'FAILURE':
+        response = {'status': 'error', 'error': str(task.info)}
+    else:
+        response = {'status': 'unknown'}
+    
+    return Response(response)
+
+
+# Add to catalog/views.py
+
+@api_view(['POST'])
+def retailer_bulk_video_upload(request):
+    """Retailer bulk upload from video - creates separate product per detected item"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can upload'}, status=401)
+    
+    try:
+        video_file = request.FILES.get('video')
+        if not video_file:
+            return Response({'status': 'error', 'message': 'No video provided'}, status=400)
+        
+        product_count = int(request.data.get('product_count', 0))
+        grid_rows = int(request.data.get('grid_rows', 0))
+        grid_columns = int(request.data.get('grid_columns', 0))
+        
+        if product_count <= 0 or grid_rows <= 0 or grid_columns <= 0:
+            return Response({'status': 'error', 'message': 'Invalid grid or product count'}, status=400)
+        
+        from catalog.tasks import retailer_bulk_video_same_task
+        
+        # Start Celery task
+        task = retailer_bulk_video_same_task.delay(
+            seller_id=request.user.id,
+            video_data=video_file.read(),
+            product_count=product_count,
+            grid_rows=grid_rows,
+            grid_columns=grid_columns,
+            common_name_prefix=request.data.get('common_name_prefix'),
+            common_price=request.data.get('common_price'),
+            common_cost=request.data.get('common_cost', 0),
+            category_id=request.data.get('category_id'),
+            brand=request.data.get('brand', ''),
+            description=request.data.get('description', ''),
+            stock=int(request.data.get('stock', 1)),
+            threshold=int(request.data.get('threshold', 10)),
+            sizes=request.data.getlist('sizes'),
+            primary_color=request.data.get('primary_color', ''),
+            pattern=request.data.get('pattern', '')
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': 'Video processing started',
+            'task_id': task.id
+        }, status=202)
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
+@api_view(['GET'])
+def retailer_bulk_video_status(request, task_id):
+    """Check bulk video task status"""
+    
+    from celery.result import AsyncResult
+    
+    task = AsyncResult(task_id)
+    
+    if task.state == 'PENDING':
+        response = {'status': 'pending', 'progress': 0}
+    elif task.state == 'PROGRESS':
+        response = {'status': 'processing', 'progress': task.info.get('progress', 0)}
+    elif task.state == 'SUCCESS':
+        response = {'status': 'success', 'data': task.result}
+    elif task.state == 'FAILURE':
+        response = {'status': 'error', 'error': str(task.info)}
+    else:
+        response = {'status': 'unknown'}
+    
+    return Response(response)
+
+
+
+@api_view(['POST'])
+def retailer_bulk_edit(request):
+    """Bulk edit multiple retailer products"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can bulk edit'}, status=401)
+    
+    try:
+        product_ids = request.data.get('product_ids', [])
+        updates = request.data.get('updates', {})
+        
+        if not product_ids:
+            return Response({'status': 'error', 'message': 'No products selected'}, status=400)
+        
+        # Verify all products belong to the retailer
+        products = Product.objects.filter(id__in=product_ids, seller=request.user, seller_type='retailer')
+        
+        if products.count() != len(product_ids):
+            return Response({'status': 'error', 'message': 'Some products not found or unauthorized'}, status=403)
+        
+        # Apply bulk updates
+        for product in products:
+            for field, value in updates.items():
+                if value and field in ['price', 'cost', 'brand', 'description', 'stock', 'threshold', 'status']:
+                    setattr(product, field, value)
+            product.save()
+        
+        # Clear cache
+        cache.delete_pattern("retailer:product:list:*")
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'updated_count': products.count(),
+                'product_ids': list(products.values_list('id', flat=True))
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
+@api_view(['DELETE'])
+def retailer_bulk_delete(request):
+    """Bulk delete multiple retailer products"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can bulk delete'}, status=401)
+    
+    try:
+        product_ids = request.data.get('product_ids', [])
+        
+        if not product_ids:
+            return Response({'status': 'error', 'message': 'No products selected'}, status=400)
+        
+        # Verify and delete
+        deleted_count = Product.objects.filter(
+            id__in=product_ids, 
+            seller=request.user, 
+            seller_type='retailer'
+        ).delete()[0]
+        
+        # Clear cache
+        cache.delete_pattern("retailer:product:list:*")
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'deleted_count': deleted_count
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+    
+
+@api_view(['POST'])
+def retailer_import_products(request):
+    """Import retailer products from CSV/Excel file"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can import products'}, status=401)
+    
+    try:
+        import csv
+        import io
+        import uuid
+        from catalog.models import Product, ProductImage, ProductVariant, Category
+        from cloudinary.uploader import upload
+        from django.db import transaction
+        
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'status': 'error', 'message': 'No file provided'}, status=400)
+        
+        # Read file content
+        file_content = file.read().decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(file_content))
+        
+        created_products = []
+        errors = []
+        
+        with transaction.atomic():
+            for row_num, row in enumerate(csv_reader, start=2):
+                try:
+                    # Validate required fields
+                    name = row.get('name', '').strip()
+                    price = row.get('price', '').strip()
+                    
+                    if not name:
+                        errors.append(f"Row {row_num}: Product name is required")
+                        continue
+                    if not price:
+                        errors.append(f"Row {row_num}: Price is required")
+                        continue
+                    
+                    # Get or create category
+                    category_name = row.get('category', '').strip()
+                    category = None
+                    if category_name:
+                        category, _ = Category.objects.get_or_create(
+                            name=category_name,
+                            defaults={'slug': category_name.lower().replace(' ', '-')}
+                        )
+                    
+                    # Generate SKU
+                    sku = f"RET-{uuid.uuid4().hex[:8].upper()}"
+                    
+                    # Parse sizes from comma-separated string
+                    sizes_str = row.get('sizes', '').strip()
+                    sizes = [s.strip() for s in sizes_str.split(',') if s.strip()] if sizes_str else []
+                    
+                    # Create product
+                    product = Product.objects.create(
+                        seller=request.user,
+                        seller_type='retailer',
+                        retailer=request.user,
+                        name=name,
+                        sku=sku,
+                        price=price,
+                        cost=row.get('cost', 0),
+                        category=category,
+                        brand=row.get('brand', ''),
+                        description=row.get('description', ''),
+                        stock=int(row.get('stock', 1)),
+                        threshold=int(row.get('threshold', 10)),
+                        status='active'
+                    )
+                    
+                    # Create variants for sizes
+                    for size in sizes:
+                        if size:
+                            ProductVariant.objects.create(
+                                product=product,
+                                size=size,
+                                sku=f"{sku}-{size}",
+                                stock=product.stock,
+                                price=product.price
+                            )
+                    
+                    # Handle image URL if provided
+                    image_url = row.get('image_url', '').strip()
+                    if image_url:
+                        try:
+                            import requests
+                            response = requests.get(image_url, timeout=10)
+                            if response.status_code == 200:
+                                upload_result = upload(
+                                    response.content,
+                                    public_id=f"retailer/products/{datetime.now().strftime('%Y/%m')}/{sku}_image_1",
+                                    use_filename=True,
+                                    unique_filename=False,
+                                    overwrite=True,
+                                    invalidate=True
+                                )
+                                ProductImage.objects.create(
+                                    product=product,
+                                    image=upload_result['secure_url'],
+                                    is_primary=True,
+                                    is_front=True,
+                                    order=0
+                                )
+                        except Exception as e:
+                            errors.append(f"Row {row_num}: Failed to download image - {str(e)}")
+                    
+                    created_products.append(product.id)
+                    
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+        
+        # Clear cache
+        cache.delete_pattern("retailer:product:list:*")
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'imported_count': len(created_products),
+                'product_ids': created_products,
+                'errors': errors if errors else None
+            }
+        }, status=201)
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+    
+
+@api_view(['GET'])
+def retailer_export_products(request):
+    """Export retailer products to CSV/Excel"""
+    
+    if not request.user.is_authenticated or request.user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can export products'}, status=401)
+    
+    import csv
+    from django.http import HttpResponse
+    
+    # Get products
+    products = Product.objects.filter(seller=request.user, seller_type='retailer', status='active')
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="products_export_{datetime.now().strftime("%Y%m%d")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Name', 'SKU', 'Price', 'Cost', 'Stock', 'Category', 'Brand', 'Description', 'Created At'])
+    
+    for product in products:
+        writer.writerow([
+            product.id, product.name, product.sku, product.price, 
+            product.cost, product.stock, product.category.name if product.category else '',
+            product.brand, product.description, product.created_at
+        ])
+    
+    return response

@@ -35,6 +35,7 @@ class Product(models.Model):
     )
 
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='products')
+    seller_type = models.CharField(max_length=20, choices=[('wholesaler', 'Wholesaler'), ('retailer', 'Retailer')], default='wholesaler', db_index=True)
 
 
     # ✅ ADD THESE 2 FIELDS RIGHT AFTER seller

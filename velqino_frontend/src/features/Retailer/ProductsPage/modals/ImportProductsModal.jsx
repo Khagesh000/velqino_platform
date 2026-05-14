@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, Package, Eye } from '../../../../utils/icons';
+import { useImportProductsMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
 export default function ImportProductsModal({ onClose, onImport, isOpen }) {
@@ -11,6 +12,8 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
   const [showPreview, setShowPreview] = useState(false);
   const [progress, setProgress] = useState(0);
   const [errors, setErrors] = useState([]);
+  const [importProducts, { isLoading: isImporting }] = useImportProductsMutation();
+  const [progressMessage, setProgressMessage] = useState('');
 
   // Reset form when modal opens
   useEffect(() => {
@@ -46,15 +49,13 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
   };
 
   const downloadTemplate = () => {
-    // Create template data
     const template = [
-    ['name', 'price', 'cost', 'category', 'brand', 'stock', 'description', 'sizes', 'image_url'],
-    ['Cotton T-Shirt', '599', '350', 'Tshirt', 'Velqino', '50', 'Comfortable cotton shirt', 'S,M,L,XL', 'https://example.com/image1.jpg'],
-    ['Denim Jeans', '1299', '800', 'Jeans', 'Velqino', '30', 'Premium denim', '32,34,36,38', 'https://example.com/image2.jpg'],
-    ['Leather Jacket', '3999', '2500', 'Jackets', 'Velqino', '15', 'Genuine leather', 'M,L,XL,XXL', 'https://example.com/image3.jpg']
+        ['name', 'price', 'cost', 'category', 'brand', 'stock', 'description', 'sizes', 'image_url'],
+        ['Cotton T-Shirt', '599', '350', 'Tshirt', 'Velqino', '50', 'Comfortable cotton shirt', 'S,M,L,XL', 'https://example.com/image1.jpg'],
+        ['Denim Jeans', '1299', '800', 'Jeans', 'Velqino', '30', 'Premium denim', '32,34,36,38', 'https://example.com/image2.jpg'],
+        ['Leather Jacket', '3999', '2500', 'Jackets', 'Velqino', '15', 'Genuine leather', 'M,L,XL,XXL', 'https://example.com/image3.jpg']
     ];
     
-    // Create CSV content
     const csvContent = template.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -67,44 +68,38 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
     URL.revokeObjectURL(url);
     
     toast.success('Template downloaded');
-  };
+};
 
   const handleSubmit = async () => {
     if (!file) {
-      toast.error('Please select a file to import');
-      return;
+        toast.error('Please select a file to import');
+        return;
     }
     
     setUploading(true);
     setProgress(10);
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      setProgress(50);
-      
-      if (onImport) {
-        await onImport(formData);
-      }
-
-            // When parsing each row, check for image_url
-        const imageUrl = row.image_url || '';
-        if (imageUrl) {
-        submitData.append(`image_url_${index}`, imageUrl);
-        }
-      
-      setProgress(100);
-      toast.success('Products imported successfully');
-      setTimeout(() => onClose(), 1500);
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        setProgress(30);
+        setProgressMessage('Processing file...');
+        
+        // ✅ Call the API mutation
+        const response = await importProducts(formData).unwrap();
+        
+        setProgress(100);
+        toast.success(response?.message || 'Products imported successfully');
+        setTimeout(() => onClose(), 1500);
     } catch (error) {
-      toast.error('Failed to import products');
-      console.error(error);
-      setErrors(['Failed to process file. Please check the format.']);
+        toast.error(error?.data?.message || 'Failed to import products');
+        console.error(error);
+        setErrors([error?.data?.message || 'Failed to process file. Please check the format.']);
     } finally {
-      setUploading(false);
+        setUploading(false);
     }
-  };
+};
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
