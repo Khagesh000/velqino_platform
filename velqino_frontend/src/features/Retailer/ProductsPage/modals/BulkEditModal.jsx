@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Save, Package, DollarSign, Tag, Box, Archive, FileText, TrendingUp, AlertCircle } from '../../../../utils/icons';
+import { useBulkEditProductsMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
+
 
 export default function BulkEditModal({ isOpen, onClose, products = [], onSave, categories = [] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [bulkChanges, setBulkChanges] = useState({});
   const scrollContainerRef = useRef(null);
+  const [bulkEditProducts, { isLoading: isBulkEditing }] = useBulkEditProductsMutation();
 
   const [formData, setFormData] = useState({
     price: '',
@@ -85,31 +88,30 @@ export default function BulkEditModal({ isOpen, onClose, products = [], onSave, 
 
   const handleSubmit = async () => {
     if (Object.keys(bulkChanges).length === 0) {
-      toast.error('No changes to apply');
-      return;
+        toast.error('No changes to apply');
+        return;
     }
     
     setUploading(true);
     try {
-      const productIds = products.map(p => p.id);
-      const payload = {
-        product_ids: productIds,
-        updates: bulkChanges
-      };
-      
-      if (onSave) {
-        await onSave(payload);
-      }
-      
-      toast.success(`${products.length} products updated successfully`);
-      onClose();
+        const productIds = products.map(p => p.id);
+        const payload = {
+            product_ids: productIds,
+            updates: bulkChanges
+        };
+        
+        // ✅ Call the API mutation
+        const response = await bulkEditProducts(payload).unwrap();
+        
+        toast.success(`${products.length} products updated successfully`);
+        onClose();
     } catch (error) {
-      toast.error('Failed to update products');
-      console.error(error);
+        toast.error(error?.data?.message || 'Failed to update products');
+        console.error(error);
     } finally {
-      setUploading(false);
+        setUploading(false);
     }
-  };
+};
 
   const hasChanges = Object.keys(bulkChanges).length > 0;
 

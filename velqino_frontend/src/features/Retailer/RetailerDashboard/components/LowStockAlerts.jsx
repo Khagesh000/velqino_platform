@@ -4,26 +4,19 @@ import React, { useState, useEffect } from 'react'
 import { AlertCircle, Package, Truck, ShoppingCart, MoreHorizontal, Eye, RefreshCw, Bell } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/LowStockAlerts.scss'
 
-export default function LowStockAlerts() {
+export default function LowStockAlerts({ data, isLoading, onFilterChange, activeFilter }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState(activeFilter || 'all')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />
 
-  const lowStockItems = [
-    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', currentStock: 8, reorderLevel: 20, supplier: 'Fashion Hub', supplierContact: '+91 98765 43210', leadTime: '3-5 days', price: 499, status: 'critical', image: '👕' },
-    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', currentStock: 12, reorderLevel: 25, supplier: 'ElectroMart', supplierContact: '+91 87654 32109', leadTime: '5-7 days', price: 2499, status: 'warning', image: '🎧' },
-    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', currentStock: 5, reorderLevel: 15, supplier: 'TechGadgets', supplierContact: '+91 76543 21098', leadTime: '7-10 days', price: 4999, status: 'critical', image: '⌚' },
-    { id: 4, name: 'Leather Wallet', sku: 'LW-004', currentStock: 15, reorderLevel: 20, supplier: 'LeatherCraft', supplierContact: '+91 65432 10987', leadTime: '3-5 days', price: 1499, status: 'warning', image: '👛' },
-    { id: 5, name: 'Running Shoes', sku: 'RS-005', currentStock: 3, reorderLevel: 12, supplier: 'SportFit', supplierContact: '+91 54321 09876', leadTime: '4-6 days', price: 2999, status: 'critical', image: '👟' },
-    { id: 6, name: 'Coffee Mug', sku: 'CM-006', currentStock: 18, reorderLevel: 30, supplier: 'HomeDecor', supplierContact: '+91 43210 98765', leadTime: '2-4 days', price: 299, status: 'warning', image: '☕' },
-  ]
-
+  const lowStockItems = data || []
   const filteredItems = filter === 'all' ? lowStockItems : lowStockItems.filter(item => item.status === filter)
 
   const getStatusColor = (status) => {

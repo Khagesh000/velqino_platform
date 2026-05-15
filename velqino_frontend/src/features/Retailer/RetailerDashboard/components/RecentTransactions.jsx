@@ -4,26 +4,19 @@ import React, { useState, useEffect } from 'react'
 import { MoreHorizontal, Eye, Receipt, CheckCircle, Clock, XCircle, TrendingUp } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/RecentTransactions.scss'
 
-export default function RecentTransactions() {
+export default function RecentTransactions({ data, isLoading, onFilterChange, activeFilter }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredRow, setHoveredRow] = useState(null)
-  const [viewMode, setViewMode] = useState('all') // 'all', 'today', 'week'
+  const [viewMode, setViewMode] = useState(activeFilter || 'all')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[380px] bg-gray-100 rounded-xl animate-pulse" />
 
-  const transactions = [
-    { id: '#TR-001', customer: 'Rajesh Kumar', items: 3, amount: 2450, payment: 'UPI', status: 'completed', time: '10:30 AM', date: 'Today' },
-    { id: '#TR-002', customer: 'Priya Sharma', items: 2, amount: 1890, payment: 'Card', status: 'completed', time: '10:15 AM', date: 'Today' },
-    { id: '#TR-003', customer: 'Amit Singh', items: 5, amount: 5670, payment: 'Cash', status: 'pending', time: '09:45 AM', date: 'Today' },
-    { id: '#TR-004', customer: 'Sneha Reddy', items: 1, amount: 899, payment: 'UPI', status: 'completed', time: '09:20 AM', date: 'Today' },
-    { id: '#TR-005', customer: 'Vikram Mehta', items: 4, amount: 3420, payment: 'Card', status: 'refunded', time: 'Yesterday', date: 'Yesterday' },
-    { id: '#TR-006', customer: 'Neha Gupta', items: 2, amount: 1560, payment: 'Wallet', status: 'completed', time: 'Yesterday', date: 'Yesterday' },
-    { id: '#TR-007', customer: 'Rahul Verma', items: 6, amount: 7890, payment: 'UPI', status: 'completed', time: 'Yesterday', date: 'Yesterday' },
-  ]
+  const transactions = data || []
 
   const getStatusIcon = (status) => {
     switch(status) {

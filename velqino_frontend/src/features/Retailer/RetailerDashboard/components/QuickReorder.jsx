@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { TrendingUp, Package, Truck, Clock, Zap, ShoppingCart, AlertCircle, CheckCircle, RefreshCw, Eye } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/QuickReorder.scss'
 
-export default function QuickReorder() {
+export default function QuickReorder({ data, isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
   const [selectedItems, setSelectedItems] = useState([])
@@ -14,15 +14,9 @@ export default function QuickReorder() {
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />
 
-  const reorderSuggestions = [
-    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', currentStock: 8, reorderLevel: 20, salesVelocity: 45, daysUntilOut: 5, suggestedQty: 50, supplier: 'Fashion Hub', price: 499, urgency: 'high', image: '👕' },
-    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', currentStock: 12, reorderLevel: 25, salesVelocity: 28, daysUntilOut: 8, suggestedQty: 40, supplier: 'ElectroMart', price: 2499, urgency: 'medium', image: '🎧' },
-    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', currentStock: 5, reorderLevel: 15, salesVelocity: 52, daysUntilOut: 3, suggestedQty: 60, supplier: 'TechGadgets', price: 4999, urgency: 'critical', image: '⌚' },
-    { id: 4, name: 'Leather Wallet', sku: 'LW-004', currentStock: 15, reorderLevel: 20, salesVelocity: 22, daysUntilOut: 10, suggestedQty: 30, supplier: 'LeatherCraft', price: 1499, urgency: 'low', image: '👛' },
-    { id: 5, name: 'Running Shoes', sku: 'RS-005', currentStock: 3, reorderLevel: 12, salesVelocity: 48, daysUntilOut: 4, suggestedQty: 55, supplier: 'SportFit', price: 2999, urgency: 'critical', image: '👟' },
-    { id: 6, name: 'Coffee Mug', sku: 'CM-006', currentStock: 18, reorderLevel: 30, salesVelocity: 15, daysUntilOut: 15, suggestedQty: 25, supplier: 'HomeDecor', price: 299, urgency: 'low', image: '☕' },
-  ]
+  const reorderSuggestions = data || []
 
   const toggleItemSelection = (id) => {
     if (selectedItems.includes(id)) {

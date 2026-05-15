@@ -7,9 +7,22 @@ import BulkImagesModal from './modals/BulkImagesModal'
 import BulkVideoModal from './modals/BulkVideoModal'
 import ImportProductsModal from './modals/ImportProductsModal'
 import ExportProductsModal from './modals/ExportProductsModal'
+import BulkEditModal from './modals/BulkEditModal'
+import EditProductModal from './modals/EditProductModal'
+
 import { toast } from 'react-toastify';
 
-import { useCreateRetailerProductMutation, useGetRetailerProductsQuery } from '@/redux/retailer/slices/retailerProductsSlice'
+import { 
+    useCreateRetailerProductMutation, 
+    useGetRetailerProductsQuery,
+    useUpdateRetailerProductMutation, 
+    useBulkImagesSameMutation,
+    useBulkVideoMutation,
+    useBulkEditProductsMutation,
+    useDeleteRetailerProductMutation,
+    useImportProductsMutation,
+    useExportProductsMutation
+} from '@/redux/retailer/slices/retailerProductsSlice'
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
 // Lazy load all components
 const ProductsGrid = lazy(() => import('./components/ProductsGrid'))
@@ -35,6 +48,18 @@ export default function RetailerProducts() {
   const [showBulkVideoModal, setShowBulkVideoModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const [bulkImagesSame] = useBulkImagesSameMutation();
+  const [bulkVideo] = useBulkVideoMutation();
+  const [bulkEditProducts] = useBulkEditProductsMutation();
+  const [importProducts] = useImportProductsMutation();
+  const [exportProducts] = useExportProductsMutation();
+  const [updateProduct] = useUpdateRetailerProductMutation();
+
   
   const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery();
   const categories = categoriesData?.data || categoriesData || [];
@@ -118,6 +143,34 @@ export default function RetailerProducts() {
     }
 };
 
+const handleBulkEdit = async (payload) => {
+    try {
+        const response = await bulkEditProducts(payload).unwrap();
+        toast.success('Products updated successfully');
+        setShowBulkEditModal(false);
+        setSelectedProducts([]);
+        refetch();
+        return response;
+    } catch (error) {
+        toast.error(error?.data?.message || 'Failed to update products');
+        throw error;
+    }
+};
+
+const handleUpdateProduct = async (productId, formData) => {
+    try {
+        const response = await updateProduct({ productId, data: formData }).unwrap();
+        toast.success('Product updated successfully');
+        setShowEditModal(false);
+        setEditingProduct(null);
+        refetch();
+        return response;
+    } catch (error) {
+        toast.error(error?.data?.message || 'Failed to update product');
+        throw error;
+    }
+};
+
     const handleScanBarcode = (barcode) => {
       console.log('Scanned:', barcode);
     };
@@ -191,9 +244,17 @@ export default function RetailerProducts() {
               <div style={{ minHeight: '500px' }}>
                 <Suspense fallback={<GridPlaceholder />}>
                   <ProductsGrid 
-                    selectedProduct={selectedProduct}
-                    setSelectedProduct={setSelectedProduct}
-                    refreshTrigger={refreshTrigger}
+                      selectedProduct={selectedProduct}
+                      setSelectedProduct={setSelectedProduct}
+                      refreshTrigger={refreshTrigger}
+                      onEditProduct={(product) => {
+                          setEditingProduct(product);
+                          setShowEditModal(true);
+                      }}
+                      onBulkEdit={(products) => {
+                          setSelectedProducts(products);
+                          setShowBulkEditModal(true);
+                      }}
                   />
                 </Suspense>
               </div>
@@ -267,6 +328,34 @@ export default function RetailerProducts() {
                     onClose={() => setShowExportModal(false)} 
                     onExport={handleExportProducts}
                     totalProducts={productsData?.data?.products?.length || 0}
+                />
+            )}
+
+            {/* Bulk Edit Modal */}
+            {showBulkEditModal && (
+                <BulkEditModal 
+                    isOpen={showBulkEditModal}
+                    onClose={() => {
+                        setShowBulkEditModal(false);
+                        setSelectedProducts([]);
+                    }}
+                    products={selectedProducts}
+                    onSave={handleBulkEdit}
+                    categories={categories}
+                />
+            )}
+
+            {/* Edit Product Modal */}
+            {showEditModal && (
+                <EditProductModal 
+                    isOpen={showEditModal}
+                    onClose={() => {
+                        setShowEditModal(false);
+                        setEditingProduct(null);
+                    }}
+                    product={editingProduct}
+                    onSave={handleUpdateProduct}
+                    categories={categories}
                 />
             )}
 

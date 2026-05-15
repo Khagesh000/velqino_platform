@@ -22,4 +22,14 @@ urlpatterns = [
     path('wholesaler/geo-sales/', GeographicSalesAPIView.as_view(), name='geo-sales'),
     path('wholesaler/hourly-sales/', HourlySalesAPIView.as_view(), name='hourly-sales'),
     path('wholesaler/export-report/', ExportReportAPIView.as_view(), name='export-report'),
+
+    #-----------------------------------------------RETAILERS---------------------------------------
+    path('retailer/kpi-stats/', views.retailer_kpi_stats, name='retailer-kpi-stats'),
+    path('retailer/daily-sales/', views.retailer_daily_sales, name='retailer-daily-sales'),
+    path('retailer/top-products/', views.retailer_top_products, name='retailer-top-products'),
+    path('retailer/customer-activity/', views.retailer_customer_activity, name='retailer-customer-activity'),
+    path('retailer/recent-transactions/', views.retailer_recent_transactions, name='retailer-recent-transactions'),
+    path('retailer/low-stock-alerts/', views.retailer_low_stock_alerts, name='retailer-low-stock-alerts'),
+    path('retailer/today-summary/', views.retailer_today_summary, name='retailer-today-summary'),
+    path('retailer/quick-reorder/', views.retailer_quick_reorder, name='retailer-quick-reorder'),
     ]

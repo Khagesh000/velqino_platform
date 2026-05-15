@@ -164,27 +164,27 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
                 </label>
                 <div className="relative">
                   <input
-    type="file"
-    accept="image/*"
-    onChange={handleImageSelect}
-    className="hidden"
-    id="product-image"
-/>
-<label
-    htmlFor="product-image"
-    onClick={() => document.getElementById('product-image').click()}  // ✅ ADD THIS
-    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-all bg-gray-50"
->
-    {imagePreview ? (
-        <img src={imagePreview} alt="Preview" className="h-full object-contain rounded-lg" />
-    ) : (
-        <div className="flex flex-col items-center">
-            <Upload size={24} className="text-gray-400 mb-2" />
-            <span className="text-sm text-gray-500">Click to upload image</span>
-            <span className="text-xs text-gray-400">JPG, PNG, WEBP (Max 5MB)</span>
-        </div>
-    )}
-</label>
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      id="product-image"
+                  />
+                  <label
+                      htmlFor="product-image"
+                      onClick={() => document.getElementById('product-image').click()}  // ✅ ADD THIS
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-all bg-gray-50"
+                  >
+                      {imagePreview ? (
+                          <img src={imagePreview} alt="Preview" className="h-full object-contain rounded-lg" />
+                      ) : (
+                          <div className="flex flex-col items-center">
+                              <Upload size={24} className="text-gray-400 mb-2" />
+                              <span className="text-sm text-gray-500">Click to upload image</span>
+                              <span className="text-xs text-gray-400">JPG, PNG, WEBP (Max 5MB)</span>
+                          </div>
+                      )}
+                  </label>
                 </div>
               </div>
 

@@ -51,3 +51,121 @@ class ProductStatsSerializer(serializers.Serializer):
     archived = serializers.IntegerField()
     low_stock = serializers.IntegerField()
     out_of_stock = serializers.IntegerField()
+
+
+#-------------------------------------------RETAILERS--------------------------------------------
+class KPIValueSerializer(serializers.Serializer):
+    value = serializers.FloatField()
+    change = serializers.FloatField()
+    trend = serializers.CharField()
+    period = serializers.CharField()
+
+class RetailerKPIStatsSerializer(serializers.Serializer):
+    today_sales = KPIValueSerializer()
+    total_orders = KPIValueSerializer()
+    total_customers = KPIValueSerializer()
+    total_products = KPIValueSerializer()
+
+
+class HourlySalesSerializer(serializers.Serializer):
+    hour = serializers.CharField()
+    sales = serializers.FloatField()
+    target = serializers.FloatField(required=False, default=0)
+
+class PeakHourSerializer(serializers.Serializer):
+    hour = serializers.CharField()
+    sales = serializers.FloatField()
+
+class DailySalesSerializer(serializers.Serializer):
+    today = HourlySalesSerializer(many=True)
+    yesterday = HourlySalesSerializer(many=True)
+    peak_hour = PeakHourSerializer()
+    total_today = serializers.FloatField()
+    total_yesterday = serializers.FloatField()
+    growth = serializers.FloatField()
+
+class TopProductSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    sku = serializers.CharField()
+    sales = serializers.IntegerField()
+    revenue = serializers.FloatField()
+    stock = serializers.IntegerField()
+    trend = serializers.CharField()
+
+class CustomerActivitySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    type = serializers.CharField()
+    visits = serializers.IntegerField()
+    lastVisit = serializers.CharField()
+    amount = serializers.FloatField()
+    phone = serializers.CharField()
+    email = serializers.CharField()
+    status = serializers.CharField()
+    avatar = serializers.CharField()
+
+
+class TransactionSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    customer = serializers.CharField()
+    items = serializers.IntegerField()
+    amount = serializers.FloatField()
+    payment = serializers.CharField()
+    status = serializers.CharField()
+    time = serializers.CharField()
+    date = serializers.CharField()
+
+
+class LowStockAlertSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    sku = serializers.CharField()
+    currentStock = serializers.IntegerField()
+    reorderLevel = serializers.IntegerField()
+    supplier = serializers.CharField()
+    supplierContact = serializers.CharField()
+    leadTime = serializers.CharField()
+    price = serializers.FloatField()
+    status = serializers.CharField()
+    image = serializers.CharField()
+
+
+class HourlyBreakdownSerializer(serializers.Serializer):
+    hour = serializers.CharField()
+    transactions = serializers.IntegerField()
+    amount = serializers.FloatField()
+
+class PaymentMethodsSerializer(serializers.Serializer):
+    upi = serializers.IntegerField()
+    card = serializers.IntegerField()
+    cash = serializers.IntegerField()
+    wallet = serializers.IntegerField()
+
+class TodaySummarySerializer(serializers.Serializer):
+    totalTransactions = serializers.IntegerField()
+    averageBill = serializers.FloatField()
+    busiestHour = serializers.CharField()
+    busiestHourSales = serializers.FloatField()
+    totalItems = serializers.IntegerField()
+    uniqueCustomers = serializers.IntegerField()
+    peakHourCustomers = serializers.IntegerField()
+    revenue = serializers.FloatField()
+    target = serializers.FloatField()
+    paymentMethods = PaymentMethodsSerializer()
+    hourlyBreakdown = HourlyBreakdownSerializer(many=True)
+
+
+class QuickReorderSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    sku = serializers.CharField()
+    currentStock = serializers.IntegerField()
+    reorderLevel = serializers.IntegerField()
+    salesVelocity = serializers.FloatField()
+    daysUntilOut = serializers.IntegerField()
+    suggestedQty = serializers.IntegerField()
+    supplier = serializers.CharField()
+    price = serializers.FloatField()
+    urgency = serializers.CharField()
+    image = serializers.CharField()

@@ -4,55 +4,28 @@ import React, { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Calendar, MoreHorizontal } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/DailySalesChart.scss'
 
-export default function DailySalesChart() {
+export default function DailySalesChart({ data, isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredBar, setHoveredBar] = useState(null)
-  const [chartView, setChartView] = useState('today') // 'today' or 'yesterday'
+  const [chartView, setChartView] = useState('today')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[400px] bg-gray-100 rounded-xl animate-pulse" />
 
-  // Mock data - hourly sales
-  const todaySales = [
-    { hour: '10 AM', sales: 1250, target: 1000 },
-    { hour: '11 AM', sales: 2100, target: 1800 },
-    { hour: '12 PM', sales: 3100, target: 2500 },
-    { hour: '1 PM', sales: 2850, target: 3000 },
-    { hour: '2 PM', sales: 3450, target: 3200 },
-    { hour: '3 PM', sales: 4200, target: 3800 },
-    { hour: '4 PM', sales: 5100, target: 4500 },
-    { hour: '5 PM', sales: 6350, target: 5500 },
-    { hour: '6 PM', sales: 7200, target: 6500 },
-    { hour: '7 PM', sales: 6800, target: 7000 },
-    { hour: '8 PM', sales: 5900, target: 6200 },
-    { hour: '9 PM', sales: 4100, target: 4500 },
-  ]
+  const todaySalesData = data?.today || []
+  const yesterdaySalesData = data?.yesterday || []
 
-  const yesterdaySales = [
-    { hour: '10 AM', sales: 1100, target: 1000 },
-    { hour: '11 AM', sales: 1900, target: 1800 },
-    { hour: '12 PM', sales: 2800, target: 2500 },
-    { hour: '1 PM', sales: 2650, target: 3000 },
-    { hour: '2 PM', sales: 3200, target: 3200 },
-    { hour: '3 PM', sales: 3900, target: 3800 },
-    { hour: '4 PM', sales: 4700, target: 4500 },
-    { hour: '5 PM', sales: 5800, target: 5500 },
-    { hour: '6 PM', sales: 6500, target: 6500 },
-    { hour: '7 PM', sales: 6200, target: 7000 },
-    { hour: '8 PM', sales: 5400, target: 6200 },
-    { hour: '9 PM', sales: 3800, target: 4500 },
-  ]
-
-  const currentData = chartView === 'today' ? todaySales : yesterdaySales
-  const maxSales = Math.max(...currentData.map(d => d.sales))
+  const currentData = chartView === 'today' ? todaySalesData : yesterdaySalesData
+  const maxSales = Math.max(...currentData.map(d => d.sales), 1)
   const totalSales = currentData.reduce((sum, d) => sum + d.sales, 0)
   const previousTotal = chartView === 'today' 
-    ? yesterdaySales.reduce((sum, d) => sum + d.sales, 0)
-    : todaySales.reduce((sum, d) => sum + d.sales, 0)
-  const percentChange = ((totalSales - previousTotal) / previousTotal * 100).toFixed(1)
+      ? yesterdaySalesData.reduce((sum, d) => sum + d.sales, 0)
+      : todaySalesData.reduce((sum, d) => sum + d.sales, 0)
+  const percentChange = previousTotal > 0 ? ((totalSales - previousTotal) / previousTotal * 100).toFixed(1) : 0
 
 return (
     <div className="daily-sales-chart bg-white rounded-xl p-5 shadow-sm border border-gray-100">
@@ -65,18 +38,14 @@ return (
         <div className="chart-header-actions flex items-center gap-3">
           <div className="chart-view-toggle flex gap-1 bg-gray-100 p-1 rounded-lg">
             <button
-              className={`chart-view-btn px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                chartView === 'today' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'
-              }`}
               onClick={() => setChartView('today')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${chartView === 'today' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
             >
               Today
             </button>
             <button
-              className={`chart-view-btn px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                chartView === 'yesterday' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'
-              }`}
               onClick={() => setChartView('yesterday')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${chartView === 'yesterday' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
             >
               Yesterday
             </button>

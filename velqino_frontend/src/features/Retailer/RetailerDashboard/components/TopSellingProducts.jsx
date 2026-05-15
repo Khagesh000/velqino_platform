@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Package, TrendingUp, MoreHorizontal, ShoppingCart, Eye } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/TopSellingProducts.scss'
 
-export default function TopSellingProducts() {
+export default function TopSellingProducts({ data, isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredProduct, setHoveredProduct] = useState(null)
 
@@ -13,14 +13,9 @@ export default function TopSellingProducts() {
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[350px] bg-gray-100 rounded-xl animate-pulse" />
 
-  const topProducts = [
-    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', sales: 245, revenue: 36750, stock: 89, image: '👕', trend: '+12%' },
-    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', sales: 189, revenue: 47250, stock: 34, image: '🎧', trend: '+8%' },
-    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', sales: 156, revenue: 78000, stock: 23, image: '⌚', trend: '+15%' },
-    { id: 4, name: 'Leather Wallet', sku: 'LW-004', sales: 134, revenue: 20100, stock: 56, image: '👛', trend: '+5%' },
-    { id: 5, name: 'Running Shoes', sku: 'RS-005', sales: 112, revenue: 56000, stock: 42, image: '👟', trend: '-2%' },
-  ]
+  const topProducts = data || []
 
   return (
     <div className="top-selling-products bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">

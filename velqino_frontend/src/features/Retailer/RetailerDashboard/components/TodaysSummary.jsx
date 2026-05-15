@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Clock, Package, Users, CreditCard, Wallet, Calendar, ArrowUpRight, ArrowDownRight } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/TodaysSummary.scss'
 
-export default function TodaysSummary() {
+export default function TodaysSummary({ data, isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredCard, setHoveredCard] = useState(null)
 
@@ -13,35 +13,20 @@ export default function TodaysSummary() {
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[200px] bg-gray-100 rounded-xl animate-pulse" />
 
-  const summaryData = {
-    totalTransactions: 24,
-    averageBill: 1037,
-    busiestHour: '6:00 PM - 7:00 PM',
-    busiestHourSales: 7200,
-    totalItems: 86,
-    uniqueCustomers: 18,
-    peakHourCustomers: 12,
-    revenue: 24890,
-    target: 25000,
-    paymentMethods: {
-      upi: 12,
-      card: 7,
-      cash: 3,
-      wallet: 2
-    },
-    hourlyBreakdown: [
-      { hour: '10 AM', transactions: 2, amount: 1250 },
-      { hour: '11 AM', transactions: 3, amount: 2100 },
-      { hour: '12 PM', transactions: 4, amount: 3100 },
-      { hour: '1 PM', transactions: 3, amount: 2850 },
-      { hour: '2 PM', transactions: 2, amount: 1750 },
-      { hour: '3 PM', transactions: 3, amount: 2450 },
-      { hour: '4 PM', transactions: 4, amount: 3980 },
-      { hour: '5 PM', transactions: 5, amount: 4520 },
-      { hour: '6 PM', transactions: 6, amount: 5240 },
-      { hour: '7 PM', transactions: 4, amount: 3680 },
-    ]
+  const summaryData = data || {
+    totalTransactions: 0,
+    averageBill: 0,
+    busiestHour: 'N/A',
+    busiestHourSales: 0,
+    totalItems: 0,
+    uniqueCustomers: 0,
+    peakHourCustomers: 0,
+    revenue: 0,
+    target: 0,
+    paymentMethods: { upi: 0, card: 0, cash: 0, wallet: 0 },
+    hourlyBreakdown: []
   }
 
   const revenuePercent = (summaryData.revenue / summaryData.target) * 100

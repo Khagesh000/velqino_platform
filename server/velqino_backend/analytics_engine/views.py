@@ -9,7 +9,8 @@ from rest_framework.views import APIView
 from .services.analytics_service import AnalyticsService
 from .serializers import (
     WholesalerStatsSerializer, OrderStatsSerializer,
-    RevenueStatsSerializer, ProductStatsSerializer
+    RevenueStatsSerializer, ProductStatsSerializer,
+    RetailerKPIStatsSerializer,
 )
 from django.db import models
 from catalog.models import Product
@@ -824,3 +825,740 @@ class ExportReportAPIView(APIView):
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{report_type}_report.pdf"'
         return response
+    
+
+
+
+# -------------------------------------------------------------------RETAILERS-------------------------------------------
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_kpi_stats(request):
+    """Get KPI statistics for retailer dashboard cards"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, Count
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        last_week = today - timedelta(days=7)
+        
+        # Today's Sales
+        today_sales = Order.objects.filter(
+            retailer=user,
+            created_at__date=today,
+            status='completed'
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        yesterday_sales = Order.objects.filter(
+            retailer=user,
+            created_at__date=yesterday,
+            status='completed'
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        if yesterday_sales > 0:
+            sales_change = round(((today_sales - yesterday_sales) / yesterday_sales) * 100, 1)
+        else:
+            sales_change = 100 if today_sales > 0 else 0
+        
+        # Total Orders (last 7 days)
+        total_orders = Order.objects.filter(
+            retailer=user,
+            created_at__date__gte=last_week
+        ).count()
+        
+        prev_week_orders = Order.objects.filter(
+            retailer=user,
+            created_at__date__range=[last_week - timedelta(days=7), last_week]
+        ).count()
+        
+        if prev_week_orders > 0:
+            orders_change = round(((total_orders - prev_week_orders) / prev_week_orders) * 100, 1)
+        else:
+            orders_change = 100 if total_orders > 0 else 0
+        
+        # Total Customers
+        total_customers = Order.objects.filter(retailer=user).values('customer').distinct().count()
+        
+        # Total Products
+        total_products = Product.objects.filter(
+            seller=user,
+            seller_type='retailer'
+        ).count()
+        
+        stats = {
+            'today_sales': {
+                'value': today_sales,
+                'change': sales_change,
+                'trend': 'up' if sales_change >= 0 else 'down',
+                'period': 'vs yesterday'
+            },
+            'total_orders': {
+                'value': total_orders,
+                'change': orders_change,
+                'trend': 'up' if orders_change >= 0 else 'down',
+                'period': 'vs last week'
+            },
+            'total_customers': {
+                'value': total_customers,
+                'change': 0,
+                'trend': 'up',
+                'period': 'all time'
+            },
+            'total_products': {
+                'value': total_products,
+                'change': 0,
+                'trend': 'up',
+                'period': 'total inventory'
+            }
+        }
+        
+        serializer = RetailerKPIStatsSerializer(stats)
+        
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_daily_sales(request):
+    """Get hourly sales data for retailer dashboard chart"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        
+        # Get today's hourly sales
+        today_sales_data = []
+        for hour in range(10, 22):  # 10 AM to 9 PM
+            start_time = datetime.combine(today, datetime.min.time()) + timedelta(hours=hour)
+            end_time = start_time + timedelta(hours=1)
+            
+            sales = Order.objects.filter(
+                retailer=user,
+                status='completed',
+                created_at__gte=start_time,
+                created_at__lt=end_time
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
+            
+            today_sales_data.append({
+                'hour': f"{hour} AM" if hour < 12 else f"{hour-12} PM" if hour > 12 else "12 PM",
+                'sales': sales,
+                'target': 0  # Target can be calculated based on average
+            })
+        
+        # Get yesterday's hourly sales
+        yesterday_sales_data = []
+        for hour in range(10, 22):
+            start_time = datetime.combine(yesterday, datetime.min.time()) + timedelta(hours=hour)
+            end_time = start_time + timedelta(hours=1)
+            
+            sales = Order.objects.filter(
+                retailer=user,
+                status='completed',
+                created_at__gte=start_time,
+                created_at__lt=end_time
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
+            
+            yesterday_sales_data.append({
+                'hour': f"{hour} AM" if hour < 12 else f"{hour-12} PM" if hour > 12 else "12 PM",
+                'sales': sales,
+                'target': 0
+            })
+        
+        # Calculate peak hour
+        peak_sales = max(today_sales_data, key=lambda x: x['sales']) if today_sales_data else {}
+        
+        # Calculate total sales
+        total_today = sum(item['sales'] for item in today_sales_data)
+        total_yesterday = sum(item['sales'] for item in yesterday_sales_data)
+        
+        # Calculate growth
+        growth = round(((total_today - total_yesterday) / total_yesterday) * 100, 1) if total_yesterday > 0 else 0
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'today': today_sales_data,
+                'yesterday': yesterday_sales_data,
+                'peak_hour': {
+                    'hour': peak_sales.get('hour', 'N/A'),
+                    'sales': peak_sales.get('sales', 0)
+                },
+                'total_today': total_today,
+                'total_yesterday': total_yesterday,
+                'growth': growth
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_top_products(request):
+    """Get top selling products for retailer dashboard"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, Count, F
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get last 30 days data
+        last_30_days = timezone.now().date() - timedelta(days=30)
+        
+        # Get top selling products
+        top_products = OrderItem.objects.filter(
+            order__retailer=user,
+            order__status='completed',
+            order__created_at__date__gte=last_30_days
+        ).values(
+            'product_id', 'product__name', 'product__sku', 'product__stock'
+        ).annotate(
+            total_sales=Sum('quantity'),
+            total_revenue=Sum(F('quantity') * F('price'))
+        ).order_by('-total_sales')[:5]
+        
+        # Calculate previous period for trend
+        prev_period_start = last_30_days - timedelta(days=30)
+        prev_period_end = last_30_days
+        
+        products_data = []
+        for product in top_products:
+            # Get previous period sales for trend
+            prev_sales = OrderItem.objects.filter(
+                order__retailer=user,
+                order__status='completed',
+                product_id=product['product_id'],
+                order__created_at__date__range=[prev_period_start, prev_period_end]
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            current_sales = product['total_sales'] or 0
+            
+            if prev_sales > 0:
+                trend_percent = round(((current_sales - prev_sales) / prev_sales) * 100, 1)
+                trend = f"{'+' if trend_percent >= 0 else ''}{trend_percent}%"
+            else:
+                trend = '+100%' if current_sales > 0 else '0%'
+            
+            products_data.append({
+                'id': product['product_id'],
+                'name': product['product__name'],
+                'sku': product['product__sku'],
+                'sales': current_sales,
+                'revenue': product['total_revenue'] or 0,
+                'stock': product['product__stock'] or 0,
+                'trend': trend
+            })
+        
+        return Response({
+            'status': 'success',
+            'data': products_data
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_customer_activity(request):
+    """Get customer activity for retailer dashboard"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get filter parameter
+        time_filter = request.GET.get('filter', 'all')  # all, today, repeat, new
+        
+        customer_ids = Order.objects.filter(
+            retailer=user
+        ).values_list('customer', flat=True).distinct()
+        
+        # Base queryset - customers who placed orders with this retailer
+        customers = User.objects.filter(
+            id__in=customer_ids,
+            role='customer',
+            is_active=True
+        )
+        
+        # Apply time filter
+        today = timezone.now().date()
+        
+        if time_filter == 'today':
+            customers = customers.filter(last_login__date=today)
+        elif time_filter == 'repeat':
+            # Customers with more than 5 orders
+            customers = customers.annotate(
+                order_count=Count('orders', filter=Q(orders__status='completed'))
+            ).filter(order_count__gt=5)
+        elif time_filter == 'new':
+            # Customers created in last 7 days
+            last_week = today - timedelta(days=7)
+            customers = customers.filter(date_joined__date__gte=last_week)
+        
+        # Get customer data
+        customer_data = []
+        for customer in customers[:10]:  # Limit to 10 customers
+            # Get order statistics
+            order_stats = Order.objects.filter(
+                customer=customer,
+                retailer=user,
+                status='completed'
+            ).aggregate(
+                total_orders=Count('id'),
+                total_amount=Sum('total_amount'),
+                last_order=Max('created_at')
+            )
+            
+            total_orders = order_stats['total_orders'] or 0
+            total_amount = order_stats['total_amount'] or 0
+            last_order = order_stats['last_order']
+            
+            # Determine customer type
+            if total_orders > 5:
+                customer_type = 'repeat'
+            elif total_orders == 1:
+                customer_type = 'new'
+            else:
+                customer_type = 'regular'
+            
+            # Determine status
+            if total_orders > 10:
+                status = 'vip'
+            elif total_orders > 0:
+                status = 'active'
+            else:
+                status = 'inactive'
+            
+            # Get initials for avatar
+            name_parts = customer.get_full_name().split()
+            initials = ''.join([p[0].upper() for p in name_parts[:2]]) if name_parts else customer.email[:2].upper()
+            
+            customer_data.append({
+                'id': customer.id,
+                'name': customer.get_full_name() or customer.email.split('@')[0],
+                'type': customer_type,
+                'visits': total_orders,
+                'lastVisit': last_order.strftime('%b %d, %I:%M %p') if last_order else 'Never',
+                'amount': total_amount,
+                'phone': customer.phone or '',
+                'email': customer.email,
+                'status': status,
+                'avatar': initials
+            })
+        
+        return Response({
+            'status': 'success',
+            'data': customer_data
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_recent_transactions(request):
+    """Get recent transactions for retailer dashboard"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get filter parameter
+        view_mode = request.GET.get('mode', 'all')  # all, today, week
+        
+        # Base queryset
+        orders = Order.objects.filter(
+            retailer=user,
+            status__in=['completed', 'pending', 'refunded']
+        ).select_related('customer')
+        
+        # Apply filter
+        today = timezone.now().date()
+        
+        if view_mode == 'today':
+            orders = orders.filter(created_at__date=today)
+        elif view_mode == 'week':
+            last_week = today - timedelta(days=7)
+            orders = orders.filter(created_at__date__gte=last_week)
+        
+        # Get recent orders (last 10)
+        recent_orders = orders.order_by('-created_at')[:10]
+        
+        transactions = []
+        for order in recent_orders:
+            # Get item count
+            item_count = order.items.aggregate(total=Sum('quantity'))['total'] or 0
+            
+            # Format time
+            if order.created_at.date() == today:
+                date_display = 'Today'
+                time_display = order.created_at.strftime('%I:%M %p')
+            elif order.created_at.date() == today - timedelta(days=1):
+                date_display = 'Yesterday'
+                time_display = order.created_at.strftime('%I:%M %p')
+            else:
+                date_display = order.created_at.strftime('%b %d')
+                time_display = order.created_at.strftime('%I:%M %p')
+            
+            # Payment method mapping
+            payment_method = order.payment_method or 'Cash'
+            if payment_method == 'upi':
+                payment_display = 'UPI'
+            elif payment_method == 'card':
+                payment_display = 'Card'
+            elif payment_method == 'wallet':
+                payment_display = 'Wallet'
+            else:
+                payment_display = 'Cash'
+            
+            transactions.append({
+                'id': order.order_id or f"#TR-{order.id:04d}",
+                'customer': order.customer.get_full_name() or order.customer.email.split('@')[0] if order.customer else 'Guest',
+                'items': item_count,
+                'amount': float(order.total_amount),
+                'payment': payment_display,
+                'status': order.status,
+                'time': time_display,
+                'date': date_display
+            })
+        
+        return Response({
+            'status': 'success',
+            'data': transactions
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_low_stock_alerts(request):
+    """Get low stock alerts for retailer dashboard"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Q, F
+        from django.utils import timezone
+        
+        # Get filter parameter
+        filter_type = request.GET.get('filter', 'all')  # all, critical, warning
+        
+        # Get products where stock <= threshold
+        products = Product.objects.filter(
+            seller=user,
+            seller_type='retailer',
+            status='active'
+        ).select_related('category')
+        
+        # Filter by low stock condition
+        low_stock_products = products.filter(stock__lte=F('threshold'))
+        
+        alerts = []
+        for product in low_stock_products:
+            # Determine status
+            if product.stock == 0:
+                status = 'critical'
+            elif product.stock <= product.threshold // 2:
+                status = 'critical'
+            else:
+                status = 'warning'
+            
+            # Apply filter
+            if filter_type == 'critical' and status != 'critical':
+                continue
+            if filter_type == 'warning' and status != 'warning':
+                continue
+            
+            # Get supplier from product brand or default
+            supplier = product.brand or 'Generic Supplier'
+            supplier_contact = '+91 00000 00000'  # Can be stored in Supplier model
+            
+            # Calculate lead time based on category or default
+            lead_time = '3-5 days'
+            if product.category:
+                if product.category.name in ['Electronics', 'Gadgets']:
+                    lead_time = '5-7 days'
+                elif product.category.name in ['Furniture', 'Home Decor']:
+                    lead_time = '7-10 days'
+            
+            alerts.append({
+                'id': product.id,
+                'name': product.name,
+                'sku': product.sku,
+                'currentStock': product.stock,
+                'reorderLevel': product.threshold,
+                'supplier': supplier,
+                'supplierContact': supplier_contact,
+                'leadTime': lead_time,
+                'price': float(product.price),
+                'status': status,
+                'image': '📦'  # Default icon, can be replaced with actual image
+            })
+        
+        # Sort by severity (critical first)
+        alerts.sort(key=lambda x: 0 if x['status'] == 'critical' else 1)
+        
+        return Response({
+            'status': 'success',
+            'data': alerts
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_today_summary(request):
+    """Get today's summary statistics for retailer dashboard"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, Count
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        
+        today = timezone.now().date()
+        start_of_day = datetime.combine(today, datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+        
+        # Get today's orders
+        today_orders = Order.objects.filter(
+            retailer=user,
+            status='completed',
+            created_at__gte=start_of_day,
+            created_at__lt=end_of_day
+        )
+        
+        # Total revenue
+        total_revenue = today_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        # Total transactions
+        total_transactions = today_orders.count()
+        
+        # Average bill
+        average_bill = total_revenue / total_transactions if total_transactions > 0 else 0
+        
+        # Total items sold
+        total_items = today_orders.aggregate(
+            total=Sum('items__quantity')
+        )['total'] or 0
+        
+        # Unique customers
+        unique_customers = today_orders.values('customer').distinct().count()
+        
+        # Hourly breakdown
+        hourly_breakdown = []
+        busiest_hour = {'hour': '', 'transactions': 0, 'amount': 0}
+        
+        for hour in range(10, 22):  # 10 AM to 9 PM
+            start_hour = start_of_day + timedelta(hours=hour)
+            end_hour = start_hour + timedelta(hours=1)
+            
+            hour_orders = today_orders.filter(
+                created_at__gte=start_hour,
+                created_at__lt=end_hour
+            )
+            
+            hour_transactions = hour_orders.count()
+            hour_amount = hour_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+            
+            hour_display = f"{hour} AM" if hour < 12 else f"{hour-12} PM" if hour > 12 else "12 PM"
+            
+            hourly_breakdown.append({
+                'hour': hour_display,
+                'transactions': hour_transactions,
+                'amount': hour_amount
+            })
+            
+            if hour_transactions > busiest_hour['transactions']:
+                busiest_hour = {
+                    'hour': f"{hour_display} - {(hour+1)} {hour_display.split()[1] if hour+1 != 12 else 'PM'}",
+                    'transactions': hour_transactions,
+                    'amount': hour_amount
+                }
+        
+        # Payment methods breakdown
+        payment_methods = {
+            'upi': today_orders.filter(payment_method='upi').count(),
+            'card': today_orders.filter(payment_method='card').count(),
+            'cash': today_orders.filter(payment_method='cash').count(),
+            'wallet': today_orders.filter(payment_method='wallet').count()
+        }
+        
+        # Target (can be set from retailer settings or average of last 7 days)
+        last_7_days = timezone.now().date() - timedelta(days=7)
+        avg_daily_target = Order.objects.filter(
+            retailer=user,
+            status='completed',
+            created_at__date__gte=last_7_days
+        ).aggregate(avg=Sum('total_amount'))['avg'] or 25000
+        avg_daily_target = avg_daily_target / 7 if avg_daily_target else 25000
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'totalTransactions': total_transactions,
+                'averageBill': round(average_bill, 2),
+                'busiestHour': busiest_hour['hour'],
+                'busiestHourSales': busiest_hour['amount'],
+                'totalItems': total_items,
+                'uniqueCustomers': unique_customers,
+                'peakHourCustomers': busiest_hour['transactions'],
+                'revenue': total_revenue,
+                'target': round(avg_daily_target, 2),
+                'paymentMethods': payment_methods,
+                'hourlyBreakdown': hourly_breakdown
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_quick_reorder(request):
+    """Get quick reorder suggestions based on stock and sales velocity"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, Count, F
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get last 30 days sales data
+        last_30_days = timezone.now().date() - timedelta(days=30)
+        next_7_days = timezone.now().date() + timedelta(days=7)
+        
+        # Get all retailer products
+        products = Product.objects.filter(
+            seller=user,
+            seller_type='retailer',
+            status='active'
+        )
+        
+        # Calculate sales velocity for each product
+        reorder_suggestions = []
+        
+        for product in products:
+            # Get sales in last 30 days
+            sales_data = OrderItem.objects.filter(
+                product=product,
+                order__retailer=user,
+                order__status='completed',
+                order__created_at__date__gte=last_30_days
+            ).aggregate(
+                total_sold=Sum('quantity'),
+                order_count=Count('order', distinct=True)
+            )
+            
+            total_sold = sales_data['total_sold'] or 0
+            order_count = sales_data['order_count'] or 0
+            
+            # Calculate daily sales velocity
+            daily_velocity = total_sold / 30 if total_sold > 0 else 0
+            
+            # Calculate days until out of stock
+            if daily_velocity > 0:
+                days_until_out = int(product.stock / daily_velocity) if product.stock > 0 else 0
+            else:
+                days_until_out = 999  # No sales, not urgent
+            
+            # Check if product needs reordering (stock below threshold or days until out < 7)
+            needs_reorder = product.stock <= product.threshold or (days_until_out < 7 and days_until_out > 0)
+            
+            if not needs_reorder:
+                continue
+            
+            # Determine urgency
+            if product.stock == 0 or days_until_out <= 3:
+                urgency = 'critical'
+            elif product.stock <= product.threshold // 2 or days_until_out <= 7:
+                urgency = 'high'
+            elif product.stock <= product.threshold:
+                urgency = 'medium'
+            else:
+                urgency = 'low'
+            
+            # Calculate suggested quantity (based on 30 days sales + safety stock)
+            suggested_qty = int((daily_velocity * 30) + product.threshold) if daily_velocity > 0 else product.threshold * 2
+            
+            # Get supplier from brand or default
+            supplier = product.brand or 'Generic Supplier'
+            
+            reorder_suggestions.append({
+                'id': product.id,
+                'name': product.name,
+                'sku': product.sku,
+                'currentStock': product.stock,
+                'reorderLevel': product.threshold,
+                'salesVelocity': round(daily_velocity, 1),
+                'daysUntilOut': days_until_out,
+                'suggestedQty': suggested_qty,
+                'supplier': supplier,
+                'price': float(product.price),
+                'urgency': urgency,
+                'image': '📦'
+            })
+        
+        # Sort by urgency (critical first, then high, medium, low)
+        urgency_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        reorder_suggestions.sort(key=lambda x: urgency_order.get(x['urgency'], 4))
+        
+        return Response({
+            'status': 'success',
+            'data': reorder_suggestions[:10]  # Limit to 10 suggestions
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)

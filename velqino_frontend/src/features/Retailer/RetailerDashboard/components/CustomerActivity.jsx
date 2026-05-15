@@ -4,31 +4,28 @@ import React, { useState, useEffect } from 'react'
 import { Users, UserPlus, TrendingUp, Star, MessageCircle, Phone, Mail, MoreHorizontal, Eye, Award } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerDashboard/CustomerActivity.scss'
 
-export default function CustomerActivity() {
+export default function CustomerActivity({ data, isLoading, onFilterChange, activeFilter }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredCustomer, setHoveredCustomer] = useState(null)
-  const [timeFilter, setTimeFilter] = useState('today')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="w-full h-[350px] bg-gray-100 rounded-xl animate-pulse" />
 
-  const customers = [
-    { id: 1, name: 'Rajesh Kumar', type: 'repeat', visits: 12, lastVisit: 'Today, 10:30 AM', amount: 2450, phone: '+91 98765 43210', email: 'rajesh@example.com', status: 'active', avatar: 'RK' },
-    { id: 2, name: 'Priya Sharma', type: 'new', visits: 1, lastVisit: 'Today, 10:15 AM', amount: 1890, phone: '+91 87654 32109', email: 'priya@example.com', status: 'active', avatar: 'PS' },
-    { id: 3, name: 'Amit Singh', type: 'repeat', visits: 8, lastVisit: 'Today, 09:45 AM', amount: 5670, phone: '+91 76543 21098', email: 'amit@example.com', status: 'active', avatar: 'AS' },
-    { id: 4, name: 'Sneha Reddy', type: 'walk-in', visits: 3, lastVisit: 'Today, 09:20 AM', amount: 899, phone: '+91 65432 10987', email: 'sneha@example.com', status: 'new', avatar: 'SR' },
-    { id: 5, name: 'Vikram Mehta', type: 'repeat', visits: 25, lastVisit: 'Yesterday', amount: 3420, phone: '+91 54321 09876', email: 'vikram@example.com', status: 'vip', avatar: 'VM' },
-  ]
-
-  const filteredCustomers = timeFilter === 'all' ? customers : customers.filter(c => {
-    if (timeFilter === 'today') return c.lastVisit.includes('Today')
-    if (timeFilter === 'repeat') return c.type === 'repeat'
-    if (timeFilter === 'new') return c.type === 'new'
+  const customers = data || []
+  const filteredCustomers = activeFilter === 'all' ? customers : customers.filter(c => {
+    if (activeFilter === 'today') return c.lastVisit?.includes('Today')
+    if (activeFilter === 'repeat') return c.type === 'repeat'
+    if (activeFilter === 'new') return c.type === 'new'
     return true
   })
+
+  const newCustomers = customers.filter(c => c.type === 'new').length
+  const repeatCustomers = customers.filter(c => c.type === 'repeat').length
+  const totalVisits = customers.reduce((sum, c) => sum + (c.visits || 0), 0)
 
   const getTypeIcon = (type) => {
     switch(type) {
@@ -48,9 +45,6 @@ export default function CustomerActivity() {
     }
   }
 
-  const newCustomers = customers.filter(c => c.type === 'new').length
-  const repeatCustomers = customers.filter(c => c.type === 'repeat').length
-  const totalVisits = customers.reduce((sum, c) => sum + c.visits, 0)
 
   return (
     <div className="customer-activity bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
@@ -68,26 +62,26 @@ export default function CustomerActivity() {
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeFilter === 'today' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setTimeFilter('today')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeFilter === 'today' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => onFilterChange('today')}
             >
               Today
             </button>
             <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeFilter === 'repeat' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setTimeFilter('repeat')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeFilter === 'today' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => onFilterChange('today')}
             >
               Repeat
             </button>
             <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeFilter === 'new' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setTimeFilter('new')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeFilter === 'new' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => onFilterChange('new')}
             >
               New
             </button>
             <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeFilter === 'all' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setTimeFilter('all')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeFilter === 'all' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => onFilterChange('all')}
             >
               All
             </button>

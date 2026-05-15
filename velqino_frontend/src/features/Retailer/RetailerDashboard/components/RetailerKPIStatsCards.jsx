@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import '../../../../styles/Retailer/RetailerDashboard/RetailerKPIStatsCards.scss'
 import { MoreHorizontal, ArrowUpRight, ArrowDownRight, Info, DollarSign, ShoppingBag, Package, Star } from '../../../../utils/icons';
 
-export default function RetailerKPIStatsCards() {
+export default function RetailerKPIStatsCards({ stats, isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [hoveredCard, setHoveredCard] = useState(null)
   const [showTooltip, setShowTooltip] = useState(null)
@@ -14,61 +14,52 @@ export default function RetailerKPIStatsCards() {
   }, [])
 
   if (!mounted) return null
+  if (isLoading) return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />)}
+  </div>
 
   const statsData = [
     {
       id: 'todaySales',
       title: "Today's Sales",
-      value: '₹12,450',
-      change: '+8.2%',
-      trend: 'up',
-      period: 'vs yesterday',
+      value: `₹${stats?.today_sales?.value?.toLocaleString() || '0'}`,
+      change: `${stats?.today_sales?.trend === 'up' ? '+' : ''}${stats?.today_sales?.change || 0}%`,
+      trend: stats?.today_sales?.trend || 'up',
+      period: stats?.today_sales?.period || 'vs yesterday',
       icon: <DollarSign size={22} />
     },
     {
-      id: 'pendingOrders',
-      title: 'Pending Orders',
-      value: '8',
-      change: '+2',
-      trend: 'up',
-      period: 'vs yesterday',
-      icon: <ShoppingBag size={22} />,
-      urgent: '3'
+      id: 'totalOrders',
+      title: 'Total Orders',
+      value: stats?.total_orders?.value || 0,
+      change: `${stats?.total_orders?.trend === 'up' ? '+' : ''}${stats?.total_orders?.change || 0}%`,
+      trend: stats?.total_orders?.trend || 'up',
+      period: stats?.total_orders?.period || 'vs last week',
+      icon: <ShoppingBag size={22} />
     },
     {
-      id: 'lowStock',
-      title: 'Low Stock Items',
-      value: '12',
-      change: '-3',
-      trend: 'down',
-      period: 'vs yesterday',
+      id: 'totalCustomers',
+      title: 'Total Customers',
+      value: stats?.total_customers?.value || 0,
+      change: `+${stats?.total_customers?.change || 0}%`,
+      trend: 'up',
+      period: stats?.total_customers?.period || 'all time',
       icon: <Package size={22} />
     },
     {
-      id: 'loyaltyPoints',
-      title: 'Loyalty Points',
-      value: '2,450',
-      change: '+450',
+      id: 'totalProducts',
+      title: 'Total Products',
+      value: stats?.total_products?.value || 0,
+      change: `+${stats?.total_products?.change || 0}%`,
       trend: 'up',
-      period: 'this month',
+      period: stats?.total_products?.period || 'total inventory',
       icon: <Star size={22} />
     }
-  ]
+  ];
 
   return (
     <div className="retailer-kpi-stats animate-fadeInUp">
-      <div className="stats-header">
-        <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Store Performance</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Real-time overview of your retail store</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">Last updated: Today 10:30 AM</span>
-          <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-            <MoreHorizontal size={16} className="text-gray-400" />
-          </button>
-        </div>
-      </div>
+      
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
         {statsData.map((stat, index) => (

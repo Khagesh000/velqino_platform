@@ -3,7 +3,7 @@
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
-import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
+
 
 // Lazy load components
 const CategoriesMegaMenu = lazy(() => import('./components/CategoriesMegaMenu'));
