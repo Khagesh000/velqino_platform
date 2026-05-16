@@ -57,6 +57,13 @@ return (
       </div>
 
       {/* Summary Stats */}
+      {totalSales === 0 ? (
+          <div className="chart-summary grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+            <div className="col-span-1 sm:col-span-3 bg-gray-50 rounded-xl p-6 text-center">
+              <p className="text-sm text-gray-500">No sales data available for {chartView === 'today' ? 'today' : 'yesterday'}</p>
+            </div>
+          </div>
+        ) : (
       <div className="chart-summary grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="summary-card bg-gray-50 rounded-xl p-2.5 sm:p-3 transition-all hover:shadow-md">
             <span className="summary-label text-[11px] sm:text-xs font-medium text-gray-500 block mb-0.5 sm:mb-1">Total Sales</span>
@@ -91,8 +98,18 @@ return (
             <span className="summary-period text-[10px] sm:text-xs text-gray-400">across 12 hours</span>
         </div>
         </div>
+        )}
 
       {/* Chart */}
+      {currentData.length === 0 || totalSales === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-xl">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+            <TrendingUp size={28} className="text-gray-400" />
+          </div>
+          <h4 className="text-sm font-medium text-gray-900 mb-1">No Sales Data</h4>
+          <p className="text-xs text-gray-500">No orders have been completed for {chartView === 'today' ? 'today' : 'yesterday'}</p>
+        </div>
+      ) : (
       <div className="chart-container relative mb-4 min-h-[280px] w-full overflow-x-auto">
         <div className="chart-bars flex items-end justify-between gap-1.5 h-[220px] min-w-[600px] sm:min-w-full pb-6">
             {currentData.map((data, index) => {
@@ -131,6 +148,7 @@ return (
             <span className="target-label absolute -top-1 right-0 text-[11px] font-medium text-warning-600 bg-warning-50 px-2 py-0.5 rounded">Target</span>
         </div>
         </div>
+        )}
 
       {/* Footer Note */}
       <div className="chart-footer flex justify-between items-center pt-3 border-t border-gray-100">

@@ -1072,7 +1072,8 @@ def retailer_top_products(request):
                 'sales': current_sales,
                 'revenue': product['total_revenue'] or 0,
                 'stock': product['product__stock'] or 0,
-                'trend': trend
+                'trend': trend,
+                'image': Product.objects.get(id=product['product_id']).images.filter(is_primary=True).first().image.url if Product.objects.get(id=product['product_id']).images.filter(is_primary=True).first() else '📦'
             })
         
         return Response({
@@ -1250,7 +1251,7 @@ def retailer_recent_transactions(request):
                 payment_display = 'Cash'
             
             transactions.append({
-                'id': order.order_id or f"#TR-{order.id:04d}",
+                'id': f"#TR-{order.id:04d}",
                 'customer': order.customer.get_full_name() or order.customer.email.split('@')[0] if order.customer else 'Guest',
                 'items': item_count,
                 'amount': float(order.total_amount),
@@ -1334,7 +1335,8 @@ def retailer_low_stock_alerts(request):
                 'leadTime': lead_time,
                 'price': float(product.price),
                 'status': status,
-                'image': '📦'  # Default icon, can be replaced with actual image
+                'image': product.images.filter(is_primary=True).first().image.url if product.images.filter(is_primary=True).first() else '📦',
+                'image_url': product.images.filter(is_primary=True).first().image.url if product.images.filter(is_primary=True).first() else None
             })
         
         # Sort by severity (critical first)
@@ -1548,7 +1550,8 @@ def retailer_quick_reorder(request):
                 'supplier': supplier,
                 'price': float(product.price),
                 'urgency': urgency,
-                'image': '📦'
+                'image': product.images.filter(is_primary=True).first().image.url if product.images.filter(is_primary=True).first() else '📦',
+                'image_url': product.images.filter(is_primary=True).first().image.url if product.images.filter(is_primary=True).first() else None
             })
         
         # Sort by urgency (critical first, then high, medium, low)

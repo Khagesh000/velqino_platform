@@ -59,13 +59,24 @@ export default function RetailerProducts() {
   const [importProducts] = useImportProductsMutation();
   const [exportProducts] = useExportProductsMutation();
   const [updateProduct] = useUpdateRetailerProductMutation();
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterParams, setFilterParams] = useState({});
   
   const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery();
   const categories = categoriesData?.data || categoriesData || [];
 
   const [createProduct, { isLoading: isCreating }] = useCreateRetailerProductMutation();
-  const { data: productsData, refetch } = useGetRetailerProductsQuery({ page: 1, per_page: 50 });
+  const { data: productsData, refetch } = useGetRetailerProductsQuery({ 
+    page: currentPage, 
+    per_page: 12,
+    search: searchQuery,
+    ...filterParams
+  });
+
+  const products = productsData?.data?.products || [];
+  const totalProducts = productsData?.data?.pagination?.total || 0;
+  const totalPages = productsData?.data?.pagination?.total_pages || 1;
 
       const handleAddProduct = (type) => {
       if (type === 'single') {
@@ -221,7 +232,7 @@ const handleUpdateProduct = async (productId, formData) => {
           </div>
 
           {/* Stock Alerts */}
-          <div className="mb-6" style={{ minHeight: '100px' }}>
+          <div className="mb-6" style={{ minHeight: 'auto' }}>
             <Suspense fallback={<AlertsPlaceholder />}>
               <StockAlerts />
             </Suspense>
@@ -244,17 +255,26 @@ const handleUpdateProduct = async (productId, formData) => {
               <div style={{ minHeight: '500px' }}>
                 <Suspense fallback={<GridPlaceholder />}>
                   <ProductsGrid 
-                      selectedProduct={selectedProduct}
-                      setSelectedProduct={setSelectedProduct}
-                      refreshTrigger={refreshTrigger}
-                      onEditProduct={(product) => {
-                          setEditingProduct(product);
-                          setShowEditModal(true);
-                      }}
-                      onBulkEdit={(products) => {
-                          setSelectedProducts(products);
-                          setShowBulkEditModal(true);
-                      }}
+                    selectedProduct={selectedProduct}
+                    setSelectedProduct={setSelectedProduct}
+                    refreshTrigger={refreshTrigger}
+                    categories={categories}
+                    products={products}
+                    totalProducts={totalProducts}
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                    onSearch={setSearchQuery}
+                    onFilter={setFilterParams}
+                    onRefresh={refetch}
+                    onEditProduct={(product) => {
+                      setEditingProduct(product);
+                      setShowEditModal(true);
+                    }}
+                    onBulkEdit={(products) => {
+                      setSelectedProducts(products);
+                      setShowBulkEditModal(true);
+                    }}
                   />
                 </Suspense>
               </div>

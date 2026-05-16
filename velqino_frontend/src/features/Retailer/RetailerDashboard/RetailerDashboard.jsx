@@ -70,23 +70,22 @@ export default function RetailerDashboard() {
             <main className={`transition-all duration-300 p-4 lg:p-6 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
                 <div className="max-w-7xl mx-auto">
                     {/* Welcome Header */}
-                    {/* Header Section */}
-<div className="mb-6">
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-    <div>
-      <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Welcome back, Retail Store</h1>
-      <p className="text-sm text-gray-500 mt-1">
-        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-      </p>
-    </div>
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-400">Last updated: {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-        <MoreHorizontal size={16} className="text-gray-400" />
-      </button>
-    </div>
-  </div>
-</div>
+                <div className="mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Welcome back, Retail Store</h1>
+                    <p className="text-sm text-gray-500 mt-1">
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Last updated: {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
+                        <MoreHorizontal size={16} className="text-gray-400" />
+                    </button>
+                    </div>
+                </div>
+                </div>
 
                     {/* Critical components - load with data */}
                     <RetailerKPIStatsCards stats={kpiStats} isLoading={kpiLoading} />
