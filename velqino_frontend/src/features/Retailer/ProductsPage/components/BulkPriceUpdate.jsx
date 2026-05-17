@@ -1,75 +1,87 @@
-"use client"
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { TrendingUp, Percent, DollarSign, Filter, RefreshCw, CheckCircle, AlertCircle, Save, X, Tag, Truck, FolderTree } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerProducts/BulkPriceUpdate.scss'
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Percent, DollarSign, Filter, RefreshCw, CheckCircle, AlertCircle, Save, X, Tag, Truck, FolderTree } from '../../../../utils/icons';
+import { toast } from 'react-toastify';
+import { useBulkEditProductsMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 
-export default function BulkPriceUpdate({ onComplete }) {
-  const [mounted, setMounted] = useState(false)
-  const [updateType, setUpdateType] = useState('percentage')
-  const [updateScope, setUpdateScope] = useState('category')
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [selectedSupplier, setSelectedSupplier] = useState('')
-  const [percentageValue, setPercentageValue] = useState('')
-  const [fixedValue, setFixedValue] = useState('')
-  const [previewCount, setPreviewCount] = useState(0)
-  const [isApplying, setIsApplying] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
+export default function BulkPriceUpdate({ onComplete, categories = [] }) {  // ✅ Accept categories as prop
+  const [mounted, setMounted] = useState(false);
+  const [updateType, setUpdateType] = useState('percentage');
+  const [updateScope, setUpdateScope] = useState('category');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [percentageValue, setPercentageValue] = useState('');
+  const [fixedValue, setFixedValue] = useState('');
+  const [previewCount, setPreviewCount] = useState(0);
+  const [isApplying, setIsApplying] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const [bulkEditProducts] = useBulkEditProductsMutation();
 
-  if (!mounted) return null
-
-  const categories = [
-    { id: 1, name: 'Electronics', productCount: 45 },
-    { id: 2, name: 'Clothing', productCount: 78 },
-    { id: 3, name: 'Home Decor', productCount: 23 },
-    { id: 4, name: 'Fitness', productCount: 34 },
-  ]
+  // Remove the useGetCategoriesQuery call
+  // Categories are received as props from parent
 
   const suppliers = [
     { id: 1, name: 'Fashion Hub', productCount: 56 },
     { id: 2, name: 'ElectroMart', productCount: 34 },
     { id: 3, name: 'TechGadgets', productCount: 23 },
     { id: 4, name: 'SportFit', productCount: 45 },
-  ]
+  ];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   const handlePreview = () => {
-    // Simulate preview count
     if (updateScope === 'category' && selectedCategory) {
-      const category = categories.find(c => c.id === parseInt(selectedCategory))
-      setPreviewCount(category?.productCount || 0)
+      const category = categories.find(c => c.id === parseInt(selectedCategory));
+      setPreviewCount(category?.productCount || 0);
     } else if (updateScope === 'supplier' && selectedSupplier) {
-      const supplier = suppliers.find(s => s.id === parseInt(selectedSupplier))
-      setPreviewCount(supplier?.productCount || 0)
+      const supplier = suppliers.find(s => s.id === parseInt(selectedSupplier));
+      setPreviewCount(supplier?.productCount || 0);
     } else if (updateScope === 'all') {
-      setPreviewCount(245)
+      setPreviewCount(245);
     }
-  }
+  };
 
   const handleApply = async () => {
-    setIsApplying(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsApplying(false)
-    setShowSuccess(true)
-    setTimeout(() => {
-      setShowSuccess(false)
-      if (onComplete) onComplete()
-    }, 2000)
-  }
+    setIsApplying(true);
+    try {
+      const updateValue = updateType === 'percentage' ? parseFloat(percentageValue) : parseFloat(fixedValue);
+      const payload = {
+        update_type: updateType,
+        update_value: updateValue,
+        scope: updateScope,
+        category_id: updateScope === 'category' ? selectedCategory : null,
+        supplier_id: updateScope === 'supplier' ? selectedSupplier : null
+      };
+      
+      await bulkEditProducts(payload).unwrap();
+      toast.success(`${previewCount} products updated successfully`);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        if (onComplete) onComplete();
+      }, 2000);
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update prices');
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
   const handleReset = () => {
-    setUpdateType('percentage')
-    setUpdateScope('category')
-    setSelectedCategory('')
-    setSelectedSupplier('')
-    setPercentageValue('')
-    setFixedValue('')
-    setPreviewCount(0)
-  }
+    setUpdateType('percentage');
+    setUpdateScope('category');
+    setSelectedCategory('');
+    setSelectedSupplier('');
+    setPercentageValue('');
+    setFixedValue('');
+    setPreviewCount(0);
+  };
 
   if (showSuccess) {
     return (

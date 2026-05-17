@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db import transaction
 from rest_framework import status
 from .models import Order, OrderItem, Cart, CartItem
-from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer, OrderCreateSerializer
+from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer
 from catalog.models import Product
 from identity.serializers import AddressSerializer
 from .services.cart_service import CartService
@@ -807,8 +807,8 @@ def get_retailer_orders(request):
     
     orders = Order.objects.filter(retailer=user).order_by('-created_at')
     
-    from .serializers import OrderSerializer
-    serializer = OrderSerializer(orders, many=True)
+    from .serializers import OrderListSerializer  # ✅ Use correct name
+    serializer = OrderListSerializer(orders, many=True)
     
     return Response({
         'status': 'success',

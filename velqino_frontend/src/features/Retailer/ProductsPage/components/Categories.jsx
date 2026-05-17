@@ -1,70 +1,69 @@
-"use client"
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { FolderTree, ChevronRight, ChevronDown, Plus, Edit, Trash2, Search, Package, TrendingUp } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerProducts/Categories.scss'
+import React, { useState, useEffect } from 'react';
+import { FolderTree, ChevronRight, ChevronDown, Plus, Edit, Trash2, Search, Package, TrendingUp, X } from '../../../../utils/icons';
+import { toast } from 'react-toastify';
+import { useCreateCategoryMutation } from '@/redux/wholesaler/slices/categoriesSlice';
 
-export default function Categories({ onSelectCategory, selectedCategory }) {
-  const [mounted, setMounted] = useState(false)
-  const [expandedNodes, setExpandedNodes] = useState([1])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [hoveredCategory, setHoveredCategory] = useState(null)
-
+export default function Categories({ categories = [], onSelectCategory, selectedCategory, onRefresh }) {
+  const [mounted, setMounted] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation();
+  
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
-  const categories = [
-    { 
-      id: 1, name: 'Electronics', slug: 'electronics', productCount: 45, 
-      children: [
-        { id: 11, name: 'Mobile Phones', slug: 'mobile-phones', productCount: 12, children: [] },
-        { id: 12, name: 'Laptops', slug: 'laptops', productCount: 8, children: [] },
-        { id: 13, name: 'Audio', slug: 'audio', productCount: 15, 
-          children: [
-            { id: 131, name: 'Headphones', slug: 'headphones', productCount: 7, children: [] },
-            { id: 132, name: 'Speakers', slug: 'speakers', productCount: 5, children: [] }
-          ] 
-        }
-      ]
-    },
-    { id: 2, name: 'Clothing', slug: 'clothing', productCount: 78, 
-      children: [
-        { id: 21, name: 'Men', slug: 'men', productCount: 32, children: [] },
-        { id: 22, name: 'Women', slug: 'women', productCount: 46, children: [] }
-      ]
-    },
-    { id: 3, name: 'Home Decor', slug: 'home-decor', productCount: 23, children: [] },
-    { id: 4, name: 'Fitness', slug: 'fitness', productCount: 34, children: [] },
-    { id: 5, name: 'Stationery', slug: 'stationery', productCount: 18, children: [] },
-  ]
+  // Remove the hardcoded categories and use props
+  // Remove the API call
 
   const handleToggleExpand = (categoryId) => {
     if (expandedNodes.includes(categoryId)) {
-      setExpandedNodes(expandedNodes.filter(id => id !== categoryId))
+      setExpandedNodes(expandedNodes.filter(id => id !== categoryId));
     } else {
-      setExpandedNodes([...expandedNodes, categoryId])
+      setExpandedNodes([...expandedNodes, categoryId]);
     }
-  }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Please enter category name');
+      return;
+    }
+    
+    try {
+      await createCategory({ name: newCategoryName }).unwrap();
+      toast.success('Category added successfully');
+      setNewCategoryName('');
+      setShowAddModal(false);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to add category');
+    }
+  };
+
 
   const filterCategories = (cats, query) => {
-    if (!query) return cats
+    if (!query) return cats;
     return cats.filter(cat => {
-      const matches = cat.name.toLowerCase().includes(query.toLowerCase())
-      const childrenMatch = filterCategories(cat.children || [], query)
+      const matches = cat.name.toLowerCase().includes(query.toLowerCase());
+      const childrenMatch = filterCategories(cat.children || [], query);
       if (childrenMatch.length > 0) {
-        cat.children = childrenMatch
-        return true
+        return true;
       }
-      return matches
-    }).map(cat => ({ ...cat }))
-  }
+      return matches;
+    });
+  };
 
-  const filteredCategories = filterCategories([...categories], searchQuery)
+  const filteredCategories = filterCategories(categories, searchQuery);
 
-  const totalProducts = categories.reduce((sum, cat) => sum + cat.productCount, 0)
+  const totalProducts = categories.reduce((sum, cat) => sum + (cat.productCount || 0), 0);
 
   const renderCategoryTree = (cats, level = 0) => {
     return cats.map(category => (
@@ -85,8 +84,8 @@ export default function Categories({ onSelectCategory, selectedCategory }) {
               {category.children?.length > 0 ? (
                 <button
                   onClick={(e) => {
-                    e.stopPropagation()
-                    handleToggleExpand(category.id)
+                    e.stopPropagation();
+                    handleToggleExpand(category.id);
                   }}
                   className="p-0.5 text-gray-400 hover:text-gray-600"
                 >
@@ -108,11 +107,11 @@ export default function Categories({ onSelectCategory, selectedCategory }) {
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">{category.productCount}</span>
+              <span className="text-xs text-gray-400">{category.productCount || 0}</span>
               <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-primary-500 rounded-full"
-                  style={{ width: `${(category.productCount / totalProducts) * 100}%` }}
+                  style={{ width: `${((category.productCount || 0) / (totalProducts || 1)) * 100}%` }}
                 />
               </div>
             </div>
@@ -125,8 +124,8 @@ export default function Categories({ onSelectCategory, selectedCategory }) {
           </div>
         )}
       </div>
-    ))
-  }
+    ));
+  };
 
   return (
     <div className="categories bg-white rounded-xl shadow-sm border border-gray-100 h-full">
@@ -137,9 +136,12 @@ export default function Categories({ onSelectCategory, selectedCategory }) {
             <FolderTree size={18} className="text-primary-500" />
             <h3 className="text-base font-semibold text-gray-900">Categories</h3>
           </div>
-          <button className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all">
-            <Plus size={14} />
-          </button>
+          <button 
+  onClick={() => setShowAddModal(true)}
+  className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+>
+  <Plus size={14} />
+</button>
         </div>
         
         {/* Search */}
@@ -152,6 +154,14 @@ export default function Categories({ onSelectCategory, selectedCategory }) {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -177,10 +187,43 @@ export default function Categories({ onSelectCategory, selectedCategory }) {
           </div>
           <div className="flex items-center gap-1">
             <TrendingUp size={10} className="text-green-500" />
-            <span className="text-[10px] text-gray-500">+2 this month</span>
+            <span className="text-[10px] text-gray-500">Active</span>
           </div>
         </div>
       </div>
+
+      {/* Add Category Modal */}
+{showAddModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <h3 className="text-base font-semibold text-gray-900">Add New Category</h3>
+        <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+          <X size={18} className="text-gray-400" />
+        </button>
+      </div>
+      <div className="p-4">
+        <input
+          type="text"
+          placeholder="Category name"
+          value={newCategoryName}
+          onChange={(e) => setNewCategoryName(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+          autoFocus
+        />
+      </div>
+      <div className="flex gap-3 p-4 border-t border-gray-100">
+        <button onClick={() => setShowAddModal(false)} className="flex-1 px-3 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button onClick={handleAddCategory} className="flex-1 px-3 py-2 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600">
+          Add Category
+        </button>
+      </div>
     </div>
-  )
+  </div>
+)}
+
+    </div>
+  );
 }

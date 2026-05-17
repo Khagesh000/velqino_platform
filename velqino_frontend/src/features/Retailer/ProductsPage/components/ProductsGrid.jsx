@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Scan, Filter, Grid, Edit3, List, Eye, Edit, Trash2, Copy, Package, AlertCircle } from '../../../../utils/icons';
+import { Search, Scan, Filter, Grid, Edit3, List, Eye, Edit, Trash2, X, Copy, Package, AlertCircle } from '../../../../utils/icons';
 import { toast } from 'react-toastify';
 import EditProductModal from '../modals/EditProductModal';
 import BulkEditModal from '../modals/BulkEditModal';
 import ProductsFilter from './filters/ProductsFilter';
-import { useGetRetailerProductsQuery, useDeleteRetailerProductMutation } from '@/redux/retailer/slices/retailerProductsSlice';
+import { useUpdateRetailerProductMutation, useDeleteRetailerProductMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 
 export default function ProductsGrid({ 
   selectedProduct, 
@@ -16,16 +16,17 @@ export default function ProductsGrid({
   products = [],        
   totalProducts = 0,   
   totalPages = 1,       
-  currentPage = 1,    
+  currentPage = 1, 
+  isLoading = false,
+  searchQuery = '',        // ✅ ADD THIS
   onPageChange,      
   onSearch,            
   onFilter,             
   onRefresh,            
-  onDelete              
+  onDelete               
 }) {
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
-  const [searchQuery, setSearchQuery] = useState('');
   const [hoveredProduct, setHoveredProduct] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -35,7 +36,7 @@ export default function ProductsGrid({
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterParams, setFilterParams] = useState({});
   const itemsPerPage = 12;
-
+  const [updateProduct] = useUpdateRetailerProductMutation();
   // Real API call
 
 
@@ -67,10 +68,19 @@ export default function ProductsGrid({
   };
 
   const handleUpdateProduct = async (productId, formData) => {
-    console.log('Updating product:', productId);
-    toast.success('Product updated successfully');
-    refetch();
-    return Promise.resolve();
+    console.log('🔵 Updating product:', productId);
+    console.log('🔵 Update data:', formData);
+    try {
+      const response = await updateProduct({ productId, data: formData }).unwrap();
+      console.log('🔵 API Success:', response);
+      toast.success('Product updated successfully');
+      if (onRefresh) onRefresh();  // Refresh the list
+      return response;
+    } catch (error) {
+      console.error('🔴 API Error:', error);
+      toast.error(error?.data?.message || 'Failed to update product');
+      throw error;
+    }
   };
 
   const handleDeleteProduct = async (productId) => {
@@ -127,7 +137,8 @@ export default function ProductsGrid({
 
   const handleApplyFilters = (filters) => {
     setFilterParams(filters);
-    setCurrentPage(1);
+    onFilter(filters);      // ✅ ADD THIS LINE
+    onPageChange(1);
     setShowFilterModal(false);
   };
 
@@ -135,149 +146,239 @@ export default function ProductsGrid({
     return product?.primary_image || product?.images?.[0]?.image || null;
   };
 
-  if (!products || products.length === 0) {
-  return (
-    <div className="products-grid-container bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-      <div className="text-center py-12">
-        <Package size={48} className="mx-auto text-gray-300 mb-3" />
-        <p className="text-sm text-gray-500">No products found</p>
-      </div>
-    </div>
-  );
-}
+  
 
   return (
     <div className="products-grid-container bg-white rounded-xl shadow-sm border border-gray-100">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Package size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Products Inventory</h3>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-              {totalProducts} items
+  {/* Header */}
+  <div className="p-4 border-b border-gray-100">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Package size={18} className="text-primary-500" />
+        <h3 className="text-base font-semibold text-gray-900">Products Inventory</h3>
+        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+          {totalProducts} items
+        </span>
+        
+        {selectedProductIds.length > 0 && (
+          <div className="flex items-center gap-2 ml-2">
+            <span className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-full">
+              {selectedProductIds.length} selected
             </span>
-            
-            {selectedProductIds.length > 0 && (
-              <div className="flex items-center gap-2 ml-2">
-                <span className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-full">
-                  {selectedProductIds.length} selected
-                </span>
-                <button onClick={handleBulkEditClick} className="px-3 py-1 text-xs font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center gap-1">
-                  <Edit3 size={12} />
-                  Bulk Edit
-                </button>
-                <button onClick={handleBulkDelete} className="px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all flex items-center gap-1">
-                  <Trash2 size={12} />
-                  Delete
-                </button>
-              </div>
-            )}
+            <button onClick={handleBulkEditClick} className="px-3 py-1 text-xs font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center gap-1">
+              <Edit3 size={12} />
+              Bulk Edit
+            </button>
+            <button onClick={handleBulkDelete} className="px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all flex items-center gap-1">
+              <Trash2 size={12} />
+              Delete
+            </button>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg w-48 focus:outline-none focus:border-primary-500"
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* Search and Filter - ALWAYS VISIBLE */}
+  <div className="px-4 pt-3 pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100">
+    <div className="flex items-center gap-2">
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={(e) => onSearch(e.target.value)}
+          className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg w-48 focus:outline-none focus:border-primary-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => onSearch('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <button
+        onClick={() => setShowFilterModal(true)}
+        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+      >
+        <Filter size={14} />
+      </button>
+    </div>
+    <div className="flex bg-gray-100 rounded-lg p-0.5">
+      <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500'}`}>
+        <Grid size={14} />
+      </button>
+      <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500'}`}>
+        <List size={14} />
+      </button>
+    </div>
+  </div>
+
+  {/* Products Content */}
+  <div className="p-4">
+    {isLoading ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
+        ))}
+      </div>
+    ) : products.length === 0 ? (
+      <div className="text-center py-12">
+        <Package size={48} className="mx-auto text-gray-300 mb-3" />
+        <p className="text-sm text-gray-500">No products found</p>
+        <p className="text-xs text-gray-400 mt-1">Try adjusting your filters or add a new product</p>
+      </div>
+    ) : viewMode === 'grid' ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {products.map((product, index) => (
+          <div 
+            key={product.id} 
+            className="product-card border rounded-xl p-4 transition-all cursor-pointer relative hover:shadow-md" 
+            onClick={() => setSelectedProduct(product)}
+            style={{ animationDelay: `${index * 0.05}s` }}
+          >
+            {/* Checkbox */}
+            <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+              <input 
+                type="checkbox" 
+                checked={selectedProductIds.includes(product.id)} 
+                onChange={(e) => handleSelectProduct(product.id, e.target.checked)} 
+                className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500" 
               />
             </div>
-            <button
-              onClick={() => setShowFilterModal(true)}
-              className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
-            >
-              <Filter size={14} />
-            </button>
-            <div className="flex bg-gray-100 rounded-lg p-0.5">
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500'}`}>
-                <Grid size={14} />
+            
+            {/* Product Image */}
+            <div className="w-full h-28 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+              {getImageUrl(product) ? (
+                <img 
+                  src={getImageUrl(product)} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                />
+              ) : (
+                <Package size={32} className="text-gray-400" />
+              )}
+            </div>
+            
+            {/* Product Info */}
+            <div className="mb-2 mt-2">
+              <h4 className="text-sm font-semibold text-gray-900 truncate">{product.name}</h4>
+              <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+            </div>
+            
+            <div className="flex items-center gap-1 mb-2 text-[10px] text-gray-400">
+              <Scan size={10} />
+              <span>{product.sku?.slice(-8) || 'N/A'}</span>
+            </div>
+            
+            {/* Price & Stock */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-lg font-bold text-gray-900">₹{product.display_price || product.price}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                product.stock === 0 ? 'bg-red-100 text-red-700' : 
+                product.stock <= product.threshold ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+              }`}>
+                {product.stock === 0 ? 'Out of Stock' : 
+                 product.stock <= product.threshold ? 'Low Stock' : 'In Stock'}
+              </span>
+            </div>
+            
+            {/* Stock Bar */}
+            <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mb-3">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  product.stock === 0 ? 'bg-red-500' : 
+                  product.stock <= product.threshold ? 'bg-orange-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min((product.stock / (product.threshold || 1)) * 100, 100)}%` }}
+              />
+            </div>
+            
+            {/* Actions */}
+            <div className="flex gap-2 pt-2 border-t border-gray-100">
+              <button className="flex-1 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-primary-100 hover:text-primary-700 transition-all flex items-center justify-center gap-1">
+                <Eye size={12} />
+                <span>View</span>
               </button>
-              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500'}`}>
-                <List size={14} />
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setEditingProduct(product); 
+                  setShowEditModal(true); 
+                }} 
+                className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+              >
+                <Edit size={12} />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }} 
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+              >
+                <Trash2 size={12} />
               </button>
             </div>
           </div>
-        </div>
+        ))}
       </div>
-
-      {/* Products Grid/List */}
-      <div className="p-4">
-        {products.length === 0 ? (
-          <div className="text-center py-12">
-            <Package size={48} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-sm text-gray-500">No products found</p>
-            <button className="mt-2 text-xs text-primary-500">Add your first product</button>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {products.map((product, index) => (
-              <div key={product.id} className="product-card border rounded-xl p-4 transition-all cursor-pointer relative hover:shadow-md" onClick={() => setSelectedProduct(product)}>
-                <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedProductIds.includes(product.id)} onChange={(e) => handleSelectProduct(product.id, e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-primary-500" />
-                </div>
-                <div className="w-full h-28 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
-                  {getImageUrl(product) ? (
-                    <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package size={32} className="text-gray-400" />
-                  )}
-                </div>
-                <div className="mb-2 mt-2">
-                  <h4 className="text-sm font-semibold text-gray-900 truncate">{product.name}</h4>
-                  <p className="text-xs text-gray-500">SKU: {product.sku}</p>
-                </div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-lg font-bold text-gray-900">₹{product.display_price || product.price}</span>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px]">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr className="text-left text-xs font-medium text-gray-500">
+              <th className="px-3 py-2 w-8">
+                <input type="checkbox" checked={selectedProductIds.length === products.length && products.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-gray-300" />
+              </th>
+              <th className="px-3 py-2">Product</th>
+              <th className="px-3 py-2">SKU</th>
+              <th className="px-3 py-2">Price</th>
+              <th className="px-3 py-2">Stock</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2"></th>
+             </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {products.map((product) => (
+              <tr key={product.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedProduct(product)}>
+                <td className="px-3 py-2 w-8" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={selectedProductIds.includes(product.id)} onChange={(e) => handleSelectProduct(product.id, e.target.checked)} className="w-4 h-4 rounded border-gray-300" />
+                 </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      {getImageUrl(product) ? 
+                        <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover" /> : 
+                        <Package size={16} className="text-gray-400" />
+                      }
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                  </div>
+                  </td>
+                <td className="px-3 py-2 text-xs text-gray-600">{product.sku}</td>
+                <td className="px-3 py-2 text-sm font-semibold text-gray-900">₹{product.display_price || product.price}</td>
+                <td className="px-3 py-2"><span className="text-xs">{product.stock} units</span></td>
+                <td className="px-3 py-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${getStockStatusClass(product.stock, product.threshold)}`}>
                     {getStockText(product.stock, product.threshold)}
                   </span>
-                </div>
-                <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mb-3">
-                  <div className={`h-full rounded-full ${product.stock === 0 ? 'bg-red-500' : product.stock <= product.threshold ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: `${Math.min((product.stock / (product.threshold || 1)) * 100, 100)}%` }} />
-                </div>
-                <div className="flex gap-2 pt-2 border-t border-gray-100">
-                  <button className="flex-1 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-primary-100 hover:text-primary-700 transition-all flex items-center justify-center gap-1"><Eye size={12} /><span>View</span></button>
-                  <button onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowEditModal(true); }} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"><Edit size={12} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={12} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr className="text-left text-xs font-medium text-gray-500">
-                  <th className="px-3 py-2 w-8"><input type="checkbox" checked={selectedProductIds.length === products.length && products.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-gray-300" /></th>
-                  <th className="px-3 py-2">Product</th>
-                  <th className="px-3 py-2">SKU</th>
-                  <th className="px-3 py-2">Price</th>
-                  <th className="px-3 py-2">Stock</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2"></th>
+                  </td>
+                <td className="px-3 py-2">
+                  <button onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowEditModal(true); }} className="p-1 text-gray-400 hover:text-primary-600">
+                    <Eye size={14} />
+                  </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedProduct(product)}>
-                    <td className="px-3 py-2 w-8" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selectedProductIds.includes(product.id)} onChange={(e) => handleSelectProduct(product.id, e.target.checked)} className="w-4 h-4 rounded border-gray-300" /></td>
-                    <td className="px-3 py-2"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">{getImageUrl(product) ? <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover" /> : <Package size={16} className="text-gray-400" />}</div><span className="text-sm font-medium text-gray-900">{product.name}</span></div></td>
-                    <td className="px-3 py-2 text-xs text-gray-600">{product.sku}</td>
-                    <td className="px-3 py-2 text-sm font-semibold text-gray-900">₹{product.display_price || product.price}</td>
-                    <td className="px-3 py-2"><span className="text-xs">{product.stock} units</span></td>
-                    <td className="px-3 py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${getStockStatusClass(product.stock, product.threshold)}`}>{getStockText(product.stock, product.threshold)}</span></td>
-                    <td className="px-3 py-2"><button onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowEditModal(true); }} className="p-1 text-gray-400 hover:text-primary-600"><Eye size={14} /></button></td>
-                  </tr>
-                ))}
-              </tbody>
+            ))}
+                        </tbody>
             </table>
           </div>
         )}
       </div>
+  
+
 
       {/* Pagination */}
       {totalPages > 1 && (

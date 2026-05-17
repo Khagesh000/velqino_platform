@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, lazy, Suspense, useEffect } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
 import AddProductModal from './modals/AddProductModal'
 import BulkImagesModal from './modals/BulkImagesModal'
@@ -62,21 +62,48 @@ export default function RetailerProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterParams, setFilterParams] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState(null);
   
-  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery();
+  const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useGetCategoriesQuery();
   const categories = categoriesData?.data || categoriesData || [];
 
   const [createProduct, { isLoading: isCreating }] = useCreateRetailerProductMutation();
-  const { data: productsData, refetch } = useGetRetailerProductsQuery({ 
-    page: currentPage, 
-    per_page: 12,
-    search: searchQuery,
-    ...filterParams
-  });
+  const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  
+  return debouncedValue;
+};
 
-  const products = productsData?.data?.products || [];
-  const totalProducts = productsData?.data?.pagination?.total || 0;
-  const totalPages = productsData?.data?.pagination?.total_pages || 1;
+// Inside component
+const debouncedSearch = useDebounce(searchQuery, 500); // Wait 500ms after user stops typing
+
+// Use debouncedSearch in API call
+const { data: productsData, refetch, isLoading } = useGetRetailerProductsQuery({ 
+  page: currentPage, 
+  per_page: 12,
+  search: debouncedSearch,
+  ...filterParams
+});
+
+// Add this useEffect to debug
+useEffect(() => {
+  console.log('🔴 API will call with search:', searchQuery);
+  console.log('🔴 API will call with filters:', filterParams);
+}, [searchQuery, filterParams, currentPage]);
+
+
+
+  const products = productsData?.products || [];  // ✅ Remove .data
+  const totalProducts = productsData?.pagination?.total || 0;  // ✅ Remove .data
+  const totalPages = productsData?.pagination?.total_pages || 1;  // ✅ Remove .data
 
       const handleAddProduct = (type) => {
       if (type === 'single') {
@@ -141,6 +168,13 @@ export default function RetailerProducts() {
         toast.error(error?.data?.message || 'Failed to import products');
         throw error;
     }
+};
+
+const handleSelectCategory = (categoryId) => {
+  setSelectedCategory(categoryId);
+  // Apply filter to products based on category
+  setFilterParams(prev => ({ ...prev, category_id: categoryId }));
+  setCurrentPage(1);
 };
 
   const handleExportProducts = async (params) => {
@@ -243,12 +277,17 @@ const handleUpdateProduct = async (productId, formData) => {
             
             {/* Left Column - Categories (1/4 width) */}
             <div className="lg:col-span-1">
-              <div style={{ minHeight: '400px' }}>
-                <Suspense fallback={<SidebarPlaceholder />}>
-                  <Categories />
-                </Suspense>
-              </div>
-            </div> 
+            <div style={{ minHeight: '400px' }}>
+              <Suspense fallback={<SidebarPlaceholder />}>
+                <Categories 
+                  categories={categories}
+                  onSelectCategory={handleSelectCategory}
+                  selectedCategory={selectedCategory}
+                  onRefresh={refetchCategories}
+                />
+              </Suspense>
+            </div>
+          </div>
 
             {/* Right Column - Products Grid (3/4 width) */}
             <div className="lg:col-span-3">
@@ -263,6 +302,8 @@ const handleUpdateProduct = async (productId, formData) => {
                     totalProducts={totalProducts}
                     totalPages={totalPages}
                     currentPage={currentPage}
+                    isLoading={isLoading}        
+                    searchQuery={searchQuery} 
                     onPageChange={setCurrentPage}
                     onSearch={setSearchQuery}
                     onFilter={setFilterParams}
@@ -293,7 +334,10 @@ const handleUpdateProduct = async (productId, formData) => {
             
            <div style={{ minHeight: '350px' }}>
               <Suspense fallback={<SidebarPlaceholder />}>
-                <BulkPriceUpdate onComplete={() => setRefreshTrigger(prev => prev + 1)} />
+                <BulkPriceUpdate 
+                  onComplete={() => setRefreshTrigger(prev => prev + 1)} 
+                  categories={categories}  // ✅ ADD THIS
+                />
               </Suspense>
             </div> 
             
@@ -374,7 +418,7 @@ const handleUpdateProduct = async (productId, formData) => {
                         setEditingProduct(null);
                     }}
                     product={editingProduct}
-                    onSave={handleUpdateProduct}
+                    onSave={(formData) => handleUpdateProduct(editingProduct.id, formData)}
                     categories={categories}
                 />
             )}

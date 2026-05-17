@@ -3,6 +3,8 @@
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
+import { motion, AnimatePresence } from 'framer-motion';
+import LogoLoader from '../LogoLoader';
 
 
 // Lazy load components
@@ -31,54 +33,54 @@ const HeroPlaceholder = () => (
 );
 
 export default function HomePage() {
+  const [showLoader, setShowLoader] = useState(true);
+
   // ============ MULTIPLE PARALLEL API CALLS ============
-  // All fetch simultaneously - NO WAITING
-  
-  // 1. Best Selling Products (sorted by total_sold)
   const { data: bestSellingResponse, isLoading: bestSellingLoading } = useGetProductsQuery(
     { sort: '-total_sold', limit: 8 },
     { refetchOnMountOrArgChange: true }
   );
   
-  // 2. New Arrivals (sorted by created_at)
   const { data: newArrivalsResponse, isLoading: newArrivalsLoading } = useGetProductsQuery(
     { sort: '-created_at', limit: 8 },
     { refetchOnMountOrArgChange: true }
   );
   
-  // 3. Deals of the Day (discount = true)
   const { data: dealsResponse, isLoading: dealsLoading } = useGetProductsQuery(
     { deals_of_day: true, limit: 8 },
     { refetchOnMountOrArgChange: true }
-);
+  );
   
-  // 4. Summer Collection (season = summer)
   const { data: summerResponse, isLoading: summerLoading } = useGetProductsQuery(
     { season: 'summer', limit: 8 },
     { refetchOnMountOrArgChange: true }
   );
   
-  // 5. Winter Collection (season = winter)
   const { data: winterResponse, isLoading: winterLoading } = useGetProductsQuery(
     { season: 'winter', limit: 8 },
     { refetchOnMountOrArgChange: true }
   );
   
-  // 6. Festive Collection (season = festive)
   const { data: festiveResponse, isLoading: festiveLoading } = useGetProductsQuery(
     { season: 'festive', limit: 8 },
     { refetchOnMountOrArgChange: true }
   );
   
-  // 7. Categories (for mega menu and grid)
   const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery();
   
-  // 8. All Products (for Recently Viewed and other sections)
   const { data: allProductsResponse, isLoading: allProductsLoading } = useGetProductsQuery(
     { page: 1, per_page: 50 },
     { refetchOnMountOrArgChange: true }
   );
-  
+
+  // Hide loader when essential data is loaded
+  useEffect(() => {
+    if (!categoriesLoading && !allProductsLoading && bestSellingResponse && newArrivalsResponse) {
+      const timer = setTimeout(() => setShowLoader(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [categoriesLoading, allProductsLoading, bestSellingResponse, newArrivalsResponse]);
+
   // ============ EXTRACT DATA FROM RESPONSES ============
   const bestSellingProducts = useMemo(() => bestSellingResponse?.data?.products || [], [bestSellingResponse]);
   const newArrivalsProducts = useMemo(() => newArrivalsResponse?.data?.products || [], [newArrivalsResponse]);
@@ -93,7 +95,6 @@ export default function HomePage() {
     return Array.isArray(categoryList) ? categoryList : [];
   }, [categoriesData]);
   
-  // Combine all seasonal collections for Featured Collections
   const seasonalCollections = useMemo(() => [
     { name: 'Summer Breeze', season: 'summer', products: summerProducts, icon: '☀️', gradient: 'from-orange-500 to-yellow-500' },
     { name: 'Winter Warmers', season: 'winter', products: winterProducts, icon: '❄️', gradient: 'from-blue-500 to-cyan-500' },
@@ -107,94 +108,78 @@ export default function HomePage() {
     deals_count: dealsProducts.length,
     brands_count: memoizedCategories.length,
   }), [allProducts, newArrivalsProducts, bestSellingProducts, dealsProducts, memoizedCategories]);
-  
-  // Check if essential data is still loading
-  const isInitialLoading = categoriesLoading || allProductsLoading;
-  
-  // Show loading skeleton only for first load
-  if (isInitialLoading) {
-    return <SectionPlaceholder height="h-screen" />;
-  }
-  
-  // ============ RENDER COMPONENTS WITH THEIR SPECIFIC DATA ============
+
   return (
-    <div>
-      {/* CategoriesMegaMenu */}
-      <Suspense fallback={<SectionPlaceholder height="h-20" />}>
-        <CategoriesMegaMenu 
-          categories={memoizedCategories} 
-          quickLinksData={quickLinksData}
-          loading={categoriesLoading} 
-        />
-      </Suspense>
-      
-      {/* HeroBanner */}
-      <Suspense fallback={<HeroPlaceholder />}>
-        <HeroBanner />
-      </Suspense>
-      
-      {/* CategoryGrid - Uses categories only */}
-      <Suspense fallback={<SectionPlaceholder height="h-96" />}>
-        <CategoryGrid 
-          categories={memoizedCategories} 
-          productsData={allProductsResponse?.data || {}} 
-          loading={categoriesLoading} 
-        />
-      </Suspense>
-      
-      {/* DealsOfTheDay - Uses dealsProducts only */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <DealsOfTheDay deals={dealsProducts} loading={dealsLoading} />
-      </Suspense>
-      
-      {/* BestSellingProducts - Uses bestSellingProducts only */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <BestSellingProducts products={bestSellingProducts} loading={bestSellingLoading} />
-      </Suspense>
-      
-      {/* NewArrivals - Uses newArrivalsProducts only */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <NewArrivals products={newArrivalsProducts} loading={newArrivalsLoading} />
-      </Suspense>
-      
-      {/* FeaturedCollections - Uses seasonal collections */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <FeaturedCollections collections={seasonalCollections} />
-      </Suspense>
-      
-      {/* Static components */}
-      <Suspense fallback={<SectionPlaceholder height="h-60" />}>
-        <TopBrands />
-      </Suspense>
-      
-      <Suspense fallback={<SectionPlaceholder height="h-40" />}>
-        <PromotionBanners />
-      </Suspense>
-      
-      {/* ReviewsSection */}
-      <Suspense fallback={<SectionPlaceholder height="h-96" />}>
-        <ReviewsSection />
-      </Suspense>
-      
-      {/* BenefitsSection */}
-      <Suspense fallback={<SectionPlaceholder height="h-32" />}>
-        <BenefitsSection />
-      </Suspense>
-      
-      {/* RecentlyViewed - Uses allProducts */}
-      <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-        <RecentlyViewed products={allProducts} loading={allProductsLoading} />
-      </Suspense>
-      
-      {/* NewsletterSection */}
-      <Suspense fallback={<SectionPlaceholder height="h-48" />}>
-        <NewsletterSection />
-      </Suspense>
-      
-      {/* FloatingElements */}
-      <Suspense fallback={null}>
-        <FloatingElements />
-      </Suspense>
-    </div>
+    <AnimatePresence mode="wait">
+    {showLoader ? (
+      <LogoLoader key="loader" />
+    ) : (
+      <div key="content" className="block">
+        <Suspense fallback={<SectionPlaceholder height="h-20" />}>
+          <CategoriesMegaMenu 
+            categories={memoizedCategories} 
+            quickLinksData={quickLinksData}
+            loading={categoriesLoading} 
+          />
+        </Suspense>
+        
+        <Suspense fallback={<HeroPlaceholder />}>
+          <HeroBanner />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-96" />}>
+          <CategoryGrid 
+            categories={memoizedCategories} 
+            productsData={allProductsResponse?.data || {}} 
+            loading={categoriesLoading} 
+          />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+          <DealsOfTheDay deals={dealsProducts} loading={dealsLoading} />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+          <BestSellingProducts products={bestSellingProducts} loading={bestSellingLoading} />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+          <NewArrivals products={newArrivalsProducts} loading={newArrivalsLoading} />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+          <FeaturedCollections collections={seasonalCollections} />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-60" />}>
+          <TopBrands />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-40" />}>
+          <PromotionBanners />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-96" />}>
+          <ReviewsSection />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-32" />}>
+          <BenefitsSection />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-80" />}>
+          <RecentlyViewed products={allProducts} loading={allProductsLoading} />
+        </Suspense>
+        
+        <Suspense fallback={<SectionPlaceholder height="h-48" />}>
+          <NewsletterSection />
+        </Suspense>
+        
+        <Suspense fallback={null}>
+          <FloatingElements />
+        </Suspense>
+      </div>
+    )}
+  </AnimatePresence>
   );
 }

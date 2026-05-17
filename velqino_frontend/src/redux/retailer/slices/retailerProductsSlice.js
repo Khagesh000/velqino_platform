@@ -12,14 +12,16 @@ export const retailerProductsApi = createApi({
             async queryFn(params) {
                 try {
                     const response = await retailerProductsAPI.getProducts(params);
+                    // ✅ API returns { products: [], pagination: {} } directly
+                    // No need to wrap in data.data
                     return { data: response.data };
                 } catch (error) {
                     return { error: error.response?.data || error };
                 }
             },
             providesTags: (result) => 
-                result?.data?.products 
-                    ? [...result.data.products.map(p => ({ type: 'RetailerProducts', id: p.id })), { type: 'RetailerProducts', id: 'LIST' }]
+                result?.products  // ✅ Change from result?.data?.products
+                    ? [...result.products.map(p => ({ type: 'RetailerProducts', id: p.id })), { type: 'RetailerProducts', id: 'LIST' }]
                     : [{ type: 'RetailerProducts', id: 'LIST' }],
         }),
         
