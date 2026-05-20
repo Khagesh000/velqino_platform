@@ -21,16 +21,20 @@ export default function OrderConfirmation({ currentStep, selectedAddress, delive
     return;
   }
   
-  if (userRole === 'wholesaler' || userRole === 'customer') {
-    toast.error('❌ You are not authorized to place orders. Only retailers can place orders.', {
+  // ✅ Only block wholesalers
+  if (userRole === 'wholesaler') {
+    toast.error('❌ Wholesalers cannot place orders. Only customers and retailers can place orders.', {
       position: "top-center",
       autoClose: 4000
     });
     return;
   }
   
-  if (userRole === 'retailer') {
+  // ✅ Allow customers and retailers
+  if (userRole === 'customer' || userRole === 'retailer') {
     onPlaceOrder();
+  } else {
+    toast.error('❌ Invalid user role. Please login again.');
   }
 };
 
@@ -63,7 +67,7 @@ export default function OrderConfirmation({ currentStep, selectedAddress, delive
             onClick={handlePlaceOrderClick}
             disabled={isPlacingOrder}
             className={`flex-1 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
-              localStorage.getItem('user_role') === 'retailer' 
+              (localStorage.getItem('user_role') === 'retailer' || localStorage.getItem('user_role') === 'customer')
                 ? 'bg-green-600 text-white hover:bg-green-700' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}

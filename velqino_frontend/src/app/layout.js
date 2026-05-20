@@ -46,6 +46,18 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+
+       <script dangerouslySetInnerHTML={{
+        __html: `
+          window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('ChunkLoadError')) {
+              window.location.reload();
+            }
+          });
+        `
+      }} />
+
+
         <ReduxProvider>
           <ClientOnly fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
             {children}

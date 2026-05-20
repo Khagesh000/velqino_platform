@@ -145,6 +145,22 @@ class WholesalerProfileUpdateSerializer(serializers.ModelSerializer):
         if value and len(value) != 11:
             raise serializers.ValidationError("IFSC code must be 11 characters")
         return value
+    
+
+class UserUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False)
+    password = serializers.CharField(write_only=True, required=False)
+    
+    def update(self, instance, validated_data):
+        if 'username' in validated_data:
+            instance.username = validated_data['username']
+        if 'email' in validated_data:
+            instance.email = validated_data['email']
+        if 'password' in validated_data:
+            instance.set_password(validated_data['password'])
+        instance.save()
+        return instance
 
 
 class WholesalerProfileListSerializer(serializers.ModelSerializer):

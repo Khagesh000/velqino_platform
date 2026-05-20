@@ -47,6 +47,31 @@ class AddToCartSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1, default=1)
     selected_size = serializers.CharField(required=False, allow_blank=True)
     selected_color = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        """✅ ADD THIS VALIDATION"""
+        from catalog.models import Product
+        
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return data
+        
+        user = request.user
+        product = Product.objects.get(id=data['product_id'])
+        
+        # ✅ Retailer cannot add retailer products to cart
+        if product.seller_type == 'retailer' and user.role == 'retailer':
+            raise serializers.ValidationError(
+                'Retailers cannot add retailer products to cart. Only customers can buy retailer products.'
+            )
+        
+        # ✅ Customer cannot add wholesaler products to cart
+        if product.seller_type == 'wholesaler' and user.role == 'customer':
+            raise serializers.ValidationError(
+                'Customers cannot add wholesaler products to cart. Only retailers can buy wholesaler products.'
+            )
+        
+        return data
 
 
 class UpdateCartItemSerializer(serializers.Serializer):
@@ -86,3 +111,36 @@ class OrderCreateSerializer(serializers.Serializer):
     address_id = serializers.IntegerField()
     delivery_type = serializers.ChoiceField(choices=['standard', 'express'])
     payment_method = serializers.CharField(max_length=50)
+    
+    def validate(self, data):
+        """✅ ADD THIS VALIDATION"""
+        from .models import Cart
+        from catalog.models import Product
+        
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return data
+        
+        user = request.user
+        cart = Cart.objects.filter(user=user, status='active').first()
+        
+        if not cart or not cart.items.exists():
+            raise serializers.ValidationError('Cart is empty')
+        
+        # ✅ Validate each cart item
+        for cart_item in cart.items.all():
+            product = cart_item.product
+            
+            # Retailer cannot order retailer products
+            if product.seller_type == 'retailer' and user.role == 'retailer':
+                raise serializers.ValidationError(
+                    f'Cannot place order: {product.name} is a retailer product. Retailers cannot buy retailer products.'
+                )
+            
+            # Customer cannot order wholesaler products
+            if product.seller_type == 'wholesaler' and user.role == 'customer':
+                raise serializers.ValidationError(
+                    f'Cannot place order: {product.name} is a wholesaler product. Customers cannot buy wholesaler products.'
+                )
+        
+        return data

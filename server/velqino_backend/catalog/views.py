@@ -111,7 +111,19 @@ def product_list(request):
             per_page = int(limit)
         
         # ✅ START WITH BASE QUERYSET (NOT paginated yet)
-        queryset = Product.objects.all()
+        # Role-based filtering with performance optimization
+        base_queryset = Product.objects.select_related('category', 'seller').prefetch_related('images')
+
+        if not request.user.is_authenticated:
+            queryset = base_queryset.filter(status='active')
+        elif request.user.role == 'customer':
+            queryset = base_queryset.filter(seller_type='retailer', status='active')
+        elif request.user.role == 'wholesaler':
+            queryset = base_queryset.filter(seller=request.user, seller_type='wholesaler')
+        elif request.user.role == 'retailer':
+            queryset = base_queryset.filter(Q(seller=request.user) | Q(seller_type='wholesaler', status='active')).distinct()
+        else:
+            queryset = base_queryset.all()
         
         # ✅ APPLY DISCOUNT FILTER
         if discount == 'true':
@@ -269,6 +281,17 @@ def product_detail(request, product_id):
     
     if request.method == 'GET':
         product = get_object_or_404(Product, id=product_id)
+
+        if not request.user.is_authenticated or request.user.role == 'customer':
+            if product.seller_type != 'retailer':
+                return Response({'status': 'error', 'message': 'Access denied'}, status=403)
+        elif request.user.role == 'wholesaler':
+            if product.seller != request.user:
+                return Response({'status': 'error', 'message': 'Access denied'}, status=403)
+        elif request.user.role == 'retailer':
+            if product.seller != request.user and product.seller_type != 'wholesaler':
+                return Response({'status': 'error', 'message': 'Access denied'}, status=403)
+
         cache_key = f"product:{product_id}"
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -507,10 +530,10 @@ def bulk_product_action(request):
 # ============= CATEGORY ENDPOINTS =============
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
 def category_list(request):
     """List all categories or create new"""
     if request.method == 'GET':
+        # ✅ No authentication required for GET
         cache_key = "categories:all"
         cached_data = cache.get(cache_key)
         
@@ -525,6 +548,10 @@ def category_list(request):
         return Response({'status': 'success', 'data': serializer.data})
     
     elif request.method == 'POST':
+        # ✅ Only POST requires authentication
+        if not request.user.is_authenticated:
+            return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
+        
         serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -533,6 +560,8 @@ def category_list(request):
                           status=status.HTTP_201_CREATED)
         return Response({'status': 'error', 'errors': serializer.errors}, 
                        status=status.HTTP_400_BAD_REQUEST)
+    
+
     
 # catalog/views.py - ADD this function
 @api_view(['GET', 'PUT', 'DELETE'])

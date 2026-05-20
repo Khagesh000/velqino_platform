@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db import transaction
 from rest_framework import status
 from .models import Order, OrderItem, Cart, CartItem
-from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer
+from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer, OrderCreateSerializer
 from catalog.models import Product
 from identity.serializers import AddressSerializer
 from .services.cart_service import CartService
@@ -31,19 +31,23 @@ import io
 @permission_classes([IsAuthenticated])
 def create_order(request):
     """Create order from cart"""
-    from .models import Cart, Order, OrderItem
+    from .models import Cart, Order, OrderItem, OrderStatusHistory
     from catalog.models import Product
     from identity.models import Address
     import uuid
     from decimal import Decimal
+
+    serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+    if not serializer.is_valid():
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
     
     user = request.user
     
-    # Only customers and retailers can place orders
-    if user.role == 'wholesaler':
+    # ✅ Only customers and retailers can place orders
+    if user.role not in ['customer', 'retailer']:
         return Response({
             'status': 'error',
-            'message': 'Wholesalers cannot place orders'
+            'message': 'Only customers and retailers can place orders'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get active cart
@@ -81,11 +85,18 @@ def create_order(request):
     tax = round((float(subtotal) - float(discount)) * 0.05, 2)
     grand_total = float(subtotal) - float(discount) + float(shipping_charge) + tax
     
+    # ✅ Get wholesaler from first cart item (if retailer is buying from wholesaler)
+    first_item = cart.items.first()
+    wholesaler = None
+    if first_item and first_item.product.seller_type == 'wholesaler':
+        wholesaler = first_item.product.seller
+    
     # Create order
     order = Order.objects.create(
         order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
         customer=user,
         retailer=user if user.role == 'retailer' else None,
+        wholesaler=wholesaler,  # ✅ ADDED - This fixes wholesaler orders
         total_amount=subtotal,
         discount_amount=discount,
         shipping_charge=shipping_charge,
@@ -102,7 +113,6 @@ def create_order(request):
         status='pending',
         payment_status='pending'
     )
-
     
     OrderStatusHistory.objects.create(
         order=order,
@@ -159,43 +169,46 @@ def create_order(request):
 def get_orders(request):
     """Get user orders based on role"""
     from .models import Order
-    from django.db.models import Q
+    from django.db.models import Q, Prefetch
     from django.core.paginator import Paginator
 
     user = request.user
 
+    # ✅ Optimized with select_related and prefetch_related
+    base_queryset = Order.objects.select_related('customer', 'retailer', 'wholesaler').prefetch_related(
+        Prefetch('items', queryset=OrderItem.objects.select_related('product'))
+    )
+
     if user.role in ['admin', 'support']:
-        orders = Order.objects.all()
+        orders = base_queryset.all()
     elif user.role == 'customer':
-        orders = Order.objects.filter(customer=user)
+        orders = base_queryset.filter(customer=user)
     elif user.role == 'retailer':
-        orders = Order.objects.filter(retailer=user)
+        orders = base_queryset.filter(retailer=user)
     elif user.role == 'wholesaler':
-        orders = Order.objects.filter(items__product__seller=user).distinct()
+        orders = base_queryset.filter(items__product__seller=user).distinct()
     else:
         orders = Order.objects.none()
 
-    # Filter by status
+    # Filters (same as before)
     status_filter = request.query_params.get('status')
     if status_filter:
         orders = orders.filter(status=status_filter)
 
-    # Filter by payment status
     payment_filter = request.query_params.get('payment_status')
-    print('payment_filter:', payment_filter)  # remove after fix
     if payment_filter:
         orders = orders.filter(payment_status=payment_filter)
 
-    # Filter by search
     search = request.query_params.get('search')
     if search:
         orders = orders.filter(
             Q(order_number__icontains=search) |
             Q(customer__email__icontains=search) |
+            Q(customer__first_name__icontains=search) |
+            Q(customer__last_name__icontains=search) |
             Q(shipping_name__icontains=search)
         )
 
-    # Filter by date range
     days = request.query_params.get('days')
     if days and days != 'custom':
         from django.utils import timezone
@@ -203,7 +216,6 @@ def get_orders(request):
         cutoff = timezone.now() - timedelta(days=int(days))
         orders = orders.filter(created_at__gte=cutoff)
 
-    # Filter by amount range
     min_amount = request.query_params.get('min_amount')
     max_amount = request.query_params.get('max_amount')
     if min_amount:
@@ -221,14 +233,58 @@ def get_orders(request):
 
     data = []
     for order in page_obj.object_list:
+        # ✅ Customer name
+        customer_name = ""
+        if order.customer:
+            customer_name = order.customer.get_full_name() or order.customer.email
+        
+        # ✅ Retailer name
+        retailer_name = ""
+        if order.retailer:
+            retailer_name = order.retailer.get_full_name() or order.retailer.email
+        
+        # ✅ Delivered date (use delivered_at field from your model)
+        delivered_date = order.delivered_at if order.delivered_at else None
+        
+        # ✅ Items with images
+        items_data = []
+        for item in order.items.all():
+            product_images = []
+            if item.product:
+                primary_image = item.product.images.filter(is_primary=True).first()
+                if primary_image:
+                    product_images.append(primary_image.image.url)
+                else:
+                    for img in item.product.images.all()[:3]:
+                        product_images.append(img.image.url)
+            
+            items_data.append({
+                'id': item.id,
+                'product_name': item.product_name,
+                'product_sku': item.product_sku,
+                'quantity': item.quantity,
+                'price': float(item.price),
+                'total': float(item.total),
+                'product_images': product_images
+            })
+        
         data.append({
             'id': order.id,
             'order_number': order.order_number,
-            'total_amount': order.grand_total,
+            'customer_name': customer_name,
+            'customer_email': order.customer.email if order.customer else None,
+            'retailer_name': retailer_name,
+            'total_amount': float(order.grand_total),
             'status': order.status,
             'payment_status': order.payment_status,
+            'payment_method': order.payment_method,
+            'delivery_type': order.delivery_type,
             'created_at': order.created_at,
-            'items_count': order.items.count()
+            'delivered_date': delivered_date,
+            'expected_delivery_date': order.expected_delivery_date,
+            'tracking_number': order.tracking_number,
+            'items_count': order.items.count(),
+            'items': items_data
         })
 
     return Response({
@@ -537,7 +593,7 @@ def get_cart(request):
 def add_to_cart(request):
     """Add product to cart"""
     
-    serializer = AddToCartSerializer(data=request.data)
+    serializer = AddToCartSerializer(data=request.data, context={'request': request})
     if not serializer.is_valid():
         return Response({'status': 'error', 'errors': serializer.errors}, status=400)
     

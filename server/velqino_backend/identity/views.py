@@ -7,6 +7,7 @@ from .models import User, WholesalerProfile, RetailerProfile, Address
 from .serializers import (
     WholesalerProfileSerializer,
     WholesalerProfileCreateSerializer,
+    UserUpdateSerializer,
     WholesalerProfileUpdateSerializer,
     WholesalerProfileListSerializer,
     RetailerRegisterSerializer,
@@ -364,11 +365,26 @@ def update_wholesaler_profile(request, user_id):
     if request.user.id != user_id and request.user.role != 'admin':
         return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
     
-    serializer = WholesalerProfileSerializer(profile, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response({'status': 'success', 'data': serializer.data})
-    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+    # ✅ Update User
+    user = profile.user
+    user_serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+    if not user_serializer.is_valid():
+        return Response({'status': 'error', 'errors': user_serializer.errors}, status=400)
+    user_serializer.save()
+    
+    # ✅ Update Profile
+    from .serializers import WholesalerProfileUpdateSerializer
+    profile_serializer = WholesalerProfileUpdateSerializer(profile, data=request.data, partial=True)
+    if profile_serializer.is_valid():
+        profile_serializer.save()
+        
+        # Return combined data
+        response_data = profile_serializer.data
+        response_data['username'] = user.username
+        response_data['user_email'] = user.email
+        return Response({'status': 'success', 'data': response_data})
+    
+    return Response({'status': 'error', 'errors': profile_serializer.errors}, status=400)
 
 
 @api_view(['DELETE'])
