@@ -84,14 +84,15 @@ const ProductCard = memo(({ product, index }) => {
           </div>
         )}
         <img
-          src={product.image}
-          alt={product.name}
-          loading="lazy"
-          className={`w-full h-full object-cover transition-transform duration-500 ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          } ${isHovered ? 'scale-110' : 'scale-100'}`}
-          onLoad={() => setIsLoaded(true)}
-        />
+            src={product.image}
+            alt={product.name}
+            loading={index < 4 ? "eager" : "lazy"}
+            className={`w-full h-full object-cover transition-transform duration-500 ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            } ${isHovered ? 'scale-110' : 'scale-100'}`}
+            onLoad={() => setIsLoaded(true)}
+            onError={(e) => { e.target.src = '/images/products/placeholder.jpg' }}
+          />
         
         {/* Discount Badge */}
         {product.discount > 0 && (
@@ -104,9 +105,11 @@ const ProductCard = memo(({ product, index }) => {
         <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}>
+          <Link href={`/product/productlistingpage?product_id=${product.id}`}>
           <button className="bg-white text-primary-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-500 hover:text-white transition-all transform -translate-y-2 group-hover:translate-y-0">
             Quick View
           </button>
+        </Link>
         </div>
       </div>
 
@@ -171,8 +174,6 @@ export default function DealsOfTheDay({ deals = [], loading = false }) {
   
   // Remove shouldFetch - not needed
   
-  const endTime = new Date().getTime() + 24 * 60 * 60 * 1000;
-
   const formattedDeals = React.useMemo(() => {
     if (!deals || deals.length === 0) return [];
     return deals.slice(0, 6).map((deal) => ({
@@ -182,11 +183,12 @@ export default function DealsOfTheDay({ deals = [], loading = false }) {
       originalPrice: parseFloat(deal.retail_price) || parseFloat(deal.price) || 0,
       discountedPrice: parseFloat(deal.price) || 0,
       discount: deal.discount_percentage || Math.round(((parseFloat(deal.retail_price) - parseFloat(deal.price)) / parseFloat(deal.retail_price)) * 100) || 0,
-      image: deal.primary_image || deal.images?.[0]?.image || '/images/products/placeholder.jpg',
+      image: deal.image || deal.primary_image || '/images/products/placeholder.jpg',
       stock: deal.stock || 0,
       totalStock: deal.total_stock || deal.stock || 100,
       sold: (deal.total_stock || 100) - (deal.stock || 0),
-      rating: deal.rating || 4.5
+      rating: deal.rating || 4.5,
+      endTime: deal.deal_end_time ? new Date(deal.deal_end_time).getTime() : new Date().getTime() + 24 * 60 * 60 * 1000
     }));
   }, [deals]);
 
@@ -259,7 +261,7 @@ export default function DealsOfTheDay({ deals = [], loading = false }) {
           </div>
           
           {/* Countdown Timer */}
-          <CountdownTimer targetDate={endTime} />
+          <CountdownTimer targetDate={visibleDeals[0]?.endTime} />
         </div>
 
         {/* Deals Grid */}
@@ -272,8 +274,8 @@ export default function DealsOfTheDay({ deals = [], loading = false }) {
         {/* View All Deals Button */}
         <div className="text-center mt-8 sm:mt-12">
           <Link
-            href="/deals"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-500 hover:text-white transition-all duration-300 group"
+            href="/product/productlistingpage?deals_of_day=true"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
           >
             <span>View All Deals</span>
             <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />

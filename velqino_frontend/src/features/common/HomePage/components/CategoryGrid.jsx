@@ -10,10 +10,11 @@ import '../../../../styles/common/HomePage/CategoryGrid.scss'
 const CategoryCard = React.memo(({ category, index }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const productCount = category.productCount || 0;
 
   return (
     <Link
-      href={`/category/${category.slug}`}
+      href={`/product/productlistingpage?category_id=${category.id}&category=${encodeURIComponent(category.name)}`}
       className="category-card group block"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -31,11 +32,12 @@ const CategoryCard = React.memo(({ category, index }) => {
           <img
             src={category.image}
             alt={category.name}
-            loading="lazy"
+            loading={index < 4 ? "eager" : "lazy"}
             className={`w-full h-full object-cover transition-all duration-700 ${
               isLoaded ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
             } ${isHovered ? 'scale-110' : 'scale-100'}`}
             onLoad={() => setIsLoaded(true)}
+            onError={(e) => { e.target.src = '/images/categories/placeholder.jpg' }}
             width={400}
             height={400}
           />
@@ -57,7 +59,7 @@ const CategoryCard = React.memo(({ category, index }) => {
           </h3>
           <div className="flex items-center gap-1 text-[10px] sm:text-xs text-white/80">
             <Package size={12} className="sm:w-3 sm:h-3" />
-            <span>{category.productCount.toLocaleString()} products</span>
+            <span>{productCount.toLocaleString()} products</span>
           </div>
         </div>
 
@@ -97,33 +99,36 @@ export default function CategoryGrid({ categories = [], productsData = {}, loadi
   };
 
   const formattedCategories = React.useMemo(() => {
-  if (!categories || categories.length === 0) return [];
-  const categoryList = categories.data || categories.results || categories;
-  if (!Array.isArray(categoryList)) return [];
-  
-  // Get products from correct path - now productsData has { products, pagination }
-  const products = productsData?.products || [];
-  
-  return categoryList.slice(0, 12).map((category) => {
-    // Find a product that belongs to THIS specific category
-    const categoryProduct = products.find(p => p.category_id === category.id || p.category_name === category.name);
+    if (!categories || categories.length === 0) return [];
+    const categoryList = categories.data || categories.results || categories;
+    if (!Array.isArray(categoryList)) return [];
     
-    return {
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      image: categoryProduct?.primary_image || 
-             categoryProduct?.images?.[0]?.image ||
-             '/images/categories/placeholder.jpg',
-      productCount: products.filter(p => p.category_id === category.id).length,
-      icon: getCategoryIcon(category.name),
-      color: 'from-blue-500 to-cyan-500'
-    };
-  });
-}, [categories, productsData]);
-  console.log('Image object:', productsData?.products?.[0]?.images?.[0]);
+    // ✅ NEW - Get products from all homepage sections
+    const products = [
+      ...(productsData?.bestSelling || []),
+      ...(productsData?.newArrivals || []),
+      ...(productsData?.dealsOfDay || [])
+    ];
+    
+    return categoryList.slice(0, 12).map((category) => {
+      const categoryProduct = products.find(p => p.category === category.name);
+      
+      return {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        image: categoryProduct?.image || '/images/categories/placeholder.jpg',
+        productCount: category.product_count,  // ✅ USE DATABASE COUNT
+        icon: getCategoryIcon(category.name),
+        color: 'from-blue-500 to-cyan-500'
+      };
+    });
+  }, [categories, productsData]);
+
+
   console.log('productsData received:', productsData);
-console.log('Products array:', productsData?.products);
+  console.log('Best selling:', productsData?.bestSelling);
+  console.log('New arrivals:', productsData?.newArrivals);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -207,15 +212,15 @@ console.log('Products array:', productsData?.products);
 
     {/* View All Categories Button */}
     <div className="text-center mt-8 sm:mt-12">
-  <Link
-    href="/product/productlistingpage"
-    className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
-  >
-    <span>View All Categories</span>
-    <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-  </Link>
-</div>
-  </div>
-</section>
+      <Link
+        href="/product/productlistingpage"
+        className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
+      >
+        <span>View All Categories</span>
+        <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+      </Link>
+    </div>
+      </div>
+    </section>
   );
 }

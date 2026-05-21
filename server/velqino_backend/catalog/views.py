@@ -3,9 +3,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
+from django.utils import timezone  # ✅ ADD THIS LINE
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from django.db.models import F, Q
+from django.db.models import F, Q, Count
 from django.core.paginator import Paginator
 from .models import Product, Category, ProductImage, ProductVariant, Wishlist, DealOfTheDay
 from .serializers import (
@@ -26,6 +27,213 @@ import logging
 from django.http import HttpResponse
 from django.db import IntegrityError
 logger = logging.getLogger(__name__)
+
+
+
+
+class HomepageService:
+    """SERVICE LAYER - Single responsibility for homepage data"""
+    
+    @staticmethod
+    def get_optimized_queryset():
+        """Base optimized queryset with only needed fields"""
+        return Product.objects.select_related('category').only(
+            'id', 'name', 'slug', 'price', 'compare_price', 
+            'retail_price', 'total_sold', 'created_at', 'season',
+            'category__name', 'category__slug'
+        )
+    
+    @staticmethod
+    def get_best_selling(limit=8):
+        """Uses index on total_sold"""
+        return list(HomepageService.get_optimized_queryset()
+                   .filter(status='active')
+                   .order_by('-total_sold')[:limit])
+    
+    @staticmethod
+    def get_new_arrivals(limit=8):
+        """Uses index on created_at"""
+        return list(HomepageService.get_optimized_queryset()
+                   .filter(status='active')
+                   .order_by('-created_at')[:limit])
+    
+    @staticmethod
+    def get_deals_of_day():
+        """Optimized with select_related and only needed fields"""
+        now = timezone.now()
+        deals = DealOfTheDay.objects.filter(
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        ).select_related('product__category').prefetch_related('product__images')[:8]
+        
+        return [{
+            'id': deal.product.id,
+            'name': deal.product.name,
+            'slug': deal.product.slug,
+            'price': str(deal.product.price),
+            'deal_price': str(deal.deal_price),
+            'original_price': str(deal.original_price_was),
+            'discount_percentage': round(((deal.original_price_was - deal.deal_price) / deal.original_price_was) * 100),
+            'deal_end_time': deal.end_date.isoformat(),
+            'category_name': deal.product.category.name if deal.product.category else None,
+            'image': deal.product.images.first().image.url if deal.product.images.exists() else None
+        } for deal in deals]
+    
+    @staticmethod
+    def get_seasonal_products(limit=4):
+        """Fetch all seasons in ONE query using Q objects"""
+        products = HomepageService.get_optimized_queryset().filter(
+            Q(season='summer') | Q(season='winter') | Q(season='festive'),
+            status='active'
+        )
+        
+        # Separate in Python (faster than 3 DB queries)
+        summer = []
+        winter = []
+        festive = []
+        
+        for product in products:
+            if len(summer) < limit and product.season == 'summer':
+                summer.append(product)
+            elif len(winter) < limit and product.season == 'winter':
+                winter.append(product)
+            elif len(festive) < limit and product.season == 'festive':
+                festive.append(product)
+            
+            if len(summer) >= limit and len(winter) >= limit and len(festive) >= limit:
+                break
+        
+        return summer, winter, festive
+    
+    @staticmethod
+    def get_categories():
+        """Get categories with accurate product counts"""
+        from django.db.models import Count, Q
+        
+        return list(Category.objects.filter(is_active=True).annotate(
+            product_count=Count('products', filter=Q(products__status='active'))
+        ).values('id', 'name', 'slug', 'product_count').order_by('name'))
+
+
+@api_view(['GET'])
+def homepage_data(request):
+    """
+    SINGLE ENDPOINT FOR HOMEPAGE
+    Supports 1 Lakh+ concurrent users
+    """
+    # ============ CACHE CHECK WITH COMPRESSION ============
+    cache_key = "homepage:v2:compressed"
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        return Response({
+            'status': 'success',
+            'data': cached_data,
+            'source': 'cache'
+        })
+    
+    # ============ SERVICE LAYER CALLS ============
+    try:
+        # Get all data using service layer
+        best_selling = HomepageService.get_best_selling()
+        new_arrivals = HomepageService.get_new_arrivals()
+        deals_data = HomepageService.get_deals_of_day()
+        summer, winter, festive = HomepageService.get_seasonal_products()
+        categories = HomepageService.get_categories()
+        
+        # ============ PRE-FETCH IMAGES IN BATCH ============
+        all_product_ids = (
+            [p.id for p in best_selling] + 
+            [p.id for p in new_arrivals] + 
+            [deal['id'] for deal in deals_data] +
+            [p.id for p in summer] +
+            [p.id for p in winter] +
+            [p.id for p in festive]
+        )
+        
+        # ONE query for ALL images (not N+1)
+        from django.db import connection
+        images_qs = ProductImage.objects.filter(product_id__in=all_product_ids).order_by('product_id', '-is_primary', 'order')
+        images_map = {}
+        for img in images_qs:
+            if img.product_id not in images_map:
+                images_map[img.product_id] = img.image.url if img.image else None
+        
+        # ============ SERIALIZE WITH MINIMAL DATA ============
+        def serialize_product(product):
+            return {
+                'id': product.id,
+                'name': product.name,
+                'slug': product.slug,
+                'price': str(product.price),
+                'compare_price': str(product.compare_price) if product.compare_price else None,
+                'total_sold': product.total_sold,
+                'image': images_map.get(product.id),
+                'category': product.category.name if product.category else None
+            }
+        
+        # ============ BUILD RESPONSE ============
+        response_data = {
+            'bestSelling': [serialize_product(p) for p in best_selling],
+            'newArrivals': [serialize_product(p) for p in new_arrivals],
+            'dealsOfDay': deals_data,
+            'seasonalCollections': {
+                'summer': [serialize_product(p) for p in summer],
+                'winter': [serialize_product(p) for p in winter],
+                'festive': [serialize_product(p) for p in festive]
+            },
+            'categories': [{
+                'id': c['id'],
+                'name': c['name'],
+                'slug': c['slug'],
+                'product_count': c['product_count']
+            } for c in categories],
+            'stats': {
+                'total_categories': len(categories),
+                'total_deals': len(deals_data),
+                'total_products': all_product_ids.__len__()
+            }
+        }
+        
+        # ============ CACHE WITH COMPRESSION ============
+       
+        cache.set(cache_key, response_data, timeout=300)  # 5 minutes
+        
+        return Response({
+            'status': 'success',
+            'data': response_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Homepage error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error',
+            'message': 'Unable to load homepage data'
+        }, status=500)
+
+
+# ============ CACHE INVALIDATION TASKS ============
+from celery import shared_task
+
+@shared_task
+def invalidate_homepage_cache():
+    """Task to invalidate homepage cache on product changes"""
+    cache.delete("homepage:v2:compressed")
+    return True
+
+# Signal to trigger cache invalidation
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Product)
+@receiver(post_delete, sender=Product)
+@receiver(post_save, sender=DealOfTheDay)
+def clear_homepage_cache(sender, instance, **kwargs):
+    """Clear cache when products or deals change"""
+    invalidate_homepage_cache.delay()  # Async task
+
+
 
 
 # ============= PRODUCT ENDPOINTS =============

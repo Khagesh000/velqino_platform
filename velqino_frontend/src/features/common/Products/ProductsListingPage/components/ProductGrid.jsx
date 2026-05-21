@@ -9,6 +9,8 @@ import { useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/redux
 import '../../../../../styles/Products/ProductsListingPage/ProductGrid.scss'
 import { BASE_IMAGE_URL } from '@/utils/apiConfig';
 import { toast } from 'react-toastify';
+import { useSearchParams } from 'next/navigation';
+
 
 const ProductCard = ({ product, onWishlistToggle }) => {
   const [isWishlist, setIsWishlist] = useState(product?.is_wishlisted || false);
@@ -245,10 +247,26 @@ export default function ProductGrid() {
   const [addToCart] = useAddToCartMutation();
   const isMounted = useRef(false);
 
-  const { data, isLoading, isFetching } = useGetProductsQuery({
+  const searchParams = useSearchParams();
+  const categoryId = searchParams.get('category_id');
+  const season = searchParams.get('season');
+  const category = searchParams.get('category');
+  const dealsOfDay = searchParams.get('deals_of_day');
+  const productId = searchParams.get('product_id');
+  const sort = searchParams.get('sort');
+
+  const queryParams = {
     page: page,
-    per_page: 12
-  });
+    per_page: 12,
+    ...(categoryId && { category_id: categoryId }),
+    ...(season && { season: season }),
+    ...(category && { category: category }),
+    ...(dealsOfDay && { deals_of_day: dealsOfDay }),
+    ...(productId && { product_id: productId }),
+    ...(sort && { sort: sort })
+  };
+
+  const { data, isLoading, isFetching } = useGetProductsQuery(queryParams);
 
   const products = data?.data?.products || [];
   const totalPages = data?.data?.pagination?.total_pages || 1;

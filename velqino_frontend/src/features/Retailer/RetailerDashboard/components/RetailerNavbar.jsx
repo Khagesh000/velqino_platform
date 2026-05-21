@@ -94,14 +94,19 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
 
-              <Link href="/retailer" className="flex items-center gap-2">
-                <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-                  VELTRIX
-                </span>
-                <span className="hidden sm:inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                  RETAILER
-                </span>
+              <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <span className="text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors">
+                VELTRIX
+              </span>
               </Link>
+              <Link 
+                href="/retailer/retailerdashboard" 
+                className="hidden sm:inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full hover:bg-green-200 transition-all duration-300"
+              >
+                RETAILER
+              </Link>
+            </div>
             </div>
 
             {/* Center Search */}
@@ -312,7 +317,7 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
     ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
 `}>
     <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-      <Link href="/retailer" className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+      <Link href="/" className="text-xl font-bold text-primary-600 hover:text-primary-700 transition-colors">
         VELTRIX
       </Link>
       <button

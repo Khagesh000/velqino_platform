@@ -28,13 +28,14 @@ const ProductCard = memo(({ product, index }) => {
           </div>
         )}
         <img
-          src={product.primary_image || product.images?.[0]?.image || '/images/products/placeholder.jpg'}
+          src={product.image || product.primary_image || product.images?.[0]?.image || '/images/products/placeholder.jpg'}
           alt={product.name}
           loading="lazy"
           className={`w-full h-full object-cover transition-transform duration-500 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           } ${isHovered ? 'scale-110' : 'scale-100'}`}
           onLoad={() => setIsLoaded(true)}
+          onError={(e) => { e.target.src = '/images/products/placeholder.jpg' }}
         />
         
         {/* New Badge */}
@@ -52,13 +53,16 @@ const ProductCard = memo(({ product, index }) => {
           <Heart size={16} className={`${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
         </button>
         
-        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
+        <Link 
+        href={`/product/${product.slug}`}
+        className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-500 hover:text-white transition-all">
-            Quick View
-          </button>
-        </div>
+        }`}
+      >
+        <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-950 hover:text-primary-500 transition-all duration-300">
+          Quick View
+        </button>
+      </Link>
       </div>
 
       <div className="p-3">
@@ -144,8 +148,8 @@ export default function NewArrivals({ products = [], loading = false }) {
 
         <div className="text-center mt-8 sm:mt-12">
           <Link
-            href="/new-arrivals"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-600 hover:text-white transition-all duration-300 group"
+            href="/product/productlistingpage?season=new"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
           >
             <span>Shop New Arrivals</span>
             <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />

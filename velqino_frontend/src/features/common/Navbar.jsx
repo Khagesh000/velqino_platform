@@ -414,7 +414,7 @@ export default function Navbar() {
                             <span className="text-sm">Dashboard</span>
                           </button>
                         
-                        <button onClick={() => handleNavigation('/orders')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                        <button onClick={() => handleNavigation('/product/orderslist')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                           <Truck size={16} />
                           <span className="text-sm">My Orders</span>
                         </button>
@@ -520,7 +520,7 @@ export default function Navbar() {
                 <span className="text-sm font-medium">Cart ({cartCount})</span>
               </button>
               
-              <button onClick={() => handleNavigation('/wishlist')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50">
+              <button onClick={() => handleNavigation('/profile/wishlist')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50">
                 <Heart size={18} />
                 <span className="text-sm font-medium">Wishlist</span>
               </button>

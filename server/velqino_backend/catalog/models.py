@@ -12,6 +12,7 @@ class Category(models.Model):
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    display_order = models.IntegerField(default=0, db_index=True)
 
     class Meta:
         indexes = [models.Index(fields=['slug'])]
@@ -98,6 +99,12 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     total_sold = models.IntegerField(default=0, db_index=True, help_text="Total number sold")
+    has_discount = models.BooleanField(default=False, db_index=True)
+    season = models.CharField(max_length=10, choices=[
+        ('summer', 'Summer'),
+        ('winter', 'Winter'),
+        ('festive', 'Festive'),
+    ], null=True, blank=True, db_index=True)
 
     class Meta:
         indexes = [
@@ -111,6 +118,9 @@ class Product(models.Model):
             models.Index(fields=['seller_type', 'status']),
             models.Index(fields=['price']),
             models.Index(fields=['created_at']),
+
+            models.Index(fields=['has_discount', 'status']),  
+            models.Index(fields=['season', 'status']),
         ]
         ordering = ['-created_at']
 
@@ -121,16 +131,31 @@ class Product(models.Model):
         return self.stock <= self.threshold
 
     def save(self, *args, **kwargs):
-        # ✅ SKU FIRST
+        # SKU FIRST
         if not self.sku:
             import uuid
             self.sku = f"PROD-{uuid.uuid4().hex[:8].upper()}"
 
-        # ✅ SLUG SECOND (uses SKU)
+        # SLUG SECOND (uses SKU)
         if not self.slug:
             from django.utils.text import slugify
             base_slug = slugify(self.name)
             self.slug = f"{base_slug}-{self.sku}"[:50]
+
+        # AUTO-SET has_discount (HANDLE NULL VALUES)
+        retail_price = self.retail_price if self.retail_price is not None else 0
+        compare_price = self.compare_price if self.compare_price is not None else 0
+        self.has_discount = (retail_price > self.price or compare_price > self.price)
+        
+        # AUTO-SET season based on created_at month
+        if not self.season and self.created_at:
+            month = self.created_at.month
+            if month in [3, 4, 5, 6]:
+                self.season = 'summer'
+            elif month in [11, 12, 1, 2]:
+                self.season = 'winter'
+            elif month in [8, 9, 10]:
+                self.season = 'festive'
 
         super().save(*args, **kwargs)
 

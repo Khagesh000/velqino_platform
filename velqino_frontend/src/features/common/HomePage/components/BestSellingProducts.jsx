@@ -25,9 +25,9 @@ const ProductCard = memo(({ product, index }) => {
           </div>
         )}
         <img
-          src={product.primary_image || product.images?.[0]?.image || '/images/products/placeholder.jpg'}
+          src={product.image || product.primary_image || product.images?.[0]?.image || '/images/products/placeholder.jpg'}
           alt={product.name}
-          loading="lazy"
+          loading={index < 4 ? "eager" : "lazy"}
           className={`w-full h-full object-cover transition-transform duration-500 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           } ${isHovered ? 'scale-110' : 'scale-100'}`}
@@ -44,9 +44,11 @@ const ProductCard = memo(({ product, index }) => {
         <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}>
-          <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-500 hover:text-white transition-all">
-            Quick View
-          </button>
+          <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+            <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-950 hover:text-primary-500 transition-all">
+              Quick View
+            </button>
+          </Link>
         </div>
       </div>
 
@@ -160,8 +162,8 @@ export default function BestSellingProducts({ products = [], loading = false }) 
 
         <div className="text-center mt-8 sm:mt-12">
           <Link
-            href="/best-sellers"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-600 hover:text-white transition-all duration-300 group"
+            href="/product/productlistingpage?sort=-total_sold"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
           >
             <span>View All Best Sellers</span>
             <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />

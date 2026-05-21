@@ -118,9 +118,12 @@ export default function FeaturedCollections({ collections = [] }) {
   }, [isInView, currentCollection]);
 
   // If no collections data, don't render
-  if (!collections.length || !currentCollection?.products?.length) {
+if (!collections.length) {
     return null;
-  }
+}
+
+// Check if current season has products
+const hasProducts = currentCollection?.products?.length > 0;
 
   return (
     <section ref={sectionRef} className="featured-collections-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
@@ -192,22 +195,29 @@ export default function FeaturedCollections({ collections = [] }) {
 
             {/* Products Grid */}
             <div className="p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {visibleProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              {hasProducts ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {visibleProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No products available in this season yet.</p>
+                  <p className="text-sm text-gray-400 mt-1">Check back soon for new arrivals!</p>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* View All Collections Button */}
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 sm:mt-12">
           <Link
-            href="/collections"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-600 hover:text-primary-50 transition-all duration-300 group"
+            href={`/product/productlistingpage?season=${activeSeason}`}
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
           >
-            <span>View All Collections</span>
+            <span>View All {currentCollection?.name}</span>
             <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>

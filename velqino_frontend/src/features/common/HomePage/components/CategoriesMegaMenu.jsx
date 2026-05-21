@@ -113,53 +113,52 @@ export default function CategoriesMegaMenu({ categories = [], quickLinksData = {
     return [];
   }, [categories]);
 
-  // Dynamic quick links from backend stats
-  const quickLinks = React.useMemo(() => {
-    return [
-      { 
-        name: 'Trending', 
-        icon: <TrendingUp size={14} />, 
-        href: '/trending', 
-        color: 'text-orange-500',
-        count: quickLinksData?.trending_count || null
-      },
-      { 
-        name: 'New Arrivals', 
-        icon: <Sparkles size={14} />, 
-        href: '/new-arrivals', 
-        color: 'text-green-500',
-        count: quickLinksData?.new_arrivals_count || null
-      },
-      { 
-        name: 'Best Sellers', 
-        icon: <Flame size={14} />, 
-        href: '/best-sellers', 
-        color: 'text-red-500',
-        count: quickLinksData?.best_sellers_count || null
-      },
-      { 
-        name: 'Deals of the Day', 
-        icon: <Tag size={14} />, 
-        href: '/deals', 
-        color: 'text-yellow-500',
-        count: quickLinksData?.deals_count || null
-      },
-      { 
-        name: 'Brand Store', 
-        icon: <Store size={14} />, 
-        href: '/brands', 
-        color: 'text-purple-500',
-        count: quickLinksData?.brands_count || null
-      },
-      { 
-        name: 'Help & Support', 
-        icon: <HelpCircle size={14} />, 
-        href: '/support', 
-        color: 'text-blue-500',
-        count: null
-      },
-    ];
-  }, [quickLinksData]);
+    const quickLinks = React.useMemo(() => {
+      return [
+        { 
+          name: 'Trending', 
+          icon: <TrendingUp size={14} />, 
+          href: '/product/productlistingpage?sort=-total_sold',  // ✅ CHANGED
+          color: 'text-orange-500',
+          count: quickLinksData?.trending_count || null
+        },
+        { 
+          name: 'New Arrivals', 
+          icon: <Sparkles size={14} />, 
+          href: '/product/productlistingpage?sort=-created_at',  // ✅ CHANGED
+          color: 'text-green-500',
+          count: quickLinksData?.new_arrivals_count || null
+        },
+        { 
+          name: 'Best Sellers', 
+          icon: <Flame size={14} />, 
+          href: '/product/productlistingpage?sort=-total_sold',  // ✅ CHANGED
+          color: 'text-red-500',
+          count: quickLinksData?.best_sellers_count || null
+        },
+        { 
+          name: 'Deals of the Day', 
+          icon: <Tag size={14} />, 
+          href: '/product/productlistingpage?deals_of_day=true',  // ✅ CHANGED
+          color: 'text-yellow-500',
+          count: quickLinksData?.deals_count || null
+        },
+        { 
+          name: 'Brand Store', 
+          icon: <Store size={14} />, 
+          href: '/product/productlistingpage',  // ✅ CHANGED
+          color: 'text-purple-500',
+          count: quickLinksData?.brands_count || null
+        },
+        { 
+          name: 'Help & Support', 
+          icon: <HelpCircle size={14} />, 
+          href: '/support',  // ✅ KEPT SAME (not product page)
+          color: 'text-blue-500',
+          count: null
+        },
+      ];
+    }, [quickLinksData]);
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -232,7 +231,7 @@ export default function CategoriesMegaMenu({ categories = [], quickLinksData = {
                           onMouseEnter={() => setActiveCategory(cat.id)}
                         >
                           <Link
-                            href={`/category/${cat.slug}`}
+                            href={`/product/productlistingpage?category_id=${cat.id}&category=${encodeURIComponent(cat.name)}`}
                             className={`flex items-center justify-between py-2.5 px-2 rounded-lg transition-all text-sm ${
                               activeCategory === cat.id
                                 ? 'bg-primary-50 text-primary-600'
@@ -370,7 +369,7 @@ export default function CategoriesMegaMenu({ categories = [], quickLinksData = {
             {formattedCategories.map((cat) => (
               <Link
                 key={cat.id}
-                href={`/category/${cat.slug}`}
+                href={`/product/productlistingpage?category_id=${cat.id}&category=${encodeURIComponent(cat.name)}`}
                 className="flex flex-col items-center gap-1 px-3 py-2 bg-white rounded-lg shadow-sm min-w-[70px] hover:shadow-md transition-all flex-shrink-0"
               >
                 <span className="text-lg">{cat.icon}</span>
