@@ -3,9 +3,24 @@ from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile, A
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['id', 'username', 'email', 'mobile', 'role', 'created_at']
+    list_display = ['id', 'username', 'email', 'mobile', 'role', 'date_of_birth', 'anniversary_date', 'created_at']
     list_filter = ['role', 'created_at']
     search_fields = ['username', 'email', 'mobile']
+    readonly_fields = ['created_at']  # ✅ Add this to show but not edit
+    
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'email', 'mobile', 'role', 'date_of_birth', 'anniversary_date')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),  # ✅ removed created_at
+    )
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'mobile', 'role', 'date_of_birth', 'anniversary_date', 'password1', 'password2'),
+        }),
+    )
 
 @admin.register(WholesalerProfile)
 class WholesalerProfileAdmin(admin.ModelAdmin):
@@ -78,14 +93,14 @@ class RetailerProfileAdmin(admin.ModelAdmin):
 # ✅ ADD Customer Admin
 @admin.register(CustomerProfile)
 class CustomerProfileAdmin(admin.ModelAdmin):
-    list_display = ['id', 'full_name', 'user_email', 'phone', 'city', 'created_at']
+    list_display = ['id', 'full_name', 'user_email', 'phone', 'date_of_birth', 'anniversary_date', 'city', 'created_at']  # ✅ Added date fields
     list_filter = ['city', 'state']
     search_fields = ['full_name', 'user__email', 'user__mobile', 'phone']
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('user', 'full_name', 'phone')
+            'fields': ('user', 'full_name', 'phone', 'date_of_birth', 'anniversary_date')  # ✅ Added here
         }),
         ('Address Information', {
             'fields': ('address_line1', 'address_line2', 'city', 'state', 'pincode', 'landmark')

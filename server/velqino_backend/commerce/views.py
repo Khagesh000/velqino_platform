@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db import transaction
 from rest_framework import status
 from .models import Order, OrderItem, Cart, CartItem
-from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer, OrderCreateSerializer
+from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer, OrderCreateSerializer, UpdateReturnStatusSerializer
 from catalog.models import Product
 from identity.serializers import AddressSerializer
 from .services.cart_service import CartService
@@ -87,16 +87,34 @@ def create_order(request):
     
     # ✅ Get wholesaler from first cart item (if retailer is buying from wholesaler)
     first_item = cart.items.first()
-    wholesaler = None
-    if first_item and first_item.product.seller_type == 'wholesaler':
-        wholesaler = first_item.product.seller
-    
+    seller = first_item.product.seller
+    seller_type = first_item.product.seller_type
+
+    # Set retailer and wholesaler fields correctly
+    retailer_field = None
+    wholesaler_field = None
+
+    if user.role == 'customer':
+        # Customer buys from RETAILER
+        if seller_type == 'retailer':
+            retailer_field = seller
+        elif seller_type == 'wholesaler':
+            # Customer cannot buy from wholesaler (your validation prevents this)
+            retailer_field = None
+    elif user.role == 'retailer':
+        # Retailer buys from WHOLESALER
+        if seller_type == 'wholesaler':
+            wholesaler_field = seller
+        elif seller_type == 'retailer':
+            # Retailer cannot buy from retailer (your validation prevents this)
+            wholesaler_field = None
+
     # Create order
     order = Order.objects.create(
         order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
         customer=user,
-        retailer=user if user.role == 'retailer' else None,
-        wholesaler=wholesaler,  # ✅ ADDED - This fixes wholesaler orders
+        retailer=retailer_field,
+        wholesaler=wholesaler_field,
         total_amount=subtotal,
         discount_amount=discount,
         shipping_charge=shipping_charge,
@@ -1196,4 +1214,155 @@ def get_order_status_history(request, order_id):
             'history': history_data,
             'timeline': timeline
         }
+    })
+
+
+# ========== RETURNS MANAGEMENT VIEWS ==========
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_retailer_returns(request):
+    """
+    Retailer sees all return requests for their orders
+    """
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({
+            'status': 'error',
+            'message': 'Only retailers can view returns'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    from .models import ReturnRequest
+    from .serializers import ReturnRequestSerializer
+    
+    returns = ReturnRequest.objects.filter(retailer=user).order_by('-created_at')
+    serializer = ReturnRequestSerializer(returns, many=True)
+    
+    return Response({
+        'status': 'success',
+        'data': serializer.data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_return_request(request):
+    """
+    Customer creates a return request
+    """
+    user = request.user
+    
+    if user.role != 'customer':
+        return Response({
+            'status': 'error',
+            'message': 'Only customers can create return requests'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    from .models import Order, ReturnRequest
+    from .serializers import CreateReturnRequestSerializer
+    
+    serializer = CreateReturnRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    order_id = data.get('order_id')
+    
+    try:
+        order = Order.objects.get(order_number=order_id, customer=user)
+    except Order.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if order is delivered
+    if order.status != 'delivered':
+        return Response({
+            'status': 'error',
+            'message': 'Only delivered orders can be returned'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if return already exists for this order
+    if ReturnRequest.objects.filter(order=order).exists():
+        return Response({
+            'status': 'error',
+            'message': 'Return request already exists for this order'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Calculate refund amount
+    items = data.get('items', [])
+    refund_amount = sum(float(item.get('total', 0)) for item in items)
+    
+    # Create return request
+    return_request = ReturnRequest.objects.create(
+        order=order,
+        retailer=order.retailer,
+        customer=user,
+        return_type=data.get('return_type'),
+        reason=data.get('reason'),
+        comments=data.get('comments', ''),
+        items=items,
+        refund_amount=refund_amount,
+        status='pending'
+    )
+    
+    return Response({
+        'status': 'success',
+        'message': 'Return request created successfully',
+        'data': {
+            'return_number': return_request.return_number
+        }
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_return_status(request, return_id):
+    """
+    Retailer updates return request status
+    """
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({
+            'status': 'error',
+            'message': 'Only retailers can update return status'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    from .models import ReturnRequest
+    from .serializers import UpdateReturnStatusSerializer
+    
+    serializer = UpdateReturnStatusSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    new_status = serializer.validated_data.get('status')
+    
+    try:
+        return_request = ReturnRequest.objects.get(return_number=return_id, retailer=user)
+    except ReturnRequest.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Return request not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    return_request.status = new_status
+    return_request.save()
+    
+    # If approved, update order status
+    if new_status == 'approved':
+        return_request.order.status = 'refunded'
+        return_request.order.save()
+    
+    return Response({
+        'status': 'success',
+        'message': f'Return request {new_status} successfully'
     })

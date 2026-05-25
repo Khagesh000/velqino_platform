@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderItem, Cart, CartItem
+from .models import Order, OrderItem, Cart, CartItem, ReturnRequest
 from catalog.serializers import ProductListSerializer, ProductDetailSerializer
 
 
@@ -103,9 +103,49 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderListSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     
+    # ADD THESE 5 NEW FIELDS
+    customer_name = serializers.SerializerMethodField()
+    customer_email = serializers.SerializerMethodField()
+    customer_phone = serializers.SerializerMethodField()
+    shipping_full_address = serializers.SerializerMethodField()
+    
     class Meta:
         model = Order
-        fields = ['id', 'order_number', 'tracking_number', 'grand_total', 'status', 'payment_status', 'payment_method', 'delivery_type', 'expected_delivery_date', 'created_at', 'items']
+        fields = ['id', 'order_number', 'tracking_number', 'grand_total', 'status', 
+                  'payment_status', 'payment_method', 'delivery_type', 
+                  'expected_delivery_date', 'created_at', 'items',
+                  'customer_name', 'customer_email', 'customer_phone', 'shipping_full_address']
+    
+    # ADD THESE 4 METHODS
+    def get_customer_name(self, obj):
+        """Returns customer's full name"""
+        if obj.customer:
+            return f"{obj.customer.first_name} {obj.customer.last_name}".strip() or obj.customer.username
+        return None
+    
+    def get_customer_email(self, obj):
+        """Returns customer's email"""
+        return obj.customer.email if obj.customer else None
+    
+    def get_customer_phone(self, obj):
+        """Returns customer's phone number"""
+        # Check if customer has phone field, otherwise return shipping_phone
+        if obj.customer and hasattr(obj.customer, 'phone'):
+            return obj.customer.phone
+        return obj.shipping_phone if obj.shipping_phone else None
+    
+    def get_shipping_full_address(self, obj):
+        """Returns complete shipping address"""
+        if obj.shipping_address:
+            return {
+                'name': obj.shipping_name,
+                'phone': obj.shipping_phone,
+                'address': obj.shipping_address,
+                'city': obj.shipping_city,
+                'state': obj.shipping_state,
+                'pincode': obj.shipping_pincode
+            }
+        return None
 
 class OrderCreateSerializer(serializers.Serializer):
     address_id = serializers.IntegerField()
@@ -144,3 +184,37 @@ class OrderCreateSerializer(serializers.Serializer):
                 )
         
         return data
+    
+
+class ReturnItemSerializer(serializers.Serializer):
+    product_name = serializers.CharField()
+    product_sku = serializers.CharField()
+    quantity = serializers.IntegerField()
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class ReturnRequestSerializer(serializers.ModelSerializer):
+    order_number = serializers.CharField(source='order.order_number', read_only=True)
+    customer_name = serializers.CharField(source='customer.get_full_name', read_only=True)
+    customer_email = serializers.EmailField(source='customer.email', read_only=True)
+    
+    class Meta:
+        model = ReturnRequest
+        fields = [
+            'return_number', 'order_number', 'return_type', 'status',
+            'reason', 'comments', 'items', 'refund_amount', 'images',
+            'customer_name', 'customer_email', 'created_at', 'updated_at'
+        ]
+
+
+class CreateReturnRequestSerializer(serializers.Serializer):
+    order_id = serializers.CharField()
+    return_type = serializers.ChoiceField(choices=['return', 'exchange'])
+    reason = serializers.CharField()
+    comments = serializers.CharField(required=False, allow_blank=True)
+    items = serializers.ListField(child=ReturnItemSerializer())
+
+
+class UpdateReturnStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=['pending', 'processing', 'approved', 'rejected', 'completed'])

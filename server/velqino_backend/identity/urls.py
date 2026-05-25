@@ -32,5 +32,8 @@ urlpatterns = [
     path('addresses/<int:address_id>/', views.address_detail, name='address-detail'),
 
     path('change-password/', views.change_password, name='change-password'),
+
+    path('customers/upcoming-birthdays/', views.upcoming_birthdays, name='upcoming-birthdays'),
+    path('customers/upcoming-anniversaries/', views.upcoming_anniversaries, name='upcoming-anniversaries'),
     
 ]

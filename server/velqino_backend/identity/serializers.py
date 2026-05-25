@@ -226,10 +226,11 @@ class RetailerProfileUpdateSerializer(serializers.ModelSerializer):
 class CustomerRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True, min_length=8)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)  # ✅ ADD THIS LINE
     
     class Meta:
         model = User
-        fields = ['email', 'mobile', 'password', 'confirm_password', 'username']
+        fields = ['email', 'mobile', 'password', 'confirm_password', 'username', 'date_of_birth']  # ✅ ADD date_of_birth
     
     def validate(self, data):
         if data['password'] != data['confirm_password']:
@@ -238,13 +239,23 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data.pop('confirm_password')
+        date_of_birth = validated_data.pop('date_of_birth', None)  # ✅ ADD THIS LINE
+        
         user = User.objects.create_user(
             username=validated_data.get('username', validated_data['email'].split('@')[0]),
             email=validated_data['email'],
             mobile=validated_data['mobile'],
             password=validated_data['password'],
-            role='customer'  # ✅ Auto-set role
+            role='customer'
         )
+        
+        # ✅ ADD THIS BLOCK
+        if date_of_birth:
+            from .models import CustomerProfile
+            profile, created = CustomerProfile.objects.get_or_create(user=user)
+            profile.date_of_birth = date_of_birth
+            profile.save()
+        
         return user
 
 
@@ -263,7 +274,7 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 class CustomerProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerProfile
-        fields = ['full_name', 'phone', 'address_line1', 'address_line2', 'city', 'state', 'pincode', 'landmark']
+        fields = ['full_name', 'phone', 'address_line1', 'address_line2', 'city', 'state', 'pincode', 'landmark', 'date_of_birth', 'anniversary_date']
 
 
 class AddressSerializer(serializers.ModelSerializer):

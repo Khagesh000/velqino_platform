@@ -24,6 +24,9 @@ urlpatterns = [
     # Retailer orders & customers
     path('orders/retailer/list/', views.get_retailer_orders, name='retailer-orders'),
     path('retailer/customers/', views.get_retailer_customers, name='retailer-customers'),
+    path('retailer/returns/', views.get_retailer_returns, name='retailer-returns'),
+    path('returns/create/', views.create_return_request, name='create-return'),
+    path('returns/<str:return_id>/status/', views.update_return_status, name='update-return-status'),
 
     path('orders/<str:order_id>/invoice/', views.download_invoice, name='download-invoice'),
     path('orders/<str:order_id>/status/', views.update_order_status, name='update-order-status'),

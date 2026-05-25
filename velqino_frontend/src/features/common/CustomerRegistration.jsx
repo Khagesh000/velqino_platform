@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useRegisterCustomerMutation } from '../../redux/customer/slices/customerSlice';
-import { Eye, EyeOff, User, Mail, Phone, Lock } from '../../utils/icons';
+import { Eye, EyeOff, User, Mail, Phone, Lock, Calenda } from '../../utils/icons';
 import { toast } from 'react-toastify';
 
 export default function CustomerRegistration() {
@@ -19,7 +19,8 @@ export default function CustomerRegistration() {
     email: '',
     mobile: '',
     password: '',
-    confirm_password: ''
+    confirm_password: '',
+    date_of_birth: '' 
   });
   
   const [errors, setErrors] = useState({});
@@ -68,6 +69,10 @@ export default function CustomerRegistration() {
     } else if (formData.password !== formData.confirm_password) {
       newErrors.confirm_password = 'Passwords do not match';
     }
+
+    if (!formData.date_of_birth) {
+    newErrors.date_of_birth = 'Date of birth is required';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -84,7 +89,8 @@ export default function CustomerRegistration() {
       email: formData.email,
       mobile: formData.mobile,
       password: formData.password,
-      confirm_password: formData.confirm_password
+      confirm_password: formData.confirm_password,
+      date_of_birth: formData.date_of_birth
     }).unwrap();
     
     toast.success('Registration successful! Please login.');
@@ -163,6 +169,30 @@ export default function CustomerRegistration() {
               </p>
             )}
           </div>
+
+          <div>
+          <label className="block text-gray-700 font-semibold text-sm sm:text-base mb-1.5">Date of Birth</label>
+          <div className="relative group">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-primary-500 transition-colors" size={18} />
+            <input
+              type="date"
+              name="date_of_birth"
+              value={formData.date_of_birth}
+              onChange={handleInputChange}
+              className={`w-full pl-10 pr-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all bg-gray-50 hover:bg-white text-sm sm:text-base ${
+                errors.date_of_birth || backendErrors.date_of_birth 
+                  ? 'border-red-500 focus:ring-red-200' 
+                  : 'border-gray-200 focus:border-primary-500 focus:ring-primary-100'
+              }`}
+            />
+          </div>
+          {(errors.date_of_birth || backendErrors.date_of_birth) && (
+            <p className="text-red-500 text-xs sm:text-sm mt-1 flex items-center gap-1">
+              <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
+              {backendErrors.date_of_birth || errors.date_of_birth}
+            </p>
+          )}
+        </div>
           
           <div>
             <label className="block text-gray-700 font-semibold text-sm sm:text-base mb-1.5">Email Address *</label>

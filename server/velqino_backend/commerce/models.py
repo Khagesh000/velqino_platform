@@ -382,3 +382,63 @@ class OrderStatusHistory(models.Model):
     
     def __str__(self):
         return f"{self.order.order_number} → {self.status}"
+    
+
+
+class ReturnRequest(models.Model):
+    """Return and Exchange Request Model"""
+    
+    RETURN_STATUS = (
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('completed', 'Completed'),
+    )
+    
+    RETURN_TYPE = (
+        ('return', 'Return'),
+        ('exchange', 'Exchange'),
+    )
+    
+    # Identifiers
+    return_number = models.CharField(max_length=50, unique=True, db_index=True)
+    
+    # Relationships
+    order = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='return_requests')
+    retailer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='retailer_returns')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='customer_returns')
+    
+    # Return details
+    return_type = models.CharField(max_length=20, choices=RETURN_TYPE, default='return')
+    status = models.CharField(max_length=20, choices=RETURN_STATUS, default='pending')
+    reason = models.TextField()
+    comments = models.TextField(blank=True)
+    
+    # Items and amount
+    items = models.JSONField(default=list)  # Stores list of returned items
+    refund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Images
+    images = models.JSONField(default=list, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['return_number']),
+            models.Index(fields=['status']),
+            models.Index(fields=['retailer', 'status']),
+            models.Index(fields=['order']),
+        ]
+    
+    def __str__(self):
+        return f"{self.return_number} - {self.order.order_number}"
+    
+    def save(self, *args, **kwargs):
+        if not self.return_number:
+            self.return_number = f"RET-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)

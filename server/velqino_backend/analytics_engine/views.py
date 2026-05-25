@@ -15,7 +15,7 @@ from .serializers import (
 from django.db import models
 from catalog.models import Product
 from commerce.models import Order, OrderItem
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Max
 from django.core.paginator import Paginator
 from identity.models import User
 from datetime import timedelta
@@ -1173,7 +1173,7 @@ def retailer_customer_activity(request):
                 'visits': total_orders,
                 'lastVisit': last_order.strftime('%b %d, %I:%M %p') if last_order else 'Never',
                 'amount': total_amount,
-                'phone': customer.phone or '',
+                'phone': customer.mobile or '',
                 'email': customer.email,
                 'status': status,
                 'avatar': initials

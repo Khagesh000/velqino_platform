@@ -31,17 +31,21 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
+    # ✅ ADD THESE TWO LINES HERE
+    date_of_birth = models.DateField(null=True, blank=True)
+    anniversary_date = models.DateField(null=True, blank=True)
+    
     # ========== FIX FOR THE ERROR - ADD THESE TWO FIELDS ==========
     groups = models.ManyToManyField(
         'auth.Group',
-        related_name='identity_user_groups',  # Custom name to avoid clash
+        related_name='identity_user_groups',
         blank=True,
         help_text='The groups this user belongs to.',
         verbose_name='groups',
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
-        related_name='identity_user_permissions',  # Custom name to avoid clash
+        related_name='identity_user_permissions',
         blank=True,
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
@@ -231,6 +235,8 @@ class CustomerProfile(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    anniversary_date = models.DateField(null=True, blank=True)
     
     class Meta:
         indexes = [

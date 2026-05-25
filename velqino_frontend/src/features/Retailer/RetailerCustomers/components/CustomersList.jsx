@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Users, Search, Filter, ChevronLeft, ChevronRight, Phone, Mail, Calendar, TrendingUp, Star, Award } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerCustomers/CustomersList.scss'
 
-export default function CustomersList({ selectedCustomer, setSelectedCustomer, refreshTrigger }) {
+export default function CustomersList({ customers = [], selectedCustomer, setSelectedCustomer, refreshTrigger, isLoading = false }) {
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterTier, setFilterTier] = useState('all')
@@ -16,19 +16,14 @@ export default function CustomersList({ selectedCustomer, setSelectedCustomer, r
     setMounted(true)
   }, [])
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterTier])
+
   if (!mounted) return null
 
-  const customers = [
-    { id: 1, name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@example.com', visits: 12, totalSpent: 45890, lastVisit: '2026-04-14', tier: 'Gold', points: 1250, status: 'active' },
-    { id: 2, name: 'Priya Sharma', phone: '+91 87654 32109', email: 'priya@example.com', visits: 5, totalSpent: 18900, lastVisit: '2026-04-14', tier: 'Silver', points: 450, status: 'active' },
-    { id: 3, name: 'Amit Singh', phone: '+91 76543 21098', email: 'amit@example.com', visits: 15, totalSpent: 56780, lastVisit: '2026-04-13', tier: 'Gold', points: 890, status: 'active' },
-    { id: 4, name: 'Sneha Reddy', phone: '+91 65432 10987', email: 'sneha@example.com', visits: 3, totalSpent: 8900, lastVisit: '2026-04-13', tier: 'Silver', points: 230, status: 'active' },
-    { id: 5, name: 'Vikram Mehta', phone: '+91 54321 09876', email: 'vikram@example.com', visits: 25, totalSpent: 78200, lastVisit: '2026-04-12', tier: 'Platinum', points: 2250, status: 'vip' },
-    { id: 6, name: 'Neha Gupta', phone: '+91 43210 98765', email: 'neha@example.com', visits: 8, totalSpent: 23450, lastVisit: '2026-04-12', tier: 'Gold', points: 670, status: 'active' },
-    { id: 7, name: 'Rahul Verma', phone: '+91 32109 87654', email: 'rahul@example.com', visits: 2, totalSpent: 3450, lastVisit: '2026-04-11', tier: 'Bronze', points: 80, status: 'new' },
-    { id: 8, name: 'Meera Joshi', phone: '+91 21098 76543', email: 'meera@example.com', visits: 18, totalSpent: 45600, lastVisit: '2026-04-11', tier: 'Platinum', points: 1890, status: 'vip' },
-  ]
-
+  // Get tier badge styling
   const getTierBadge = (tier) => {
     switch(tier) {
       case 'Platinum': return { bg: 'bg-gradient-to-r from-gray-400 to-gray-600', text: 'text-white', icon: <Award size={10} /> }
@@ -39,23 +34,45 @@ export default function CustomersList({ selectedCustomer, setSelectedCustomer, r
     }
   }
 
+  // Format date
+  const formatDate = (date) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  }
+
+  // Filter customers based on search and tier
   const filteredCustomers = customers.filter(customer => {
+    const customerName = customer.full_name || customer.name || customer.user?.full_name || ''
+    const customerPhone = customer.phone || customer.mobile || customer.user?.mobile || ''
+    const customerEmail = customer.email || customer.user?.email || ''
+    const customerTier = customer.tier || 'Bronze'
+    
     const matchesSearch = searchQuery === '' || 
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesTier = filterTier === 'all' || customer.tier === filterTier
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerPhone.includes(searchQuery) ||
+      customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesTier = filterTier === 'all' || customerTier === filterTier
+    
     return matchesSearch && matchesTier
   })
 
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
   const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-  }
-
   const tiers = ['all', 'Platinum', 'Gold', 'Silver', 'Bronze']
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="customers-list-container bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading customers...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="customers-list-container bg-white rounded-xl shadow-sm border border-gray-100">
@@ -96,87 +113,105 @@ export default function CustomersList({ selectedCustomer, setSelectedCustomer, r
       </div>
 
       {/* Customers Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr className="text-left text-xs font-medium text-gray-500">
-              <th className="px-4 py-3">Customer</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Visits</th>
-              <th className="px-4 py-3">Total Spent</th>
-              <th className="px-4 py-3">Last Visit</th>
-              <th className="px-4 py-3">Tier</th>
-              <th className="px-4 py-3">Points</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {paginatedCustomers.map((customer, index) => {
-              const tierBadge = getTierBadge(customer.tier)
-              return (
-                <tr
-                  key={customer.id}
-                  className={`customer-row cursor-pointer transition-all ${selectedCustomer?.id === customer.id ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
-                  onClick={() => setSelectedCustomer(customer)}
-                  onMouseEnter={() => setHoveredRow(customer.id)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  style={{ animationDelay: `${index * 0.03}s` }}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-600 font-semibold">{customer.name.charAt(0)}</span>
+      {filteredCustomers.length === 0 ? (
+        <div className="p-8 text-center">
+          <Users size={48} className="mx-auto text-gray-200 mb-3" />
+          <p className="text-sm text-gray-500">No customers found</p>
+          <p className="text-xs text-gray-400 mt-1">Try adjusting your search or filter</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr className="text-left text-xs font-medium text-gray-500">
+                <th className="px-4 py-3">Customer</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Visits</th>
+                <th className="px-4 py-3">Total Spent</th>
+                <th className="px-4 py-3">Last Visit</th>
+                <th className="px-4 py-3">Tier</th>
+                <th className="px-4 py-3">Points</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {paginatedCustomers.map((customer, index) => {
+                const customerName = customer.full_name || customer.name || customer.user?.full_name || 'N/A'
+                const customerPhone = customer.phone || customer.mobile || customer.user?.mobile || 'N/A'
+                const customerEmail = customer.email || customer.user?.email || 'N/A'
+                const customerVisits = customer.visits || customer.totalOrders || 0
+                const customerTotalSpent = customer.totalSpent || 0
+                const customerLastVisit = customer.lastVisit || customer.created_at || null
+                const customerTier = customer.tier || 'Bronze'
+                const customerPoints = customer.points || Math.floor(customerTotalSpent / 10)
+                const customerId = customer.id || customer.user?.id
+                const tierBadge = getTierBadge(customerTier)
+                
+                return (
+                  <tr
+                    key={customerId}
+                    className={`customer-row cursor-pointer transition-all ${selectedCustomer?.id === customerId ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
+                    onClick={() => setSelectedCustomer(customer)}
+                    onMouseEnter={() => setHoveredRow(customerId)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    style={{ animationDelay: `${index * 0.03}s` }}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                          <span className="text-primary-600 font-semibold">{customerName.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{customerName}</p>
+                          <p className="text-xs text-gray-500">ID: #{customerId}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{customer.name}</p>
-                        <p className="text-xs text-gray-500">ID: #{customer.id}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <Phone size={10} className="text-gray-400" />
+                          <span>{customerPhone}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <Mail size={10} className="text-gray-400" />
+                          <span className="truncate max-w-[120px]">{customerEmail}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Phone size={10} className="text-gray-400" />
-                        <span>{customer.phone}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-gray-700">{customerVisits}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-semibold text-gray-900">₹{customerTotalSpent.toLocaleString()}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={10} className="text-gray-400" />
+                        <span className="text-sm text-gray-600">{formatDate(customerLastVisit)}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Mail size={10} className="text-gray-400" />
-                        <span className="truncate max-w-[120px]">{customer.email}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-gray-700">{customer.visits}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-semibold text-gray-900">₹{customer.totalSpent.toLocaleString()}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={10} className="text-gray-400" />
-                      <span className="text-sm text-gray-600">{formatDate(customer.lastVisit)}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${tierBadge.bg} ${tierBadge.text}`}>
-                      {tierBadge.icon}
-                      {customer.tier}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-primary-600">{customer.points}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-                      <TrendingUp size={14} />
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${tierBadge.bg} ${tierBadge.text}`}>
+                        {tierBadge.icon}
+                        {customerTier}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-medium text-primary-600">{customerPoints.toLocaleString()}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
+                        <TrendingUp size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

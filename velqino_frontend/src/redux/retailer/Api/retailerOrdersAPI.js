@@ -24,6 +24,14 @@ const retailerOrdersAPI = {
     
     // Bulk order actions
     bulkOrderAction: (data) => API.post('commerce/orders/bulk/', data),
+
+     getRetailerReturns: () => API.get('commerce/retailer/returns/'),
+    
+    // Create return request
+    createReturnRequest: (data) => API.post('commerce/returns/create/', data),
+    
+    // Update return status
+    updateReturnStatus: (returnId, data) => API.post(`commerce/returns/${returnId}/status/`, data),
 };
 
 export default retailerOrdersAPI;

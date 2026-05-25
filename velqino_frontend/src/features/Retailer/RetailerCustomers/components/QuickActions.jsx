@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Phone, MessageCircle, Mail, FileText, ShoppingCart, XCircle, Star, Send, Copy, CheckCircle, UserPlus, Tag, Bell } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerCustomers/QuickActions.scss'
 
-export default function QuickActions({ selectedCustomer }) {
+export default function QuickActions({ selectedCustomer, onRefresh }) {
   const [mounted, setMounted] = useState(false)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [noteText, setNoteText] = useState('')
@@ -18,10 +18,23 @@ export default function QuickActions({ selectedCustomer }) {
 
   if (!mounted) return null
 
+  // Get customer display info from selectedCustomer prop
+  const getCustomerName = () => {
+    return selectedCustomer?.full_name || selectedCustomer?.name || selectedCustomer?.user?.full_name || 'N/A'
+  }
+
+  const getCustomerPhone = () => {
+    return selectedCustomer?.phone || selectedCustomer?.mobile || selectedCustomer?.user?.mobile || ''
+  }
+
+  const getCustomerEmail = () => {
+    return selectedCustomer?.email || selectedCustomer?.user?.email || ''
+  }
+
   const actions = [
-    { id: 'call', label: 'Call', icon: <Phone size={16} />, color: 'green', href: `tel:${selectedCustomer?.phone}`, bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
-    { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} />, color: 'whatsapp', href: `https://wa.me/${selectedCustomer?.phone?.replace(/\D/g, '')}`, bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
-    { id: 'email', label: 'Email', icon: <Mail size={16} />, color: 'blue', href: `mailto:${selectedCustomer?.email}`, bg: 'bg-blue-100', text: 'text-blue-600', hover: 'hover:bg-blue-200' },
+    { id: 'call', label: 'Call', icon: <Phone size={16} />, color: 'green', href: `tel:${getCustomerPhone()}`, bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
+    { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} />, color: 'whatsapp', href: `https://wa.me/${getCustomerPhone().replace(/\D/g, '')}`, bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
+    { id: 'email', label: 'Email', icon: <Mail size={16} />, color: 'blue', href: `mailto:${getCustomerEmail()}`, bg: 'bg-blue-100', text: 'text-blue-600', hover: 'hover:bg-blue-200' },
     { id: 'note', label: 'Add Note', icon: <FileText size={16} />, color: 'purple', bg: 'bg-purple-100', text: 'text-purple-600', hover: 'hover:bg-purple-200' },
     { id: 'sale', label: 'Create Sale', icon: <ShoppingCart size={16} />, color: 'orange', bg: 'bg-orange-100', text: 'text-orange-600', hover: 'hover:bg-orange-200' },
   ]
@@ -34,8 +47,9 @@ export default function QuickActions({ selectedCustomer }) {
   ]
 
   const handleCopyPhone = () => {
-    if (selectedCustomer?.phone) {
-      navigator.clipboard.writeText(selectedCustomer.phone)
+    const phone = getCustomerPhone()
+    if (phone) {
+      navigator.clipboard.writeText(phone)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
@@ -43,9 +57,20 @@ export default function QuickActions({ selectedCustomer }) {
 
   const handleSendOffer = () => {
     if (selectedOffer) {
-      alert(`Special offer sent to ${selectedCustomer?.name}`)
+      alert(`Special offer sent to ${getCustomerName()}`)
       setShowOfferModal(false)
       setSelectedOffer('')
+      if (onRefresh) onRefresh()
+    }
+  }
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      // Here you can call an API to save the note
+      alert(`Note added for ${getCustomerName()}`)
+      setShowNoteModal(false)
+      setNoteText('')
+      if (onRefresh) onRefresh()
     }
   }
 
@@ -60,6 +85,10 @@ export default function QuickActions({ selectedCustomer }) {
       </div>
     )
   }
+
+  const customerName = getCustomerName()
+  const customerPhone = getCustomerPhone()
+  const customerEmail = getCustomerEmail()
 
   return (
     <div className="quick-actions bg-white rounded-xl shadow-sm border border-gray-100 h-full">
@@ -78,32 +107,34 @@ export default function QuickActions({ selectedCustomer }) {
             Send Offer
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Engage with {selectedCustomer.name}</p>
+        <p className="text-xs text-gray-500 mt-1">Engage with {customerName}</p>
       </div>
 
       {/* Customer Quick Info */}
       <div className="p-4 bg-gray-50 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{selectedCustomer.name.charAt(0)}</span>
+            <span className="text-white font-bold text-lg">{customerName.charAt(0)}</span>
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-bold text-gray-900">{selectedCustomer.name}</h4>
+            <h4 className="text-sm font-bold text-gray-900">{customerName}</h4>
             <div className="flex items-center gap-2 mt-0.5">
               <div className="flex items-center gap-1">
                 <Phone size={10} className="text-gray-400" />
-                <span className="text-xs text-gray-600">{selectedCustomer.phone}</span>
+                <span className="text-xs text-gray-600">{customerPhone || 'N/A'}</span>
               </div>
-              <button 
-                onClick={handleCopyPhone}
-                className="p-0.5 text-gray-400 hover:text-primary-600"
-              >
-                {copied ? <CheckCircle size={10} className="text-green-500" /> : <Copy size={10} />}
-              </button>
+              {customerPhone && (
+                <button 
+                  onClick={handleCopyPhone}
+                  className="p-0.5 text-gray-400 hover:text-primary-600"
+                >
+                  {copied ? <CheckCircle size={10} className="text-green-500" /> : <Copy size={10} />}
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-1 mt-0.5">
               <Mail size={10} className="text-gray-400" />
-              <span className="text-xs text-gray-500 truncate">{selectedCustomer.email}</span>
+              <span className="text-xs text-gray-500 truncate">{customerEmail || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -120,8 +151,8 @@ export default function QuickActions({ selectedCustomer }) {
                 if (action.id === 'note') {
                   setShowNoteModal(true)
                 } else if (action.id === 'sale') {
-                  alert(`Create new sale for ${selectedCustomer.name}`)
-                } else if (action.href) {
+                  alert(`Create new sale for ${customerName}`)
+                } else if (action.href && action.id !== 'note') {
                   window.open(action.href, '_blank')
                 }
               }}
@@ -136,14 +167,14 @@ export default function QuickActions({ selectedCustomer }) {
         <p className="text-xs font-medium text-gray-700 mb-2">Customer Actions</p>
         <div className="grid grid-cols-2 gap-2">
           <button 
-            onClick={() => alert(`View order history for ${selectedCustomer.name}`)}
+            onClick={() => alert(`View order history for ${customerName}`)}
             className="flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
           >
             <FileText size={14} />
             <span className="text-xs font-medium">Order History</span>
           </button>
           <button 
-            onClick={() => alert(`View loyalty points for ${selectedCustomer.name}`)}
+            onClick={() => alert(`View loyalty points for ${customerName}`)}
             className="flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
           >
             <Star size={14} />
@@ -161,9 +192,9 @@ export default function QuickActions({ selectedCustomer }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageCircle size={12} className="text-green-500" />
-            <span className="text-xs text-gray-600">WhatsApp message sent</span>
+            <span className="text-xs text-gray-600">No recent interactions</span>
           </div>
-          <span className="text-[10px] text-gray-400">2 days ago</span>
+          <span className="text-[10px] text-gray-400">-</span>
         </div>
       </div>
 
@@ -182,7 +213,7 @@ export default function QuickActions({ selectedCustomer }) {
             </div>
             <textarea
               rows={4}
-              placeholder="Add a note about this customer..."
+              placeholder={`Add a note about ${customerName}...`}
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 resize-none"
@@ -195,13 +226,7 @@ export default function QuickActions({ selectedCustomer }) {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (noteText.trim()) {
-                    alert('Note added successfully')
-                    setShowNoteModal(false)
-                    setNoteText('')
-                  }
-                }}
+                onClick={handleAddNote}
                 className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
               >
                 Add Note
@@ -226,7 +251,7 @@ export default function QuickActions({ selectedCustomer }) {
             </div>
 
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">Select an offer to send to {selectedCustomer.name}</p>
+              <p className="text-sm text-gray-600 mb-3">Select an offer to send to {customerName}</p>
               <div className="space-y-2">
                 {quickOffers.map((offer) => (
                   <label

@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.db import transaction
+from datetime import date, timedelta
 from .models import User, WholesalerProfile, RetailerProfile, Address
 from .serializers import (
     WholesalerProfileSerializer,
@@ -1069,3 +1070,70 @@ def change_password(request):
     user.save()
     
     return Response({'status': 'success', 'message': 'Password changed successfully'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def upcoming_birthdays(request):
+    user = request.user
+    if user.role != 'retailer':
+        return Response({'error': 'Unauthorized'}, status=403)
+    
+    today = date.today()
+    next_30_days = today + timedelta(days=30)
+    
+    customers = User.objects.filter(role='customer', date_of_birth__isnull=False)
+    
+    upcoming = []
+    for customer in customers:
+        dob = customer.date_of_birth
+        birthday_this_year = date(today.year, dob.month, dob.day)
+        if today <= birthday_this_year <= next_30_days:
+            days_left = (birthday_this_year - today).days
+            upcoming.append({
+                'id': customer.id,
+                'name': customer.get_full_name() or customer.email,
+                'phone': getattr(customer, 'phone', ''),
+                'email': customer.email,
+                'date_of_birth': dob,
+                'days_left': days_left,
+                'tier': getattr(customer, 'loyalty_tier', 'Bronze'),
+                'total_spent': getattr(customer, 'total_spent', 0)
+            })
+    
+    upcoming.sort(key=lambda x: x['days_left'])
+    return Response({'status': 'success', 'data': upcoming[:10]})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def upcoming_anniversaries(request):
+    user = request.user
+    if user.role != 'retailer':
+        return Response({'error': 'Unauthorized'}, status=403)
+    
+    today = date.today()
+    next_30_days = today + timedelta(days=30)
+    
+    customers = User.objects.filter(role='customer', anniversary_date__isnull=False)
+    
+    upcoming = []
+    for customer in customers:
+        anniversary = customer.anniversary_date
+        anniversary_this_year = date(today.year, anniversary.month, anniversary.day)
+        if today <= anniversary_this_year <= next_30_days:
+            days_left = (anniversary_this_year - today).days
+            years_with_us = today.year - anniversary.year
+            upcoming.append({
+                'id': customer.id,
+                'name': customer.get_full_name() or customer.email,
+                'phone': getattr(customer, 'phone', ''),
+                'email': customer.email,
+                'anniversary_date': anniversary,
+                'days_left': days_left,
+                'years_with_us': years_with_us,
+                'tier': getattr(customer, 'loyalty_tier', 'Bronze'),
+                'total_spent': getattr(customer, 'total_spent', 0)
+            })
+    
+    upcoming.sort(key=lambda x: x['days_left'])
+    return Response({'status': 'success', 'data': upcoming[:10]})

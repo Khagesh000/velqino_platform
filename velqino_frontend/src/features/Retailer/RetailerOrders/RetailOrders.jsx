@@ -116,7 +116,7 @@ export default function RetailerOrders() {
                   <OrderStatus 
                     selectedOrder={selectedOrder}
                     onStatusUpdate={handleStatusUpdate}
-                    onCancelOrder={handleCancelOrder}
+                    onRefresh={refetch}
                   />
                 </Suspense>
               </div>
@@ -135,7 +135,9 @@ export default function RetailerOrders() {
             
             <div style={{ minHeight: '300px' }}>
               <Suspense fallback={<SidebarPlaceholder />}>
-                <ReturnsManagement selectedOrder={selectedOrder} />
+                <ReturnsManagement 
+                selectedOrder={selectedOrder}
+                retailerOrders={orders} />
               </Suspense>
             </div>
             
@@ -151,7 +153,7 @@ export default function RetailerOrders() {
               
               <div style={{ minHeight: '250px' }}>
                 <Suspense fallback={<SidebarPlaceholder />}>
-                  <OrderHistory selectedOrder={selectedOrder} />
+                  <OrderHistory selectedOrder={selectedOrder} orders={orders} />
                 </Suspense>
               </div>
             </div>

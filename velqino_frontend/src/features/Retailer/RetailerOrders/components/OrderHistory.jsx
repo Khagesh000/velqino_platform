@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Clock, Package, Eye, TrendingUp, Calendar, Search, Filter, ChevronLeft, ChevronRight } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerOrders/OrderHistory.scss'
 
-export default function OrderHistory({ selectedOrder }) {
+export default function OrderHistory({ selectedOrder, orders = [] }) {
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -17,44 +17,79 @@ export default function OrderHistory({ selectedOrder }) {
 
   if (!mounted) return null
 
-  // Mock customer order history data
-  const customerOrders = {
-    'Rajesh Kumar': {
-      customer: { name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@example.com', since: 'Jan 2025', totalSpent: 45890, totalOrders: 12 },
-      orders: [
-        { id: '#ORD-001', date: '2026-04-14', amount: 2450, items: 3, status: 'delivered', payment: 'UPI' },
-        { id: '#ORD-015', date: '2026-04-10', amount: 1890, items: 2, status: 'delivered', payment: 'Card' },
-        { id: '#ORD-028', date: '2026-04-05', amount: 3420, items: 4, status: 'delivered', payment: 'Cash' },
-        { id: '#ORD-042', date: '2026-03-28', amount: 5670, items: 5, status: 'delivered', payment: 'UPI' },
-        { id: '#ORD-056', date: '2026-03-20', amount: 1250, items: 2, status: 'delivered', payment: 'Wallet' },
-        { id: '#ORD-071', date: '2026-03-15', amount: 2990, items: 3, status: 'delivered', payment: 'Card' },
-      ]
-    },
-    'Priya Sharma': {
-      customer: { name: 'Priya Sharma', phone: '+91 87654 32109', email: 'priya@example.com', since: 'Mar 2025', totalSpent: 18900, totalOrders: 5 },
-      orders: [
-        { id: '#ORD-002', date: '2026-04-14', amount: 1890, items: 2, status: 'delivered', payment: 'Card' },
-        { id: '#ORD-023', date: '2026-04-08', amount: 2450, items: 3, status: 'delivered', payment: 'UPI' },
-        { id: '#ORD-045', date: '2026-03-30', amount: 899, items: 1, status: 'delivered', payment: 'Wallet' },
-      ]
-    },
-    'Amit Singh': {
-      customer: { name: 'Amit Singh', phone: '+91 76543 21098', email: 'amit@example.com', since: 'Dec 2024', totalSpent: 56780, totalOrders: 15 },
-      orders: [
-        { id: '#ORD-003', date: '2026-04-13', amount: 5670, items: 5, status: 'delivered', payment: 'Cash' },
-        { id: '#ORD-018', date: '2026-04-09', amount: 3420, items: 4, status: 'delivered', payment: 'UPI' },
-        { id: '#ORD-032', date: '2026-04-02', amount: 1250, items: 2, status: 'delivered', payment: 'Card' },
-      ]
+  // Calculate customer data from real orders
+  const getCustomerDataFromOrders = (customerName, customerEmail) => {
+    // Filter orders for this customer
+    const customerOrdersList = orders.filter(order => 
+      order.customer_name === customerName || order.customer_email === customerEmail
+    )
+    
+    if (customerOrdersList.length === 0) return null
+    
+    const totalSpent = customerOrdersList.reduce((sum, order) => sum + parseFloat(order.grand_total || 0), 0)
+    const firstOrder = customerOrdersList[customerOrdersList.length - 1]
+    
+    return {
+      customer: {
+        name: customerOrdersList[0]?.customer_name || customerName,
+        phone: customerOrdersList[0]?.customer_phone || 'N/A',
+        email: customerOrdersList[0]?.customer_email || customerEmail,
+        since: firstOrder?.created_at ? new Date(firstOrder.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A',
+        totalSpent: totalSpent,
+        totalOrders: customerOrdersList.length
+      },
+      orders: customerOrdersList.map(order => ({
+        id: order.order_number,
+        date: order.created_at,
+        amount: parseFloat(order.grand_total),
+        items: order.items?.length || 0,
+        status: order.status,
+        payment: order.payment_method?.toUpperCase() || 'N/A'
+      }))
     }
   }
 
-  // If selectedOrder exists, show that customer's history
-  const customerName = selectedOrder?.customer || (selectedCustomer?.name) || 'Rajesh Kumar'
-  const customerData = customerOrders[customerName] || customerOrders['Rajesh Kumar']
-  const customer = customerData.customer
-  const orders = customerData.orders
+  // Determine which customer to show
+  let currentCustomerData = null
+  
+  if (selectedOrder) {
+    // Show history for selected order's customer
+    currentCustomerData = getCustomerDataFromOrders(selectedOrder.customer_name, selectedOrder.customer_email)
+  } else if (selectedCustomer) {
+    // Show history for selected customer from top customers list
+    currentCustomerData = getCustomerDataFromOrders(selectedCustomer.name, selectedCustomer.email)
+  } else if (orders.length > 0) {
+    // Default to first customer in orders list
+    const firstOrder = orders[0]
+    if (firstOrder) {
+      currentCustomerData = getCustomerDataFromOrders(firstOrder.customer_name, firstOrder.customer_email)
+    }
+  }
 
-  const filteredOrders = orders.filter(order =>
+  // If no orders at all
+  if (!currentCustomerData && orders.length === 0) {
+    return (
+      <div className="order-history bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Clock size={18} className="text-primary-500" />
+            <h3 className="text-base font-semibold text-gray-900">Order History</h3>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">Customer purchase history & insights</p>
+        </div>
+        <div className="p-8 text-center">
+          <Package size={48} className="mx-auto text-gray-200 mb-3" />
+          <p className="text-sm text-gray-500">No orders found</p>
+        </div>
+      </div>
+    )
+  }
+
+  const customerData = currentCustomerData
+  const customer = customerData.customer
+  const customerOrdersList = customerData.orders
+
+  const filteredOrders = customerOrdersList.filter(order =>
     order.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -64,18 +99,46 @@ export default function OrderHistory({ selectedOrder }) {
   const getStatusClass = (status) => {
     switch(status) {
       case 'delivered': return 'bg-green-100 text-green-700'
+      case 'shipped': return 'bg-purple-100 text-purple-700'
       case 'processing': return 'bg-yellow-100 text-yellow-700'
+      case 'confirmed': return 'bg-blue-100 text-blue-700'
+      case 'pending': return 'bg-yellow-100 text-yellow-700'
       case 'cancelled': return 'bg-red-100 text-red-700'
       default: return 'bg-gray-100 text-gray-700'
     }
   }
 
   const formatDate = (date) => {
+    if (!date) return 'N/A'
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  // Top customers summary
-  const topCustomers = Object.values(customerOrders).map(c => c.customer).sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 3)
+  // Calculate top customers from real orders
+  const getTopCustomersFromOrders = () => {
+    const customerMap = new Map()
+    
+    orders.forEach(order => {
+      const customerKey = order.customer_email
+      if (!customerMap.has(customerKey)) {
+        customerMap.set(customerKey, {
+          name: order.customer_name,
+          phone: order.customer_phone,
+          email: order.customer_email,
+          totalSpent: 0,
+          totalOrders: 0
+        })
+      }
+      const customerData = customerMap.get(customerKey)
+      customerData.totalSpent += parseFloat(order.grand_total || 0)
+      customerData.totalOrders += 1
+    })
+    
+    return Array.from(customerMap.values())
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 3)
+  }
+
+  const topCustomers = orders.length > 0 ? getTopCustomersFromOrders() : []
 
   return (
     <div className="order-history bg-white rounded-xl shadow-sm border border-gray-100 h-full">
@@ -134,7 +197,7 @@ export default function OrderHistory({ selectedOrder }) {
         ) : (
           <div className="space-y-3">
             {paginatedOrders.map((order, idx) => (
-              <div key={order.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all">
+              <div key={idx} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{order.id}</p>
@@ -195,32 +258,34 @@ export default function OrderHistory({ selectedOrder }) {
       )}
 
       {/* Top Customers Insights */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={12} className="text-green-500" />
-          <h4 className="text-xs font-semibold text-gray-700">Top Customers</h4>
-        </div>
-        <div className="space-y-2">
-          {topCustomers.map((customer, idx) => (
-            <div 
-              key={idx}
-              className="flex items-center justify-between cursor-pointer hover:bg-white p-2 rounded-lg transition-all"
-              onClick={() => setSelectedCustomer(customer)}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-600">
-                  {customer.name.charAt(0)}
+      {topCustomers.length > 0 && (
+        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp size={12} className="text-green-500" />
+            <h4 className="text-xs font-semibold text-gray-700">Top Customers</h4>
+          </div>
+          <div className="space-y-2">
+            {topCustomers.map((customer, idx) => (
+              <div 
+                key={idx}
+                className="flex items-center justify-between cursor-pointer hover:bg-white p-2 rounded-lg transition-all"
+                onClick={() => setSelectedCustomer(customer)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-600">
+                    {customer.name?.charAt(0) || '?'}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{customer.name}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-700">{customer.name}</span>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-900">₹{customer.totalSpent.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-500">{customer.totalOrders} orders</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-gray-900">₹{customer.totalSpent.toLocaleString()}</p>
-                <p className="text-[10px] text-gray-500">{customer.totalOrders} orders</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

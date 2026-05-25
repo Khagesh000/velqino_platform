@@ -34,6 +34,9 @@ const customerAPI = {
     API.post('commerce/cart/merge/', {}, {
         headers: { 'X-Session-ID': sessionId }
     }),
+
+    upcomingBirthdays: () => API.get('identity/customers/upcoming-birthdays/'),
+    upcomingAnniversaries: () => API.get('identity/customers/upcoming-anniversaries/'),
 };
 
 export default customerAPI;

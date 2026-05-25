@@ -4,7 +4,7 @@ import customerAPI from '../Api/customerAPI';
 export const customerApi = createApi({
     reducerPath: 'customerApi',
     baseQuery: fakeBaseQuery(),
-    tagTypes: ['Customer', 'Profile'],
+    tagTypes: ['Customer', 'Profile', 'Customer'],
     endpoints: (builder) => ({
         // Register Customer
         registerCustomer: builder.mutation({
@@ -28,6 +28,18 @@ export const customerApi = createApi({
                     return { error };
                 }
             },
+        }),
+
+        getCustomersList: builder.query({
+            async queryFn() {
+                try {
+                    const response = await customerAPI.listCustomers();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['Customer'],
         }),
         
         // Get Customer Profile
@@ -103,6 +115,30 @@ export const customerApi = createApi({
             invalidatesTags: ['Profile']
         }),
 
+        getUpcomingBirthdays: builder.query({
+            async queryFn() {
+                try {
+                    const response = await customerAPI.upcomingBirthdays();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['Customer']
+        }),
+
+        getUpcomingAnniversaries: builder.query({
+            async queryFn() {
+                try {
+                    const response = await customerAPI.upcomingAnniversaries();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['Customer']
+        }),
+
     })
 });
 
@@ -115,4 +151,7 @@ export const {
     useChangePasswordMutation,
     useGetProfileQuery,        
     useUpdateProfileMutation,
+    useGetCustomersListQuery,
+    useGetUpcomingBirthdaysQuery,
+    useGetUpcomingAnniversariesQuery
 } = customerApi;

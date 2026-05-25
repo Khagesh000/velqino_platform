@@ -4,7 +4,7 @@ import retailerOrdersAPI from '../Api/retailerOrdersAPI';
 export const retailerOrdersApi = createApi({
     reducerPath: 'retailerOrdersApi',
     baseQuery: fakeBaseQuery(),
-    tagTypes: ['RetailerOrders', 'RetailerOrder', 'RetailerCustomers'],
+    tagTypes: ['RetailerOrders', 'RetailerOrder', 'RetailerCustomers', 'Returns'],
     
     endpoints: (builder) => ({
         // Get all retailer orders
@@ -117,6 +117,44 @@ export const retailerOrdersApi = createApi({
             },
             invalidatesTags: [{ type: 'RetailerOrders', id: 'LIST' }],
         }),
+
+        getRetailerReturns: builder.query({
+            async queryFn() {
+                try {
+                    const response = await retailerOrdersAPI.getRetailerReturns();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error: error.response?.data || error };
+                }
+            },
+            providesTags: ['Returns'],
+        }),
+        
+        // Create return request - MUTATION
+        createReturnRequest: builder.mutation({
+            async queryFn(data) {
+                try {
+                    const response = await retailerOrdersAPI.createReturnRequest(data);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error: error.response?.data || error };
+                }
+            },
+            invalidatesTags: ['Returns'],
+        }),
+        
+        // Update return status - MUTATION
+        updateReturnStatus: builder.mutation({
+            async queryFn({ returnId, status }) {
+                try {
+                    const response = await retailerOrdersAPI.updateReturnStatus(returnId, { status });
+                    return { data: response.data };
+                } catch (error) {
+                    return { error: error.response?.data || error };
+                }
+            },
+            invalidatesTags: ['Returns'],
+        }),
     }),
 });
 
@@ -130,4 +168,7 @@ export const {
     useDownloadInvoiceMutation,
     useGetRetailerCustomersQuery,
     useBulkOrderActionMutation,
+    useGetRetailerReturnsQuery,
+    useCreateReturnRequestMutation,
+    useUpdateReturnStatusMutation,
 } = retailerOrdersApi;

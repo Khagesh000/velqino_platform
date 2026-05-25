@@ -4,33 +4,31 @@ import React, { useState, useEffect } from 'react'
 import { Clock, Package, Truck, CheckCircle, XCircle, RefreshCw, AlertCircle, Send } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerOrders/OrderStatus.scss'
 
-export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
+export default function OrderStatus({ selectedOrder, onStatusUpdate, onRefresh }) {
   const [mounted, setMounted] = useState(false)
   const [currentStatus, setCurrentStatus] = useState('')
   const [isUpdating, setIsUpdating] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     setMounted(true)
     if (selectedOrder) {
       setCurrentStatus(selectedOrder.status)
       setSelectedStatus(selectedOrder.status)
+      setError(null)
     }
   }, [selectedOrder])
 
   if (!mounted) return null
 
   const statusFlow = [
-    { key: 'new', label: 'New', icon: <Clock size={16} />, color: 'gray', description: 'Order received' },
-    { key: 'processing', label: 'Processing', icon: <Package size={16} />, color: 'blue', description: 'Verifying payment' },
-    { key: 'packed', label: 'Packed', icon: <Package size={16} />, color: 'purple', description: 'Ready for pickup' },
+    { key: 'pending', label: 'Pending', icon: <Clock size={16} />, color: 'gray', description: 'Order received, awaiting confirmation' },
+    { key: 'confirmed', label: 'Confirmed', icon: <CheckCircle size={16} />, color: 'blue', description: 'Order confirmed' },
+    { key: 'processing', label: 'Processing', icon: <Package size={16} />, color: 'purple', description: 'Preparing for shipment' },
     { key: 'shipped', label: 'Shipped', icon: <Truck size={16} />, color: 'indigo', description: 'On the way' },
+    { key: 'out_for_delivery', label: 'Out for Delivery', icon: <Truck size={16} />, color: 'indigo', description: 'Out for delivery' },
     { key: 'delivered', label: 'Delivered', icon: <CheckCircle size={16} />, color: 'green', description: 'Order completed' },
-  ]
-
-  const statusActions = [
-    { key: 'cancelled', label: 'Cancel Order', icon: <XCircle size={14} />, color: 'red', requireReason: true },
-    { key: 'returned', label: 'Return Order', icon: <RefreshCw size={14} />, color: 'orange', requireReason: true },
   ]
 
   const getStatusColor = (color) => {
@@ -47,17 +45,86 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
   }
 
   const getCurrentStepIndex = () => {
-    return statusFlow.findIndex(s => s.key === currentStatus)
+    const index = statusFlow.findIndex(s => s.key === currentStatus)
+    return index >= 0 ? index : 0
   }
 
+  // Real API call to update order status
   const handleStatusUpdate = async (newStatus) => {
+    if (!selectedOrder) return
+    
     setIsUpdating(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setCurrentStatus(newStatus)
-    setSelectedStatus(newStatus)
-    if (onStatusUpdate) onStatusUpdate(newStatus)
-    setIsUpdating(false)
+    setError(null)
+    
+    try {
+      // Call your backend API
+      const response = await fetch(`/api/commerce/orders/${selectedOrder.order_number}/status/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update status')
+      }
+      
+      const data = await response.json()
+      
+      // Update local state
+      setCurrentStatus(newStatus)
+      setSelectedStatus(newStatus)
+      
+      // Notify parent component
+      if (onStatusUpdate) onStatusUpdate(newStatus)
+      
+      // Refresh orders list to get updated data from backend
+      if (onRefresh) onRefresh()
+      
+    } catch (err) {
+      console.error('Status update error:', err)
+      setError(err.message)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Real API call to cancel order
+  const handleCancelOrder = async () => {
+    if (!selectedOrder) return
+    
+    setIsUpdating(true)
+    setError(null)
+    
+    try {
+      const response = await fetch(`/api/commerce/orders/${selectedOrder.order_number}/cancel/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to cancel order')
+      }
+      
+      const data = await response.json()
+      
+      setCurrentStatus('cancelled')
+      setSelectedStatus('cancelled')
+      
+      if (onStatusUpdate) onStatusUpdate('cancelled')
+      if (onRefresh) onRefresh()
+      
+    } catch (err) {
+      console.error('Cancel order error:', err)
+      setError(err.message)
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   if (!selectedOrder) {
@@ -85,28 +152,33 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
           </div>
           <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(
             currentStatus === 'delivered' ? 'green' :
-            currentStatus === 'shipped' ? 'indigo' :
-            currentStatus === 'processing' ? 'blue' :
-            currentStatus === 'packed' ? 'purple' : 'gray'
+            currentStatus === 'shipped' || currentStatus === 'out_for_delivery' ? 'indigo' :
+            currentStatus === 'processing' ? 'purple' :
+            currentStatus === 'confirmed' ? 'blue' :
+            currentStatus === 'cancelled' ? 'red' : 'gray'
           )}`}>
-            {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
+            {currentStatus?.charAt(0).toUpperCase() + currentStatus?.slice(1).replace(/_/g, ' ') || 'Pending'}
           </span>
         </div>
         <p className="text-xs text-gray-500 mt-1">Track your order progress</p>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="mx-4 mt-4 p-2 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-xs text-red-600">{error}</p>
+        </div>
+      )}
+
       {/* Status Timeline */}
       <div className="p-4 border-b border-gray-100">
         <div className="relative">
-          {/* Progress Line */}
           <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200" />
           <div 
             className="absolute left-5 top-0 w-0.5 bg-primary-500 transition-all duration-500"
             style={{ height: `${(currentStepIndex / (statusFlow.length - 1)) * 100}%` }}
           />
 
-          
-          {/* Status Steps */}
           <div className="space-y-6 relative">
             {statusFlow.map((status, index) => {
               const isCompleted = index <= currentStepIndex
@@ -133,9 +205,6 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
                       )}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{status.description}</p>
-                    {isCurrent && selectedOrder.tracking && (
-                      <p className="text-[10px] text-blue-600 mt-1">Tracking: {selectedOrder.tracking}</p>
-                    )}
                   </div>
                 </div>
               )
@@ -144,8 +213,8 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
         </div>
       </div>
 
-      {/* Status Update Section (for pending orders) */}
-      {currentStatus !== 'delivered' && currentStatus !== 'cancelled' && currentStatus !== 'returned' && (
+      {/* Status Update Section */}
+      {currentStatus !== 'delivered' && currentStatus !== 'cancelled' && currentStatus !== 'refunded' && (
         <div className="p-4 border-b border-gray-100">
           <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Update Status</h4>
           <div className="flex flex-wrap gap-2">
@@ -156,7 +225,7 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
                 disabled={isUpdating}
                 className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${
                   getStatusColor(status.color)
-                } hover:opacity-80`}
+                } hover:opacity-80 disabled:opacity-50`}
               >
                 {status.icon}
                 <span>Mark as {status.label}</span>
@@ -166,22 +235,19 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
         </div>
       )}
 
-      {/* Cancel/Return Actions */}
-      {(currentStatus === 'new' || currentStatus === 'processing') && (
+      {/* Cancel Action */}
+      {(currentStatus === 'pending' || currentStatus === 'confirmed') && (
         <div className="p-4">
           <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Order Actions</h4>
           <div className="flex gap-2">
-            {statusActions.map(action => (
-              <button
-                key={action.key}
-                onClick={() => handleStatusUpdate(action.key)}
-                disabled={isUpdating}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${getStatusColor(action.color)} hover:opacity-80`}
-              >
-                {action.icon}
-                <span>{action.label}</span>
-              </button>
-            ))}
+            <button
+              onClick={handleCancelOrder}
+              disabled={isUpdating}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${getStatusColor('red')} hover:opacity-80 disabled:opacity-50`}
+            >
+              <XCircle size={14} />
+              <span>Cancel Order</span>
+            </button>
           </div>
         </div>
       )}
@@ -193,24 +259,20 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate }) {
             <CheckCircle size={16} className="text-green-600" />
             <div>
               <p className="text-sm font-semibold text-green-800">Order Delivered</p>
-              <p className="text-xs text-green-600 mt-0.5">Delivered on {new Date().toLocaleDateString()}</p>
+              <p className="text-xs text-green-600 mt-0.5">Order completed successfully</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Cancelled/Returned Info */}
-      {(currentStatus === 'cancelled' || currentStatus === 'returned') && (
+      {/* Cancelled Info */}
+      {currentStatus === 'cancelled' && (
         <div className="p-4 bg-red-50 rounded-b-xl">
           <div className="flex items-center gap-2">
             <XCircle size={16} className="text-red-600" />
             <div>
-              <p className="text-sm font-semibold text-red-800">
-                Order {currentStatus === 'cancelled' ? 'Cancelled' : 'Returned'}
-              </p>
-              <p className="text-xs text-red-600 mt-0.5">
-                {currentStatus === 'cancelled' ? 'Refund initiated' : 'Return request processed'}
-              </p>
+              <p className="text-sm font-semibold text-red-800">Order Cancelled</p>
+              <p className="text-xs text-red-600 mt-0.5">Order has been cancelled</p>
             </div>
           </div>
         </div>

@@ -1,14 +1,19 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Gift, Cake, Heart, Calendar,  Bell, Send, MessageCircle, Phone, Mail, Star, Users, Sparkles } from '../../../../utils/icons'
+import { Gift, Cake, Heart, Calendar, Bell, Send, MessageCircle, Phone, Mail, Star, Users, Sparkles, XCircle } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerCustomers/BirthdayAnniversary.scss'
+import { useGetUpcomingAnniversariesQuery, useGetUpcomingBirthdaysQuery } from '@/redux/customer/slices/customerSlice'
 
-export default function BirthdayAnniversary() {
+export default function BirthdayAnniversary({ onSelectCustomer }) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('birthday')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
   const [showSendModal, setShowSendModal] = useState(false)
+
+  // Backend API calls - NO frontend calculations
+  const { data: birthdaysData, isLoading: birthdaysLoading, refetch: refetchBirthdays } = useGetUpcomingBirthdaysQuery()
+  const { data: anniversariesData, isLoading: anniversariesLoading, refetch: refetchAnniversaries } = useGetUpcomingAnniversariesQuery()
 
   useEffect(() => {
     setMounted(true)
@@ -16,20 +21,10 @@ export default function BirthdayAnniversary() {
 
   if (!mounted) return null
 
-  const upcomingBirthdays = [
-    { id: 1, name: 'Rajesh Kumar', date: '2026-04-20', daysLeft: 6, phone: '+91 98765 43210', email: 'rajesh@example.com', tier: 'Gold', totalSpent: 45890, lastPurchase: '2026-04-14' },
-    { id: 2, name: 'Priya Sharma', date: '2026-04-25', daysLeft: 11, phone: '+91 87654 32109', email: 'priya@example.com', tier: 'Silver', totalSpent: 18900, lastPurchase: '2026-04-13' },
-    { id: 3, name: 'Amit Singh', date: '2026-05-01', daysLeft: 17, phone: '+91 76543 21098', email: 'amit@example.com', tier: 'Gold', totalSpent: 56780, lastPurchase: '2026-04-12' },
-    { id: 4, name: 'Sneha Reddy', date: '2026-05-05', daysLeft: 21, phone: '+91 65432 10987', email: 'sneha@example.com', tier: 'Silver', totalSpent: 8900, lastPurchase: '2026-04-11' },
-  ]
-
-  const upcomingAnniversaries = [
-    { id: 1, name: 'Vikram Mehta', date: '2026-04-18', daysLeft: 4, yearsWithUs: 2, phone: '+91 54321 09876', email: 'vikram@example.com', tier: 'Platinum', totalSpent: 78200 },
-    { id: 2, name: 'Neha Gupta', date: '2026-04-22', daysLeft: 8, yearsWithUs: 1, phone: '+91 43210 98765', email: 'neha@example.com', tier: 'Gold', totalSpent: 23450 },
-    { id: 3, name: 'Rahul Verma', date: '2026-04-28', daysLeft: 14, yearsWithUs: 3, phone: '+91 32109 87654', email: 'rahul@example.com', tier: 'Silver', totalSpent: 3450 },
-  ]
-
+  const upcomingBirthdays = birthdaysData?.data || []
+  const upcomingAnniversaries = anniversariesData?.data || []
   const currentData = activeTab === 'birthday' ? upcomingBirthdays : upcomingAnniversaries
+  const isLoading = activeTab === 'birthday' ? birthdaysLoading : anniversariesLoading
 
   const getTierBadge = (tier) => {
     switch(tier) {
@@ -47,6 +42,7 @@ export default function BirthdayAnniversary() {
   }
 
   const formatDate = (date) => {
+    if (!date) return 'N/A'
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })
   }
 
@@ -55,11 +51,29 @@ export default function BirthdayAnniversary() {
     setShowSendModal(true)
   }
 
+  const handleCustomerClick = (customer) => {
+    setSelectedCustomer(customer)
+    if (onSelectCustomer) {
+      onSelectCustomer(customer)
+    }
+  }
+
   const getOfferForCustomer = (customer) => {
     if (customer.tier === 'Platinum') return '20% off + Free Gift'
     if (customer.tier === 'Gold') return '15% off'
     if (customer.tier === 'Silver') return '10% off'
     return '5% off'
+  }
+
+  if (isLoading) {
+    return (
+      <div className="birthday-anniversary bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -131,7 +145,7 @@ export default function BirthdayAnniversary() {
                 className={`border rounded-lg p-3 transition-all cursor-pointer ${
                   selectedCustomer?.id === item.id ? 'ring-2 ring-pink-500 bg-pink-50' : 'hover:shadow-md'
                 }`}
-                onClick={() => setSelectedCustomer(item)}
+                onClick={() => handleCustomerClick(item)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -151,27 +165,27 @@ export default function BirthdayAnniversary() {
                           <Star size={8} />
                           {item.tier}
                         </span>
-                        {activeTab === 'anniversary' && (
-                          <span className="text-[9px] text-gray-500">{item.yearsWithUs} years</span>
+                        {activeTab === 'anniversary' && item.years_with_us && (
+                          <span className="text-[9px] text-gray-500">{item.years_with_us} years</span>
                         )}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getDaysLeftClass(item.daysLeft)}`}>
-                      {item.daysLeft} days left
+                    <div className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getDaysLeftClass(item.days_left)}`}>
+                      {item.days_left} days left
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1">{formatDate(item.date)}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">{formatDate(item.date_of_birth || item.anniversary_date)}</p>
                   </div>
                 </div>
 
                 {/* Customer Stats */}
                 <div className="flex items-center gap-3 text-[10px] text-gray-500 mt-2 pt-2 border-t border-gray-100">
-                  <span>₹{item.totalSpent.toLocaleString()} spent</span>
-                  {activeTab === 'birthday' && item.lastPurchase && (
+                  <span>₹{item.total_spent?.toLocaleString() || 0} spent</span>
+                  {activeTab === 'birthday' && item.last_purchase && (
                     <>
                       <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                      <span>Last purchase: {new Date(item.lastPurchase).toLocaleDateString()}</span>
+                      <span>Last purchase: {formatDate(item.last_purchase)}</span>
                     </>
                   )}
                 </div>
@@ -188,18 +202,22 @@ export default function BirthdayAnniversary() {
                     <Send size={12} />
                     Send Wishes
                   </button>
-                  <button
+                  <a
+                    href={`tel:${item.phone}`}
                     onClick={(e) => e.stopPropagation()}
                     className="py-1.5 px-2 text-xs font-medium bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
                   >
                     <Phone size={12} />
-                  </button>
-                  <button
+                  </a>
+                  <a
+                    href={`https://wa.me/${item.phone?.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     className="py-1.5 px-2 text-xs font-medium bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
                   >
                     <MessageCircle size={12} />
-                  </button>
+                  </a>
                 </div>
               </div>
             ))}
@@ -244,7 +262,7 @@ export default function BirthdayAnniversary() {
             <div className="mb-4">
               <div className="bg-pink-50 rounded-lg p-3 mb-3">
                 <p className="text-sm font-medium text-gray-900">{selectedCustomer.name}</p>
-                <p className="text-xs text-gray-500">{formatDate(selectedCustomer.date)}</p>
+                <p className="text-xs text-gray-500">{formatDate(selectedCustomer.date_of_birth || selectedCustomer.anniversary_date)}</p>
               </div>
 
               <label className="block text-sm font-medium text-gray-700 mb-1">Message Template</label>
@@ -252,7 +270,7 @@ export default function BirthdayAnniversary() {
                 rows={4}
                 defaultValue={activeTab === 'birthday' 
                   ? `Happy Birthday ${selectedCustomer.name}! 🎂\n\nWe have a special gift for you: ${getOfferForCustomer(selectedCustomer)} on your next purchase.\n\nWishing you a wonderful year ahead!\n\n- Store Team`
-                  : `Happy Anniversary ${selectedCustomer.name}! ❤️\n\nThank you for being with us for ${selectedCustomer.yearsWithUs} years. Enjoy ${getOfferForCustomer(selectedCustomer)} on your next purchase.\n\n- Store Team`
+                  : `Happy Anniversary ${selectedCustomer.name}! ❤️\n\nThank you for being with us for ${selectedCustomer.years_with_us || 1} years. Enjoy ${getOfferForCustomer(selectedCustomer)} on your next purchase.\n\n- Store Team`
                 }
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-pink-500 resize-none"
               />

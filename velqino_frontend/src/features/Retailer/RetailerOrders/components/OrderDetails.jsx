@@ -13,6 +13,16 @@ export default function OrderDetails({ selectedOrder }) {
 
   if (!mounted) return null
 
+  const formatDate = (date) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  }
+
+  // If no order selected
   if (!selectedOrder) {
     return (
       <div className="order-details bg-white rounded-xl shadow-sm border border-gray-100 h-full">
@@ -23,48 +33,6 @@ export default function OrderDetails({ selectedOrder }) {
         </div>
       </div>
     )
-  }
-
-  // Mock order details - replace with actual data from API
-  const orderDetails = {
-    customer: {
-      name: selectedOrder.customer || 'Rajesh Kumar',
-      phone: '+91 98765 43210',
-      email: 'rajesh@example.com',
-      type: 'Regular'
-    },
-    items: [
-      { name: 'Premium Cotton T-Shirt', sku: 'CT-001', quantity: 2, price: 499, total: 998 },
-      { name: 'Leather Wallet', sku: 'LW-004', quantity: 1, price: 1499, total: 1499 }
-    ],
-    payment: {
-      method: selectedOrder.payment || 'UPI',
-      status: 'Paid',
-      transactionId: 'TXN' + Math.floor(Math.random() * 1000000),
-      date: selectedOrder.date || '2026-04-14'
-    },
-    delivery: {
-      address: '123, MG Road, Bangalore - 560001',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      pincode: '560001',
-      landmark: 'Near Metro Station'
-    },
-    summary: {
-      subtotal: selectedOrder.total || 2450,
-      shipping: 0,
-      tax: 189,
-      discount: 0,
-      total: selectedOrder.total || 2450
-    }
-  }
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
   }
 
   return (
@@ -94,11 +62,11 @@ export default function OrderDetails({ selectedOrder }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">Order ID</p>
-              <p className="text-sm font-bold text-gray-900">{selectedOrder.id}</p>
+              <p className="text-sm font-bold text-gray-900">{selectedOrder.order_number}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">Order Date</p>
-              <p className="text-sm font-medium text-gray-700">{formatDate(selectedOrder.date)}</p>
+              <p className="text-sm font-medium text-gray-700">{formatDate(selectedOrder.created_at)}</p>
             </div>
           </div>
         </div>
@@ -112,16 +80,15 @@ export default function OrderDetails({ selectedOrder }) {
           <div className="bg-gray-50 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
               <User size={12} className="text-gray-400" />
-              <span className="text-sm font-medium text-gray-900">{orderDetails.customer.name}</span>
-              <span className="text-xs text-gray-500">({orderDetails.customer.type})</span>
+              <span className="text-sm font-medium text-gray-900">{selectedOrder.customer_name || 'N/A'}</span>
             </div>
             <div className="flex items-center gap-2">
               <Phone size={12} className="text-gray-400" />
-              <span className="text-sm text-gray-700">{orderDetails.customer.phone}</span>
+              <span className="text-sm text-gray-700">{selectedOrder.customer_phone || 'N/A'}</span>
             </div>
             <div className="flex items-center gap-2">
               <Mail size={12} className="text-gray-400" />
-              <span className="text-sm text-gray-700">{orderDetails.customer.email}</span>
+              <span className="text-sm text-gray-700">{selectedOrder.customer_email || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -130,19 +97,19 @@ export default function OrderDetails({ selectedOrder }) {
         <div>
           <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-2">
             <Package size={12} />
-            Items Purchased ({orderDetails.items.length})
+            Items Purchased ({selectedOrder.items?.length || 0})
           </h4>
           <div className="space-y-2">
-            {orderDetails.items.map((item, idx) => (
+            {selectedOrder.items?.map((item, idx) => (
               <div key={idx} className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
+                    <p className="text-xs text-gray-500">SKU: {item.product_sku}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">₹{item.total}</p>
-                    <p className="text-xs text-gray-500">Qty: {item.quantity} × ₹{item.price}</p>
+                    <p className="text-sm font-bold text-gray-900">₹{parseFloat(item.total).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Qty: {item.quantity} × ₹{parseFloat(item.price).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -159,19 +126,23 @@ export default function OrderDetails({ selectedOrder }) {
           <div className="bg-gray-50 rounded-lg p-3 space-y-2">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Method</span>
-              <span className="text-sm font-medium text-gray-900">{orderDetails.payment.method}</span>
+              <span className="text-sm font-medium text-gray-900 uppercase">{selectedOrder.payment_method || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Status</span>
-              <span className="text-sm font-medium text-green-600">{orderDetails.payment.status}</span>
+              <span className={`text-sm font-medium ${selectedOrder.payment_status === 'paid' ? 'text-green-600' : selectedOrder.payment_status === 'pending' ? 'text-yellow-600' : 'text-red-600'}`}>
+                {selectedOrder.payment_status || 'Pending'}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Transaction ID</span>
-              <span className="text-sm text-gray-700">{orderDetails.payment.transactionId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Payment Date</span>
-              <span className="text-sm text-gray-700">{formatDate(orderDetails.payment.date)}</span>
+              <span className="text-sm text-gray-600">Order Status</span>
+              <span className={`text-sm font-medium ${
+                selectedOrder.status === 'delivered' ? 'text-green-600' : 
+                selectedOrder.status === 'cancelled' ? 'text-red-600' : 
+                selectedOrder.status === 'shipped' ? 'text-purple-600' : 'text-blue-600'
+              }`}>
+                {selectedOrder.status || 'Pending'}
+              </span>
             </div>
           </div>
         </div>
@@ -183,13 +154,12 @@ export default function OrderDetails({ selectedOrder }) {
             Delivery Address
           </h4>
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-sm text-gray-700">{orderDetails.delivery.address}</p>
-            <p className="text-sm text-gray-700 mt-1">
-              {orderDetails.delivery.city}, {orderDetails.delivery.state} - {orderDetails.delivery.pincode}
+            <p className="text-sm font-medium text-gray-900">{selectedOrder.shipping_full_address?.name || 'N/A'}</p>
+            <p className="text-sm text-gray-700 mt-1">{selectedOrder.shipping_full_address?.address || 'N/A'}</p>
+            <p className="text-sm text-gray-700">
+              {selectedOrder.shipping_full_address?.city || ''}, {selectedOrder.shipping_full_address?.state || ''} - {selectedOrder.shipping_full_address?.pincode || ''}
             </p>
-            {orderDetails.delivery.landmark && (
-              <p className="text-xs text-gray-500 mt-1">Landmark: {orderDetails.delivery.landmark}</p>
-            )}
+            <p className="text-sm text-gray-700">Phone: {selectedOrder.shipping_full_address?.phone || 'N/A'}</p>
           </div>
         </div>
 
@@ -199,25 +169,15 @@ export default function OrderDetails({ selectedOrder }) {
           <div className="bg-gray-50 rounded-lg p-3 space-y-2">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Subtotal</span>
-              <span className="text-sm text-gray-900">₹{orderDetails.summary.subtotal.toLocaleString()}</span>
+              <span className="text-sm text-gray-900">₹{parseFloat(selectedOrder.grand_total || 0).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Shipping</span>
-              <span className="text-sm text-green-600">Free</span>
+              <span className="text-sm text-gray-900">{selectedOrder.delivery_type === 'express' ? '₹99' : 'Free'}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Tax (GST)</span>
-              <span className="text-sm text-gray-900">₹{orderDetails.summary.tax.toLocaleString()}</span>
-            </div>
-            {orderDetails.summary.discount > 0 && (
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Discount</span>
-                <span className="text-sm text-red-600">-₹{orderDetails.summary.discount}</span>
-              </div>
-            )}
             <div className="flex justify-between pt-2 border-t border-gray-200">
               <span className="text-sm font-semibold text-gray-900">Total</span>
-              <span className="text-base font-bold text-primary-600">₹{orderDetails.summary.total.toLocaleString()}</span>
+              <span className="text-base font-bold text-primary-600">₹{parseFloat(selectedOrder.grand_total || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -227,10 +187,10 @@ export default function OrderDetails({ selectedOrder }) {
           <div className="bg-blue-50 rounded-lg p-3">
             <div className="flex items-center gap-2">
               <Truck size={14} className="text-blue-600" />
-              <p className="text-xs font-medium text-blue-700">Estimated Delivery</p>
+              <p className="text-xs font-medium text-blue-700">Expected Delivery</p>
             </div>
             <p className="text-sm text-blue-800 mt-1">
-              {new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+              {selectedOrder.expected_delivery_date ? formatDate(selectedOrder.expected_delivery_date) : '3-5 business days'}
             </p>
           </div>
         )}
