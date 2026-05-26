@@ -1,7 +1,16 @@
 "use client"
 
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, lazy, Suspense, useEffect } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
+import { 
+  useGetCustomersListQuery, 
+  useGetRetailerCustomersQuery,
+  useGetLoyaltySettingsQuery,
+  useGetRewardsQuery,
+  useGetCampaignsQuery,
+  useGetPointsTransactionsQuery,
+  useGetPointsSummaryQuery
+} from '@/redux/retailer/slices/retailerLoyaltySlice'
 
 // Lazy load all components
 const ProgramSettings = lazy(() => import('./components/ProgramSettings'))
@@ -18,6 +27,115 @@ const SidebarPlaceholder = () => <div className="w-full h-[350px] bg-gray-100 ro
 export default function RetailerLoyalty() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+
+
+    // ========== API CALLS ==========
+  const { data: customersData, isLoading: customersLoading, refetch: refetchCustomers } = useGetCustomersListQuery()
+  const { data: retailerCustomersData, isLoading: retailerCustomersLoading, refetch: refetchRetailerCustomers } = useGetRetailerCustomersQuery()
+  const { data: loyaltySettingsData, refetch: refetchLoyaltySettings } = useGetLoyaltySettingsQuery()
+  const { data: rewardsData, refetch: refetchRewards } = useGetRewardsQuery({ active_only: true })
+  const { data: campaignsData, refetch: refetchCampaigns } = useGetCampaignsQuery({})
+  const { data: pointsTransactionsData, refetch: refetchPointsTransactions } = useGetPointsTransactionsQuery(
+    { customer_id: selectedCustomer?.user?.id },
+    { skip: !selectedCustomer?.user?.id }
+  )
+  const { data: pointsSummaryData, refetch: refetchPointsSummary } = useGetPointsSummaryQuery(
+    selectedCustomer?.user?.id,
+    { skip: !selectedCustomer?.user?.id }
+  )
+
+  // ========== TRANSFORM CUSTOMERS DATA ==========
+  const customers = customersData?.data || []
+  const retailerCustomers = retailerCustomersData?.data || []
+
+  const getCustomerOrders = (userId) => {
+    return retailerCustomers.filter(order => Number(order.customer__id) === Number(userId))
+  }
+
+  const getCustomerTotalSpent = (userId) => {
+    const orders = getCustomerOrders(userId)
+    return orders.reduce((sum, order) => sum + parseFloat(order.grand_total || 0), 0)
+  }
+
+  const getCustomerVisitCount = (userId) => {
+    return getCustomerOrders(userId).length
+  }
+
+  const getCustomerLastVisit = (userId) => {
+    const orders = getCustomerOrders(userId)
+    if (orders.length === 0) return null
+    return orders[0]?.created_at
+  }
+
+  // Enrich customers with order data
+  const enrichedCustomers = customers
+    .filter(customer => getCustomerOrders(customer.user?.id).length > 0)
+    .map(customer => ({
+      ...customer,
+      totalSpent: getCustomerTotalSpent(customer.user?.id),
+      visits: getCustomerVisitCount(customer.user?.id),
+      lastVisit: getCustomerLastVisit(customer.user?.id),
+      orders: getCustomerOrders(customer.user?.id),
+      points: Math.floor(getCustomerTotalSpent(customer.user?.id) / 10),
+      tier: getTierFromTotalSpent(getCustomerTotalSpent(customer.user?.id))
+    }))
+
+  // Helper function to determine tier
+  function getTierFromTotalSpent(spent) {
+    if (spent >= 50000) return 'Platinum'
+    if (spent >= 25000) return 'Gold'
+    if (spent >= 10000) return 'Silver'
+    return 'Bronze'
+  }
+
+  // ========== SUMMARY CALCULATIONS ==========
+  const totalMembers = enrichedCustomers.length
+  const totalPointsEarned = enrichedCustomers.reduce((sum, c) => sum + (c.points || 0), 0)
+  const totalPointsRedeemed = enrichedCustomers.reduce((sum, c) => sum + (c.pointsRedeemed || 0), 0)
+  const activeMembers = enrichedCustomers.filter(c => c.visits > 0).length
+
+  // ========== TIERS FROM BACKEND SETTINGS ==========
+  const tiersFromSettings = [
+    { name: 'Bronze', minPoints: 0, benefits: ['Welcome bonus 50pts', 'Basic support'], color: 'bronze' },
+    { name: 'Silver', minPoints: loyaltySettingsData?.data?.silver_threshold || 500, benefits: ['2% extra points', 'Priority support'], color: 'silver' },
+    { name: 'Gold', minPoints: loyaltySettingsData?.data?.gold_threshold || 1500, benefits: ['5% extra points', 'Free shipping', 'Birthday bonus'], color: 'gold' },
+    { name: 'Platinum', minPoints: loyaltySettingsData?.data?.platinum_threshold || 3000, benefits: ['10% extra points', 'Free express shipping', 'Exclusive offers', 'Dedicated manager'], color: 'platinum' }
+  ]
+
+  // ========== HANDLERS ==========
+  const handleSelectCustomer = (customer) => {
+    setSelectedCustomer(customer)
+  }
+
+    const refreshAll = () => {
+    setRefreshTrigger(prev => prev + 1)
+    refetchCustomers()
+    refetchRetailerCustomers()
+    refetchLoyaltySettings()
+    refetchRewards()
+    refetchCampaigns()
+    // ✅ Only refetch if customer is selected (query has started)
+    if (selectedCustomer?.user?.id) {
+      refetchPointsTransactions()
+      refetchPointsSummary()
+    }
+  }
+
+  useEffect(() => {
+  if (refreshTrigger > 0) {
+    refetchCustomers()
+    refetchRetailerCustomers()
+    refetchLoyaltySettings()
+    refetchRewards()
+    refetchCampaigns()
+    if (selectedCustomer?.user?.id) {
+      refetchPointsTransactions()
+      refetchPointsSummary()
+    }
+  }
+}, [refreshTrigger, refetchCustomers, refetchRetailerCustomers, refetchLoyaltySettings, refetchRewards, refetchCampaigns, refetchPointsTransactions, refetchPointsSummary, selectedCustomer?.user?.id])
+  const isLoading = customersLoading || retailerCustomersLoading
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
@@ -42,7 +160,17 @@ export default function RetailerLoyalty() {
           <div className="mb-6">
             <div style={{ minHeight: '200px' }}>
               <Suspense fallback={<CardPlaceholder />}>
-                <ProgramSettings />
+                <ProgramSettings 
+                  onRefresh={refreshAll}
+                  settings={loyaltySettingsData?.data}
+                  tiers={tiersFromSettings}
+                  summary={{
+                    totalMembers: totalMembers,
+                    pointsEarned: totalPointsEarned,
+                    pointsRedeemed: totalPointsRedeemed,
+                    activeMembers: activeMembers
+                  }}
+                />
               </Suspense>
             </div>
           </div>
@@ -54,7 +182,13 @@ export default function RetailerLoyalty() {
             <div className="lg:col-span-2 h-full">
               <div style={{ minHeight: '450px' }}>
                 <Suspense fallback={<TablePlaceholder />}>
-                  <MemberList refreshTrigger={refreshTrigger} />
+                  <MemberList 
+                    customers={enrichedCustomers}
+                    selectedCustomer={selectedCustomer}
+                    setSelectedCustomer={handleSelectCustomer}
+                    isLoading={isLoading}
+                    refreshTrigger={refreshTrigger}
+                  />
                 </Suspense>
               </div>
             </div>
@@ -63,7 +197,12 @@ export default function RetailerLoyalty() {
             <div className="h-full">
               <div style={{ minHeight: '450px' }}>
                 <Suspense fallback={<SidebarPlaceholder />}>
-                  <PointsTransaction refreshTrigger={refreshTrigger} />
+                  <PointsTransaction 
+                    selectedCustomer={selectedCustomer}
+                    pointsTransactions={pointsTransactionsData?.data?.transactions || []}
+                    pointsSummary={pointsSummaryData?.data}
+                    refreshTrigger={refreshTrigger}
+                  />
                 </Suspense>
               </div>
             </div>
@@ -76,7 +215,10 @@ export default function RetailerLoyalty() {
             <div className="h-full">
               <div style={{ minHeight: '400px' }}>
                 <Suspense fallback={<CardPlaceholder />}>
-                  <RewardsCatalog />
+                  <RewardsCatalog 
+                    onRefresh={refreshAll}
+                    rewards={rewardsData?.data?.rewards || []}
+                  />
                 </Suspense>
               </div>
             </div>
@@ -84,7 +226,10 @@ export default function RetailerLoyalty() {
             <div className="h-full">
               <div style={{ minHeight: '400px' }}>
                 <Suspense fallback={<CardPlaceholder />}>
-                  <Campaigns />
+                  <Campaigns 
+                    onRefresh={refreshAll}
+                    campaigns={campaignsData?.data?.campaigns || []}
+                  />
                 </Suspense>
               </div>
             </div>

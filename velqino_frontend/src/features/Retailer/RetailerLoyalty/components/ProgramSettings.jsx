@@ -4,17 +4,17 @@ import React, { useState, useEffect } from 'react'
 import { Settings, Star, Award, Gift, Save, Edit, X, CheckCircle, TrendingUp, Users, ShoppingBag } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerLoyalty/ProgramSettings.scss'
 
-export default function ProgramSettings() {
+export default function ProgramSettings({ onRefresh, settings: propSettings, tiers: propTiers, summary: propSummary }) {
   const [mounted, setMounted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [settings, setSettings] = useState({
-    pointsPerRupee: 1,
-    minRedemption: 100,
-    maxRedemption: 5000,
-    pointsExpiry: 6,
-    welcomeBonus: 50,
-    birthdayBonus: 100,
-    referralBonus: 200
+    points_per_rupee: 1,
+    min_redemption_points: 100,
+    max_redemption_points: 5000,
+    points_expiry_months: 6,
+    welcome_bonus_points: 50,
+    birthday_bonus_points: 100,
+    referral_bonus_points: 200
   })
   const [tiers, setTiers] = useState([
     { name: 'Bronze', minPoints: 0, benefits: ['Welcome bonus 50pts', 'Basic support'], color: 'bronze' },
@@ -26,6 +26,26 @@ export default function ProgramSettings() {
   const [showSuccess, setShowSuccess] = useState(false)
 
   useEffect(() => {
+    if (propSettings) {
+      setSettings({
+        points_per_rupee: propSettings.points_per_rupee || 1,
+        min_redemption_points: propSettings.min_redemption_points || 100,
+        max_redemption_points: propSettings.max_redemption_points || 5000,
+        points_expiry_months: propSettings.points_expiry_months || 6,
+        welcome_bonus_points: propSettings.welcome_bonus_points || 50,
+        birthday_bonus_points: propSettings.birthday_bonus_points || 100,
+        referral_bonus_points: propSettings.referral_bonus_points || 200
+      })
+    }
+  }, [propSettings])
+
+  useEffect(() => {
+    if (propTiers) {
+      setTiers(propTiers)
+    }
+  }, [propTiers])
+
+  useEffect(() => {
     setMounted(true)
   }, [])
 
@@ -35,6 +55,7 @@ export default function ProgramSettings() {
     setIsEditing(false)
     setShowSuccess(true)
     setTimeout(() => setShowSuccess(false), 2000)
+    if (onRefresh) onRefresh()
   }
 
   const handleUpdateTier = (index, field, value) => {
@@ -53,11 +74,11 @@ export default function ProgramSettings() {
     }
   }
 
-  const summary = {
-    totalMembers: 245,
-    pointsEarned: 12500,
-    pointsRedeemed: 4800,
-    activeMembers: 189
+  const summary = propSummary || {
+    totalMembers: 0,
+    pointsEarned: 0,
+    pointsRedeemed: 0,
+    activeMembers: 0
   }
 
   return (
@@ -124,12 +145,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.pointsPerRupee}
-                onChange={(e) => setSettings({ ...settings, pointsPerRupee: parseInt(e.target.value) })}
+                value={settings.points_per_rupee}
+                onChange={(e) => setSettings({ ...settings, points_per_rupee: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.pointsPerRupee} point per ₹1</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.points_per_rupee} point per ₹1</p>
             )}
           </div>
           <div>
@@ -137,12 +158,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.minRedemption}
-                onChange={(e) => setSettings({ ...settings, minRedemption: parseInt(e.target.value) })}
+                value={settings.min_redemption_points}
+                onChange={(e) => setSettings({ ...settings, min_redemption_points: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.minRedemption} points</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.min_redemption_points} points</p>
             )}
           </div>
           <div>
@@ -150,12 +171,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.maxRedemption}
-                onChange={(e) => setSettings({ ...settings, maxRedemption: parseInt(e.target.value) })}
+                value={settings.max_redemption_points}
+                onChange={(e) => setSettings({ ...settings, max_redemption_points: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.maxRedemption} points</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.max_redemption_points} points</p>
             )}
           </div>
           <div>
@@ -163,12 +184,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.pointsExpiry}
-                onChange={(e) => setSettings({ ...settings, pointsExpiry: parseInt(e.target.value) })}
+                value={settings.points_expiry_months}
+                onChange={(e) => setSettings({ ...settings, points_expiry_months: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.pointsExpiry} months</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.points_expiry_months} months</p>
             )}
           </div>
         </div>
@@ -183,12 +204,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.welcomeBonus}
-                onChange={(e) => setSettings({ ...settings, welcomeBonus: parseInt(e.target.value) })}
+                value={settings.welcome_bonus_points}
+                onChange={(e) => setSettings({ ...settings, welcome_bonus_points: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.welcomeBonus} points</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.welcome_bonus_points} points</p>
             )}
           </div>
           <div>
@@ -196,12 +217,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.birthdayBonus}
-                onChange={(e) => setSettings({ ...settings, birthdayBonus: parseInt(e.target.value) })}
+                value={settings.birthday_bonus_points}
+                onChange={(e) => setSettings({ ...settings, birthday_bonus_points: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.birthdayBonus} points</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.birthday_bonus_points} points</p>
             )}
           </div>
           <div>
@@ -209,12 +230,12 @@ export default function ProgramSettings() {
             {isEditing ? (
               <input
                 type="number"
-                value={settings.referralBonus}
-                onChange={(e) => setSettings({ ...settings, referralBonus: parseInt(e.target.value) })}
+                value={settings.referral_bonus_points}
+                onChange={(e) => setSettings({ ...settings, referral_bonus_points: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
             ) : (
-              <p className="text-sm font-semibold text-gray-900">{settings.referralBonus} points</p>
+              <p className="text-sm font-semibold text-gray-900">{settings.referral_bonus_points} points</p>
             )}
           </div>
         </div>

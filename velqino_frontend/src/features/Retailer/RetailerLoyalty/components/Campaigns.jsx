@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Megaphone, Calendar, Gift, Star, Users, TrendingUp, Plus, Edit, Trash2, Eye, CheckCircle, X, Save, Search, Filter, ChevronLeft, ChevronRight, Clock, Rocket } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerLoyalty/Campaigns.scss'
 
-export default function Campaigns() {
+export default function Campaigns({ onRefresh, campaigns = [] }) {
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -27,16 +27,27 @@ export default function Campaigns() {
     setMounted(true)
   }, [])
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
+
   if (!mounted) return null
 
-  const campaigns = [
-    { id: 1, name: 'Weekend Special', type: 'bonus', bonusPoints: 50, startDate: '2026-04-01', endDate: '2026-04-30', status: 'active', description: 'Double points on weekend purchases', redeemed: 245, eligible: 'all' },
-    { id: 2, name: 'Birthday Month', type: 'birthday', bonusPoints: 100, startDate: '2026-04-01', endDate: '2026-04-30', status: 'active', description: '100 bonus points for birthday month customers', redeemed: 89, eligible: 'birthday' },
-    { id: 3, name: 'Referral Program', type: 'referral', bonusPoints: 200, startDate: '2026-03-01', endDate: '2026-05-31', status: 'active', description: 'Get 200 points for each successful referral', redeemed: 156, eligible: 'all' },
-    { id: 4, name: 'Festival Sale', type: 'bonus', bonusPoints: 100, startDate: '2026-05-01', endDate: '2026-05-15', status: 'scheduled', description: '100 bonus points on orders above ₹2000', redeemed: 0, eligible: 'all' },
-    { id: 5, name: 'New Year Special', type: 'bonus', bonusPoints: 150, startDate: '2025-12-25', endDate: '2026-01-05', status: 'expired', description: 'New Year celebration bonus', redeemed: 890, eligible: 'all' },
-    { id: 6, name: 'First Purchase', type: 'welcome', bonusPoints: 50, startDate: '2026-01-01', endDate: '2026-12-31', status: 'active', description: 'Welcome bonus for new customers', redeemed: 234, eligible: 'new' },
-  ]
+  // Transform backend campaigns to component format
+  const transformedCampaigns = campaigns.map(campaign => ({
+    id: campaign.id,
+    name: campaign.name,
+    type: campaign.campaign_type,
+    bonusPoints: campaign.bonus_points,
+    startDate: campaign.start_date?.split('T')[0] || '',
+    endDate: campaign.end_date?.split('T')[0] || '',
+    status: campaign.status,
+    description: campaign.description,
+    redeemed: campaign.total_redeemed || 0,
+    eligible: campaign.eligible_tiers?.length > 0 ? campaign.eligible_tiers.join(', ') : 'all',
+    is_active: campaign.is_active_now?.()
+  }))
 
   const getTypeConfig = (type) => {
     switch(type) {
@@ -48,6 +59,8 @@ export default function Campaigns() {
         return { bg: 'bg-blue-100', text: 'text-blue-700', icon: <Users size={12} />, label: 'Referral' }
       case 'welcome':
         return { bg: 'bg-purple-100', text: 'text-purple-700', icon: <Rocket size={12} />, label: 'Welcome' }
+      case 'festival':
+        return { bg: 'bg-orange-100', text: 'text-orange-700', icon: <Megaphone size={12} />, label: 'Festival' }
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Megaphone size={12} />, label: type }
     }
@@ -61,12 +74,14 @@ export default function Campaigns() {
         return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={10} />, label: 'Scheduled' }
       case 'expired':
         return { bg: 'bg-gray-100', text: 'text-gray-700', icon: <X size={10} />, label: 'Expired' }
+      case 'cancelled':
+        return { bg: 'bg-red-100', text: 'text-red-700', icon: <X size={10} />, label: 'Cancelled' }
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Clock size={10} />, label: status }
     }
   }
 
-  const filteredCampaigns = campaigns.filter(campaign => {
+  const filteredCampaigns = transformedCampaigns.filter(campaign => {
     const matchesSearch = searchQuery === '' || 
       campaign.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       campaign.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -78,20 +93,48 @@ export default function Campaigns() {
   const paginatedCampaigns = filteredCampaigns.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const summary = {
-    active: campaigns.filter(c => c.status === 'active').length,
-    scheduled: campaigns.filter(c => c.status === 'scheduled').length,
-    totalRedeemed: campaigns.reduce((sum, c) => sum + c.redeemed, 0),
-    bonusGiven: campaigns.reduce((sum, c) => sum + (c.redeemed * c.bonusPoints), 0)
+    active: transformedCampaigns.filter(c => c.status === 'active').length,
+    scheduled: transformedCampaigns.filter(c => c.status === 'scheduled').length,
+    totalRedeemed: transformedCampaigns.reduce((sum, c) => sum + c.redeemed, 0),
+    bonusGiven: transformedCampaigns.reduce((sum, c) => sum + (c.redeemed * c.bonusPoints), 0)
   }
 
   const formatDate = (date) => {
+    if (!date) return 'N/A'
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   }
 
-  const handleAddCampaign = () => {
+  const handleAddCampaign = async () => {
     if (!formData.name || !formData.bonusPoints) return
+    
+    // Here you would call createCampaign mutation
+    // await createCampaign({...}).unwrap()
+    
     setShowAddModal(false)
     setFormData({ name: '', type: '', bonusPoints: '', startDate: '', endDate: '', description: '', eligibility: 'all' })
+    if (onRefresh) onRefresh()
+  }
+
+  const handleEditCampaign = (campaign) => {
+    setEditingCampaign(campaign)
+    setFormData({
+      name: campaign.name,
+      type: campaign.type,
+      bonusPoints: campaign.bonusPoints.toString(),
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      description: campaign.description,
+      eligibility: campaign.eligible
+    })
+    setShowAddModal(true)
+  }
+
+  const handleDeleteCampaign = async (campaignId) => {
+    if (confirm('Are you sure you want to delete this campaign?')) {
+      // Here you would call deleteCampaign mutation
+      // await deleteCampaign(campaignId).unwrap()
+      if (onRefresh) onRefresh()
+    }
   }
 
   return (
@@ -163,6 +206,7 @@ export default function Campaigns() {
             <option value="active">Active</option>
             <option value="scheduled">Scheduled</option>
             <option value="expired">Expired</option>
+            <option value="cancelled">Cancelled</option>
           </select>
         </div>
       </div>
@@ -170,10 +214,16 @@ export default function Campaigns() {
       {/* Campaigns List */}
       <div className="p-4 max-h-[350px] overflow-y-auto custom-scroll">
         <div className="space-y-3">
-          {paginatedCampaigns.length === 0 ? (
+          {transformedCampaigns.length === 0 ? (
             <div className="text-center py-8">
               <Megaphone size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No campaigns found</p>
+              <p className="text-sm text-gray-500">No campaigns available</p>
+              <p className="text-xs text-gray-400 mt-1">Click "Create Campaign" to start your first campaign</p>
+            </div>
+          ) : filteredCampaigns.length === 0 ? (
+            <div className="text-center py-8">
+              <Search size={32} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm text-gray-500">No matching campaigns found</p>
             </div>
           ) : (
             paginatedCampaigns.map((campaign, index) => {
@@ -207,8 +257,8 @@ export default function Campaigns() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-primary-600">+{campaign.bonusPoints} pts</p>
-                      <p className="text-[10px] text-gray-500">{campaign.redeemed} redeemed</p>
+                      <p className="text-sm font-bold text-primary-600">+{campaign.bonusPoints.toLocaleString()} pts</p>
+                      <p className="text-[10px] text-gray-500">{campaign.redeemed.toLocaleString()} redeemed</p>
                     </div>
                   </div>
 
@@ -221,23 +271,23 @@ export default function Campaigns() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Users size={10} className="text-gray-400" />
-                      <span>{campaign.eligibility === 'all' ? 'All Customers' : campaign.eligibility === 'new' ? 'New Customers' : 'Birthday Customers'}</span>
+                      <span>{campaign.eligible === 'all' ? 'All Customers' : campaign.eligible}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
                     <div className="flex items-center gap-1 text-[10px] text-gray-500">
                       <TrendingUp size={10} className="text-green-500" />
-                      <span>Engagement: {(campaign.redeemed / 500 * 100).toFixed(1)}%</span>
+                      <span>Engagement: {campaign.redeemed > 0 ? ((campaign.redeemed / 500) * 100).toFixed(1) : 0}%</span>
                     </div>
                     <div className="flex gap-1">
                       <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
                         <Eye size={12} />
                       </button>
-                      <button onClick={() => setEditingCampaign(campaign)} className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
+                      <button onClick={() => handleEditCampaign(campaign)} className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
                         <Edit size={12} />
                       </button>
-                      <button className="p-1 text-gray-400 hover:text-red-600 rounded-lg">
+                      <button onClick={() => handleDeleteCampaign(campaign.id)} className="p-1 text-gray-400 hover:text-red-600 rounded-lg">
                         <Trash2 size={12} />
                       </button>
                     </div>
@@ -316,6 +366,7 @@ export default function Campaigns() {
                     <option value="birthday">Birthday</option>
                     <option value="referral">Referral</option>
                     <option value="welcome">Welcome</option>
+                    <option value="festival">Festival Special</option>
                   </select>
                 </div>
                 <div>
@@ -361,6 +412,10 @@ export default function Campaigns() {
                   <option value="all">All Customers</option>
                   <option value="new">New Customers Only</option>
                   <option value="birthday">Birthday Customers</option>
+                  <option value="bronze">Bronze Tier Only</option>
+                  <option value="silver">Silver Tier Only</option>
+                  <option value="gold">Gold Tier Only</option>
+                  <option value="platinum">Platinum Tier Only</option>
                 </select>
               </div>
 

@@ -442,3 +442,235 @@ class ReturnRequest(models.Model):
         if not self.return_number:
             self.return_number = f"RET-{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
+
+
+class Review(models.Model):
+    """Product Review Model"""
+    
+    RATING_CHOICES = (
+        (1, '1 Star - Poor'),
+        (2, '2 Stars - Fair'),
+        (3, '3 Stars - Good'),
+        (4, '4 Stars - Very Good'),
+        (5, '5 Stars - Excellent'),
+    )
+    
+    # Relationships
+    product = models.ForeignKey('catalog.Product', on_delete=models.CASCADE, related_name='reviews')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews')
+    order = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='reviews', null=True, blank=True)
+    
+    # Review content
+    rating = models.IntegerField(choices=RATING_CHOICES)
+    title = models.CharField(max_length=200)
+    comment = models.TextField()
+    
+    # Images
+    images = models.JSONField(default=list, blank=True)
+    
+    # Status
+    is_verified_purchase = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=True)  # Auto-approve or admin approval
+    is_featured = models.BooleanField(default=False)
+    
+    # Helpful votes
+    helpful_count = models.IntegerField(default=0)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['product', '-created_at']),
+            models.Index(fields=['customer', '-created_at']),
+            models.Index(fields=['rating']),
+            models.Index(fields=['is_approved']),
+        ]
+        unique_together = ['product', 'customer']  # One review per product per customer
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.rating}★ by {self.customer.email}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-mark as verified purchase if customer actually bought this product
+        if not self.is_verified_purchase and self.order:
+            self.is_verified_purchase = True
+        super().save(*args, **kwargs)
+
+
+
+
+#-------------------------------------------------Retailers Loyality------------------------
+class LoyaltySettings(models.Model):
+    """Store loyalty program configuration"""
+    
+    # Point conversion
+    points_per_rupee = models.DecimalField(max_digits=5, decimal_places=2, default=1.00)
+    min_redemption_points = models.IntegerField(default=100)
+    max_redemption_points = models.IntegerField(default=5000)
+    
+    # Expiry settings
+    points_expiry_months = models.IntegerField(default=6)
+    
+    # Bonus settings
+    welcome_bonus_points = models.IntegerField(default=50)
+    birthday_bonus_points = models.IntegerField(default=100)
+    referral_bonus_points = models.IntegerField(default=200)
+    
+    # Tier thresholds
+    bronze_threshold = models.IntegerField(default=0)
+    silver_threshold = models.IntegerField(default=10000)
+    gold_threshold = models.IntegerField(default=25000)
+    platinum_threshold = models.IntegerField(default=50000)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Loyalty Settings"
+    
+    def __str__(self):
+        return f"Loyalty Settings (Points per ₹: {self.points_per_rupee})"
+
+
+class PointsTransaction(models.Model):
+    """Track all points movements"""
+    
+    TRANSACTION_TYPES = (
+        ('earned', 'Earned from Purchase'),
+        ('redeemed', 'Redeemed for Reward'),
+        ('expired', 'Expired Points'),
+        ('bonus', 'Bonus Points'),
+        ('adjusted', 'Manual Adjustment'),
+    )
+    
+    transaction_id = models.CharField(max_length=50, unique=True, db_index=True)
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, 
+                                 related_name='points_transactions')
+    retailer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, 
+                                 null=True, blank=True, related_name='retailer_points_transactions')
+    
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES, db_index=True)
+    points = models.IntegerField()
+    balance_after = models.IntegerField()
+    
+    # Related objects
+    order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='points_transactions')
+    reward = models.ForeignKey('Reward', on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='points_transactions')
+    
+    description = models.CharField(max_length=255)
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['customer', '-created_at']),
+            models.Index(fields=['transaction_type', 'created_at']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.transaction_id} - {self.customer.email} - {self.transaction_type}: {self.points}"
+    
+    def save(self, *args, **kwargs):
+        if not self.transaction_id:
+            self.transaction_id = f"PTX-{uuid.uuid4().hex[:12].upper()}"
+        super().save(*args, **kwargs)
+
+
+class Reward(models.Model):
+    """Rewards catalog for points redemption"""
+    
+    REWARD_CATEGORIES = (
+        ('discount', 'Discount Coupon'),
+        ('shipping', 'Free Shipping'),
+        ('gift', 'Gift Card'),
+        ('product', 'Free Product'),
+        ('access', 'Early Access'),
+    )
+    
+    name = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=REWARD_CATEGORIES, db_index=True)
+    points_required = models.IntegerField(validators=[MinValueValidator(1)])
+    description = models.TextField()
+    
+    # Reward value (e.g., discount amount in rupees)
+    value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Media
+    image_url = models.URLField(blank=True)
+    icon = models.CharField(max_length=50, blank=True)
+    
+    # Availability
+    stock = models.IntegerField(default=999, help_text="Remaining quantity, -1 for unlimited")
+    is_active = models.BooleanField(default=True, db_index=True)
+    is_popular = models.BooleanField(default=False)
+    
+    # Usage tracking
+    total_redeemed = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['points_required']
+        indexes = [
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['points_required']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.points_required} pts)"
+    
+    def can_redeem(self, customer_points):
+        return self.is_active and (self.stock > 0 or self.stock == -1) and customer_points >= self.points_required
+
+
+class Campaign(models.Model):
+    CAMPAIGN_TYPES = (
+        ('bonus', 'Bonus Points'),
+        ('birthday', 'Birthday Bonus'),
+        ('referral', 'Referral Bonus'),
+        ('welcome', 'Welcome Bonus'),
+        ('festival', 'Festival Special'),
+    )
+    
+    CAMPAIGN_STATUS = (
+        ('scheduled', 'Scheduled'),
+        ('active', 'Active'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    )
+    
+    name = models.CharField(max_length=200)
+    campaign_type = models.CharField(max_length=20, choices=CAMPAIGN_TYPES, db_index=True)
+    bonus_points = models.IntegerField()
+    description = models.TextField(blank=True)
+    eligible_tiers = models.JSONField(default=list, blank=True)
+    min_order_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    start_date = models.DateTimeField(db_index=True)
+    end_date = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=20, choices=CAMPAIGN_STATUS, default='scheduled', db_index=True)
+    total_redeemed = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'start_date', 'end_date']),
+            models.Index(fields=['campaign_type', 'status']),
+        ]
+    
+    def is_active_now(self):
+        from django.utils import timezone
+        now = timezone.now()
+        return self.start_date <= now <= self.end_date and self.status == 'active'
+    
+    

@@ -6,7 +6,7 @@ from commerce.models import Order, OrderItem
 from catalog.models import Product  # ✅ ADD THIS
 from analytics_engine.tasks import update_stats_on_order_created
 
-print("✅ Signals file loaded - Waiting for orders app")
+print("[INFO] Signals file loaded - Waiting for orders app")
 
 # ✅ ADD THIS - Auto clear product cache when products change
 @receiver([post_save, post_delete], sender=Product)

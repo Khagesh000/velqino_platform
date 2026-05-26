@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Clock, Calendar, Gift, Star, CheckCircle, AlertCircle, Search, Filter, ChevronLeft, ChevronRight, Download } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerLoyalty/PointsTransaction.scss'
 
-export default function PointsTransaction({ refreshTrigger }) {
+export default function PointsTransaction({ selectedCustomer, pointsTransactions = [], pointsSummary = null, refreshTrigger }) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -16,20 +16,23 @@ export default function PointsTransaction({ refreshTrigger }) {
     setMounted(true)
   }, [])
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, searchQuery])
+
   if (!mounted) return null
 
-  const transactions = [
-    { id: 1, customer: 'Rajesh Kumar', type: 'earned', points: 50, description: 'Purchase #ORD-001', date: '2026-04-14', status: 'completed', balance: 1250 },
-    { id: 2, customer: 'Priya Sharma', type: 'earned', points: 30, description: 'Purchase #ORD-002', date: '2026-04-13', status: 'completed', balance: 480 },
-    { id: 3, customer: 'Amit Singh', type: 'redeemed', points: 100, description: '₹50 discount on order', date: '2026-04-12', status: 'completed', balance: 890 },
-    { id: 4, customer: 'Sneha Reddy', type: 'earned', points: 75, description: 'Purchase #ORD-003', date: '2026-04-11', status: 'completed', balance: 305 },
-    { id: 5, customer: 'Vikram Mehta', type: 'bonus', points: 25, description: 'Birthday bonus', date: '2026-04-10', status: 'completed', balance: 2275 },
-    { id: 6, customer: 'Neha Gupta', type: 'earned', points: 45, description: 'Purchase #ORD-004', date: '2026-04-09', status: 'completed', balance: 715 },
-    { id: 7, customer: 'Rahul Verma', type: 'redeemed', points: 50, description: 'Free shipping', date: '2026-04-08', status: 'completed', balance: 30 },
-    { id: 8, customer: 'Meera Joshi', type: 'expired', points: 120, description: 'Points expired', date: '2026-04-07', status: 'expired', balance: 1770 },
-    { id: 9, customer: 'Rajesh Kumar', type: 'earned', points: 60, description: 'Purchase #ORD-005', date: '2026-04-06', status: 'completed', balance: 1310 },
-    { id: 10, customer: 'Amit Singh', type: 'bonus', points: 50, description: 'Referral bonus', date: '2026-04-05', status: 'completed', balance: 940 },
-  ]
+  // Transform backend transactions to component format
+  const getTypeFromBackend = (type) => {
+    switch(type) {
+      case 'earned': return 'earned'
+      case 'redeemed': return 'redeemed'
+      case 'bonus': return 'bonus'
+      case 'expired': return 'expired'
+      default: return 'earned'
+    }
+  }
 
   const getTypeConfig = (type) => {
     switch(type) {
@@ -46,6 +49,28 @@ export default function PointsTransaction({ refreshTrigger }) {
     }
   }
 
+  // Transform transactions from backend
+  const transactions = pointsTransactions.map(transaction => ({
+    id: transaction.transaction_id || transaction.id,
+    customer: transaction.customer_name || selectedCustomer?.full_name || 'Customer',
+    type: getTypeFromBackend(transaction.transaction_type),
+    points: transaction.points,
+    description: transaction.description,
+    date: transaction.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    status: 'completed',
+    balance: transaction.balance_after || 0
+  }))
+
+  // Use summary from backend or calculate from transactions
+  const summary = pointsSummary || {
+    total_earned: transactions.filter(t => t.type === 'earned' || t.type === 'bonus').reduce((sum, t) => sum + t.points, 0),
+    total_redeemed: transactions.filter(t => t.type === 'redeemed').reduce((sum, t) => sum + t.points, 0),
+    total_expired: transactions.filter(t => t.type === 'expired').reduce((sum, t) => sum + t.points, 0),
+    available_points: transactions.filter(t => t.type === 'earned' || t.type === 'bonus').reduce((sum, t) => sum + t.points, 0) - 
+                       transactions.filter(t => t.type === 'redeemed').reduce((sum, t) => sum + t.points, 0) -
+                       transactions.filter(t => t.type === 'expired').reduce((sum, t) => sum + t.points, 0)
+  }
+
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = searchQuery === '' || 
       transaction.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -57,17 +82,22 @@ export default function PointsTransaction({ refreshTrigger }) {
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
   const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-  const summary = {
-    totalEarned: transactions.filter(t => t.type === 'earned' || t.type === 'bonus').reduce((sum, t) => sum + t.points, 0),
-    totalRedeemed: transactions.filter(t => t.type === 'redeemed').reduce((sum, t) => sum + t.points, 0),
-    totalExpired: transactions.filter(t => t.type === 'expired').reduce((sum, t) => sum + t.points, 0),
-    netPoints: transactions.filter(t => t.type === 'earned' || t.type === 'bonus').reduce((sum, t) => sum + t.points, 0) - 
-               transactions.filter(t => t.type === 'redeemed').reduce((sum, t) => sum + t.points, 0) -
-               transactions.filter(t => t.type === 'expired').reduce((sum, t) => sum + t.points, 0)
+  const formatDate = (date) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   }
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  // If no customer selected
+  if (!selectedCustomer) {
+    return (
+      <div className="points-transaction bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-8 text-center">
+          <TrendingUp size={48} className="mx-auto text-gray-200 mb-3" />
+          <p className="text-sm text-gray-500">Select a customer to view transactions</p>
+          <p className="text-xs text-gray-400 mt-1">Click on any customer from the member list</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -83,26 +113,28 @@ export default function PointsTransaction({ refreshTrigger }) {
             <Download size={14} />
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Track points earned, redeemed and expired</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Track points for {selectedCustomer.full_name || selectedCustomer.name}
+        </p>
       </div>
 
       {/* Summary Stats */}
       <div className="p-4 grid grid-cols-4 gap-2 border-b border-gray-100 bg-gray-50">
         <div className="text-center">
-          <p className="text-lg font-bold text-green-600">+{summary.totalEarned.toLocaleString()}</p>
+          <p className="text-lg font-bold text-green-600">+{summary.total_earned.toLocaleString()}</p>
           <p className="text-[10px] text-gray-500">Earned</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-bold text-orange-600">-{summary.totalRedeemed.toLocaleString()}</p>
+          <p className="text-lg font-bold text-orange-600">-{summary.total_redeemed.toLocaleString()}</p>
           <p className="text-[10px] text-gray-500">Redeemed</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-bold text-red-600">-{summary.totalExpired.toLocaleString()}</p>
+          <p className="text-lg font-bold text-red-600">-{summary.total_expired.toLocaleString()}</p>
           <p className="text-[10px] text-gray-500">Expired</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-bold text-primary-600">{summary.netPoints.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">Net Points</p>
+          <p className="text-lg font-bold text-primary-600">{summary.available_points.toLocaleString()}</p>
+          <p className="text-[10px] text-gray-500">Available</p>
         </div>
       </div>
 
@@ -146,7 +178,7 @@ export default function PointsTransaction({ refreshTrigger }) {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by customer or description..."
+            placeholder="Search by description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
@@ -157,10 +189,16 @@ export default function PointsTransaction({ refreshTrigger }) {
       {/* Transactions List */}
       <div className="p-4 max-h-[320px] overflow-y-auto custom-scroll">
         <div className="space-y-3">
-          {paginatedTransactions.length === 0 ? (
+          {transactions.length === 0 ? (
             <div className="text-center py-8">
               <Clock size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No transactions found</p>
+              <p className="text-sm text-gray-500">No transactions yet</p>
+              <p className="text-xs text-gray-400 mt-1">Points will appear when customer places orders</p>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="text-center py-8">
+              <Search size={32} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm text-gray-500">No matching transactions</p>
             </div>
           ) : (
             paginatedTransactions.map((transaction, index) => {
@@ -185,7 +223,7 @@ export default function PointsTransaction({ refreshTrigger }) {
                     </div>
                     <div className="text-right">
                       <p className={`text-sm font-bold ${typeConfig.text}`}>
-                        {typeConfig.prefix}{transaction.points} points
+                        {typeConfig.prefix}{transaction.points.toLocaleString()} points
                       </p>
                       <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${typeConfig.bg} ${typeConfig.text} mt-1`}>
                         {typeConfig.icon}
@@ -201,7 +239,7 @@ export default function PointsTransaction({ refreshTrigger }) {
                     </div>
                     <div className="flex items-center gap-1">
                       <CheckCircle size={10} className="text-green-500" />
-                      <span>Balance: {transaction.balance} points</span>
+                      <span>Balance: {transaction.balance.toLocaleString()} points</span>
                     </div>
                   </div>
                 </div>

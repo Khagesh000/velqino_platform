@@ -27,56 +27,77 @@ export default function RetailerCustomers() {
 
   // API Calls
   const { data: customersData, isLoading: customersLoading, refetch: refetchCustomers } = useGetCustomersListQuery()
-  const { data: retailerCustomersData, isLoading: retailerCustomersLoading } = useGetRetailerCustomersQuery()
-  const { data: productsData } = useGetRetailerProductsQuery()
+const { data: retailerCustomersData, isLoading: retailerCustomersLoading } = useGetRetailerCustomersQuery()
+const { data: productsData } = useGetRetailerProductsQuery()
 
-  // Transform customers data from backend
-  const customers = customersData?.data || []
-  const retailerCustomers = retailerCustomersData?.data || []
+// Transform customers data from backend
+const customers = customersData?.data || []
+const retailerCustomers = retailerCustomersData?.data || []
 
-  // Get customer orders from retailer perspective
-  const getCustomerOrders = (customerId) => {
-    return retailerCustomers.filter(order => order.customer_id === customerId)
-  }
+// Get customer orders from retailer perspective - USE user.id
+const getCustomerOrders = (userId) => {
+  return retailerCustomers.filter(order => Number(order.customer__id) === Number(userId))
+}
 
-  // Get customer total spent
-  const getCustomerTotalSpent = (customerId) => {
-    const orders = getCustomerOrders(customerId)
-    return orders.reduce((sum, order) => sum + parseFloat(order.grand_total || 0), 0)
-  }
+const getCustomerTotalSpent = (userId) => {
+  const orders = getCustomerOrders(userId)
+  return orders.reduce((sum, order) => sum + parseFloat(order.grand_total || 0), 0)
+}
 
-  // Get customer visit count
-  const getCustomerVisitCount = (customerId) => {
-    return getCustomerOrders(customerId).length
-  }
+const getCustomerVisitCount = (userId) => {
+  return getCustomerOrders(userId).length
+}
 
-  // Get customer last visit
-  const getCustomerLastVisit = (customerId) => {
-    const orders = getCustomerOrders(customerId)
-    if (orders.length === 0) return null
-    return orders[0]?.created_at
-  }
+const getCustomerLastVisit = (userId) => {
+  const orders = getCustomerOrders(userId)
+  if (orders.length === 0) return null
+  return orders[0]?.created_at
+}
 
-  // Enrich customers with order data
-  const enrichedCustomers = customers.map(customer => ({
+// Enrich customers with order data - USE user.id (not customer.id)
+const enrichedCustomers = customers
+  .filter(customer => getCustomerOrders(customer.user?.id).length > 0)
+  .map(customer => ({
     ...customer,
-    totalSpent: getCustomerTotalSpent(customer.id),
-    visits: getCustomerVisitCount(customer.id),
-    lastVisit: getCustomerLastVisit(customer.id),
-    orders: getCustomerOrders(customer.id)
+    totalSpent: getCustomerTotalSpent(customer.user?.id),
+    visits: getCustomerVisitCount(customer.user?.id),
+    lastVisit: getCustomerLastVisit(customer.user?.id),
+    orders: getCustomerOrders(customer.user?.id)
   }))
 
-  // Handle customer selection
-  const handleSelectCustomer = (customer) => {
-    setSelectedCustomer(customer)
-  }
+// Handle customer selection
+const handleSelectCustomer = (customer) => {
+  console.log("✅ Customer selected:", customer?.full_name || customer?.name)
+  setSelectedCustomer(customer)
+}
 
-  // Refresh data when needed
-  useEffect(() => {
-    if (refreshTrigger > 0) {
-      refetchCustomers()
-    }
-  }, [refreshTrigger, refetchCustomers])
+// Get product ID from customer's first order
+const getProductIdFromCustomer = () => {
+  if (!selectedCustomer?.orders || selectedCustomer.orders.length === 0) return null
+  const firstOrder = selectedCustomer.orders[0]
+  if (!firstOrder?.items || firstOrder.items.length === 0) return null
+  return firstOrder.items[0]?.product_id || firstOrder.items[0]?.product?.id
+}
+
+// Refresh data when needed
+useEffect(() => {
+  if (refreshTrigger > 0) {
+    refetchCustomers()
+  }
+}, [refreshTrigger, refetchCustomers])
+
+// Debug useEffect
+useEffect(() => {
+  if (selectedCustomer) {
+    console.log("=== DEBUG SELECTED CUSTOMER ===")
+    console.log("Customer ID:", selectedCustomer.id)
+    console.log("Customer user.id:", selectedCustomer.user?.id)
+    console.log("Customer orders:", selectedCustomer.orders)
+    console.log("First order:", selectedCustomer.orders?.[0])
+    console.log("First order items:", selectedCustomer.orders?.[0]?.items)
+    console.log("Product ID from first item:", selectedCustomer.orders?.[0]?.items?.[0]?.product_id)
+  }
+}, [selectedCustomer])
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
@@ -108,7 +129,7 @@ export default function RetailerCustomers() {
               {/* Main Content - 2 Columns */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Left Column - Customers List (2/3 width) */}
+                {/* Left Column - Customers List */}
                 <div className="lg:col-span-2">
                   <div style={{ minHeight: '500px' }}>
                     <Suspense fallback={<TablePlaceholder />}>
@@ -123,7 +144,7 @@ export default function RetailerCustomers() {
                   </div>
                 </div>
 
-                {/* Right Column - Customer Details & Quick Actions (1/3 width) */}
+                {/* Right Column - Customer Details & Quick Actions */}
                 <div className="space-y-6">
                   <div style={{ minHeight: '350px' }}>
                     <Suspense fallback={<SidebarPlaceholder />}>
@@ -172,6 +193,7 @@ export default function RetailerCustomers() {
                       <FeedbackReviews 
                         selectedCustomer={selectedCustomer}
                         customerOrders={selectedCustomer?.orders || []}
+                        productId={getProductIdFromCustomer()}
                       />
                     </Suspense>
                   </div> 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Gift, Star, Award, Tag, Plus, Edit, Trash2, Eye, ShoppingCart, CheckCircle, X, Save, Search, Filter, ChevronLeft, ChevronRight } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerLoyalty/RewardsCatalog.scss'
 
-export default function RewardsCatalog() {
+export default function RewardsCatalog({ onRefresh, rewards = [] }) {
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -26,22 +26,30 @@ export default function RewardsCatalog() {
     setMounted(true)
   }, [])
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, categoryFilter])
+
   if (!mounted) return null
 
-  const rewards = [
-    { id: 1, name: '₹50 Off Coupon', points: 500, category: 'discount', description: 'Get ₹50 off on next purchase', image: '🏷️', stock: 45, popular: true, used: 120 },
-    { id: 2, name: 'Free Shipping', points: 800, category: 'shipping', description: 'Free shipping on orders above ₹999', image: '🚚', stock: 100, popular: true, used: 85 },
-    { id: 3, name: '10% Discount', points: 1000, category: 'discount', description: '10% off on total purchase', image: '💰', stock: 30, popular: false, used: 45 },
-    { id: 4, name: '₹100 Gift Card', points: 1500, category: 'gift', description: '₹100 store credit', image: '🎁', stock: 20, popular: true, used: 62 },
-    { id: 5, name: 'Free Product', points: 2500, category: 'product', description: 'Choose any product under ₹500', image: '🎁', stock: 10, popular: false, used: 18 },
-    { id: 6, name: 'Premium T-Shirt', points: 3500, category: 'product', description: 'Exclusive premium cotton t-shirt', image: '👕', stock: 5, popular: true, used: 12 },
-    { id: 7, name: '20% Discount', points: 2000, category: 'discount', description: '20% off on total purchase', image: '💰', stock: 25, popular: false, used: 38 },
-    { id: 8, name: 'Early Access', points: 1200, category: 'access', description: 'Early access to new products', image: '🔑', stock: 999, popular: false, used: 28 },
-  ]
+  // Transform backend rewards to component format
+  const transformedRewards = rewards.map(reward => ({
+    id: reward.id,
+    name: reward.name,
+    points: reward.points_required,
+    category: reward.category,
+    description: reward.description,
+    image: reward.image_url || reward.icon || '🎁',
+    stock: reward.stock === -1 ? 'Unlimited' : reward.stock,
+    popular: reward.is_popular,
+    used: reward.total_redeemed || 0,
+    is_active: reward.is_active
+  }))
 
   const categories = ['all', 'discount', 'shipping', 'gift', 'product', 'access']
 
-  const filteredRewards = rewards.filter(reward => {
+  const filteredRewards = transformedRewards.filter(reward => {
     const matchesSearch = searchQuery === '' || 
       reward.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       reward.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -63,10 +71,15 @@ export default function RewardsCatalog() {
     }
   }
 
-  const handleAddReward = () => {
+  const handleAddReward = async () => {
     if (!formData.name || !formData.points) return
+    
+    // Here you would call createReward mutation
+    // await createReward({...}).unwrap()
+    
     setShowAddModal(false)
     setFormData({ name: '', points: '', category: '', description: '', image: '', stock: '' })
+    if (onRefresh) onRefresh()
   }
 
   const handleEditReward = (reward) => {
@@ -77,16 +90,24 @@ export default function RewardsCatalog() {
       category: reward.category,
       description: reward.description,
       image: reward.image,
-      stock: reward.stock.toString()
+      stock: reward.stock === 'Unlimited' ? '-1' : reward.stock.toString()
     })
     setShowAddModal(true)
   }
 
+  const handleDeleteReward = async (rewardId) => {
+    if (confirm('Are you sure you want to delete this reward?')) {
+      // Here you would call deleteReward mutation
+      // await deleteReward(rewardId).unwrap()
+      if (onRefresh) onRefresh()
+    }
+  }
+
   const summary = {
-    totalRewards: rewards.length,
-    totalRedeemed: rewards.reduce((sum, r) => sum + r.used, 0),
-    popularRewards: rewards.filter(r => r.popular).length,
-    lowStock: rewards.filter(r => r.stock < 20).length
+    totalRewards: transformedRewards.length,
+    totalRedeemed: transformedRewards.reduce((sum, r) => sum + r.used, 0),
+    popularRewards: transformedRewards.filter(r => r.popular).length,
+    lowStock: transformedRewards.filter(r => r.stock !== 'Unlimited' && parseInt(r.stock) < 20).length
   }
 
   return (
@@ -164,10 +185,16 @@ export default function RewardsCatalog() {
       {/* Rewards Grid */}
       <div className="p-4 max-h-[360px] overflow-y-auto custom-scroll">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {paginatedRewards.length === 0 ? (
+          {transformedRewards.length === 0 ? (
             <div className="col-span-2 text-center py-8">
               <Gift size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No rewards found</p>
+              <p className="text-sm text-gray-500">No rewards available</p>
+              <p className="text-xs text-gray-400 mt-1">Click "Add Reward" to create your first reward</p>
+            </div>
+          ) : filteredRewards.length === 0 ? (
+            <div className="col-span-2 text-center py-8">
+              <Search size={32} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm text-gray-500">No matching rewards found</p>
             </div>
           ) : (
             paginatedRewards.map((reward, index) => {
@@ -202,15 +229,15 @@ export default function RewardsCatalog() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-primary-600">{reward.points} pts</p>
-                          <p className="text-[10px] text-gray-500">Stock: {reward.stock}</p>
+                          <p className="text-sm font-bold text-primary-600">{reward.points.toLocaleString()} pts</p>
+                          <p className="text-[10px] text-gray-500">Stock: {typeof reward.stock === 'number' ? reward.stock.toLocaleString() : reward.stock}</p>
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{reward.description}</p>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
                         <div className="flex items-center gap-1 text-[10px] text-gray-500">
                           <CheckCircle size={10} className="text-green-500" />
-                          <span>{reward.used} redeemed</span>
+                          <span>{reward.used.toLocaleString()} redeemed</span>
                         </div>
                         <div className="flex gap-1">
                           <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
@@ -219,7 +246,7 @@ export default function RewardsCatalog() {
                           <button onClick={() => handleEditReward(reward)} className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
                             <Edit size={12} />
                           </button>
-                          <button className="p-1 text-gray-400 hover:text-red-600 rounded-lg">
+                          <button onClick={() => handleDeleteReward(reward.id)} className="p-1 text-gray-400 hover:text-red-600 rounded-lg">
                             <Trash2 size={12} />
                           </button>
                         </div>
@@ -331,7 +358,7 @@ export default function RewardsCatalog() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
                   <input
                     type="number"
-                    placeholder="Stock quantity"
+                    placeholder="Stock quantity (-1 for unlimited)"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"

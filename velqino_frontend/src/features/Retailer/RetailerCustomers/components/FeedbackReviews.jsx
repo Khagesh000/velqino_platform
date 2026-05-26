@@ -1,15 +1,37 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Star, MessageCircle, ThumbsUp, ThumbsDown, Flag, Clock, User, Calendar, Filter, Search, ChevronLeft, ChevronRight } from '../../../../utils/icons'
+import { Star, MessageCircle, ThumbsUp, ThumbsDown, Flag, Clock, User, Calendar, Filter, Search, ChevronLeft, ChevronRight, Plus, X } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerCustomers/FeedbackReviews.scss'
+import { useGetProductReviewsQuery, useMarkReviewHelpfulMutation } from '@/redux/customer/slices/reviewsSlice'
 
-export default function FeedbackReviews({ selectedCustomer, customerOrders = [] }) {
+export default function FeedbackReviews({ selectedCustomer, customerOrders = [], productId = null }) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('reviews')
   const [ratingFilter, setRatingFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    title: '',
+    comment: '',
+    product_id: null,
+    order_id: ''
+  })
   const itemsPerPage = 3
+
+  
+
+  console.log("🔍 DEBUG - productId value:", productId);  // ✅ ADD THIS LINE
+  console.log("🔍 DEBUG - selectedCustomer:", selectedCustomer?.name);
+
+  // RTK Query hooks for product reviews
+  const { data: reviewsData, isLoading } = useGetProductReviewsQuery(  // ✅ Added isLoading
+    { productId: productId },
+    { skip: !productId }
+  )
+
+  const [markReviewHelpful] = useMarkReviewHelpfulMutation()
 
   useEffect(() => {
     setMounted(true)
@@ -17,12 +39,12 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
 
   if (!mounted) return null
 
-  if (!selectedCustomer) {
+  if (!selectedCustomer && !productId) {
     return (
       <div className="feedback-reviews bg-white rounded-xl shadow-sm border border-gray-100 h-full">
         <div className="p-8 text-center">
           <Star size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-sm text-gray-500">Select a customer to view feedback</p>
+          <p className="text-sm text-gray-500">Select a customer or product to view feedback</p>
           <p className="text-xs text-gray-400 mt-1">Click on any customer from the list</p>
         </div>
       </div>
@@ -33,51 +55,30 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
     return selectedCustomer?.full_name || selectedCustomer?.name || selectedCustomer?.user?.full_name || 'Customer'
   }
 
-  // Generate reviews from customer orders
-  const generateReviewsFromOrders = () => {
-    const reviewList = []
-    const products = ['Premium Cotton T-Shirt', 'Wireless Headphones', 'Smart Watch Pro', 'Leather Wallet', 'Running Shoes']
-    const reviewTitles = ['Excellent product!', 'Good value for money', 'Amazing product', 'Average experience', 'Perfect!']
-    const reviewComments = [
-      'Very good quality, fast delivery. Will buy again.',
-      'Product quality is good. Slightly delayed delivery.',
-      'Best purchase ever! Highly recommended.',
-      'Product is okay but not worth the price.',
-      'Exactly what I was looking for. Great service.'
-    ]
+  // Get reviews from API response
+  const reviews = reviewsData?.data?.reviews || []
+  const summary = reviewsData?.data?.summary || {}
+  
+  const filteredReviews = ratingFilter === 'all' 
+    ? reviews 
+    : reviews.filter(r => r.rating === parseInt(ratingFilter))
 
-    customerOrders.forEach((order, index) => {
-      // Generate 1-2 reviews per customer based on orders
-      const reviewCount = Math.min(order.items?.length || 1, 2)
-      
-      for (let i = 0; i < reviewCount; i++) {
-        const randomRating = Math.floor(Math.random() * 2) + 4 // 4 or 5 stars
-        const productIndex = (index + i) % products.length
-        
-        reviewList.push({
-          id: `${order.order_number}_${i}`,
-          customer: getCustomerName(),
-          rating: randomRating,
-          title: reviewTitles[randomRating - 1] || reviewTitles[0],
-          comment: reviewComments[randomRating - 1] || reviewComments[0],
-          date: order.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          product: order.items?.[i]?.product_name || products[productIndex],
-          helpful: Math.floor(Math.random() * 25),
-          verified: true
-        })
-      }
-    })
+  const totalPages = Math.ceil(filteredReviews.length / itemsPerPage)
+  const paginatedReviews = filteredReviews.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-    // Sort by date descending
-    return reviewList.sort((a, b) => new Date(b.date) - new Date(a.date))
-  }
+  const averageRating = summary.average_rating || '0.0'
+  const totalReviews = summary.total || 0
+  const ratingDistribution = summary.rating_distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
 
-  // Generate feedback from customer data
+  const positivePercentage = totalReviews > 0
+    ? Math.round(((ratingDistribution[5] + ratingDistribution[4]) / totalReviews) * 100)
+    : 0
+
+  // Generate feedback from customer data (still using mock for feedback tab)
   const generateFeedbackFromCustomer = () => {
     const feedbackList = []
     const currentDate = new Date().toISOString().split('T')[0]
     
-    // Add birthday feedback if exists
     if (selectedCustomer?.date_of_birth) {
       feedbackList.push({
         id: 'birthday_1',
@@ -90,7 +91,6 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
       })
     }
 
-    // Add order related feedback
     customerOrders.forEach((order, index) => {
       if (order.status === 'delivered' && index < 2) {
         feedbackList.push({
@@ -110,31 +110,7 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
     return feedbackList.sort((a, b) => new Date(b.date) - new Date(a.date))
   }
 
-  const reviews = generateReviewsFromOrders()
   const feedbacks = generateFeedbackFromCustomer()
-
-  const filteredReviews = ratingFilter === 'all' 
-    ? reviews 
-    : reviews.filter(r => r.rating === parseInt(ratingFilter))
-
-  const totalPages = Math.ceil(filteredReviews.length / itemsPerPage)
-  const paginatedReviews = filteredReviews.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-
-  const averageRating = reviews.length > 0 
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : '0.0'
-
-  const ratingDistribution = {
-    5: reviews.filter(r => r.rating === 5).length,
-    4: reviews.filter(r => r.rating === 4).length,
-    3: reviews.filter(r => r.rating === 3).length,
-    2: reviews.filter(r => r.rating === 2).length,
-    1: reviews.filter(r => r.rating === 1).length,
-  }
-
-  const positivePercentage = reviews.length > 0
-    ? Math.round((reviews.filter(r => r.rating >= 4).length / reviews.length) * 100)
-    : 0
 
   const renderStars = (rating) => {
     return (
@@ -155,19 +131,57 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  const handleMarkHelpful = async (reviewId) => {
+    try {
+      await markReviewHelpful(reviewId).unwrap()
+      refetch()
+    } catch (error) {
+      console.error('Failed to mark helpful:', error)
+    }
+  }
+
+  const handleSubmitReview = async () => {
+    // Implementation for create review mutation
+    console.log('Submit review:', reviewForm)
+    setShowReviewModal(false)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="feedback-reviews bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading reviews...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="feedback-reviews bg-white rounded-xl shadow-sm border border-gray-100 h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <Star size={18} className="text-yellow-500" />
-          <h3 className="text-base font-semibold text-gray-900">Feedback & Reviews</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Star size={18} className="text-yellow-500" />
+            <h3 className="text-base font-semibold text-gray-900">Feedback & Reviews</h3>
+          </div>
+          {selectedCustomer && (
+            <button 
+              onClick={() => setShowReviewModal(true)}
+              className="px-2 py-1 text-[10px] font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+            >
+              Write Review
+            </button>
+          )}
         </div>
-        <p className="text-xs text-gray-500 mt-1">Customer ratings and feedback for {getCustomerName()}</p>
+        <p className="text-xs text-gray-500 mt-1">
+          {selectedCustomer ? `Reviews from ${getCustomerName()}` : 'Customer ratings and feedback'}
+        </p>
       </div>
 
       {/* Rating Summary */}
-      {reviews.length > 0 ? (
+      {totalReviews > 0 && (
         <div className="p-4 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center gap-6">
             <div className="text-center">
@@ -175,12 +189,12 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
               <div className="flex items-center justify-center mt-1">
                 {renderStars(Math.round(averageRating))}
               </div>
-              <p className="text-[10px] text-gray-500 mt-1">Based on {reviews.length} reviews</p>
+              <p className="text-[10px] text-gray-500 mt-1">Based on {totalReviews} reviews</p>
             </div>
             <div className="flex-1 space-y-1">
               {[5,4,3,2,1].map(rating => {
-                const count = ratingDistribution[rating]
-                const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0
+                const count = ratingDistribution[rating] || 0
+                const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0
                 return (
                   <div key={rating} className="flex items-center gap-2">
                     <span className="text-xs text-gray-600 w-6">{rating}★</span>
@@ -197,10 +211,6 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
             </div>
           </div>
         </div>
-      ) : (
-        <div className="p-4 border-b border-gray-100 bg-gray-50 text-center">
-          <p className="text-sm text-gray-500">No reviews yet</p>
-        </div>
       )}
 
       {/* Tabs */}
@@ -209,7 +219,7 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
           onClick={() => setActiveTab('reviews')}
           className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'reviews' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
         >
-          Reviews ({reviews.length})
+          Reviews ({totalReviews})
         </button>
         <button
           onClick={() => setActiveTab('feedback')}
@@ -257,28 +267,31 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-600 text-xs font-semibold">{getCustomerName().charAt(0)}</span>
+                        <span className="text-primary-600 text-xs font-semibold">{review.customer_name?.charAt(0) || 'C'}</span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{review.customer}</p>
+                        <p className="text-sm font-semibold text-gray-900">{review.customer_name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {renderStars(review.rating)}
-                          <span className="text-[10px] text-gray-400">{formatDate(review.date)}</span>
+                          <span className="text-[10px] text-gray-400">{formatDate(review.created_at)}</span>
                         </div>
                       </div>
                     </div>
-                    {review.verified && (
+                    {review.is_verified_purchase && (
                       <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">Verified</span>
                     )}
                   </div>
                   <h4 className="text-sm font-medium text-gray-900 mt-2">{review.title}</h4>
                   <p className="text-xs text-gray-600 mt-1">{review.comment}</p>
                   <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
-                    <span>Product: {review.product}</span>
-                    <div className="flex items-center gap-1">
+                    <span>Product: {review.product_name}</span>
+                    <button 
+                      onClick={() => handleMarkHelpful(review.id)}
+                      className="flex items-center gap-1 text-gray-500 hover:text-primary-600"
+                    >
                       <ThumbsUp size={10} />
-                      <span>{review.helpful} helpful</span>
-                    </div>
+                      <span>{review.helpful_count} helpful</span>
+                    </button>
                   </div>
                   <div className="flex gap-3 mt-2 pt-2 border-t border-gray-100">
                     <button className="text-[10px] text-gray-500 hover:text-primary-600 flex items-center gap-1">
@@ -341,7 +354,7 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
                         feedback.type === 'complaint' ? 'bg-red-200' :
                         feedback.type === 'suggestion' ? 'bg-blue-200' : 'bg-green-200'
                       }`}>
-                        <span className="text-xs font-semibold">{getCustomerName().charAt(0)}</span>
+                        <span className="text-xs font-semibold">{feedback.customer.charAt(0)}</span>
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{feedback.customer}</p>
@@ -382,7 +395,7 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
       </div>
 
       {/* Footer */}
-      {reviews.length > 0 && (
+      {totalReviews > 0 && (
         <div className="p-3 border-t border-gray-100 bg-gray-50 rounded-b-xl">
           <div className="flex items-center justify-between text-[10px] text-gray-500">
             <div className="flex items-center gap-1">
@@ -390,6 +403,70 @@ export default function FeedbackReviews({ selectedCustomer, customerOrders = [] 
               <span>{positivePercentage}% positive reviews</span>
             </div>
             <button className="text-primary-600">View all</button>
+          </div>
+        </div>
+      )}
+
+      {/* Write Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl max-w-md w-full p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Write a Review</h3>
+              <button onClick={() => setShowReviewModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(star => (
+                    <button
+                      key={star}
+                      onClick={() => setReviewForm({...reviewForm, rating: star})}
+                      className="focus:outline-none"
+                    >
+                      <Star size={24} className={star <= reviewForm.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={reviewForm.title}
+                  onChange={(e) => setReviewForm({...reviewForm, title: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  placeholder="Summary of your experience"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                <textarea
+                  rows={4}
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({...reviewForm, comment: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 resize-none"
+                  placeholder="Share your experience with this product..."
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                >
+                  Submit Review
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

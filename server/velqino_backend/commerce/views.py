@@ -1,30 +1,48 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny  # ✅ Added AllowAny
 from rest_framework.response import Response
 from django.db import transaction
+from django.db.models import Sum, Q, Avg  # ✅ Added Avg
 from rest_framework import status
-from .models import Order, OrderItem, Cart, CartItem
-from .serializers import CartSerializer, AddToCartSerializer,  ApplyCouponSerializer, UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer, OrderCreateSerializer, UpdateReturnStatusSerializer
+from datetime import timedelta  # ✅ Added timedelta
+from decimal import Decimal
+from django.core.cache import cache  # ✅ Fixed (was cacheSum)
+import uuid
+import io
+import logging
+
+from .models import Order, OrderItem, Cart, CartItem, LoyaltySettings, PointsTransaction, Reward, Campaign
+from .serializers import (
+    CartSerializer, AddToCartSerializer, ApplyCouponSerializer, 
+    UpdateCartItemSerializer, CartItemSerializer, OrderListSerializer, 
+    OrderCreateSerializer, UpdateReturnStatusSerializer,
+    LoyaltySettingsSerializer, PointsTransactionSerializer, 
+    RedeemPointsSerializer, CustomerPointsSummarySerializer, CreateRewardSerializer,
+    RewardSerializer, UpdateLoyaltySettingsSerializer, UpdateRewardSerializer, 
+    CampaignSerializer, UpdateCampaignSerializer, CreateCampaignSerializer, 
+)
+from .utils import (
+    calculate_points, calculate_tier, get_customer_total_spent,
+    get_customer_points_balance, add_points_transaction
+)
+from .services.cart_service import CartService
 from catalog.models import Product
 from identity.serializers import AddressSerializer
-from .services.cart_service import CartService
-from decimal import Decimal
-from django.core.cache import cache
-import uuid
 from identity.permissions import IsAdmin, IsSupport, IsAdminOrSupport
-from django.http import HttpResponse
-from reportlab.lib.pagesizes import A4 # type: ignore
-from reportlab.lib.units import inch # type: ignore
-from reportlab.lib import colors # type: ignore
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer # type: ignore
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle # type: ignore
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT # type: ignore
-from django.utils import timezone
-import logging
 from commerce.models import OrderStatusHistory
 
+# ReportLab imports
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+
+from django.utils import timezone
+from django.http import HttpResponse
+
 logger = logging.getLogger(__name__)
-import io
 
 
 @api_view(['POST'])
@@ -840,7 +858,7 @@ def create_customer_order(request):
 @permission_classes([IsAuthenticated])
 def get_retailer_customers(request):
     """
-    Retailer sees all customers who bought from them
+    Retailer sees all customers who bought from them with full order details
     """
     user = request.user
     
@@ -850,18 +868,39 @@ def get_retailer_customers(request):
             'message': 'Only retailers can view customers'
         }, status=403)
     
-    # Get unique customers from orders
-    customers = Order.objects.filter(
+    # Get all orders with their items
+    orders = Order.objects.filter(
         retailer=user
-    ).select_related('customer').values(
-        'customer__id', 
-        'customer__email',
-        'customer__mobile'
-    ).distinct()
+    ).select_related('customer').prefetch_related('items__product').order_by('-created_at')
+    
+    data = []
+    for order in orders:
+        # Get items for this order
+        items_data = []
+        for item in order.items.all():
+            items_data.append({
+                'product_id': item.product.id,
+                'product_name': item.product_name,
+                'product_sku': item.product_sku,
+                'quantity': item.quantity,
+                'price': str(item.price),
+                'total': str(item.total)
+            })
+        
+        data.append({
+            'customer__id': order.customer.id,
+            'customer__email': order.customer.email,
+            'customer__mobile': order.customer.mobile,
+            'order_number': order.order_number,
+            'grand_total': str(order.grand_total),
+            'status': order.status,
+            'created_at': order.created_at,
+            'items': items_data
+        })
     
     return Response({
         'status': 'success',
-        'data': list(customers)
+        'data': data
     })
 
 
@@ -1366,3 +1405,1261 @@ def update_return_status(request, return_id):
         'status': 'success',
         'message': f'Return request {new_status} successfully'
     })
+
+
+# ========== REVIEWS VIEWS ==========
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # ✅ No authentication required
+def get_product_reviews(request, product_id):
+    """
+    Get all reviews for a product (public access)
+    """
+    from catalog.models import Product
+    from .models import Review
+    from .serializers import ReviewSerializer
+    
+    try:
+        product = Product.objects.get(id=product_id, status='active')
+    except Product.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Product not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    reviews = Review.objects.filter(product=product, is_approved=True).order_by('-created_at')
+    
+    # Pagination
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 10))
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated = reviews[start:end]
+    
+    serializer = ReviewSerializer(paginated, many=True)
+    
+    # Calculate rating summary
+    total_reviews = reviews.count()
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'reviews': serializer.data,
+            'summary': {
+                'total': total_reviews,
+                'average_rating': round(avg_rating, 1),
+                'rating_distribution': {
+                    5: reviews.filter(rating=5).count(),
+                    4: reviews.filter(rating=4).count(),
+                    3: reviews.filter(rating=3).count(),
+                    2: reviews.filter(rating=2).count(),
+                    1: reviews.filter(rating=1).count(),
+                }
+            },
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total_reviews,
+                'total_pages': (total_reviews + per_page - 1) // per_page
+            }
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # ✅ No authentication required
+def get_product_reviews_summary(request, product_id):
+    """
+    Get only rating summary for a product (lightweight, public)
+    """
+    from catalog.models import Product
+    from .models import Review
+    from django.db.models import Avg
+    
+    try:
+        product = Product.objects.get(id=product_id, status='active')
+    except Product.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Product not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    reviews = Review.objects.filter(product=product, is_approved=True)
+    total_reviews = reviews.count()
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'product_id': product_id,
+            'product_name': product.name,
+            'total_reviews': total_reviews,
+            'average_rating': round(avg_rating, 1),
+            'rating_distribution': {
+                5: reviews.filter(rating=5).count(),
+                4: reviews.filter(rating=4).count(),
+                3: reviews.filter(rating=3).count(),
+                2: reviews.filter(rating=2).count(),
+                1: reviews.filter(rating=1).count(),
+            }
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_review(request):
+    """
+    Create a product review (authentication required)
+    """
+    user = request.user
+    
+    if user.role != 'customer':
+        return Response({
+            'status': 'error',
+            'message': 'Only customers can write reviews'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    from catalog.models import Product
+    from .models import Review, Order, OrderItem
+    from .serializers import CreateReviewSerializer
+    
+    serializer = CreateReviewSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    product_id = data.get('product_id')
+    order_id = data.get('order_id')
+    rating = data.get('rating')
+    title = data.get('title')
+    comment = data.get('comment')
+    images = data.get('images', [])
+    
+    # Check if product exists
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Product not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if user already reviewed this product
+    if Review.objects.filter(product=product, customer=user).exists():
+        return Response({
+            'status': 'error',
+            'message': 'You have already reviewed this product'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if user actually purchased this product (verified purchase)
+    is_verified = False
+    order = None
+    if order_id:
+        try:
+            order = Order.objects.get(order_number=order_id, customer=user)
+            # Check if this order contains the product
+            if OrderItem.objects.filter(order=order, product=product).exists():
+                is_verified = True
+        except Order.DoesNotExist:
+            pass
+    
+    # Create review
+    review = Review.objects.create(
+        product=product,
+        customer=user,
+        order=order,
+        rating=rating,
+        title=title,
+        comment=comment,
+        images=images,
+        is_verified_purchase=is_verified,
+        is_approved=True  # Auto-approve for now
+    )
+    
+    from .serializers import ReviewSerializer
+    response_serializer = ReviewSerializer(review)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Review submitted successfully',
+        'data': response_serializer.data
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_review(request, review_id):
+    """
+    Update own review (authentication required)
+    """
+    user = request.user
+    
+    from .models import Review
+    from .serializers import UpdateReviewSerializer
+    
+    try:
+        review = Review.objects.get(id=review_id, customer=user)
+    except Review.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Review not found or you are not authorized'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = UpdateReviewSerializer(data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    
+    if 'rating' in data:
+        review.rating = data['rating']
+    if 'title' in data:
+        review.title = data['title']
+    if 'comment' in data:
+        review.comment = data['comment']
+    if 'images' in data:
+        review.images = data['images']
+    
+    review.save()
+    
+    from .serializers import ReviewSerializer
+    response_serializer = ReviewSerializer(review)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Review updated successfully',
+        'data': response_serializer.data
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_review(request, review_id):
+    """
+    Delete own review (authentication required)
+    """
+    user = request.user
+    
+    from .models import Review
+    
+    try:
+        review = Review.objects.get(id=review_id, customer=user)
+    except Review.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Review not found or you are not authorized'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    review.delete()
+    
+    return Response({
+        'status': 'success',
+        'message': 'Review deleted successfully'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_review_helpful(request, review_id):
+    """
+    Mark a review as helpful (customer action)
+    """
+    user = request.user
+    
+    from .models import Review
+    
+    try:
+        review = Review.objects.get(id=review_id)
+    except Review.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Review not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Simple increment - can add tracking to prevent multiple marks
+    review.helpful_count += 1
+    review.save()
+    
+    return Response({
+        'status': 'success',
+        'message': 'Marked as helpful',
+        'data': {'helpful_count': review.helpful_count}
+    })
+
+
+
+#----------------------------------------------------------Retailers Anaylyitcs-----------------------------------------------
+# ========== LOYALTY SETTINGS ENDPOINTS ==========
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def loyalty_settings(request):
+    """
+    GET: Get loyalty program settings
+    PUT: Update loyalty program settings (admin/retailer only)
+    """
+    user = request.user
+    
+    # Only admin or retailer can update settings
+    if request.method == 'PUT' and user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can update loyalty settings'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    settings_obj = LoyaltySettings.objects.first()
+    
+    if not settings_obj:
+        # Create default settings if none exist
+        settings_obj = LoyaltySettings.objects.create()
+    
+    if request.method == 'GET':
+        serializer = LoyaltySettingsSerializer(settings_obj)
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        })
+    
+    elif request.method == 'PUT':
+        serializer = LoyaltySettingsSerializer(settings_obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'status': 'success',
+                'message': 'Loyalty settings updated successfully',
+                'data': serializer.data
+            })
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========== POINTS TRANSACTION ENDPOINTS ==========
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_points_transactions(request):
+    """
+    Get points transactions for a customer
+    Query params: ?customer_id=123&page=1&per_page=20&type=earned
+    """
+    user = request.user
+    
+    # Retailer can view any customer's transactions
+    if user.role == 'retailer':
+        customer_id = request.GET.get('customer_id')
+        if customer_id:
+            from identity.models import User
+            try:
+                customer = User.objects.get(id=customer_id, role='customer')
+            except User.DoesNotExist:
+                return Response({
+                    'status': 'error',
+                    'message': 'Customer not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({
+                'status': 'error',
+                'message': 'customer_id required for retailer'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Customer can only view their own transactions
+    elif user.role == 'customer':
+        customer = user
+    
+    else:
+        return Response({
+            'status': 'error',
+            'message': 'Unauthorized access'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Build queryset
+    transactions = PointsTransaction.objects.filter(customer=customer)
+    
+    # Filter by transaction type
+    transaction_type = request.GET.get('type')
+    if transaction_type:
+        transactions = transactions.filter(transaction_type=transaction_type)
+    
+    # Filter by date range
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    if from_date:
+        transactions = transactions.filter(created_at__date__gte=from_date)
+    if to_date:
+        transactions = transactions.filter(created_at__date__lte=to_date)
+    
+    # Pagination
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    total = transactions.count()
+    paginated = transactions[start:end]
+    
+    serializer = PointsTransactionSerializer(paginated, many=True)
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'transactions': serializer.data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_customer_points_summary(request):
+    """
+    Get points summary for a customer (balance, tier, expiring points)
+    """
+    user = request.user
+    
+    # Retailer can view any customer's summary
+    if user.role == 'retailer':
+        customer_id = request.GET.get('customer_id')
+        if not customer_id:
+            return Response({
+                'status': 'error',
+                'message': 'customer_id required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        from identity.models import User
+        try:
+            customer = User.objects.get(id=customer_id, role='customer')
+        except User.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Customer not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+    
+    elif user.role == 'customer':
+        customer = user
+    
+    else:
+        return Response({
+            'status': 'error',
+            'message': 'Unauthorized access'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get settings
+    settings_obj = LoyaltySettings.objects.first()
+    if not settings_obj:
+        settings_obj = LoyaltySettings.objects.create()
+    
+    # Calculate totals
+    transactions = PointsTransaction.objects.filter(customer=customer)
+    
+    total_earned = transactions.filter(
+        transaction_type__in=['earned', 'bonus']
+    ).aggregate(total=Sum('points'))['total'] or 0
+    
+    total_redeemed = transactions.filter(
+        transaction_type='redeemed'
+    ).aggregate(total=Sum('points'))['total'] or 0
+    
+    total_expired = transactions.filter(
+        transaction_type='expired'
+    ).aggregate(total=Sum('points'))['total'] or 0
+    
+    available_points = total_earned - total_redeemed - total_expired
+    
+    # Get expiring points (next 30 days)
+    next_30_days = timezone.now() + timedelta(days=30)
+    expiring_transactions = transactions.filter(
+        transaction_type='earned',
+        expires_at__lte=next_30_days,
+        expires_at__gt=timezone.now()
+    )
+    expiring_points = expiring_transactions.aggregate(total=Sum('points'))['total'] or 0
+    expiring_date = expiring_transactions.order_by('expires_at').first()
+    
+    # Calculate tier based on total spent
+    total_spent = get_customer_total_spent(customer)
+    current_tier = calculate_tier(total_spent)
+    
+    # Calculate points needed for next tier
+    tier_thresholds = {
+        'Bronze': settings_obj.silver_threshold,
+        'Silver': settings_obj.gold_threshold,
+        'Gold': settings_obj.platinum_threshold,
+        'Platinum': None
+    }
+    
+    next_tier_threshold = tier_thresholds.get(current_tier)
+    next_tier = None
+    points_to_next_tier = None
+    
+    if next_tier_threshold:
+        points_needed_rupees = next_tier_threshold - total_spent
+        points_to_next_tier = int(points_needed_rupees * float(settings_obj.points_per_rupee))
+        next_tier = {
+            'Bronze': 'Silver',
+            'Silver': 'Gold',
+            'Gold': 'Platinum'
+        }.get(current_tier)
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'total_earned': total_earned,
+            'total_redeemed': total_redeemed,
+            'total_expired': total_expired,
+            'available_points': available_points,
+            'current_tier': current_tier,
+            'points_to_next_tier': max(0, points_to_next_tier) if points_to_next_tier else 0,
+            'next_tier': next_tier,
+            'expiring_points': expiring_points,
+            'expiring_date': expiring_transactions.order_by('expires_at').first().expires_at.date() if expiring_transactions.first() else None
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def redeem_points(request):
+    """
+    Redeem points for a reward
+    """
+    user = request.user
+    
+    if user.role != 'customer':
+        return Response({
+            'status': 'error',
+            'message': 'Only customers can redeem points'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = RedeemPointsSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    reward_id = data.get('reward_id')
+    order_id = data.get('order_id')
+    metadata = data.get('metadata', {})
+    
+    # Get reward
+    try:
+        reward = Reward.objects.get(id=reward_id, is_active=True)
+    except Reward.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Reward not found or inactive'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Get current points balance
+    current_balance = get_customer_points_balance(user)
+    
+    # Check if customer has enough points
+    if current_balance < reward.points_required:
+        return Response({
+            'status': 'error',
+            'message': f'Insufficient points. Need {reward.points_required}, you have {current_balance}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check stock
+    if reward.stock != -1 and reward.stock <= 0:
+        return Response({
+            'status': 'error',
+            'message': 'Reward out of stock'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get order if provided
+    order = None
+    if order_id:
+        from .models import Order
+        try:
+            order = Order.objects.get(order_number=order_id, customer=user)
+        except Order.DoesNotExist:
+            pass
+    
+    # Create redemption transaction
+    transaction = add_points_transaction(
+        customer=user,
+        points=-reward.points_required,
+        transaction_type='redeemed',
+        description=f"Redeemed: {reward.name}",
+        order=order,
+        reward=reward,
+        metadata={
+            'reward_name': reward.name,
+            'reward_category': reward.category,
+            'value': str(reward.value) if reward.value else None,
+            **metadata
+        }
+    )
+    
+    # Update reward stock
+    if reward.stock != -1:
+        reward.stock -= 1
+        reward.total_redeemed += 1
+        reward.save()
+    
+    from .serializers import PointsTransactionSerializer
+    transaction_serializer = PointsTransactionSerializer(transaction)
+    
+    return Response({
+        'status': 'success',
+        'message': f'Successfully redeemed {reward.name} for {reward.points_required} points',
+        'data': {
+            'transaction': transaction_serializer.data,
+            'remaining_points': current_balance - reward.points_required,
+            'reward': {
+                'id': reward.id,
+                'name': reward.name,
+                'code': f"REDEEM-{transaction.transaction_id}"
+            }
+        }
+    })
+
+
+# ========== REWARDS CATALOG ENDPOINTS ==========
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Anyone can view rewards (customers, retailers)
+def list_rewards(request):
+    """
+    GET: List all available rewards
+    Query params: ?category=discount&min_points=100&max_points=1000&active_only=true
+    """
+    rewards = Reward.objects.all()
+    
+    # Filter by category
+    category = request.GET.get('category')
+    if category:
+        rewards = rewards.filter(category=category)
+    
+    # Filter by points range
+    min_points = request.GET.get('min_points')
+    max_points = request.GET.get('max_points')
+    if min_points:
+        rewards = rewards.filter(points_required__gte=min_points)
+    if max_points:
+        rewards = rewards.filter(points_required__lte=max_points)
+    
+    # Filter active only
+    active_only = request.GET.get('active_only', 'true').lower() == 'true'
+    if active_only:
+        rewards = rewards.filter(is_active=True)
+    
+    # Filter in stock only
+    in_stock_only = request.GET.get('in_stock_only', 'false').lower() == 'true'
+    if in_stock_only:
+        rewards = rewards.filter(Q(stock__gt=0) | Q(stock=-1))
+    
+    # Order by
+    ordering = request.GET.get('ordering', 'points_required')
+    if ordering == '-points_required':
+        rewards = rewards.order_by('-points_required')
+    elif ordering == 'name':
+        rewards = rewards.order_by('name')
+    elif ordering == '-name':
+        rewards = rewards.order_by('-name')
+    elif ordering == 'popular':
+        rewards = rewards.order_by('-is_popular', '-total_redeemed')
+    else:
+        rewards = rewards.order_by('points_required')
+    
+    # Pagination
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    total = rewards.count()
+    paginated = rewards[start:end]
+    
+    serializer = RewardSerializer(paginated, many=True)
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'rewards': serializer.data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_reward_detail(request, reward_id):
+    """
+    GET: Get single reward details
+    """
+    try:
+        reward = Reward.objects.get(id=reward_id)
+    except Reward.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Reward not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = RewardSerializer(reward)
+    
+    return Response({
+        'status': 'success',
+        'data': serializer.data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_reward(request):
+    """
+    POST: Create new reward (Admin or Retailer only)
+    """
+    user = request.user
+    
+    if user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can create rewards'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = CreateRewardSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    
+    reward = Reward.objects.create(
+        name=data['name'],
+        category=data['category'],
+        points_required=data['points_required'],
+        description=data['description'],
+        value=data.get('value'),
+        image_url=data.get('image_url', ''),
+        icon=data.get('icon', ''),
+        stock=data.get('stock', 999),
+        is_active=data.get('is_active', True),
+        is_popular=data.get('is_popular', False)
+    )
+    
+    response_serializer = RewardSerializer(reward)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Reward created successfully',
+        'data': response_serializer.data
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_reward(request, reward_id):
+    """
+    PUT: Update reward (Admin or Retailer only)
+    """
+    user = request.user
+    
+    if user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can update rewards'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        reward = Reward.objects.get(id=reward_id)
+    except Reward.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Reward not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = UpdateRewardSerializer(data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    
+    if 'name' in data:
+        reward.name = data['name']
+    if 'category' in data:
+        reward.category = data['category']
+    if 'points_required' in data:
+        reward.points_required = data['points_required']
+    if 'description' in data:
+        reward.description = data['description']
+    if 'value' in data:
+        reward.value = data['value']
+    if 'image_url' in data:
+        reward.image_url = data['image_url']
+    if 'icon' in data:
+        reward.icon = data['icon']
+    if 'stock' in data:
+        reward.stock = data['stock']
+    if 'is_active' in data:
+        reward.is_active = data['is_active']
+    if 'is_popular' in data:
+        reward.is_popular = data['is_popular']
+    
+    reward.save()
+    
+    response_serializer = RewardSerializer(reward)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Reward updated successfully',
+        'data': response_serializer.data
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_reward(request, reward_id):
+    """
+    DELETE: Delete reward (Admin or Retailer only)
+    """
+    user = request.user
+    
+    if user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can delete rewards'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        reward = Reward.objects.get(id=reward_id)
+    except Reward.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Reward not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if reward has been redeemed
+    if reward.total_redeemed > 0:
+        return Response({
+            'status': 'error',
+            'message': f'Cannot delete reward that has been redeemed {reward.total_redeemed} times. Mark as inactive instead.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    reward.delete()
+    
+    return Response({
+        'status': 'success',
+        'message': 'Reward deleted successfully'
+    })
+
+
+# ========== CAMPAIGNS ENDPOINTS ==========
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_campaigns(request):
+    """
+    GET: List all campaigns
+    Query params: ?status=active&type=bonus&page=1&per_page=20
+    """
+    user = request.user
+    
+    campaigns = Campaign.objects.all()
+    
+    # Filter by status
+    status_filter = request.GET.get('status')
+    if status_filter:
+        campaigns = campaigns.filter(status=status_filter)
+    else:
+        # Default show active and scheduled only for customers
+        if user.role == 'customer':
+            campaigns = campaigns.filter(status__in=['active', 'scheduled'])
+    
+    # Filter by campaign type
+    campaign_type = request.GET.get('type')
+    if campaign_type:
+        campaigns = campaigns.filter(campaign_type=campaign_type)
+    
+    # Filter active campaigns only (for customers)
+    active_only = request.GET.get('active_only', 'false').lower() == 'true'
+    if active_only:
+        from django.utils import timezone
+        now = timezone.now()
+        campaigns = campaigns.filter(
+            start_date__lte=now,
+            end_date__gte=now,
+            status='active'
+        )
+    
+    # Filter by eligibility (for customers)
+    if user.role == 'customer':
+        # Get customer tier (simplified - you can implement proper tier detection)
+        customer_tier = 'silver'  # This should come from actual customer data
+        campaigns = campaigns.filter(
+            Q(eligible_tiers=[]) | Q(eligible_tiers__contains=[customer_tier])
+        )
+    
+    # Ordering
+    ordering = request.GET.get('ordering', '-created_at')
+    campaigns = campaigns.order_by(ordering)
+    
+    # Pagination
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    total = campaigns.count()
+    paginated = campaigns[start:end]
+    
+    serializer = CampaignSerializer(paginated, many=True)
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'campaigns': serializer.data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_campaign_detail(request, campaign_id):
+    """
+    GET: Get single campaign details
+    """
+    try:
+        campaign = Campaign.objects.get(id=campaign_id)
+    except Campaign.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Campaign not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Customers can only view active or scheduled campaigns
+    user = request.user
+    if user.role == 'customer' and campaign.status not in ['active', 'scheduled']:
+        return Response({
+            'status': 'error',
+            'message': 'Campaign not available'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = CampaignSerializer(campaign)
+    
+    return Response({
+        'status': 'success',
+        'data': serializer.data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_campaign(request):
+    """
+    POST: Create new campaign (Admin or Retailer only)
+    """
+    user = request.user
+    
+    if user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can create campaigns'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = CreateCampaignSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    
+    campaign = Campaign.objects.create(
+        name=data['name'],
+        campaign_type=data['campaign_type'],
+        bonus_points=data['bonus_points'],
+        description=data.get('description', ''),
+        eligible_tiers=data.get('eligible_tiers', []),
+        min_order_value=data.get('min_order_value'),
+        start_date=data['start_date'],
+        end_date=data['end_date'],
+        status='scheduled'
+    )
+    
+    response_serializer = CampaignSerializer(campaign)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Campaign created successfully',
+        'data': response_serializer.data
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_campaign(request, campaign_id):
+    """
+    PUT: Update campaign (Admin or Retailer only)
+    """
+    user = request.user
+    
+    if user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can update campaigns'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        campaign = Campaign.objects.get(id=campaign_id)
+    except Campaign.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Campaign not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = UpdateCampaignSerializer(data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response({
+            'status': 'error',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    data = serializer.validated_data
+    
+    if 'name' in data:
+        campaign.name = data['name']
+    if 'campaign_type' in data:
+        campaign.campaign_type = data['campaign_type']
+    if 'bonus_points' in data:
+        campaign.bonus_points = data['bonus_points']
+    if 'description' in data:
+        campaign.description = data['description']
+    if 'eligible_tiers' in data:
+        campaign.eligible_tiers = data['eligible_tiers']
+    if 'min_order_value' in data:
+        campaign.min_order_value = data['min_order_value']
+    if 'start_date' in data:
+        campaign.start_date = data['start_date']
+    if 'end_date' in data:
+        campaign.end_date = data['end_date']
+    if 'status' in data:
+        campaign.status = data['status']
+    
+    campaign.save()
+    
+    response_serializer = CampaignSerializer(campaign)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Campaign updated successfully',
+        'data': response_serializer.data
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_campaign(request, campaign_id):
+    """
+    DELETE: Delete campaign (Admin or Retailer only)
+    """
+    user = request.user
+    
+    if user.role not in ['admin', 'retailer']:
+        return Response({
+            'status': 'error',
+            'message': 'Only admin or retailers can delete campaigns'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        campaign = Campaign.objects.get(id=campaign_id)
+    except Campaign.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Campaign not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Cannot delete campaign that has been redeemed
+    if campaign.total_redeemed > 0:
+        return Response({
+            'status': 'error',
+            'message': f'Cannot delete campaign that has been used {campaign.total_redeemed} times. Cancel it instead.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    campaign.delete()
+    
+    return Response({
+        'status': 'success',
+        'message': 'Campaign deleted successfully'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apply_campaign_bonus(request, campaign_id):
+    """
+    POST: Apply campaign bonus to customer order (internal use)
+    Called when customer completes an order that qualifies for campaign
+    """
+    user = request.user
+    
+    if user.role != 'customer':
+        return Response({
+            'status': 'error',
+            'message': 'Only customers can claim campaign bonuses'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        campaign = Campaign.objects.get(id=campaign_id)
+    except Campaign.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Campaign not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if campaign is active
+    from django.utils import timezone
+    now = timezone.now()
+    
+    if not campaign.is_active_now():
+        return Response({
+            'status': 'error',
+            'message': 'Campaign is not currently active'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if customer qualifies (simplified - should check tier and order value)
+    order_id = request.data.get('order_id')
+    order_value = request.data.get('order_value', 0)
+    
+    if campaign.min_order_value and float(order_value) < float(campaign.min_order_value):
+        return Response({
+            'status': 'error',
+            'message': f'Minimum order value of ₹{campaign.min_order_value} required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Add bonus points to customer
+    from .utils import add_points_transaction
+    
+    transaction = add_points_transaction(
+        customer=user,
+        points=campaign.bonus_points,
+        transaction_type='bonus',
+        description=f"Campaign bonus: {campaign.name}",
+        metadata={
+            'campaign_id': campaign.id,
+            'campaign_name': campaign.name,
+            'order_id': order_id
+        }
+    )
+    
+    # Increment campaign redemption count
+    campaign.total_redeemed += 1
+    campaign.save()
+    
+    return Response({
+        'status': 'success',
+        'message': f'Bonus {campaign.bonus_points} points added from {campaign.name}',
+        'data': {
+            'bonus_points': campaign.bonus_points,
+            'campaign_name': campaign.name,
+            'transaction_id': transaction.transaction_id
+        }
+    })
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def loyalty_settings(request):
+    """
+    GET: Get loyalty program settings
+    PUT: Update loyalty program settings (Admin or Retailer only)
+    """
+    user = request.user
+    
+    # Get or create default settings
+    settings_obj = LoyaltySettings.objects.first()
+    if not settings_obj:
+        settings_obj = LoyaltySettings.objects.create()
+    
+    # GET request - anyone authenticated can view
+    if request.method == 'GET':
+        serializer = LoyaltySettingsSerializer(settings_obj)
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        })
+    
+    # PUT request - only admin or retailer can update
+    if request.method == 'PUT':
+        if user.role not in ['admin', 'retailer']:
+            return Response({
+                'status': 'error',
+                'message': 'Only admin or retailers can update loyalty settings'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = UpdateLoyaltySettingsSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({
+                'status': 'error',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        
+        # Update only provided fields
+        if 'points_per_rupee' in data:
+            settings_obj.points_per_rupee = data['points_per_rupee']
+        if 'min_redemption_points' in data:
+            settings_obj.min_redemption_points = data['min_redemption_points']
+        if 'max_redemption_points' in data:
+            settings_obj.max_redemption_points = data['max_redemption_points']
+        if 'points_expiry_months' in data:
+            settings_obj.points_expiry_months = data['points_expiry_months']
+        if 'welcome_bonus_points' in data:
+            settings_obj.welcome_bonus_points = data['welcome_bonus_points']
+        if 'birthday_bonus_points' in data:
+            settings_obj.birthday_bonus_points = data['birthday_bonus_points']
+        if 'referral_bonus_points' in data:
+            settings_obj.referral_bonus_points = data['referral_bonus_points']
+        if 'bronze_threshold' in data:
+            settings_obj.bronze_threshold = data['bronze_threshold']
+        if 'silver_threshold' in data:
+            settings_obj.silver_threshold = data['silver_threshold']
+        if 'gold_threshold' in data:
+            settings_obj.gold_threshold = data['gold_threshold']
+        if 'platinum_threshold' in data:
+            settings_obj.platinum_threshold = data['platinum_threshold']
+        
+        settings_obj.save()
+        
+        response_serializer = LoyaltySettingsSerializer(settings_obj)
+        
+        return Response({
+            'status': 'success',
+            'message': 'Loyalty settings updated successfully',
+            'data': response_serializer.data
+        })

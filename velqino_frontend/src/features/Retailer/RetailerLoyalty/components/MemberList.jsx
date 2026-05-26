@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Users, Search, Filter, ChevronLeft, ChevronRight, Star, Award, Eye, Edit, Mail, Phone, TrendingUp, Calendar, Download } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerLoyalty/MemberList.scss'
 
-export default function MemberList({ refreshTrigger }) {
+export default function MemberList({ customers = [], selectedCustomer, setSelectedCustomer, isLoading, refreshTrigger }) {
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [tierFilter, setTierFilter] = useState('all')
@@ -16,18 +16,34 @@ export default function MemberList({ refreshTrigger }) {
     setMounted(true)
   }, [])
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, tierFilter])
+
   if (!mounted) return null
 
-  const members = [
-    { id: 1, name: 'Rajesh Kumar', email: 'rajesh@example.com', phone: '+91 98765 43210', points: 1250, tier: 'Gold', totalSpent: 45890, orders: 12, joined: '2025-01-15', lastActive: '2026-04-14' },
-    { id: 2, name: 'Priya Sharma', email: 'priya@example.com', phone: '+91 87654 32109', points: 450, tier: 'Silver', totalSpent: 18900, orders: 5, joined: '2025-03-10', lastActive: '2026-04-14' },
-    { id: 3, name: 'Amit Singh', email: 'amit@example.com', phone: '+91 76543 21098', points: 890, tier: 'Gold', totalSpent: 56780, orders: 15, joined: '2024-12-20', lastActive: '2026-04-13' },
-    { id: 4, name: 'Sneha Reddy', email: 'sneha@example.com', phone: '+91 65432 10987', points: 230, tier: 'Silver', totalSpent: 8900, orders: 3, joined: '2025-06-05', lastActive: '2026-04-13' },
-    { id: 5, name: 'Vikram Mehta', email: 'vikram@example.com', phone: '+91 54321 09876', points: 2250, tier: 'Platinum', totalSpent: 78200, orders: 25, joined: '2024-08-12', lastActive: '2026-04-12' },
-    { id: 6, name: 'Neha Gupta', email: 'neha@example.com', phone: '+91 43210 98765', points: 670, tier: 'Gold', totalSpent: 23450, orders: 8, joined: '2025-02-18', lastActive: '2026-04-12' },
-    { id: 7, name: 'Rahul Verma', email: 'rahul@example.com', phone: '+91 32109 87654', points: 80, tier: 'Bronze', totalSpent: 3450, orders: 2, joined: '2025-09-22', lastActive: '2026-04-11' },
-    { id: 8, name: 'Meera Joshi', email: 'meera@example.com', phone: '+91 21098 76543', points: 1890, tier: 'Platinum', totalSpent: 45600, orders: 18, joined: '2024-10-30', lastActive: '2026-04-11' },
-  ]
+  // Helper function to determine tier
+  const getTierFromTotalSpent = (spent) => {
+    if (spent >= 50000) return 'Platinum'
+    if (spent >= 25000) return 'Gold'
+    if (spent >= 10000) return 'Silver'
+    return 'Bronze'
+  }
+
+  // Transform customers to members format
+  const members = customers.map(customer => ({
+    id: customer.user?.id || customer.id,
+    name: customer.full_name || customer.name || 'N/A',
+    email: customer.email || customer.user?.email || 'N/A',
+    phone: customer.phone || customer.mobile || customer.user?.mobile || 'N/A',
+    points: Math.floor(customer.totalSpent / 10) || 0,
+    tier: customer.tier || getTierFromTotalSpent(customer.totalSpent),
+    totalSpent: customer.totalSpent || 0,
+    orders: customer.visits || 0,
+    joined: customer.created_at?.split('T')[0] || 'N/A',
+    lastActive: customer.lastVisit?.split('T')[0] || 'N/A'
+  }))
 
   const getTierBadge = (tier) => {
     switch(tier) {
@@ -53,12 +69,38 @@ export default function MemberList({ refreshTrigger }) {
   const summary = {
     totalMembers: members.length,
     totalPoints: members.reduce((sum, m) => sum + m.points, 0),
-    avgPoints: Math.round(members.reduce((sum, m) => sum + m.points, 0) / members.length),
-    activeMembers: members.filter(m => new Date(m.lastActive) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length
+    avgPoints: members.length > 0 ? Math.round(members.reduce((sum, m) => sum + m.points, 0) / members.length) : 0,
+    activeMembers: members.filter(m => {
+      if (!m.lastActive || m.lastActive === 'N/A') return false
+      const lastActiveDate = new Date(m.lastActive)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      return lastActiveDate > thirtyDaysAgo
+    }).length
   }
 
   const formatDate = (date) => {
+    if (!date || date === 'N/A') return 'N/A'
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  }
+
+  const handleRowClick = (member) => {
+    // Find original customer from customers array
+    const originalCustomer = customers.find(c => (c.user?.id === member.id || c.id === member.id))
+    if (originalCustomer && setSelectedCustomer) {
+      setSelectedCustomer(originalCustomer)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="member-list bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading members...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -125,91 +167,101 @@ export default function MemberList({ refreshTrigger }) {
       </div>
 
       {/* Members Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr className="text-left text-xs font-medium text-gray-500">
-              <th className="px-4 py-3">Member</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Points</th>
-              <th className="px-4 py-3">Tier</th>
-              <th className="px-4 py-3">Spent</th>
-              <th className="px-4 py-3">Orders</th>
-              <th className="px-4 py-3">Joined</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {paginatedMembers.map((member, index) => {
-              const tierBadge = getTierBadge(member.tier)
-              return (
-                <tr
-                  key={member.id}
-                  className={`member-row transition-all ${hoveredRow === member.id ? 'bg-gray-50' : ''}`}
-                  onMouseEnter={() => setHoveredRow(member.id)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  style={{ animationDelay: `${index * 0.03}s` }}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-600 font-semibold">{member.name.charAt(0)}</span>
+      {members.length === 0 ? (
+        <div className="p-8 text-center">
+          <Users size={48} className="mx-auto text-gray-200 mb-3" />
+          <p className="text-sm text-gray-500">No members found</p>
+          <p className="text-xs text-gray-400 mt-1">Customers who have placed orders will appear here</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr className="text-left text-xs font-medium text-gray-500">
+                <th className="px-4 py-3">Member</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Points</th>
+                <th className="px-4 py-3">Tier</th>
+                <th className="px-4 py-3">Spent</th>
+                <th className="px-4 py-3">Orders</th>
+                <th className="px-4 py-3">Joined</th>
+                <th className="px-4 py-3"></th>
+               </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {paginatedMembers.map((member, index) => {
+                const tierBadge = getTierBadge(member.tier)
+                const isSelected = selectedCustomer?.user?.id === member.id || selectedCustomer?.id === member.id
+                return (
+                  <tr
+                    key={member.id}
+                    className={`member-row cursor-pointer transition-all ${isSelected ? 'bg-primary-50' : ''} ${hoveredRow === member.id ? 'bg-gray-50' : ''}`}
+                    onClick={() => handleRowClick(member)}
+                    onMouseEnter={() => setHoveredRow(member.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    style={{ animationDelay: `${index * 0.03}s` }}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                          <span className="text-primary-600 font-semibold">{member.name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{member.name}</p>
+                          <p className="text-xs text-gray-500">ID: #{member.id}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{member.name}</p>
-                        <p className="text-xs text-gray-500">ID: #{member.id}</p>
+                     </td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <Mail size={10} className="text-gray-400" />
+                          <span className="truncate max-w-[120px]">{member.email}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <Phone size={10} className="text-gray-400" />
+                          <span>{member.phone}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Mail size={10} className="text-gray-400" />
-                        <span className="truncate max-w-[120px]">{member.email}</span>
+                     </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-bold text-primary-600">{member.points.toLocaleString()}</span>
+                     </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${tierBadge.bg} ${tierBadge.text}`}>
+                        {tierBadge.icon}
+                        {member.tier}
+                      </span>
+                     </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-semibold text-gray-900">₹{member.totalSpent.toLocaleString()}</span>
+                     </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-gray-700">{member.orders}</span>
+                     </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={10} className="text-gray-400" />
+                        <span className="text-sm text-gray-600">{formatDate(member.joined)}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Phone size={10} className="text-gray-400" />
-                        <span>{member.phone}</span>
+                     </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
+                          <Eye size={14} />
+                        </button>
+                        <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
+                          <Edit size={14} />
+                        </button>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-bold text-primary-600">{member.points}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${tierBadge.bg} ${tierBadge.text}`}>
-                      {tierBadge.icon}
-                      {member.tier}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-semibold text-gray-900">₹{member.totalSpent.toLocaleString()}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-gray-700">{member.orders}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={10} className="text-gray-400" />
-                      <span className="text-sm text-gray-600">{formatDate(member.joined)}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                        <Eye size={14} />
-                      </button>
-                      <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                        <Edit size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                     </td>
+                   </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

@@ -151,7 +151,10 @@ export default function CustomersList({ customers = [], selectedCustomer, setSel
                   <tr
                     key={customerId}
                     className={`customer-row cursor-pointer transition-all ${selectedCustomer?.id === customerId ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
-                    onClick={() => setSelectedCustomer(customer)}
+                    onClick={() => {
+                      console.log("🖱️ Row clicked - Customer:", customer.full_name || customer.name)
+                      setSelectedCustomer(customer)
+                    }}
                     onMouseEnter={() => setHoveredRow(customerId)}
                     onMouseLeave={() => setHoveredRow(null)}
                     style={{ animationDelay: `${index * 0.03}s` }}

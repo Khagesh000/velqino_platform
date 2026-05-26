@@ -34,4 +34,38 @@ urlpatterns = [
 
     path('orders/<str:order_id>/status/', views.update_order_status, name='update-order-status'),
     path('orders/<str:order_id>/status-history/', views.get_order_status_history, name='order-status-history'),
+
+    # ========== REVIEWS URLS ==========
+    path('reviews/<int:product_id>/summary/', views.get_product_reviews_summary, name='product-reviews-summary'),
+    path('reviews/<int:product_id>/', views.get_product_reviews, name='product-reviews'),
+    path('reviews/create/', views.create_review, name='create-review'),
+    path('reviews/<int:review_id>/update/', views.update_review, name='update-review'),
+    path('reviews/<int:review_id>/delete/', views.delete_review, name='delete-review'),
+    path('reviews/<int:review_id>/helpful/', views.mark_review_helpful, name='mark-review-helpful'),
+
+    #-----------------------------------------Retaielrs endpoints--------------------------------
+    # ========== LOYALTY ENDPOINTS ==========
+    path('loyalty/settings/', views.loyalty_settings, name='loyalty-settings'),
+    path('points/transactions/', views.get_points_transactions, name='points-transactions'),
+    path('points/summary/', views.get_customer_points_summary, name='points-summary'),
+    path('points/redeem/', views.redeem_points, name='redeem-points'),
+
+    # ========== REWARDS CATALOG URLS ==========
+    path('rewards/', views.list_rewards, name='list-rewards'),
+    path('rewards/<int:reward_id>/', views.get_reward_detail, name='reward-detail'),
+    path('rewards/create/', views.create_reward, name='create-reward'),
+    path('rewards/<int:reward_id>/update/', views.update_reward, name='update-reward'),
+    path('rewards/<int:reward_id>/delete/', views.delete_reward, name='delete-reward'),
+
+    # ========== CAMPAIGNS URLS ==========
+    path('campaigns/', views.list_campaigns, name='list-campaigns'),
+    path('campaigns/<int:campaign_id>/', views.get_campaign_detail, name='campaign-detail'),
+    path('campaigns/create/', views.create_campaign, name='create-campaign'),
+    path('campaigns/<int:campaign_id>/update/', views.update_campaign, name='update-campaign'),
+    path('campaigns/<int:campaign_id>/delete/', views.delete_campaign, name='delete-campaign'),
+    path('campaigns/<int:campaign_id>/apply/', views.apply_campaign_bonus, name='apply-campaign-bonus'),
+
+    # ========== LOYALTY SETTINGS URLS ==========
+    path('loyalty-settings/', views.loyalty_settings, name='loyalty-settings'),
+
 ]
