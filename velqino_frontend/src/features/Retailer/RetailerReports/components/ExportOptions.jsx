@@ -1,18 +1,47 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Download, Edit, FileText, FileSpreadsheet, Mail, Printer, CheckCircle, AlertCircle, Calendar, Filter, RefreshCw, X } from '../../../../utils/icons'
+import { Download, Edit, FileText, FileSpreadsheet, Mail, Printer, CheckCircle, AlertCircle, Calendar, Filter, RefreshCw, X, Plus, Trash2 } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerReports/ExportOptions.scss'
+import { 
+  useExportReportMutation, 
+  useEmailReportMutation,
+  useGetScheduledReportsQuery,
+  useCreateScheduledReportMutation,
+  useUpdateScheduledReportMutation,
+  useDeleteScheduledReportMutation
+} from '@/redux/retailer/slices/retailerReportsSlice'
 
-export default function ExportOptions() {
+export default function ExportOptions({ onRefresh, dateRange: propDateRange, scheduledReports: propScheduledReports, isLoading: propLoading }) {
   const [mounted, setMounted] = useState(false)
-  const [selectedFormat, setSelectedFormat] = useState('pdf')
+  const [selectedFormat, setSelectedFormat] = useState('excel')
   const [selectedReport, setSelectedReport] = useState('sales')
   const [emailAddress, setEmailAddress] = useState('')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [isExporting, setIsExporting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showEmailModal, setShowEmailModal] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [editingSchedule, setEditingSchedule] = useState(null)
+  const [scheduleForm, setScheduleForm] = useState({
+    name: '',
+    report_type: 'sales',
+    frequency: 'daily',
+    format_type: 'excel',
+    recipients: '',
+    is_active: true
+  })
+
+  // RTK Query hooks
+  const [exportReport, { isLoading: exportLoading }] = useExportReportMutation()
+  const [emailReport, { isLoading: emailLoading }] = useEmailReportMutation()
+  const { data: scheduledReportsData, refetch: refetchScheduled } = useGetScheduledReportsQuery()
+  const [createScheduledReport, { isLoading: createLoading }] = useCreateScheduledReportMutation()
+  const [updateScheduledReport, { isLoading: updateLoading }] = useUpdateScheduledReportMutation()
+  const [deleteScheduledReport, { isLoading: deleteLoading }] = useDeleteScheduledReportMutation()
+
+  const scheduledReports = propScheduledReports || scheduledReportsData?.data || []
+  const isLoading = propLoading || exportLoading || emailLoading || createLoading || updateLoading || deleteLoading
 
   useEffect(() => {
     setMounted(true)
@@ -26,6 +55,19 @@ export default function ExportOptions() {
     })
   }, [])
 
+  // Sync with parent dateRange if provided
+  useEffect(() => {
+    if (propDateRange && typeof propDateRange === 'string') {
+      const end = new Date()
+      const start = new Date()
+      start.setDate(start.getDate() - 30)
+      setDateRange({
+        start: start.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0]
+      })
+    }
+  }, [propDateRange])
+
   if (!mounted) return null
 
   const reportTypes = [
@@ -33,53 +75,166 @@ export default function ExportOptions() {
     { id: 'products', label: 'Product Report', icon: <FileText size={16} />, description: 'Best sellers, inventory status' },
     { id: 'customers', label: 'Customer Report', icon: <FileText size={16} />, description: 'Customer insights and analytics' },
     { id: 'tax', label: 'Tax Report', icon: <FileText size={16} />, description: 'GST summary and returns' },
-    { id: 'staff', label: 'Staff Performance', icon: <FileText size={16} />, description: 'Staff sales and targets' },
+    { id: 'profit_loss', label: 'Profit & Loss', icon: <FileText size={16} />, description: 'Revenue, expenses, net profit' },
   ]
 
   const exportFormats = [
-    { id: 'pdf', label: 'PDF', icon: <FileText size={18} />, color: 'red', description: 'Download as PDF document' },
     { id: 'excel', label: 'Excel', icon: <FileSpreadsheet size={18} />, color: 'green', description: 'Export to Excel/CSV' },
+    { id: 'pdf', label: 'PDF', icon: <FileText size={18} />, color: 'red', description: 'Download as PDF document' },
     { id: 'email', label: 'Email', icon: <Mail size={18} />, color: 'blue', description: 'Send report via email' },
+  ]
+
+  const frequencyOptions = [
+    { id: 'daily', label: 'Daily' },
+    { id: 'weekly', label: 'Weekly' },
+    { id: 'monthly', label: 'Monthly' },
   ]
 
   const handleExport = async () => {
     setIsExporting(true)
-    // Simulate export
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsExporting(false)
-    
-    if (selectedFormat === 'email') {
-      setShowEmailModal(true)
-    } else {
+    try {
+      if (selectedFormat === 'email') {
+        setShowEmailModal(true)
+        setIsExporting(false)
+        return
+      }
+      
+      const result = await exportReport({
+        report_type: selectedReport,
+        format: selectedFormat,
+        start_date: dateRange.start,
+        end_date: dateRange.end
+      }).unwrap()
+      
+      // Handle blob response for file download
+      if (result instanceof Blob) {
+        const url = window.URL.createObjectURL(result)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${selectedReport}_report_${new Date().toISOString().split('T')[0]}.${selectedFormat === 'excel' ? 'xlsx' : 'pdf'}`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }
+      
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 3000)
+    } catch (error) {
+      console.error('Export failed:', error)
+      alert('Failed to export report. Please try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   const handleSendEmail = async () => {
     if (!emailAddress) return
-    setIsExporting(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsExporting(false)
-    setShowEmailModal(false)
-    setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
-    setEmailAddress('')
+    
+    try {
+      await emailReport({
+        report_type: selectedReport,
+        format: selectedFormat,
+        start_date: dateRange.start,
+        end_date: dateRange.end,
+        email: emailAddress
+      }).unwrap()
+      
+      setShowEmailModal(false)
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
+      setEmailAddress('')
+    } catch (error) {
+      console.error('Email send failed:', error)
+      alert('Failed to send report. Please try again.')
+    }
   }
 
-  const scheduledReports = [
-    { id: 1, name: 'Daily Sales Summary', frequency: 'Daily', time: '9:00 AM', recipients: 'admin@store.com', active: true },
-    { id: 2, name: 'Weekly Performance', frequency: 'Weekly (Mon)', time: '10:00 AM', recipients: 'manager@store.com', active: true },
-    { id: 3, name: 'Monthly Tax Report', frequency: 'Monthly (1st)', time: '8:00 AM', recipients: 'accounts@store.com', active: false },
-  ]
+  const handleCreateSchedule = async () => {
+    if (!scheduleForm.name || !scheduleForm.recipients) {
+      alert('Please fill all required fields')
+      return
+    }
+    
+    try {
+      if (editingSchedule) {
+        await updateScheduledReport({
+          reportId: editingSchedule.id,
+          data: scheduleForm
+        }).unwrap()
+      } else {
+        await createScheduledReport(scheduleForm).unwrap()
+      }
+      setShowScheduleModal(false)
+      setScheduleForm({ name: '', report_type: 'sales', frequency: 'daily', format_type: 'excel', recipients: '', is_active: true })
+      setEditingSchedule(null)
+      refetchScheduled()
+      if (onRefresh) onRefresh()
+    } catch (error) {
+      console.error('Schedule failed:', error)
+      alert('Failed to save schedule. Please try again.')
+    }
+  }
+
+  const handleDeleteSchedule = async (scheduleId) => {
+    if (confirm('Are you sure you want to delete this scheduled report?')) {
+      try {
+        await deleteScheduledReport(scheduleId).unwrap()
+        refetchScheduled()
+        if (onRefresh) onRefresh()
+      } catch (error) {
+        console.error('Delete failed:', error)
+        alert('Failed to delete schedule. Please try again.')
+      }
+    }
+  }
+
+  const handleEditSchedule = (schedule) => {
+    setEditingSchedule(schedule)
+    setScheduleForm({
+      name: schedule.name,
+      report_type: schedule.report_type,
+      frequency: schedule.frequency,
+      format_type: schedule.format_type,
+      recipients: schedule.recipients,
+      is_active: schedule.is_active
+    })
+    setShowScheduleModal(true)
+  }
+
+  const getFrequencyLabel = (frequency) => {
+    switch(frequency) {
+      case 'daily': return 'Daily'
+      case 'weekly': return 'Weekly'
+      case 'monthly': return 'Monthly'
+      default: return frequency
+    }
+  }
+
+  const getReportTypeLabel = (type) => {
+    const report = reportTypes.find(r => r.id === type)
+    return report ? report.label : type
+  }
 
   return (
     <div className="export-options bg-white rounded-xl shadow-sm border border-gray-100">
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <Download size={18} className="text-primary-500" />
-          <h3 className="text-base font-semibold text-gray-900">Export Options</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Download size={18} className="text-primary-500" />
+            <h3 className="text-base font-semibold text-gray-900">Export Options</h3>
+          </div>
+          <button
+            onClick={() => {
+              setEditingSchedule(null)
+              setScheduleForm({ name: '', report_type: 'sales', frequency: 'daily', format_type: 'excel', recipients: '', is_active: true })
+              setShowScheduleModal(true)
+            }}
+            className="px-2 py-1 text-[10px] font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+          >
+            + Add Schedule
+          </button>
         </div>
         <p className="text-xs text-gray-500 mt-1">Export reports in multiple formats</p>
       </div>
@@ -174,12 +329,12 @@ export default function ExportOptions() {
         {/* Export Button */}
         <button
           onClick={handleExport}
-          disabled={isExporting}
+          disabled={isExporting || isLoading}
           className={`w-full py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            isExporting ? 'bg-gray-300 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600'
+            isExporting || isLoading ? 'bg-gray-300 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600'
           }`}
         >
-          {isExporting ? (
+          {isExporting || isLoading ? (
             <>
               <RefreshCw size={16} className="animate-spin" />
               <span>Exporting...</span>
@@ -194,27 +349,39 @@ export default function ExportOptions() {
       </div>
 
       {/* Scheduled Reports Section */}
-      <div className="border-t border-gray-100 p-4 bg-gray-50">
+      <div className="border-t border-gray-100 p-4 bg-gray-50 rounded-b-xl">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-semibold text-gray-700">Scheduled Reports</h4>
-          <button className="text-[10px] text-primary-600">+ Add Schedule</button>
         </div>
-        <div className="space-y-2">
-          {scheduledReports.map((schedule) => (
-            <div key={schedule.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
-              <div>
-                <p className="text-xs font-medium text-gray-900">{schedule.name}</p>
-                <p className="text-[10px] text-gray-500">{schedule.frequency} • {schedule.time}</p>
+        {scheduledReports.length === 0 ? (
+          <div className="text-center py-4">
+            <p className="text-xs text-gray-500">No scheduled reports</p>
+            <p className="text-[10px] text-gray-400 mt-1">Click "Add Schedule" to create one</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {scheduledReports.map((schedule) => (
+              <div key={schedule.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
+                <div>
+                  <p className="text-xs font-medium text-gray-900">{schedule.name}</p>
+                  <p className="text-[10px] text-gray-500">
+                    {getFrequencyLabel(schedule.frequency)} • {getReportTypeLabel(schedule.report_type)}
+                  </p>
+                  <p className="text-[9px] text-gray-400 truncate max-w-[150px]">{schedule.recipients}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${schedule.is_active ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <button onClick={() => handleEditSchedule(schedule)} className="p-1 text-gray-400 hover:text-primary-600">
+                    <Edit size={12} />
+                  </button>
+                  <button onClick={() => handleDeleteSchedule(schedule.id)} className="p-1 text-gray-400 hover:text-red-600">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${schedule.active ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <button className="p-1 text-gray-400 hover:text-gray-600">
-                  <Edit size={12} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Email Modal */}
@@ -258,6 +425,116 @@ export default function ExportOptions() {
                 }`}
               >
                 Send Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
+          <div className="bg-white rounded-xl max-w-md w-full p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-primary-500" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {editingSchedule ? 'Edit Schedule' : 'Add Schedule'}
+                </h3>
+              </div>
+              <button onClick={() => setShowScheduleModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Weekly Sales Summary"
+                  value={scheduleForm.name}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+                  <select
+                    value={scheduleForm.report_type}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, report_type: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  >
+                    {reportTypes.map(type => (
+                      <option key={type.id} value={type.id}>{type.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                  <select
+                    value={scheduleForm.frequency}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  >
+                    {frequencyOptions.map(freq => (
+                      <option key={freq.id} value={freq.id}>{freq.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Format</label>
+                  <select
+                    value={scheduleForm.format_type}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, format_type: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="excel">Excel</option>
+                    <option value="pdf">PDF</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Active</label>
+                  <select
+                    value={scheduleForm.is_active}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, is_active: e.target.value === 'true' })}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recipients (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="admin@store.com, manager@store.com"
+                  value={scheduleForm.recipients}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSchedule}
+                className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
+              >
+                {editingSchedule ? 'Update' : 'Create'} Schedule
               </button>
             </div>
           </div>

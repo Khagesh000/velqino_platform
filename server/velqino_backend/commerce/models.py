@@ -674,3 +674,43 @@ class Campaign(models.Model):
         return self.start_date <= now <= self.end_date and self.status == 'active'
     
     
+
+#----------------------------------Analytics report---------------------------------
+class Expense(models.Model):
+    EXPENSE_CATEGORIES = (
+        ('rent', 'Rent'),
+        ('salary', 'Staff Salary'),
+        ('utilities', 'Utilities'),
+        ('marketing', 'Marketing'),
+        ('maintenance', 'Maintenance'),
+        ('tax', 'Tax'),
+        ('shipping', 'Shipping'),
+        ('other', 'Other'),
+    )
+    
+    PAYMENT_METHODS = (
+        ('cash', 'Cash'),
+        ('bank', 'Bank Transfer'),
+        ('upi', 'UPI'),
+        ('card', 'Card'),
+    )
+    
+    retailer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='expenses')
+    category = models.CharField(max_length=20, choices=EXPENSE_CATEGORIES, db_index=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField(db_index=True)
+    description = models.TextField(blank=True)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHODS, default='cash')
+    receipt_url = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['retailer', 'date']),
+            models.Index(fields=['retailer', 'category']),
+        ]
+    
+    def __str__(self):
+        return f"{self.category} - ₹{self.amount} - {self.date}"

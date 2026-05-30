@@ -32,4 +32,19 @@ urlpatterns = [
     path('retailer/low-stock-alerts/', views.retailer_low_stock_alerts, name='retailer-low-stock-alerts'),
     path('retailer/today-summary/', views.retailer_today_summary, name='retailer-today-summary'),
     path('retailer/quick-reorder/', views.retailer_quick_reorder, name='retailer-quick-reorder'),
+
+    #----------------------------------------Retailers Reports--------------------------------------
+    path('retailer/cogs/', views.retailer_cogs, name='retailer-cogs'),
+    # ========== TAX REPORT URLS ==========
+    path('retailer/tax-summary/', views.retailer_tax_summary, name='retailer-tax-summary'),
+    path('retailer/gst-returns/', views.retailer_gst_returns, name='retailer-gst-returns'),
+    path('retailer/gst-returns/file/', views.file_gst_return, name='file-gst-return'),
+
+    # ========== EXPORT OPTIONS URLS ==========
+    path('retailer/export/', views.retailer_export_report, name='retailer-export'),
+    path('retailer/export/email/', views.retailer_email_report, name='retailer-email-report'),
+    path('retailer/scheduled-reports/', views.list_scheduled_reports, name='scheduled-reports'),
+    path('retailer/scheduled-reports/create/', views.create_scheduled_report, name='create-scheduled-report'),
+    path('retailer/scheduled-reports/<int:report_id>/update/', views.update_scheduled_report, name='update-scheduled-report'),
+    path('retailer/scheduled-reports/<int:report_id>/delete/', views.delete_scheduled_report, name='delete-scheduled-report'),
     ]

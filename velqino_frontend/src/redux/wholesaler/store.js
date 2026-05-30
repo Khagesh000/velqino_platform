@@ -12,6 +12,7 @@ import { retailerProductsApi } from '../retailer/slices/retailerProductsSlice';
 import { retailerStatsApi } from '../retailer/slices/statsSlice';
 import { retailerOrdersApi } from '../retailer/slices/retailerOrdersSlice';
 import { retailerLoyaltyApi } from '../retailer/slices/retailerLoyaltySlice';
+import { retailerReportsApi } from '../retailer/slices/retailerReportsSlice';
 
 import { reviewsApi } from '../customer/slices/reviewsSlice';
 
@@ -35,6 +36,7 @@ export const store = configureStore({
         [retailerStatsApi.reducerPath]:retailerStatsApi.reducer,
         [retailerOrdersApi.reducerPath]:retailerOrdersApi.reducer,
         [retailerLoyaltyApi.reducerPath]:retailerLoyaltyApi.reducer,
+        [retailerReportsApi.reducerPath]:retailerReportsApi.reducer,
 
         [reviewsApi.reducerPath]:reviewsApi.reducer,
 
@@ -58,6 +60,7 @@ export const store = configureStore({
             retailerStatsApi.middleware,
             retailerOrdersApi.middleware,
             retailerLoyaltyApi.middleware,
+            retailerReportsApi.middleware,
 
             reviewsApi.middleware,
             

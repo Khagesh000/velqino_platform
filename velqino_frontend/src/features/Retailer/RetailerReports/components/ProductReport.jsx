@@ -4,40 +4,76 @@ import React, { useState, useEffect } from 'react'
 import { Package, TrendingUp, TrendingDown, AlertCircle, Star, Download, ChevronLeft, ChevronRight, Eye } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerReports/ProductReport.scss'
 
-export default function ProductReport({ dateRange }) {
+
+export default function ProductReport({ dateRange, cogsData, isLoading: propLoading, onRefresh, productsData, topProductsData }) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('bestsellers')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
+  
+
+  // Use props if provided, otherwise use hook data
+  const cogs = cogsData || cogsDataFromHook?.data
+  const isLoading = propLoading
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
+
   if (!mounted) return null
 
-  const bestSellers = [
-    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', sales: 245, revenue: 122255, growth: '+12%', stock: 45, image: '👕', margin: 42 },
-    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', sales: 189, revenue: 472311, growth: '+8%', stock: 12, image: '🎧', margin: 35 },
-    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', sales: 156, revenue: 779844, growth: '+15%', stock: 8, image: '⌚', margin: 48 },
-    { id: 4, name: 'Leather Wallet', sku: 'LW-004', sales: 134, revenue: 200866, growth: '+5%', stock: 23, image: '👛', margin: 38 },
-    { id: 5, name: 'Running Shoes', sku: 'RS-005', sales: 112, revenue: 335888, growth: '-2%', stock: 15, image: '👟', margin: 32 },
-  ]
+  // Get all products
+  const allProducts = productsData?.data?.products || []
+  
+  // Get top products from analytics
+  const topProductsFromApi = topProductsData?.data?.products || []
+  
+  // Calculate product performance from orders (if no top products API data)
+  const calculateProductStats = () => {
+    return allProducts.map(product => {
+      const totalSold = product.total_sold || 0
+      const revenue = totalSold * parseFloat(product.price || 0)
+      const margin = cogs?.per_product?.find(p => p.product_id === product.id)?.margin_percentage || 0
+      
+      return {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        sales: totalSold,
+        revenue: revenue,
+        growth: '+0%', // Would need previous period data
+        stock: product.stock || 0,
+        image: product.primary_image ? '📦' : '📦',
+        margin: margin,
+        daysInStock: product.created_at ? Math.floor((new Date() - new Date(product.created_at)) / (1000 * 60 * 60 * 24)) : 30,
+        value: product.stock * parseFloat(product.price || 0)
+      }
+    })
+  }
 
-  const slowMovers = [
-    { id: 6, name: 'Desk Lamp', sku: 'DL-001', sales: 23, revenue: 22977, growth: '-15%', stock: 45, image: '💡', daysInStock: 120 },
-    { id: 7, name: 'Notebook Set', sku: 'NB-001', sales: 18, revenue: 8991, growth: '-8%', stock: 67, image: '📓', daysInStock: 90 },
-    { id: 8, name: 'Phone Case', sku: 'PC-001', sales: 12, revenue: 3599, growth: '-25%', stock: 34, image: '📱', daysInStock: 75 },
-  ]
-
-  const deadStock = [
-    { id: 9, name: 'Old Model Speaker', sku: 'SP-001', sales: 3, revenue: 4497, stock: 23, daysInStock: 180, value: 34485, image: '🔊' },
-    { id: 10, name: 'Outdated Cable', sku: 'CB-001', sales: 2, revenue: 998, stock: 56, daysInStock: 200, value: 27944, image: '🔌' },
-  ]
+  const productStats = calculateProductStats()
+  
+  // Sort products by sales for best sellers
+  const bestSellers = [...productStats].sort((a, b) => b.sales - a.sales).slice(0, 10)
+  
+  // Slow movers (low sales, high stock)
+  const slowMovers = productStats
+    .filter(p => p.sales < 10 && p.stock > 20)
+    .sort((a, b) => a.sales - b.sales)
+    .slice(0, 10)
+  
+  // Dead stock (no sales, high days in stock)
+  const deadStock = productStats
+    .filter(p => p.sales === 0 && p.daysInStock > 90)
+    .sort((a, b) => b.daysInStock - a.daysInStock)
+    .slice(0, 10)
 
   const getGrowthClass = (growth) => {
-    if (growth.startsWith('+')) return 'text-green-600'
-    return 'text-red-600'
+    if (growth && growth.startsWith('+')) return 'text-green-600'
+    if (growth && growth.startsWith('-')) return 'text-red-600'
+    return 'text-gray-600'
   }
 
   const getMarginClass = (margin) => {
@@ -59,12 +95,29 @@ export default function ProductReport({ dateRange }) {
     : deadStock.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const summary = {
-    totalProducts: 45,
-    bestSellersCount: 5,
-    slowMoversCount: 8,
-    deadStockCount: 12,
-    totalRevenue: 2456890,
-    avgMargin: 38
+    totalProducts: allProducts.length,
+    bestSellersCount: bestSellers.filter(p => p.sales > 0).length,
+    slowMoversCount: slowMovers.length,
+    deadStockCount: deadStock.length,
+    totalRevenue: productStats.reduce((sum, p) => sum + p.revenue, 0),
+    avgMargin: productStats.length > 0 
+      ? Math.round(productStats.reduce((sum, p) => sum + p.margin, 0) / productStats.length) 
+      : 0
+  }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN').format(amount)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="product-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading product data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -98,7 +151,7 @@ export default function ProductReport({ dateRange }) {
           <p className="text-[10px] text-red-600">Dead Stock</p>
         </div>
         <div className="text-center p-2 bg-blue-50 rounded-lg">
-          <p className="text-lg font-bold text-blue-700">₹{summary.avgMargin}%</p>
+          <p className="text-lg font-bold text-blue-700">{summary.avgMargin}%</p>
           <p className="text-[10px] text-blue-600">Avg Margin</p>
         </div>
       </div>
@@ -109,28 +162,34 @@ export default function ProductReport({ dateRange }) {
           onClick={() => { setActiveTab('bestsellers'); setCurrentPage(1) }}
           className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'bestsellers' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
         >
-          Best Sellers
+          Best Sellers ({bestSellers.length})
         </button>
         <button
           onClick={() => { setActiveTab('slowmovers'); setCurrentPage(1) }}
           className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'slowmovers' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
         >
-          Slow Movers
+          Slow Movers ({slowMovers.length})
         </button>
         <button
           onClick={() => { setActiveTab('deadstock'); setCurrentPage(1) }}
           className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'deadstock' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
         >
-          Dead Stock
+          Dead Stock ({deadStock.length})
         </button>
       </div>
 
       {/* Content */}
       <div className="p-4 max-h-[320px] overflow-y-auto custom-scroll">
-        {currentData.length === 0 ? (
+        {allProducts.length === 0 ? (
           <div className="text-center py-8">
             <Package size={32} className="mx-auto text-gray-300 mb-2" />
             <p className="text-sm text-gray-500">No products found</p>
+            <p className="text-xs text-gray-400 mt-1">Add products to see performance data</p>
+          </div>
+        ) : currentData.length === 0 ? (
+          <div className="text-center py-8">
+            <Package size={32} className="mx-auto text-gray-300 mb-2" />
+            <p className="text-sm text-gray-500">No {activeTab === 'bestsellers' ? 'best sellers' : activeTab === 'slowmovers' ? 'slow movers' : 'dead stock'} found</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -138,13 +197,13 @@ export default function ProductReport({ dateRange }) {
               <div key={product.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all" style={{ animationDelay: `${index * 0.05}s` }}>
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-xl">
-                    {product.image}
+                    {product.image || '📦'}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
                         <h4 className="text-sm font-semibold text-gray-900">{product.name}</h4>
-                        <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                        <p className="text-xs text-gray-500">SKU: {product.sku || 'N/A'}</p>
                       </div>
                       {activeTab === 'bestsellers' && (
                         <div className="flex items-center gap-1">
@@ -159,7 +218,7 @@ export default function ProductReport({ dateRange }) {
                       )}
                       {activeTab === 'deadstock' && (
                         <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                          ₹{product.value.toLocaleString()} value
+                          ₹{formatCurrency(product.value)} value
                         </span>
                       )}
                     </div>
@@ -167,7 +226,7 @@ export default function ProductReport({ dateRange }) {
                     <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                       <div>
                         <p className="text-gray-500">Revenue</p>
-                        <p className="font-semibold text-gray-900">₹{product.revenue.toLocaleString()}</p>
+                        <p className="font-semibold text-gray-900">₹{formatCurrency(product.revenue)}</p>
                       </div>
                       {activeTab === 'bestsellers' && (
                         <>
@@ -181,28 +240,24 @@ export default function ProductReport({ dateRange }) {
                           </div>
                         </>
                       )}
-                      {activeTab === 'slowmovers' && (
-                        <>
-                          <div>
-                            <p className="text-gray-500">Growth</p>
-                            <p className={`font-semibold ${getGrowthClass(product.growth)}`}>{product.growth}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Stock</p>
-                            <p className="font-semibold text-gray-900">{product.stock} units</p>
-                          </div>
-                        </>
-                      )}
-                      {activeTab === 'deadstock' && (
+                      {(activeTab === 'slowmovers' || activeTab === 'deadstock') && (
                         <>
                           <div>
                             <p className="text-gray-500">Stock</p>
                             <p className="font-semibold text-gray-900">{product.stock} units</p>
                           </div>
-                          <div>
-                            <p className="text-gray-500">Days in Stock</p>
-                            <p className="font-semibold text-red-600">{product.daysInStock} days</p>
-                          </div>
+                          {activeTab === 'slowmovers' && (
+                            <div>
+                              <p className="text-gray-500">Growth</p>
+                              <p className={`font-semibold ${getGrowthClass(product.growth)}`}>{product.growth}</p>
+                            </div>
+                          )}
+                          {activeTab === 'deadstock' && (
+                            <div>
+                              <p className="text-gray-500">Days in Stock</p>
+                              <p className="font-semibold text-red-600">{product.daysInStock} days</p>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from .models import GSTReturn, ScheduledReport
 
 class WholesalerStatsSerializer(serializers.Serializer):
     """Serializer for wholesaler dashboard statistics"""
@@ -169,3 +170,49 @@ class QuickReorderSerializer(serializers.Serializer):
     price = serializers.FloatField()
     urgency = serializers.CharField()
     image = serializers.CharField()
+
+
+
+#---------------------------------Analytics report-----------------------------
+class GSTReturnSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = GSTReturn
+        fields = ['id', 'period', 'tax_amount', 'status', 'status_display', 
+                  'filed_date', 'due_date', 'reference_number', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class FileGSTReturnSerializer(serializers.Serializer):
+    period = serializers.CharField(max_length=20)
+    due_date = serializers.DateField(required=False)
+    reference_number = serializers.CharField(max_length=50, required=False)
+
+
+class ScheduledReportSerializer(serializers.ModelSerializer):
+    frequency_display = serializers.CharField(source='get_frequency_display', read_only=True)
+    format_display = serializers.CharField(source='get_format_type_display', read_only=True)
+    
+    class Meta:
+        model = ScheduledReport
+        fields = ['id', 'name', 'report_type', 'frequency', 'frequency_display', 
+                  'format_type', 'format_display', 'recipients', 'is_active', 
+                  'last_sent', 'created_at', 'updated_at']
+
+
+class ScheduledReportCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    report_type = serializers.CharField(max_length=20)
+    frequency = serializers.ChoiceField(choices=ScheduledReport.FREQUENCY_CHOICES)
+    format_type = serializers.ChoiceField(choices=ScheduledReport.FORMAT_CHOICES, default='excel')
+    recipients = serializers.CharField()
+    is_active = serializers.BooleanField(default=True)
+
+
+class ScheduledReportUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100, required=False)
+    frequency = serializers.ChoiceField(choices=ScheduledReport.FREQUENCY_CHOICES, required=False)
+    format_type = serializers.ChoiceField(choices=ScheduledReport.FORMAT_CHOICES, required=False)
+    recipients = serializers.CharField(required=False)
+    is_active = serializers.BooleanField(required=False)

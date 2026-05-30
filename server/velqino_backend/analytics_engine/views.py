@@ -15,12 +15,12 @@ from .serializers import (
 from django.db import models
 from catalog.models import Product
 from commerce.models import Order, OrderItem
-from django.db.models import Q, Sum, Count, Max
+from django.db.models import Q, Sum, Count, Max, ExpressionWrapper, DecimalField
 from django.core.paginator import Paginator
 from identity.models import User
 from datetime import timedelta
 from decimal import Decimal
-
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
@@ -1565,3 +1565,635 @@ def retailer_quick_reorder(request):
         
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+#---------------------------------Retailers Reports------------------------------
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_cogs(request):
+    """
+    Get Cost of Goods Sold for margin calculation
+    """
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+        from django.db.models.functions import Coalesce
+        from decimal import Decimal
+        from commerce.models import OrderItem
+        
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        product_id = request.GET.get('product_id')
+        
+        order_items = OrderItem.objects.filter(
+            order__retailer=user,
+            order__status='delivered'
+        )
+        
+        if start_date:
+            order_items = order_items.filter(order__created_at__date__gte=start_date)
+        if end_date:
+            order_items = order_items.filter(order__created_at__date__lte=end_date)
+        if product_id:
+            order_items = order_items.filter(product_id=product_id)
+        
+        # Calculate totals using .values() first to avoid aggregate error
+        total_revenue = 0
+        total_cogs = 0
+        total_quantity = 0
+        
+        for item in order_items:
+            total_revenue += float(item.quantity) * float(item.price)
+            total_cogs += float(item.quantity) * float(item.product.cost_price) if item.product.cost_price else 0
+            total_quantity += item.quantity
+        
+        gross_profit = total_revenue - total_cogs
+        margin_percentage = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'summary': {
+                    'total_revenue': round(total_revenue, 2),
+                    'total_cogs': round(total_cogs, 2),
+                    'gross_profit': round(gross_profit, 2),
+                    'margin_percentage': round(margin_percentage, 2),
+                    'total_quantity_sold': total_quantity
+                },
+                'filters': {
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'product_id': product_id
+                }
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+# ========== TAX REPORT ENDPOINTS ==========
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_tax_summary(request):
+    """
+    Get GST collected summary for retailer
+    Query params: ?period=month&start_date=2026-01-01&end_date=2026-12-31
+    """
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.db.models import Sum
+        from django.utils import timezone
+        from datetime import timedelta
+        from commerce.models import Order
+        
+        # Get date range
+        period = request.GET.get('period', 'month')  # day, week, month, quarter, year
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        today = timezone.now().date()
+        
+        if start_date and end_date:
+            from datetime import datetime
+            start = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+        elif period == 'day':
+            start = today
+            end = today
+        elif period == 'week':
+            start = today - timedelta(days=today.weekday())
+            end = today
+        elif period == 'month':
+            start = today.replace(day=1)
+            end = today
+        elif period == 'quarter':
+            quarter_month = ((today.month - 1) // 3) * 3 + 1
+            start = today.replace(month=quarter_month, day=1)
+            end = today
+        elif period == 'year':
+            start = today.replace(month=1, day=1)
+            end = today
+        else:
+            start = today - timedelta(days=30)
+            end = today
+        
+        # Get completed orders in date range
+        orders = Order.objects.filter(
+            retailer=user,
+            status='delivered',
+            created_at__date__gte=start,
+            created_at__date__lte=end
+        )
+        
+        # Calculate GST
+        total_taxable_amount = orders.aggregate(total=Sum('total_amount'))['total'] or 0
+        total_gst = orders.aggregate(total=Sum('tax_amount'))['total'] or 0
+        
+        # CGST and SGST are half of GST (assuming 50-50 split)
+        cgst = float(total_gst) / 2
+        sgst = float(total_gst) / 2
+        
+        # Get monthly breakdown for chart
+        monthly_data = orders.annotate(
+            month_date=TruncMonth('created_at')
+        ).values('month_date').annotate(
+            gst=Sum('tax_amount'),
+            taxable=Sum('total_amount')
+        ).order_by('month_date')
+        
+        monthly_breakdown = []
+        for item in monthly_data:
+            monthly_breakdown.append({
+                'month': item['month_date'].strftime('%b %Y'),
+                'gst': float(item['gst'] or 0),
+                'taxable_amount': float(item['taxable'] or 0)
+            })
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'summary': {
+                    'period': {
+                        'start_date': start.isoformat(),
+                        'end_date': end.isoformat(),
+                        'period_type': period
+                    },
+                    'total_taxable_amount': float(total_taxable_amount),
+                    'total_gst_collected': float(total_gst),
+                    'cgst': round(cgst, 2),
+                    'sgst': round(sgst, 2),
+                    'total_orders': orders.count()
+                },
+                'monthly_breakdown': monthly_breakdown
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_gst_returns(request):
+    """
+    Get list of GST returns filed/pending
+    """
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from .models import GSTReturn
+        
+        # Get query parameters
+        status_filter = request.GET.get('status')  # filed, pending, all
+        year = request.GET.get('year')
+        
+        returns = GSTReturn.objects.filter(retailer=user)
+        
+        if status_filter and status_filter != 'all':
+            returns = returns.filter(status=status_filter)
+        if year:
+            returns = returns.filter(period__year=year)
+        
+        returns = returns.order_by('-period')
+        
+        # Pagination
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 20))
+        start = (page - 1) * per_page
+        end = start + per_page
+        
+        total = returns.count()
+        paginated = returns[start:end]
+        
+        from .serializers import GSTReturnSerializer
+        serializer = GSTReturnSerializer(paginated, many=True)
+        
+        # Summary stats
+        filed_count = returns.filter(status='filed').count()
+        pending_count = returns.filter(status='pending').count()
+        total_tax = returns.filter(status='filed').aggregate(total=Sum('tax_amount'))['total'] or 0
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'returns': serializer.data,
+                'summary': {
+                    'filed': filed_count,
+                    'pending': pending_count,
+                    'total_tax_paid': float(total_tax)
+                },
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'total_pages': (total + per_page - 1) // per_page
+                }
+            }
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def file_gst_return(request):
+    """
+    File a new GST return
+    """
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from .models import GSTReturn
+        from .serializers import FileGSTReturnSerializer
+        from django.utils import timezone
+        from commerce.models import Order
+        from django.db.models import Sum
+        
+        serializer = FileGSTReturnSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+        
+        data = serializer.validated_data
+        period = data['period']
+        
+        # Parse period (e.g., "Q1 2026" or "Jan-Mar 2026")
+        from datetime import datetime
+        
+        # Calculate tax for the period
+        # For quarterly returns
+        if 'Q' in period:
+            quarter_num = int(period.split('Q')[1].split()[0])
+            year = int(period.split()[-1])
+            
+            if quarter_num == 1:
+                start_date = datetime(year, 1, 1).date()
+                end_date = datetime(year, 3, 31).date()
+            elif quarter_num == 2:
+                start_date = datetime(year, 4, 1).date()
+                end_date = datetime(year, 6, 30).date()
+            elif quarter_num == 3:
+                start_date = datetime(year, 7, 1).date()
+                end_date = datetime(year, 9, 30).date()
+            else:
+                start_date = datetime(year, 10, 1).date()
+                end_date = datetime(year, 12, 31).date()
+        else:
+            # Monthly period
+            return Response({'status': 'error', 'message': 'Invalid period format'}, status=400)
+        
+        # Check if return already exists for this period
+        if GSTReturn.objects.filter(retailer=user, period=period).exists():
+            return Response({
+                'status': 'error',
+                'message': f'GST return for period {period} already filed'
+            }, status=400)
+        
+        # Calculate tax from orders in period
+        orders = Order.objects.filter(
+            retailer=user,
+            status='delivered',
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        
+        tax_amount = orders.aggregate(total=Sum('tax_amount'))['total'] or 0
+        
+        # Create GST return
+        gst_return = GSTReturn.objects.create(
+            retailer=user,
+            period=period,
+            tax_amount=tax_amount,
+            status='filed',
+            filed_date=timezone.now().date(),
+            due_date=data.get('due_date', timezone.now().date() + timedelta(days=30))
+        )
+        
+        from .serializers import GSTReturnSerializer
+        response_serializer = GSTReturnSerializer(gst_return)
+        
+        return Response({
+            'status': 'success',
+            'message': f'GST return for period {period} filed successfully',
+            'data': response_serializer.data
+        }, status=201)
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def retailer_export_report(request):
+    """Generate PDF/Excel report for retailer"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        import io
+        import xlsxwriter
+        from django.http import HttpResponse
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
+        from commerce.models import Order
+        from datetime import datetime
+        
+        report_type = request.data.get('report_type', 'sales')  # sales, products, customers, tax, profit
+        format_type = request.data.get('format', 'excel')  # pdf, excel
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        
+        # Get orders data
+        orders = Order.objects.filter(
+            retailer=user,
+            status='delivered',
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        
+        if format_type == 'excel':
+            output = io.BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet(report_type.title())
+            
+            # Headers
+            headers = ['Order ID', 'Date', 'Customer', 'Amount', 'Status', 'Items']
+            for col, header in enumerate(headers):
+                worksheet.write(0, col, header)
+            
+            # Data
+            for row, order in enumerate(orders, start=1):
+                worksheet.write(row, 0, order.order_number)
+                worksheet.write(row, 1, order.created_at.strftime('%Y-%m-%d'))
+                worksheet.write(row, 2, order.customer.email)
+                worksheet.write(row, 3, float(order.grand_total))
+                worksheet.write(row, 4, order.status)
+                worksheet.write(row, 5, order.items.count())
+            
+            workbook.close()
+            output.seek(0)
+            
+            filename = f"{report_type}_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
+            response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename={filename}'
+            return response
+            
+        else:  # PDF
+            response = HttpResponse(content_type='application/pdf')
+            filename = f"{report_type}_report_{datetime.now().strftime('%Y%m%d')}.pdf"
+            response['Content-Disposition'] = f'attachment; filename={filename}'
+            
+            doc = SimpleDocTemplate(response, pagesize=letter)
+            styles = getSampleStyleSheet()
+            elements = []
+            
+            # Title
+            title = Paragraph(f"{report_type.title()} Report", styles['Title'])
+            elements.append(title)
+            
+            # Table data
+            data = [['Order ID', 'Date', 'Amount']]
+            for order in orders[:50]:
+                data.append([order.order_number, order.created_at.strftime('%Y-%m-%d'), f"₹{order.grand_total}"])
+            
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            elements.append(table)
+            
+            doc.build(elements)
+            return response
+            
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def retailer_email_report(request):
+    """Send report via email"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    try:
+        from django.core.mail import EmailMessage
+        from django.template.loader import render_to_string
+        from django.utils.html import strip_tags
+        import io
+        import xlsxwriter
+        from datetime import datetime
+        
+        email_to = request.data.get('email')
+        report_type = request.data.get('report_type', 'sales')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        
+        if not email_to:
+            return Response({'status': 'error', 'message': 'Email address required'}, status=400)
+        
+        # Generate Excel file
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet(report_type.title())
+        
+        from commerce.models import Order
+        orders = Order.objects.filter(
+            retailer=user,
+            status='delivered',
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        
+        headers = ['Order ID', 'Date', 'Customer', 'Amount', 'Status']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header)
+        
+        for row, order in enumerate(orders, start=1):
+            worksheet.write(row, 0, order.order_number)
+            worksheet.write(row, 1, order.created_at.strftime('%Y-%m-%d'))
+            worksheet.write(row, 2, order.customer.email)
+            worksheet.write(row, 3, float(order.grand_total))
+            worksheet.write(row, 4, order.status)
+        
+        workbook.close()
+        output.seek(0)
+        
+        # Send email
+        subject = f"{report_type.title()} Report - {datetime.now().strftime('%Y-%m-%d')}"
+        html_message = render_to_string('email/report_email.html', {
+            'user_name': user.get_full_name() or user.email,
+            'report_type': report_type,
+            'start_date': start_date,
+            'end_date': end_date,
+            'total_orders': orders.count(),
+            'total_amount': orders.aggregate(total=Sum('grand_total'))['total'] or 0
+        })
+        plain_message = strip_tags(html_message)
+        
+        email = EmailMessage(
+            subject, plain_message, None, [email_to]
+        )
+        email.attach(f"{report_type}_report_{datetime.now().strftime('%Y%m%d')}.xlsx", output.getvalue(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        email.send()
+        
+        return Response({
+            'status': 'success',
+            'message': f'Report sent to {email_to}'
+        })
+        
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
+
+# ========== SCHEDULED REPORTS ==========
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_scheduled_reports(request):
+    """List all scheduled reports for retailer"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .models import ScheduledReport
+    from .serializers import ScheduledReportSerializer
+    
+    reports = ScheduledReport.objects.filter(retailer=user).order_by('-created_at')
+    serializer = ScheduledReportSerializer(reports, many=True)
+    
+    return Response({'status': 'success', 'data': serializer.data})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_scheduled_report(request):
+    """Create a new scheduled report"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .models import ScheduledReport
+    from .serializers import ScheduledReportCreateSerializer
+    
+    serializer = ScheduledReportCreateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+    
+    data = serializer.validated_data
+    
+    report = ScheduledReport.objects.create(
+        retailer=user,
+        name=data['name'],
+        report_type=data['report_type'],
+        frequency=data['frequency'],
+        format_type=data.get('format_type', 'excel'),
+        recipients=data['recipients'],
+        is_active=data.get('is_active', True)
+    )
+    
+    from .serializers import ScheduledReportSerializer
+    response_serializer = ScheduledReportSerializer(report)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Scheduled report created successfully',
+        'data': response_serializer.data
+    }, status=201)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_scheduled_report(request, report_id):
+    """Update a scheduled report"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .models import ScheduledReport
+    from .serializers import ScheduledReportUpdateSerializer
+    
+    try:
+        report = ScheduledReport.objects.get(id=report_id, retailer=user)
+    except ScheduledReport.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Scheduled report not found'}, status=404)
+    
+    serializer = ScheduledReportUpdateSerializer(data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+    
+    data = serializer.validated_data
+    
+    if 'name' in data:
+        report.name = data['name']
+    if 'frequency' in data:
+        report.frequency = data['frequency']
+    if 'format_type' in data:
+        report.format_type = data['format_type']
+    if 'recipients' in data:
+        report.recipients = data['recipients']
+    if 'is_active' in data:
+        report.is_active = data['is_active']
+    
+    report.save()
+    
+    from .serializers import ScheduledReportSerializer
+    response_serializer = ScheduledReportSerializer(report)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Scheduled report updated successfully',
+        'data': response_serializer.data
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_scheduled_report(request, report_id):
+    """Delete a scheduled report"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .models import ScheduledReport
+    
+    try:
+        report = ScheduledReport.objects.get(id=report_id, retailer=user)
+    except ScheduledReport.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Scheduled report not found'}, status=404)
+    
+    report.delete()
+    
+    return Response({
+        'status': 'success',
+        'message': 'Scheduled report deleted successfully'
+    })

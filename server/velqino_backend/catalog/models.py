@@ -80,7 +80,7 @@ class Product(models.Model):
     
     compare_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Cost price of product for margin calculation")
     stock = models.IntegerField(default=1, validators=[MinValueValidator(0)])
     threshold = models.IntegerField(default=10, help_text="Low stock alert level")
 

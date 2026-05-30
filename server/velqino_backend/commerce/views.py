@@ -2663,3 +2663,223 @@ def loyalty_settings(request):
             'message': 'Loyalty settings updated successfully',
             'data': response_serializer.data
         })
+
+
+
+#---------------------analytics report-----------------------
+# ========== EXPENSES MANAGEMENT ==========
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_retailer_expenses(request):
+    """Get all expenses for retailer"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from django.db.models import Sum
+    from .models import Expense
+    
+    # Get date range filters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    category = request.GET.get('category')
+    
+    expenses = Expense.objects.filter(retailer=user)
+    
+    if start_date:
+        expenses = expenses.filter(date__gte=start_date)
+    if end_date:
+        expenses = expenses.filter(date__lte=end_date)
+    if category:
+        expenses = expenses.filter(category=category)
+    
+    expenses = expenses.order_by('-date')
+    
+    # Pagination
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 20))
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    total = expenses.count()
+    paginated = expenses[start:end]
+    
+    from .serializers import ExpenseSerializer
+    serializer = ExpenseSerializer(paginated, many=True)
+    
+    # Calculate totals
+    total_amount = expenses.aggregate(total=Sum('amount'))['total'] or 0
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'expenses': serializer.data,
+            'summary': {
+                'total_expenses': float(total_amount),
+                'count': total
+            },
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_expense(request):
+    """Create new expense"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .serializers import ExpenseCreateSerializer
+    
+    serializer = ExpenseCreateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+    
+    data = serializer.validated_data
+    
+    from .models import Expense
+    
+    expense = Expense.objects.create(
+        retailer=user,
+        category=data['category'],
+        amount=data['amount'],
+        date=data['date'],
+        description=data.get('description', ''),
+        payment_method=data.get('payment_method', ''),
+        receipt_url=data.get('receipt_url', '')
+    )
+    
+    from .serializers import ExpenseSerializer
+    response_serializer = ExpenseSerializer(expense)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Expense added successfully',
+        'data': response_serializer.data
+    }, status=201)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_expense(request, expense_id):
+    """Update expense"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .models import Expense
+    
+    try:
+        expense = Expense.objects.get(id=expense_id, retailer=user)
+    except Expense.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Expense not found'}, status=404)
+    
+    from .serializers import ExpenseUpdateSerializer
+    
+    serializer = ExpenseUpdateSerializer(data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+    
+    data = serializer.validated_data
+    
+    if 'category' in data:
+        expense.category = data['category']
+    if 'amount' in data:
+        expense.amount = data['amount']
+    if 'date' in data:
+        expense.date = data['date']
+    if 'description' in data:
+        expense.description = data['description']
+    if 'payment_method' in data:
+        expense.payment_method = data['payment_method']
+    
+    expense.save()
+    
+    from .serializers import ExpenseSerializer
+    response_serializer = ExpenseSerializer(expense)
+    
+    return Response({
+        'status': 'success',
+        'message': 'Expense updated successfully',
+        'data': response_serializer.data
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_expense(request, expense_id):
+    """Delete expense"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from .models import Expense
+    
+    try:
+        expense = Expense.objects.get(id=expense_id, retailer=user)
+    except Expense.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Expense not found'}, status=404)
+    
+    expense.delete()
+    
+    return Response({
+        'status': 'success',
+        'message': 'Expense deleted successfully'
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_expense_by_category(request):
+    """Get expense breakdown by category"""
+    user = request.user
+    
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+    
+    from django.db.models import Sum
+    from .models import Expense
+    
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    expenses = Expense.objects.filter(retailer=user)
+    
+    if start_date:
+        expenses = expenses.filter(date__gte=start_date)
+    if end_date:
+        expenses = expenses.filter(date__lte=end_date)
+    
+    category_totals = expenses.values('category').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    total_all = expenses.aggregate(total=Sum('amount'))['total'] or 0
+    
+    category_breakdown = []
+    for item in category_totals:
+        category_breakdown.append({
+            'category': item['category'],
+            'amount': float(item['total']),
+            'percentage': round(float(item['total']) / float(total_all) * 100, 1) if total_all > 0 else 0
+        })
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'breakdown': category_breakdown,
+            'total': float(total_all)
+        }
+    })

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Cart, CartItem, Order, OrderItem, StockHistory, LoyaltySettings, PointsTransaction, Reward, Campaign
+from .models import Cart, CartItem, Order, OrderItem, StockHistory, LoyaltySettings, PointsTransaction, Reward, Campaign, Expense
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
@@ -214,3 +214,12 @@ class CampaignAdmin(admin.ModelAdmin):
         queryset.update(status='cancelled')
         self.message_user(request, 'Selected campaigns cancelled')
     cancel_campaigns.short_description = "Cancel selected campaigns"
+
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ['id', 'retailer', 'category', 'amount', 'date', 'payment_method']
+    list_filter = ['category', 'payment_method', 'date']
+    search_fields = ['retailer__email', 'description']
+    date_hierarchy = 'date'

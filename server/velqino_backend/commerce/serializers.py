@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import (Order, OrderItem, Review, Cart, CartItem, 
+from .models import (Order, OrderItem, Review, Cart, CartItem, Expense,
                      ReturnRequest, LoyaltySettings, PointsTransaction, Reward, Campaign)
 from catalog.serializers import ProductListSerializer, ProductDetailSerializer
 from decimal import Decimal
@@ -460,3 +460,34 @@ class UpdateCampaignSerializer(serializers.Serializer):
         if start_date and end_date and start_date >= end_date:
             raise serializers.ValidationError("End date must be after start date")
         return data
+    
+
+
+#-------------------------------------Retilaer reports-------------------------
+# ========== EXPENSE SERIALIZERS ==========
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    
+    class Meta:
+        model = Expense
+        fields = ['id', 'category', 'category_display', 'amount', 'date', 'description', 
+                  'payment_method', 'payment_method_display', 'receipt_url', 'created_at', 'updated_at']
+
+
+class ExpenseCreateSerializer(serializers.Serializer):
+    category = serializers.ChoiceField(choices=Expense.EXPENSE_CATEGORIES)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
+    date = serializers.DateField()
+    description = serializers.CharField(required=False, allow_blank=True)
+    payment_method = serializers.ChoiceField(choices=Expense.PAYMENT_METHODS, required=False, default='cash')
+    receipt_url = serializers.URLField(required=False, allow_blank=True)
+
+
+class ExpenseUpdateSerializer(serializers.Serializer):
+    category = serializers.ChoiceField(choices=Expense.EXPENSE_CATEGORIES, required=False)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'), required=False)
+    date = serializers.DateField(required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    payment_method = serializers.ChoiceField(choices=Expense.PAYMENT_METHODS, required=False)

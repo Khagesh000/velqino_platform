@@ -68,4 +68,12 @@ urlpatterns = [
     # ========== LOYALTY SETTINGS URLS ==========
     path('loyalty-settings/', views.loyalty_settings, name='loyalty-settings'),
 
+    #--------------------------Retailer Reports----------------------------------
+    # ========== EXPENSES URLS ==========
+    path('expenses/retailer/list/', views.get_retailer_expenses, name='expenses-list'),
+    path('expenses/retailer/create/', views.create_expense, name='expense-create'),
+    path('expenses/retailer/<int:expense_id>/update/', views.update_expense, name='expense-update'),
+    path('expenses/retailer/<int:expense_id>/delete/', views.delete_expense, name='expense-delete'),
+    path('expenses/retailer/by-category/', views.get_expense_by_category, name='expense-by-category'),
+
 ]

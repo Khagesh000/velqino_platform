@@ -3,87 +3,93 @@
 import React, { useState, useEffect } from 'react'
 import { FileText, TrendingUp, TrendingDown, Calendar, Download, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, Clock, Eye } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerReports/TaxReport.scss'
+import { useFileGSTReturnMutation } from '@/redux/retailer/slices/retailerReportsSlice'
 
-export default function TaxReport({ dateRange }) {
+export default function TaxReport({ dateRange, taxSummary, gstReturns = [], isLoading: propLoading, onRefresh }) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [currentPage, setCurrentPage] = useState(1)
+  const [filingReturnId, setFilingReturnId] = useState(null)
   const itemsPerPage = 4
+
+  // ADD these lines
+  const isLoading = propLoading
+  const [fileGSTReturn, { isLoading: filingLoading }] = useFileGSTReturnMutation() 
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+
+
   if (!mounted) return null
 
-  const taxData = {
-    day: {
-      gstCollected: 5209,
-      gstPayable: 5209,
-      cgst: 2604,
-      sgst: 2605,
-      pending: 0,
-      filed: true
-    },
-    week: {
-      gstCollected: 22302,
-      gstPayable: 22302,
-      cgst: 11151,
-      sgst: 11151,
-      pending: 0,
-      filed: true
-    },
-    month: {
-      gstCollected: 37188,
-      gstPayable: 37188,
-      cgst: 18594,
-      sgst: 18594,
-      pending: 0,
-      filed: true
-    },
-    quarter: {
-      gstCollected: 99288,
-      gstPayable: 99288,
-      cgst: 49644,
-      sgst: 49644,
-      pending: 0,
-      filed: true
-    },
-    year: {
-      gstCollected: 439488,
-      gstPayable: 439488,
-      cgst: 219744,
-      sgst: 219744,
-      pending: 0,
-      filed: true
-    }
+  // Get tax data from API or use defaults
+  const data = {
+    gstCollected: taxSummary?.total_gst_collected || 0,
+    gstPayable: taxSummary?.total_gst_collected || 0,
+    cgst: taxSummary?.cgst || 0,
+    sgst: taxSummary?.sgst || 0,
+    pending: taxSummary?.pending_returns || 0,
+    filed: (taxSummary?.total_orders || 0) > 0
   }
-
-  const data = taxData[dateRange] || taxData.month
-
-  const gstReturns = [
-    { period: 'Jan-Mar 2026', dueDate: '2026-04-20', status: 'pending', amount: 24822, type: 'Quarterly' },
-    { period: 'Oct-Dec 2025', dueDate: '2026-01-20', status: 'filed', amount: 22302, filedDate: '2026-01-15', type: 'Quarterly' },
-    { period: 'Jul-Sep 2025', dueDate: '2025-10-20', status: 'filed', amount: 21078, filedDate: '2025-10-18', type: 'Quarterly' },
-    { period: 'Apr-Jun 2025', dueDate: '2025-07-20', status: 'filed', amount: 19850, filedDate: '2025-07-16', type: 'Quarterly' },
-  ]
 
   const getStatusBadge = (status) => {
     if (status === 'filed') {
       return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle size={10} />, label: 'Filed' }
     }
-    return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertCircle size={10} />, label: 'Pending' }
+    if (status === 'overdue') {
+      return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertCircle size={10} />, label: 'Overdue' }
+    }
+    return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={10} />, label: 'Pending' }
   }
 
   const formatDate = (date) => {
+    if (!date) return 'N/A'
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  const pendingReturns = gstReturns.filter(r => r.status === 'pending').length
-  const totalTaxLiability = gstReturns.reduce((sum, r) => sum + r.amount, 0)
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN').format(amount)
+  }
+
+  const pendingReturns = gstReturns?.filter(r => r.status === 'pending').length || 0
+  const filedReturns = gstReturns?.filter(r => r.status === 'filed').length || 0
+  const totalTaxLiability = gstReturns?.reduce((sum, r) => sum + (r.tax_amount || 0), 0) || 0
+
+  const handleFileReturn = async (returnId) => {
+    setFilingReturnId(returnId)
+    try {
+      await fileGSTReturn({ return_id: returnId }).unwrap()
+      refetchGSTReturns()
+      refetchTaxSummary()
+      if (onRefresh) onRefresh()
+    } catch (error) {
+      console.error('Failed to file return:', error)
+      alert('Failed to file GST return. Please try again.')
+    } finally {
+      setFilingReturnId(null)
+    }
+  }
 
   const currentData = gstReturns.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   const totalPages = Math.ceil(gstReturns.length / itemsPerPage)
+
+  const getPeriodLabel = (period) => {
+    if (!period) return 'N/A'
+    return period
+  }
+
+  if (isLoading && !taxSummary && gstReturns.length === 0) {
+    return (
+      <div className="tax-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading tax data...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="tax-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
@@ -113,7 +119,7 @@ export default function TaxReport({ dateRange }) {
           onClick={() => setActiveTab('returns')}
           className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'returns' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
         >
-          GST Returns
+          GST Returns ({gstReturns.length})
         </button>
         <button
           onClick={() => setActiveTab('settings')}
@@ -128,114 +134,143 @@ export default function TaxReport({ dateRange }) {
         {activeTab === 'overview' && (
           <div className="space-y-4">
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-blue-600 mb-1">GST Collected</p>
-                <p className="text-xl font-bold text-blue-700">₹{data.gstCollected.toLocaleString()}</p>
+            {data.gstCollected === 0 ? (
+              <div className="text-center py-8">
+                <FileText size={32} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-sm text-gray-500">No tax data available</p>
+                <p className="text-xs text-gray-400 mt-1">Complete orders to see tax summary</p>
               </div>
-              <div className="bg-orange-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-orange-600 mb-1">GST Payable</p>
-                <p className="text-xl font-bold text-orange-700">₹{data.gstPayable.toLocaleString()}</p>
-              </div>
-            </div>
-
-            {/* GST Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="text-xs font-semibold text-gray-700 mb-2">GST Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">CGST (9%)</span>
-                  <span className="font-semibold text-gray-900">₹{data.cgst.toLocaleString()}</span>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-blue-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-blue-600 mb-1">GST Collected</p>
+                    <p className="text-xl font-bold text-blue-700">₹{formatCurrency(data.gstCollected)}</p>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-orange-600 mb-1">GST Payable</p>
+                    <p className="text-xl font-bold text-orange-700">₹{formatCurrency(data.gstPayable)}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">SGST (9%)</span>
-                  <span className="font-semibold text-gray-900">₹{data.sgst.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-                  <span className="font-medium text-gray-700">Total</span>
-                  <span className="font-bold text-primary-600">₹{data.gstCollected.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Compliance Status */}
-            <div className={`rounded-lg p-3 ${data.filed ? 'bg-green-50' : 'bg-red-50'}`}>
-              <div className="flex items-center gap-2">
-                {data.filed ? <CheckCircle size={16} className="text-green-600" /> : <AlertCircle size={16} className="text-red-600" />}
-                <span className="text-sm font-medium text-gray-700">Compliance Status</span>
-              </div>
-              <p className={`text-xs mt-1 ${data.filed ? 'text-green-700' : 'text-red-700'}`}>
-                {data.filed ? 'All GST returns filed for this period' : 'Pending GST returns need attention'}
-              </p>
-            </div>
+                {/* GST Breakdown */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">GST Breakdown</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">CGST (9%)</span>
+                      <span className="font-semibold text-gray-900">₹{formatCurrency(data.cgst)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">SGST (9%)</span>
+                      <span className="font-semibold text-gray-900">₹{formatCurrency(data.sgst)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                      <span className="font-medium text-gray-700">Total</span>
+                      <span className="font-bold text-primary-600">₹{formatCurrency(data.gstCollected)}</span>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Tax Summary */}
-            <div className="bg-yellow-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock size={14} className="text-yellow-600" />
-                <span className="text-xs font-semibold text-yellow-700">Next Due Date</span>
-              </div>
-              <p className="text-sm font-medium text-gray-900">April 20, 2026</p>
-              <p className="text-xs text-yellow-600 mt-1">Quarterly GST return filing</p>
-            </div>
+                {/* Compliance Status */}
+                <div className={`rounded-lg p-3 ${data.filed ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                  <div className="flex items-center gap-2">
+                    {data.filed ? <CheckCircle size={16} className="text-green-600" /> : <Clock size={16} className="text-yellow-600" />}
+                    <span className="text-sm font-medium text-gray-700">Compliance Status</span>
+                  </div>
+                  <p className={`text-xs mt-1 ${data.filed ? 'text-green-700' : 'text-yellow-700'}`}>
+                    {data.filed ? 'GST returns tracked for this period' : 'No GST returns filed yet'}
+                  </p>
+                </div>
+
+                {/* Tax Summary */}
+                {gstReturns.length > 0 && (
+                  <div className="bg-yellow-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock size={14} className="text-yellow-600" />
+                      <span className="text-xs font-semibold text-yellow-700">Next Due Date</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {gstReturns.find(r => r.status === 'pending')?.due_date || 'No pending returns'}
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-1">Quarterly GST return filing</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
         {activeTab === 'returns' && (
           <div className="space-y-3">
-            {/* Summary */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-green-50 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-green-700">{gstReturns.length - pendingReturns}</p>
-                <p className="text-[10px] text-green-600">Returns Filed</p>
+            {gstReturns.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText size={32} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-sm text-gray-500">No GST returns data available</p>
+                <p className="text-xs text-gray-400 mt-1">Returns will appear when orders are completed</p>
               </div>
-              <div className="bg-red-50 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-red-700">{pendingReturns}</p>
-                <p className="text-[10px] text-red-600">Pending</p>
-              </div>
-            </div>
-
-            {/* Returns List */}
-            {currentData.map((returnItem, idx) => {
-              const status = getStatusBadge(returnItem.status)
-              return (
-                <div key={idx} className="border border-gray-200 rounded-lg p-3 transition-all hover:shadow-md">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900">{returnItem.period}</h4>
-                      <p className="text-xs text-gray-500">{returnItem.type} Return</p>
-                    </div>
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${status.bg} ${status.text}`}>
-                      {status.icon}
-                      {status.label}
-                    </div>
+            ) : (
+              <>
+                {/* Summary */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-green-50 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-green-700">{filedReturns}</p>
+                    <p className="text-[10px] text-green-600">Returns Filed</p>
                   </div>
-                  
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-gray-500">Due Date</p>
-                      <p className="font-medium text-gray-700">{formatDate(returnItem.dueDate)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Amount</p>
-                      <p className="font-semibold text-gray-900">₹{returnItem.amount.toLocaleString()}</p>
-                    </div>
+                  <div className="bg-red-50 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-red-700">{pendingReturns}</p>
+                    <p className="text-[10px] text-red-600">Pending</p>
                   </div>
-                  
-                  {returnItem.status === 'filed' && returnItem.filedDate && (
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-[10px] text-green-600">Filed on {formatDate(returnItem.filedDate)}</p>
-                    </div>
-                  )}
-                  
-                  {returnItem.status === 'pending' && (
-                    <button className="mt-2 w-full py-1.5 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all">
-                      File Now
-                    </button>
-                  )}
                 </div>
-              )
-            })}
+
+                {/* Returns List */}
+                {currentData.map((returnItem, idx) => {
+                  const status = getStatusBadge(returnItem.status)
+                  const isFiling = filingReturnId === returnItem.id
+                  return (
+                    <div key={idx} className="border border-gray-200 rounded-lg p-3 transition-all hover:shadow-md">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900">{getPeriodLabel(returnItem.period)}</h4>
+                          <p className="text-xs text-gray-500">GST Return</p>
+                        </div>
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${status.bg} ${status.text}`}>
+                          {status.icon}
+                          {status.label}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="text-gray-500">Due Date</p>
+                          <p className="font-medium text-gray-700">{formatDate(returnItem.due_date)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Tax Amount</p>
+                          <p className="font-semibold text-gray-900">₹{formatCurrency(returnItem.tax_amount)}</p>
+                        </div>
+                      </div>
+                      
+                      {returnItem.status === 'filed' && returnItem.filed_date && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <p className="text-[10px] text-green-600">Filed on {formatDate(returnItem.filed_date)}</p>
+                        </div>
+                      )}
+                      
+                      {returnItem.status === 'pending' && (
+                        <button 
+                          onClick={() => handleFileReturn(returnItem.id)}
+                          disabled={isFiling}
+                          className="mt-2 w-full py-1.5 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all disabled:bg-gray-400"
+                        >
+                          {isFiling ? 'Filing...' : 'File Now'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </div>
         )}
 
@@ -246,7 +281,7 @@ export default function TaxReport({ dateRange }) {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">GST Number</span>
-                  <span className="font-medium text-gray-900">29ABCDE1234F1Z5</span>
+                  <span className="font-medium text-gray-900">Not configured</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">GST Rate</span>
@@ -272,6 +307,14 @@ export default function TaxReport({ dateRange }) {
                 <span className="text-xs text-gray-600">Email reminders for due dates</span>
                 <input type="checkbox" defaultChecked className="rounded text-primary-500" />
               </label>
+            </div>
+
+            <div className="bg-yellow-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={14} className="text-yellow-600" />
+                <span className="text-xs font-semibold text-yellow-700">GST Rate Information</span>
+              </div>
+              <p className="text-xs text-gray-600">Current GST rate is set to 18% (9% CGST + 9% SGST) for all products. Update product-specific rates in catalog settings.</p>
             </div>
           </div>
         )}
