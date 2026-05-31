@@ -54,6 +54,8 @@ export default function FloatingElements() {
     setShowRecentlyViewed(false);
   };
 
+  
+
   return (
     <>
       {/* Back to Top Button */}

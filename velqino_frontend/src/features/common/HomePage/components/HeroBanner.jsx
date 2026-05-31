@@ -14,8 +14,8 @@ const slides = [
     description: "Shop the latest summer collection with exclusive discounts. Limited time offer!",
     ctaText: "Shop Now",
     ctaLink: "/products",
-    image: "/images/banner/summer-sale.jpg",
-    mobileImage: "/images/banner/summer-sale-mobile.jpg",
+    image: "/images/placeholder.jpg",
+    mobileImage: "/images/placeholder.jpg",
     badge: { text: "50% OFF", color: "bg-red-500" },
     icon: <Zap size={20} />,
     gradient: "from-orange-500 to-red-500"
@@ -27,8 +27,8 @@ const slides = [
     description: "Discover the latest trends and styles. Be the first to shop!",
     ctaText: "Explore Now",
     ctaLink: "/new-arrivals",
-    image: "/images/banner/new-arrivals.jpg",
-    mobileImage: "/images/banner/new-arrivals-mobile.jpg",
+    image: "/images/placeholder.jpg",
+    mobileImage: "/images/placeholder.jpg",
     badge: { text: "NEW", color: "bg-green-500" },
     icon: <TrendingUp size={20} />,
     gradient: "from-green-500 to-teal-500"
@@ -40,8 +40,8 @@ const slides = [
     description: "Hurry up! Grab your favorites before they're gone.",
     ctaText: "Shop Sale",
     ctaLink: "/deals",
-    image: "/images/banner/flash-sale.jpg",
-    mobileImage: "/images/banner/flash-sale-mobile.jpg",
+    image: "/images/placeholder.jpg",
+    mobileImage: "/images/placeholder.jpg",
     badge: { text: "LIMITED", color: "bg-yellow-500" },
     icon: <Clock size={20} />,
     gradient: "from-purple-500 to-pink-500"

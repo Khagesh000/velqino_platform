@@ -11,9 +11,10 @@ const ProductCard = memo(({ product, onRemove }) => {
 
   // Get image URL from product data
   const getImageUrl = () => {
-    return product?.primary_image || 
-           product?.images?.[0]?.image || 
-           '/images/placeholder.jpg';
+    return product?.image || 
+          product?.primary_image || 
+          product?.images?.[0]?.image || 
+          '/images/placeholder.jpg';
   };
 
   // Format time ago
@@ -148,9 +149,6 @@ export default function RecentlyViewed({ products = [], loading = false }) {
   
   // ✅ THEN USE
   const recentProducts = products.filter(p => recentProductIds.includes(p.id));
-  console.log('🔍 RecentlyViewed - recentProductIds:', recentProductIds);
-  console.log('🔍 RecentlyViewed - products count:', products.length);
-  console.log('🔍 RecentlyViewed - recentProducts count:', recentProducts.length);
 
   const [isInView, setIsInView] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -160,22 +158,46 @@ export default function RecentlyViewed({ products = [], loading = false }) {
 
 useEffect(() => {
   const stored = localStorage.getItem('recentlyViewed');
-  console.log('🔍 RecentlyViewed - localStorage data:', stored);
+  /* console.log('🔍 RecentlyViewed - localStorage data:', stored); */
   if (stored) {
     try {
       const ids = JSON.parse(stored);
       // Extract just the IDs if they are objects
       const extractedIds = ids.map(item => typeof item === 'object' ? item.id : item);
-      console.log('🔍 Extracted IDs:', extractedIds);
+     /*  console.log('🔍 Extracted IDs:', extractedIds); */
       setRecentProductIds(extractedIds);
     } catch (e) {
-      console.log('🔍 RecentlyViewed - error:', e);
+     /*  console.log('🔍 RecentlyViewed - error:', e); */
       setRecentProductIds([]);
     }
   } else {
-    console.log('🔍 RecentlyViewed - no data in localStorage');
+   /*  console.log('🔍 RecentlyViewed - no data in localStorage'); */
   }
 }, []);
+
+useEffect(() => {
+  const stored = localStorage.getItem('recentlyViewed');
+  if (stored) {
+    try {
+      const ids = JSON.parse(stored);
+      const extractedIds = ids.map(item => typeof item === 'object' ? item.id : item);
+      
+      // Filter out IDs that don't exist in products prop
+      const validIds = extractedIds.filter(id => 
+        products.some(product => product.id === id)
+      );
+      
+      // If different, update localStorage
+      if (validIds.length !== extractedIds.length) {
+        localStorage.setItem('recentlyViewed', JSON.stringify(validIds));
+      }
+      
+      setRecentProductIds(validIds);
+    } catch (e) {
+      setRecentProductIds([]);
+    }
+  }
+}, [products]);
 
 // Filter products from props that are in recently viewed IDs
 

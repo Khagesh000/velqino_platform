@@ -8,7 +8,7 @@ const reviews = [
   {
     id: 1,
     name: 'Rajesh Kumar',
-    avatar: '/images/avatars/avatar1.jpg',
+    avatar: '/images/placeholder.jpg',
     rating: 5,
     date: '2026-04-15',
     review: 'Absolutely love this product! The quality is exceptional and delivery was super fast. Will definitely buy again.',
@@ -20,7 +20,7 @@ const reviews = [
   {
     id: 2,
     name: 'Priya Sharma',
-    avatar: '/images/avatars/avatar2.jpg',
+    avatar: '/images/placeholder.jpg',
     rating: 5,
     date: '2026-04-14',
     review: 'Best purchase decision ever! The customer service was very helpful and responsive.',
@@ -32,7 +32,7 @@ const reviews = [
   {
     id: 3,
     name: 'Amit Singh',
-    avatar: '/images/avatars/avatar3.jpg',
+    avatar: '/images/placeholder.jpg',
     rating: 4,
     date: '2026-04-13',
     review: 'Good product for the price. Build quality is nice. Would recommend to others.',
@@ -44,7 +44,7 @@ const reviews = [
   {
     id: 4,
     name: 'Sneha Reddy',
-    avatar: '/images/avatars/avatar4.jpg',
+    avatar: '/images/placeholder.jpg',
     rating: 5,
     date: '2026-04-12',
     review: 'Excellent quality! Exceeded my expectations. The packaging was also very good.',
@@ -56,7 +56,7 @@ const reviews = [
   {
     id: 5,
     name: 'Vikram Mehta',
-    avatar: '/images/avatars/avatar5.jpg',
+    avatar: '/images/placeholder.jpg',
     rating: 5,
     date: '2026-04-11',
     review: 'Very satisfied with my purchase. The product is exactly as described.',
@@ -68,7 +68,7 @@ const reviews = [
   {
     id: 6,
     name: 'Neha Gupta',
-    avatar: '/images/avatars/avatar6.jpg',
+    avatar: '/images/placeholder.jpg',
     rating: 4,
     date: '2026-04-10',
     review: 'Good value for money. Shipping was quick. Minor issue with size but resolved quickly.',

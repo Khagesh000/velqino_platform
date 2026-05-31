@@ -9,12 +9,9 @@ const ProductCard = memo(({ product }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isWishlist, setIsWishlist] = useState(false);
 
-  // Get image URL from backend product data
   const getImageUrl = () => {
-    return product?.primary_image || 
-           product?.images?.[0]?.image || 
-           '/images/placeholder.jpg';
-  };
+  return product?.image || '/images/placeholder.jpg';
+};
 
   const getPrice = () => {
     return product?.display_price || product?.price || 0;

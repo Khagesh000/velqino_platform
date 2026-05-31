@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
+import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useGetHomepageDataQuery } from '@/redux/wholesaler/slices/homepageSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 import LogoLoader from '../LogoLoader';
@@ -31,60 +31,96 @@ const HeroPlaceholder = () => (
 
 export default function HomePage() {
   const [showLoader, setShowLoader] = useState(true);
+  const [cachedData, setCachedData] = useState(null);
 
-  // ✅ SINGLE API CALL - REPLACES ALL 8 CALLS
+  // ✅ SINGLE API CALL WITH CACHING
   const { 
     data: homepageResponse, 
-    isLoading: homepageLoading 
+    isLoading: homepageLoading,
+    isFetching
   } = useGetHomepageDataQuery(undefined, {
     refetchOnMountOrArgChange: false,
     refetchOnFocus: false,
     refetchOnReconnect: false,
-    pollingInterval: 300000, // Poll every 5 minutes (optional)
+    pollingInterval: 300000,
+    // Cache data for 5 minutes
+    keepUnusedDataFor: 300,
   });
 
-  // Extract data - YOUR EXACT SAME PROPS STRUCTURE
+  // Cache data to localStorage for instant load on next visit
+  useEffect(() => {
+    if (homepageResponse?.data) {
+      setCachedData(homepageResponse.data);
+      try {
+        localStorage.setItem('homepage_cache', JSON.stringify({
+          data: homepageResponse.data,
+          timestamp: Date.now()
+        }));
+      } catch (e) {}
+    }
+  }, [homepageResponse]);
+
+  // Load from cache immediately if available
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('homepage_cache');
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // Use cache if less than 5 minutes old
+        if (Date.now() - timestamp < 300000) {
+          setCachedData(data);
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  // Use cached data while fetching new data
+  const displayData = homepageResponse?.data || cachedData;
+  const isLoading = homepageLoading && !displayData;
+
+  // Extract data from displayData
   const bestSellingProducts = useMemo(
-      () => homepageResponse?.data?.bestSelling || [], 
-      [homepageResponse]
+    () => displayData?.bestSelling || [], 
+    [displayData]
   );
 
-
   const newArrivalsProducts = useMemo(
-    () => homepageResponse?.data?.newArrivalsProducts || homepageResponse?.data?.newArrivals || [], 
-    [homepageResponse]
-);
+    () => displayData?.newArrivalsProducts || displayData?.newArrivals || [], 
+    [displayData]
+  );
   
   const dealsProducts = useMemo(
-      () => homepageResponse?.data?.dealsOfDay || [], 
-      [homepageResponse]
+    () => displayData?.dealsOfDay || [], 
+    [displayData]
   );
   
   const summerProducts = useMemo(
-    () => homepageResponse?.data?.seasonalCollections?.summer || [], 
-    [homepageResponse]
-);
+    () => displayData?.seasonalCollections?.summer || [], 
+    [displayData]
+  );
   
   const winterProducts = useMemo(
-    () => homepageResponse?.data?.seasonalCollections?.winter || [], 
-    [homepageResponse]
-);
+    () => displayData?.seasonalCollections?.winter || [], 
+    [displayData]
+  );
   
   const festiveProducts = useMemo(
-    () => homepageResponse?.data?.seasonalCollections?.festive || [], 
-    [homepageResponse]
-);
+    () => displayData?.seasonalCollections?.festive || [], 
+    [displayData]
+  );
   
   const memoizedCategories = useMemo(
-    () => homepageResponse?.data?.categories || [], 
-    [homepageResponse]
+    () => displayData?.categories || [], 
+    [displayData]
   );
   
-  // For RecentlyViewed component - Using deals products instead of allProducts
-  const allProducts = useMemo(
-    () => dealsProducts, // Use whatever you want here
-    [dealsProducts]
+  const allProducts = useMemo(() => {
+  const combined = [...bestSellingProducts, ...newArrivalsProducts, ...dealsProducts];
+  const unique = combined.filter((product, index, self) => 
+    index === self.findIndex(p => p.id === product.id)
   );
+  return unique;
+}, [bestSellingProducts, newArrivalsProducts, dealsProducts]);
 
   const seasonalCollections = useMemo(() => [
     { name: 'Summer Breeze', season: 'summer', products: summerProducts, icon: '☀️', gradient: 'from-orange-500 to-yellow-500' },
@@ -100,20 +136,18 @@ export default function HomePage() {
     brands_count: memoizedCategories.length,
   }), [allProducts, newArrivalsProducts, bestSellingProducts, dealsProducts, memoizedCategories]);
 
-  // Loading state - YOUR EXISTING LOGIC
+  // Loading state - show only on first load
   useEffect(() => {
-    if (!homepageLoading && homepageResponse) {
+    if (!isLoading && displayData) {
       const timer = setTimeout(() => setShowLoader(false), 300);
       return () => clearTimeout(timer);
     }
-  }, [homepageLoading, homepageResponse]);
+  }, [isLoading, displayData]);
 
-  // Loading fallback
-  if (homepageLoading || showLoader) {
+  if (isLoading && !displayData) {
     return <LogoLoader />;
   }
 
-  // YOUR EXISTING JSX - NO CHANGES NEEDED
   return (
     <AnimatePresence mode="wait">
       <div key="content" className="block">
@@ -121,7 +155,7 @@ export default function HomePage() {
           <CategoriesMegaMenu 
             categories={memoizedCategories} 
             quickLinksData={quickLinksData}
-            loading={homepageLoading} 
+            loading={false} 
           />
         </Suspense>
         
@@ -132,21 +166,21 @@ export default function HomePage() {
         <Suspense fallback={<SectionPlaceholder height="h-96" />}>
           <CategoryGrid 
             categories={memoizedCategories} 
-            productsData={homepageResponse?.data || {}} 
-            loading={homepageLoading} 
+            productsData={displayData || {}} 
+            loading={false} 
           />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <DealsOfTheDay deals={dealsProducts} loading={homepageLoading} />
+          <DealsOfTheDay deals={dealsProducts} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <BestSellingProducts products={bestSellingProducts} loading={homepageLoading} />
+          <BestSellingProducts products={bestSellingProducts} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <NewArrivals products={newArrivalsProducts} loading={homepageLoading} />
+          <NewArrivals products={newArrivalsProducts} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
@@ -170,7 +204,7 @@ export default function HomePage() {
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <RecentlyViewed products={allProducts} loading={homepageLoading} />
+          <RecentlyViewed products={allProducts} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-48" />}>

@@ -37,7 +37,7 @@ const CategoryCard = React.memo(({ category, index }) => {
               isLoaded ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
             } ${isHovered ? 'scale-110' : 'scale-100'}`}
             onLoad={() => setIsLoaded(true)}
-            onError={(e) => { e.target.src = '/images/categories/placeholder.jpg' }}
+            onError={(e) => { e.target.src = '/images/placeholder.jpg' }}
             width={400}
             height={400}
           />
@@ -117,7 +117,7 @@ export default function CategoryGrid({ categories = [], productsData = {}, loadi
         id: category.id,
         name: category.name,
         slug: category.slug,
-        image: categoryProduct?.image || '/images/categories/placeholder.jpg',
+        image: categoryProduct?.image || '/images/placeholder.jpg',
         productCount: category.product_count,  // ✅ USE DATABASE COUNT
         icon: getCategoryIcon(category.name),
         color: 'from-blue-500 to-cyan-500'
@@ -126,9 +126,9 @@ export default function CategoryGrid({ categories = [], productsData = {}, loadi
   }, [categories, productsData]);
 
 
-  console.log('productsData received:', productsData);
+  /* console.log('productsData received:', productsData);
   console.log('Best selling:', productsData?.bestSelling);
-  console.log('New arrivals:', productsData?.newArrivals);
+  console.log('New arrivals:', productsData?.newArrivals); */
 
   // Intersection Observer for lazy loading
   useEffect(() => {
