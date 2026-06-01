@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 from cloudinary.models import CloudinaryField
+from decimal import Decimal
 
 
 class Category(models.Model):
@@ -38,8 +39,6 @@ class Product(models.Model):
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='products')
     seller_type = models.CharField(max_length=20, choices=[('wholesaler', 'Wholesaler'), ('retailer', 'Retailer')], default='wholesaler', db_index=True)
 
-
-    # ✅ ADD THESE 2 FIELDS RIGHT AFTER seller
     wholesaler = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
@@ -54,48 +53,27 @@ class Product(models.Model):
         null=True,
         blank=True
     )
-
     
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
-
     name = models.CharField(max_length=255, db_index=True)
     slug = models.SlugField(unique=True)
     sku = models.CharField(max_length=100, unique=True, db_index=True, blank=True, null=True)
-
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-
-    retail_price = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        validators=[MinValueValidator(0)],
-        default=0,
-        help_text="MRP for customers"
-    )
-    
-    min_order_qty = models.IntegerField(
-        default=1,
-        validators=[MinValueValidator(1)],
-        help_text="Minimum quantity per order"
-    )
-    
+    retail_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], default=0, help_text="MRP for customers")
+    min_order_qty = models.IntegerField(default=1, validators=[MinValueValidator(1)], help_text="Minimum quantity per order")
     compare_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Cost price of product for margin calculation")
     stock = models.IntegerField(default=1, validators=[MinValueValidator(0)])
     threshold = models.IntegerField(default=10, help_text="Low stock alert level")
-
     description = models.TextField(blank=True)
     brand = models.CharField(max_length=100, blank=True)
-
     pattern = models.CharField(max_length=50, blank=True, help_text="Striped, checked, floral, solid, graphic")
     primary_color = models.CharField(max_length=50, blank=True)
     secondary_colors = models.JSONField(default=list, blank=True)
-
     weight = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     dimensions = models.CharField(max_length=50, blank=True)
-
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
-  
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     total_sold = models.IntegerField(default=0, db_index=True, help_text="Total number sold")
@@ -114,11 +92,9 @@ class Product(models.Model):
             models.Index(fields=['-total_sold']),
             models.Index(fields=['sku']),
             models.Index(fields=['brand']),
-
             models.Index(fields=['seller_type', 'status']),
             models.Index(fields=['price']),
             models.Index(fields=['created_at']),
-
             models.Index(fields=['has_discount', 'status']),  
             models.Index(fields=['season', 'status']),
         ]
@@ -131,23 +107,57 @@ class Product(models.Model):
         return self.stock <= self.threshold
 
     def save(self, *args, **kwargs):
-        # SKU FIRST
+        from decimal import Decimal, InvalidOperation
+
         if not self.sku:
             import uuid
             self.sku = f"PROD-{uuid.uuid4().hex[:8].upper()}"
 
-        # SLUG SECOND (uses SKU)
         if not self.slug:
             from django.utils.text import slugify
             base_slug = slugify(self.name)
             self.slug = f"{base_slug}-{self.sku}"[:50]
 
-        # AUTO-SET has_discount (HANDLE NULL VALUES)
-        retail_price = self.retail_price if self.retail_price is not None else 0
-        compare_price = self.compare_price if self.compare_price is not None else 0
-        self.has_discount = (retail_price > self.price or compare_price > self.price)
-        
-        # AUTO-SET season based on created_at month
+        # Convert integers FIRST
+        try:
+            self.stock = int(self.stock) if self.stock is not None else 0
+        except (TypeError, ValueError):
+            self.stock = 0
+
+        try:
+            self.threshold = int(self.threshold) if self.threshold is not None else 10
+        except (TypeError, ValueError):
+            self.threshold = 10
+
+        try:
+            self.total_sold = int(self.total_sold) if self.total_sold is not None else 0
+        except (TypeError, ValueError):
+            self.total_sold = 0
+
+        try:
+            self.min_order_qty = int(self.min_order_qty) if self.min_order_qty is not None else 1
+        except (TypeError, ValueError):
+            self.min_order_qty = 1
+
+        # Convert decimals
+        def to_dec(val, default=Decimal('0')):
+            try:
+                if val is None or str(val).strip() == '':
+                    return default
+                return Decimal(str(val))
+            except (InvalidOperation, TypeError, ValueError):
+                return default
+
+        price_val   = to_dec(self.price)
+        retail_val  = to_dec(self.retail_price)
+        compare_val = to_dec(self.compare_price)
+
+        self.price        = price_val
+        self.retail_price = retail_val
+        self.compare_price = compare_val if compare_val > 0 else None
+
+        self.has_discount = (retail_val > price_val or compare_val > price_val)
+
         if not self.season and self.created_at:
             month = self.created_at.month
             if month in [3, 4, 5, 6]:

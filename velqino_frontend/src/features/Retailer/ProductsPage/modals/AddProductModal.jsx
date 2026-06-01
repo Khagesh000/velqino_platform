@@ -86,6 +86,10 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
       toast.error('Please select product image');
       return;
     }
+    if (!formData.category_id) {
+        toast.error('Please select a category');
+        return;
+      }
 
     setUploading(true);
     try {
@@ -247,7 +251,10 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
                     name="category_id"
                     value={formData.category_id}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
+                    required
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-primary-500 ${
+                      !formData.category_id ? 'border-red-300' : 'border-gray-300'
+                    }`}
                   >
                     <option value="">Select Category</option>
                     {categories.map((cat) => (

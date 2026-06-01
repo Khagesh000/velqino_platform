@@ -106,6 +106,10 @@ export default function BulkImagesModal({ onClose, onSave, categories = [], isOp
         toast.error('Please select at least one image');
         return;
     }
+    if (!formData.category_id) {
+        toast.error('Please select a category');
+        return;
+    }
 
     setUploading(true);
     setProgress(10);
@@ -297,6 +301,7 @@ export default function BulkImagesModal({ onClose, onSave, categories = [], isOp
                     name="category_id"
                     value={formData.category_id}
                     onChange={handleChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
                   >
                     <option value="">Select Category</option>

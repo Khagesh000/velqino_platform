@@ -10,6 +10,7 @@ from django.db import transaction
 from celery import shared_task
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +73,13 @@ class RetailerBulkService:
                 retailer_id=seller_id,
                 name=product_name,
                 sku=sku,
-                price=common_price,
-                cost=common_cost,
+                price=Decimal(str(common_price)),        # ← wrap
+                cost=Decimal(str(common_cost)),          # ← wrap
                 category_id=category_id,
                 brand=brand,
                 description=description,
-                stock=stock,
-                threshold=threshold,
+                stock=int(stock),                        # ← wrap
+                threshold=int(threshold),               # ← wrap
                 pattern=pattern or '',
                 primary_color=primary_color or '',
                 status='active'

@@ -101,9 +101,9 @@ useEffect(() => {
 
 
 
-  const products = productsData?.products || [];  // ✅ Remove .data
-  const totalProducts = productsData?.pagination?.total || 0;  // ✅ Remove .data
-  const totalPages = productsData?.pagination?.total_pages || 1;  // ✅ Remove .data
+  const products = productsData?.data?.products || [];
+  const totalProducts = productsData?.data?.pagination?.total || 0;
+  const totalPages = productsData?.data?.pagination?.total_pages || 1;
 
       const handleAddProduct = (type) => {
       if (type === 'single') {
