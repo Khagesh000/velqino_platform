@@ -100,17 +100,12 @@ ProductCard.displayName = 'ProductCard';
 export default function NewArrivals({ products = [], loading = false }) {
   const [visibleProducts, setVisibleProducts] = useState([]);
 
-  useEffect(() => {
-    console.log('🔴 NewArrivals - products prop received:', products);
-    console.log('🔴 NewArrivals - products length:', products?.length);
-  }, [products]);
+  
 
   useEffect(() => {
     if (products.length > 0 && visibleProducts.length === 0) {
-      console.log('Setting visible products - first 4:', products.slice(0, 4));
       setVisibleProducts(products.slice(0, 6));
       const timer = setTimeout(() => {
-        console.log('Setting all products:', products);
         setVisibleProducts(products);
       }, 200);
       return () => clearTimeout(timer);

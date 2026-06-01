@@ -99,9 +99,9 @@ export default function FloatingElements() {
               </button>
             </div>
             <div className="p-2 space-y-2 max-h-80 overflow-y-auto">
-              {recentProducts.map((product) => (
+              {recentProducts.map((product, index) => (
                 <Link
-                  key={product.id}
+                  key={product?.id || `recent-${index}`}
                   href={`/product/${product.slug}`}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition-all group"
                 >

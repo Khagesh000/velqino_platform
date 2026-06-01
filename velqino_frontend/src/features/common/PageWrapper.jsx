@@ -16,11 +16,11 @@ export default function PageWrapper({ children }) {
                      document.querySelector('.navbar') || 
                      document.querySelector('[class*="sticky"]');
       
-      console.log('🔍 Found navbar:', navbar);
+    //  console.log('🔍 Found navbar:', navbar);
       
       if (navbar) {
         const height = navbar.offsetHeight;
-        console.log('📏 Navbar height:', height);
+     //   console.log('📏 Navbar height:', height);
         
         if (height > 10) {
           setNavbarHeight(height);
@@ -28,14 +28,14 @@ export default function PageWrapper({ children }) {
           // If height is too small, try again after a short delay
           setTimeout(() => {
             const retryHeight = navbar.offsetHeight;
-            console.log('📏 Retry navbar height:', retryHeight);
+          //  console.log('📏 Retry navbar height:', retryHeight);
             setNavbarHeight(retryHeight > 10 ? retryHeight : 80);
           }, 100);
         }
       } else {
         // Fallback height for different screen sizes
         const fallbackHeight = window.innerWidth < 768 ? 64 : 80;
-        console.log('⚠️ Navbar not found, using fallback height:', fallbackHeight);
+      //  console.log('⚠️ Navbar not found, using fallback height:', fallbackHeight);
         setNavbarHeight(fallbackHeight);
       }
     };
@@ -47,7 +47,6 @@ export default function PageWrapper({ children }) {
     return () => window.removeEventListener('resize', measureNavbar);
   }, []);
 
-  console.log('🎨 Rendering PageWrapper with paddingTop:', navbarHeight);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50">
