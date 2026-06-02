@@ -3,11 +3,24 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Heart, Eye, Star, Clock, Trash2, ChevronLeft, ChevronRight } from '../../../../utils/icons';
+import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
+import { useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/redux/wholesaler/slices/wishlistSlice';
+import { toast } from 'react-toastify';
 
-const ProductCard = memo(({ product, onRemove }) => {
+
+const ProductCard = memo(({ product, onRemove, wishlistIds = [] }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isWishlist, setIsWishlist] = useState(false);
+  const [isWishlist, setIsWishlist] = useState(wishlistIds?.includes(product?.id) || false);
+  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
+
+
+  useEffect(() => {
+        const productId = Number(product?.id);
+        setIsWishlist(wishlistIds?.includes(productId) || false);
+      }, [wishlistIds, product?.id]);
 
   // Get image URL from product data
   const getImageUrl = () => {
@@ -44,8 +57,43 @@ const ProductCard = memo(({ product, onRemove }) => {
     return product?.rating || 4.5;
   };
 
+    const handleAddToCart = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await addToCart({
+        product_id: product.id,
+        quantity: 1,
+        selected_size: '',
+        selected_color: ''
+      }).unwrap();
+      toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to add to cart');
+    }
+  };
+
+  const handleWishlistClick = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newState = !isWishlist;
+    setIsWishlist(newState);
+    try {
+      if (isWishlist) {
+        await removeFromWishlist(product.id).unwrap();
+        toast.success('Removed from wishlist');
+      } else {
+        await addToWishlist(product.id).unwrap();
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      setIsWishlist(!newState);
+      toast.error(error?.data?.message || 'Please login to add to wishlist');
+    }
+  };
+
   return (
-    <Link href={`/product/${product?.slug || product?.id}`} className="flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]">
+    <Link href={`/product/productlistingpage?product_id=${product?.id}`} className="flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]">
       <div
         className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100"
         onMouseEnter={() => setIsHovered(true)}
@@ -90,11 +138,7 @@ const ProductCard = memo(({ product, onRemove }) => {
 
           {/* Wishlist Button */}
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsWishlist(!isWishlist);
-            }}
+            onClick={(e) => handleWishlistClick(e, product)}
             className="absolute top-1 left-1 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all"
           >
             <Heart size={10} className={`${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
@@ -127,14 +171,12 @@ const ProductCard = memo(({ product, onRemove }) => {
 
           {/* Add to Cart Button */}
           <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onClick={(e) => handleAddToCart(e, product)}
+            disabled={isAddingToCart}
             className="w-full py-1 bg-primary-500 text-white rounded text-[10px] sm:text-xs font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-1"
           >
             <ShoppingCart size={10} />
-            <span>Add</span>
+            <span>{isAddingToCart ? 'Adding...' : 'Add'}</span>
           </button>
         </div>
       </div>
@@ -144,7 +186,7 @@ const ProductCard = memo(({ product, onRemove }) => {
 
 ProductCard.displayName = 'ProductCard';
 
-export default function RecentlyViewed({ products = [], loading = false }) {
+export default function RecentlyViewed({ products = [], loading = false, wishlistIds = [] }) {
   const [recentProductIds, setRecentProductIds] = useState([]);
   
   // ✅ THEN USE
@@ -323,6 +365,7 @@ useEffect(() => {
               <ProductCard 
                 key={product.id} 
                 product={product} 
+                wishlistIds={wishlistIds}
                 onRemove={handleRemoveProduct}
               />
             ))}

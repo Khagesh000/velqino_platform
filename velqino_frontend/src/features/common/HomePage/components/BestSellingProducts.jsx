@@ -3,22 +3,70 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Heart, Eye, Star, ChevronRight, TrendingUp } from '../../../../utils/icons';
-
-const ProductCard = memo(({ product, index }) => {
+import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
+import { useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/redux/wholesaler/slices/wishlistSlice';
+import { toast } from 'react-toastify';
+const ProductCard = memo(({ product, index, wishlistIds = [] }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isWishlist, setIsWishlist] = useState(false);
+  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
+  const [isWishlist, setIsWishlist] = useState(wishlistIds?.includes(product?.id) || false);
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
 
+    useEffect(() => {
+    const productId = Number(product?.id);
+    setIsWishlist(wishlistIds?.includes(productId) || false);
+  }, [wishlistIds, product?.id]);
+
+  
+  const handleAddToCart = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await addToCart({
+        product_id: product.id,
+        quantity: 1,
+        selected_size: '',
+        selected_color: ''
+      }).unwrap();
+      toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to add to cart');
+    }
+  };
+
+
+  const handleWishlistClick = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newState = !isWishlist;
+    setIsWishlist(newState);
+    try {
+      if (isWishlist) {
+        await removeFromWishlist(product.id).unwrap();
+        toast.success('Removed from wishlist');
+      } else {
+        await addToWishlist(product.id).unwrap();
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      setIsWishlist(!newState);
+      toast.error(error?.data?.message || 'Please login to add to wishlist');
+    }
+  };
 
 
   return (
     <div
-      className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{ animationDelay: `${index * 0.05}s` }}
-    >
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+  className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100"
+  onMouseEnter={() => setIsHovered(true)}
+  onMouseLeave={() => setIsHovered(false)}
+  style={{ animationDelay: `${index * 0.05}s` }}
+>
+  <div className="relative aspect-square overflow-hidden bg-gray-100">
+    <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+      <div className="relative w-full h-full">
         {!isLoaded && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -33,58 +81,72 @@ const ProductCard = memo(({ product, index }) => {
           } ${isHovered ? 'scale-110' : 'scale-100'}`}
           onLoad={() => setIsLoaded(true)}
         />
-        
-        <button
-          onClick={() => setIsWishlist(!isWishlist)}
-          className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md hover:shadow-lg transition-all"
-        >
-          <Heart size={16} className={`${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-        </button>
-        
-        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <Link href={`/product/productlistingpage?product_id=${product.id}`}>
-            <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-950 hover:text-primary-500 transition-all">
-              Quick View
-            </button>
-          </Link>
-        </div>
       </div>
-
-      <div className="p-3">
-        <h3 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1">
-          {product.name}
-        </h3>
-        
-        <div className="flex items-center gap-1 mb-2">
-          <div className="flex items-center">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating || 4.5) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-            ))}
-          </div>
-          <span className="text-xs text-gray-500">({product.total_sold || 0} sold)</span>
-        </div>
-
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg font-bold text-primary-600">₹{product.display_price || product.price}</span>
-          {product.retail_price > product.price && (
-            <span className="text-xs text-gray-400 line-through">₹{product.retail_price}</span>
-          )}
-        </div>
-
-        <button className="w-full py-1.5 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2">
-          <ShoppingCart size={14} />
-          <span>Add to Cart</span>
+    </Link>
+    
+    {/* Wishlist button - NOW OUTSIDE the Link */}
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleWishlistClick(e, product);
+      }}
+      className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md hover:shadow-lg transition-all z-10"
+    >
+      <Heart size={16} className={`${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+    </button>
+    
+    {/* Quick View - also separate */}
+    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
+      isHovered ? 'opacity-100' : 'opacity-0'
+    }`}>
+      <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+        <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-950 hover:text-primary-500 transition-all cursor-pointer">
+          Quick View
         </button>
-      </div>
+      </Link>
     </div>
+  </div>
+
+  <div className="p-3">
+    <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+      <h3 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1 hover:text-primary-600 transition-colors">
+        {product.name}
+      </h3>
+    </Link>
+    
+    <div className="flex items-center gap-1 mb-2">
+      <div className="flex items-center">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating || 4.5) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+        ))}
+      </div>
+      <span className="text-xs text-gray-500">({product.total_sold || 0} sold)</span>
+    </div>
+
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-lg font-bold text-primary-600">₹{product.display_price || product.price}</span>
+      {product.retail_price > product.price && (
+        <span className="text-xs text-gray-400 line-through">₹{product.retail_price}</span>
+      )}
+    </div>
+
+    <button
+      onClick={(e) => handleAddToCart(e, product)}
+      disabled={isAddingToCart}
+      className="w-full py-1.5 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2 cursor-pointer"
+    >
+      <ShoppingCart size={14} />
+      <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+    </button>
+  </div>
+</div>
   );
 });
 
 ProductCard.displayName = 'ProductCard';
 
-export default function BestSellingProducts({ products = [], loading = false }) {
+export default function BestSellingProducts({ products = [], loading = false, wishlistIds = [] }) {
   const [visibleProducts, setVisibleProducts] = useState([]);
   const [isInView, setIsInView] = useState(false);
   const sectionRef = useRef(null);
@@ -156,7 +218,7 @@ export default function BestSellingProducts({ products = [], loading = false }) 
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
           {visibleProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
+            <ProductCard key={product.id} product={product} index={index} wishlistIds={wishlistIds} />
           ))}
         </div>
 

@@ -3,11 +3,18 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Heart, Eye, Star, Sparkles, ChevronRight, TrendingUp, Gift, Sun, Snowflake } from '../../../../utils/icons';
-
-const ProductCard = memo(({ product }) => {
+import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
+import { toast } from 'react-toastify';
+const ProductCard = memo(({ product, wishlistIds = [] }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isWishlist, setIsWishlist] = useState(false);
+  const [isWishlist, setIsWishlist] = useState(wishlistIds?.includes(product?.id) || false);
+  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
+
+  useEffect(() => {
+      const productId = Number(product?.id);
+      setIsWishlist(wishlistIds?.includes(productId) || false);
+    }, [wishlistIds, product?.id]);
 
   const getImageUrl = () => {
   return product?.image || '/images/placeholder.jpg';
@@ -19,6 +26,22 @@ const ProductCard = memo(({ product }) => {
 
   const getOriginalPrice = () => {
     return product?.retail_price || product?.compare_price || null;
+  };
+
+  const handleAddToCart = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await addToCart({
+        product_id: product.id,
+        quantity: 1,
+        selected_size: '',
+        selected_color: ''
+      }).unwrap();
+      toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to add to cart');
+    }
   };
 
   return (
@@ -58,9 +81,12 @@ const ProductCard = memo(({ product }) => {
             <span className="text-[9px] text-gray-400 line-through">₹{getOriginalPrice()}</span>
           )}
         </div>
-        <button className="w-full mt-2 py-1 bg-primary-500 text-white rounded text-[10px] font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-1">
+        <button
+        onClick={(e) => handleAddToCart(e, product)}
+        disabled={isAddingToCart}
+        className="w-full mt-2 py-1 bg-primary-500 text-white rounded text-[10px] font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-1">
           <ShoppingCart size={10} />
-          <span>Add</span>
+          <span>{isAddingToCart ? 'Adding...' : 'Add'}</span>
         </button>
       </div>
     </div>
@@ -69,7 +95,7 @@ const ProductCard = memo(({ product }) => {
 
 ProductCard.displayName = 'ProductCard';
 
-export default function FeaturedCollections({ collections = [] }) {
+export default function FeaturedCollections({ collections = [], wishlistIds = [] }) {
   const [activeSeason, setActiveSeason] = useState('summer');
   const [isInView, setIsInView] = useState(false);
   const [visibleProducts, setVisibleProducts] = useState([]);
@@ -195,7 +221,7 @@ const hasProducts = currentCollection?.products?.length > 0;
               {hasProducts ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {visibleProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard key={product.id} product={product} wishlistIds={wishlistIds}/>
                   ))}
                 </div>
               ) : (

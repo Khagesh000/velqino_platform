@@ -5,12 +5,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingCart, Clock, Zap, TrendingUp, Eye, ChevronRight } from '../../../../utils/icons';
 import '../../../../styles/common/HomePage/DealsOfTheDay.scss'
-
+import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
+import { toast } from 'react-toastify';
 // Timer Component with performance optimization
 const CountdownTimer = memo(({ targetDate }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isClient, setIsClient] = useState(false);
-
+  
   useEffect(() => {
     setIsClient(true);
     const timer = setInterval(() => {
@@ -64,10 +65,36 @@ const CountdownTimer = memo(({ targetDate }) => {
 CountdownTimer.displayName = 'CountdownTimer';
 
 // Product Card Component with memoization
-const ProductCard = memo(({ product, index }) => {
+const ProductCard = memo(({ product, index, wishlistIds = [] }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
+  const [isWishlist, setIsWishlist] = useState(wishlistIds?.includes(product?.id) || false);
   const soldPercentage = product.totalStock ? (product.sold / product.totalStock) * 100 : 0;
+  
+  useEffect(() => {
+    const productId = Number(product?.id);
+    setIsWishlist(wishlistIds?.includes(productId) || false);
+  }, [wishlistIds, product?.id]);
+
+
+  const handleAddToCart = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      await addToCart({
+        product_id: product.id,
+        quantity: 1,
+        selected_size: '',
+        selected_color: ''
+      }).unwrap();
+      
+      toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to add to cart');
+    }
+  };
 
   return (
     <div
@@ -106,7 +133,7 @@ const ProductCard = memo(({ product, index }) => {
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}>
           <Link href={`/product/productlistingpage?product_id=${product.id}`}>
-          <button className="bg-white text-primary-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-500 hover:text-white transition-all transform -translate-y-2 group-hover:translate-y-0">
+          <button className="bg-white text-primary-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-500 hover:bg-primary-950 hover:text-primary-500 transition-all transform -translate-y-2 group-hover:translate-y-0">
             Quick View
           </button>
         </Link>
@@ -156,10 +183,14 @@ const ProductCard = memo(({ product, index }) => {
         )}
 
         {/* Add to Cart Button */}
-        <button className="w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2">
-          <ShoppingCart size={16} />
-          <span>Add to Cart</span>
-        </button>
+        <button 
+            onClick={(e) => handleAddToCart(e, product)}
+            disabled={isAddingToCart}
+            className="w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2"
+          >
+            <ShoppingCart size={16} />
+            <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+          </button>
       </div>
     </div>
   );
@@ -167,7 +198,7 @@ const ProductCard = memo(({ product, index }) => {
 
 ProductCard.displayName = 'ProductCard';
 
-export default function DealsOfTheDay({ deals = [], loading = false }) {
+export default function DealsOfTheDay({ deals = [], loading = false, wishlistIds = [] }) {
   const [visibleDeals, setVisibleDeals] = useState([]);
   const [isInView, setIsInView] = useState(false);
   const sectionRef = useRef(null);
@@ -267,7 +298,7 @@ export default function DealsOfTheDay({ deals = [], loading = false }) {
         {/* Deals Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
           {visibleDeals.map((deal, index) => (
-            <ProductCard key={deal.id} product={deal} index={index} />
+            <ProductCard key={deal.id} product={deal} index={index} wishlistIds={wishlistIds}/>
           ))}
         </div>
 

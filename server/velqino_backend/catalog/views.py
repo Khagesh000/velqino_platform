@@ -850,26 +850,36 @@ def export_products(request):
     
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_wishlist(request):
-    """Get user's wishlist with pagination"""
-    user = request.user
+    """Get user's wishlist with pagination (no auth required)"""
+    user = request.user if request.user.is_authenticated else None
     page = int(request.GET.get('page', 1))
     per_page = int(request.GET.get('per_page', 20))
     
-    result = WishlistService.get_wishlist_with_products(user, page, per_page)
-    
-    return Response({
-        'status': 'success',
-        'data': result['items'],
-        'pagination': result['pagination']
-    })
+    if user:
+        result = WishlistService.get_wishlist_with_products(user, page, per_page)
+        return Response({
+            'status': 'success',
+            'data': result['items'],
+            'pagination': result['pagination']
+        })
+    else:
+        return Response({
+            'status': 'success',
+            'data': [],
+            'pagination': {'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 0}
+        })
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def add_to_wishlist(request):
-    """Add product to wishlist"""
+    """Add product to wishlist (requires authentication)"""
+    if not request.user.is_authenticated:
+        return Response({
+            'status': 'error',
+            'message': 'Authentication required'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
     user = request.user
     product_id = request.data.get('product_id')
     
@@ -896,9 +906,14 @@ def add_to_wishlist(request):
 
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
 def remove_from_wishlist(request):
-    """Remove product from wishlist"""
+    """Remove product from wishlist (requires authentication)"""
+    if not request.user.is_authenticated:
+        return Response({
+            'status': 'error',
+            'message': 'Authentication required'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
     user = request.user
     product_id = request.data.get('product_id')
     

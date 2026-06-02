@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useGetHomepageDataQuery } from '@/redux/wholesaler/slices/homepageSlice';
+import { useGetWishlistQuery } from '@/redux/wholesaler/slices/wishlistSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 import LogoLoader from '../LogoLoader';
 
@@ -77,6 +78,13 @@ export default function HomePage() {
   // Use cached data while fetching new data
   const displayData = homepageResponse?.data || cachedData;
   const isLoading = homepageLoading && !displayData;
+
+  const { data: wishlistData = [] } = useGetWishlistQuery();
+
+
+  const wishlistIds = useMemo(() => {
+      return wishlistData?.map(item => item.product_id) || [];
+  }, [wishlistData]);
 
   // Extract data from displayData
   const bestSellingProducts = useMemo(
@@ -172,19 +180,19 @@ export default function HomePage() {
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <DealsOfTheDay deals={dealsProducts} loading={false} />
+          <DealsOfTheDay deals={dealsProducts} wishlistIds={wishlistIds} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <BestSellingProducts products={bestSellingProducts} loading={false} />
+          <BestSellingProducts products={bestSellingProducts} wishlistIds={wishlistIds} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <NewArrivals products={newArrivalsProducts} loading={false} />
+          <NewArrivals products={newArrivalsProducts} wishlistIds={wishlistIds} loading={false} />
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <FeaturedCollections collections={seasonalCollections} />
+          <FeaturedCollections collections={seasonalCollections} wishlistIds={wishlistIds}/>
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-60" />}>
@@ -204,7 +212,7 @@ export default function HomePage() {
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <RecentlyViewed products={allProducts} loading={false} />
+          <RecentlyViewed products={allProducts} loading={false} wishlistIds={wishlistIds}/>
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-48" />}>
@@ -212,7 +220,7 @@ export default function HomePage() {
         </Suspense>
         
         <Suspense fallback={null}>
-          <FloatingElements />
+          <FloatingElements allProducts={allProducts} />
         </Suspense>
       </div>
     </AnimatePresence>

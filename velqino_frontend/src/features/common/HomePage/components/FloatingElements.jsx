@@ -4,24 +4,51 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUp, MessageCircle, Eye, GitCompare, X, Clock } from '../../../../utils/icons';
 import Link from 'next/link';
 
-export default function FloatingElements() {
+export default function FloatingElements({ allProducts = [] }) {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showRecentlyViewed, setShowRecentlyViewed] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [recentProducts, setRecentProducts] = useState([]);
 
-  // Load recently viewed products from localStorage
+ useEffect(() => {
+  const stored = localStorage.getItem('recentlyViewed');
+  if (stored && allProducts.length > 0) {
+    try {
+      const ids = JSON.parse(stored);
+      const matchedProducts = ids
+        .map(id => allProducts.find(p => p.id === id))
+        .filter(p => p)
+        .slice(0, 5);
+      setRecentProducts(matchedProducts);
+    } catch (e) {
+      setRecentProducts([]);
+    }
+  }
+}, [allProducts]);
+
+  // Listen for storage changes from other tabs/components
   useEffect(() => {
-    const stored = localStorage.getItem('recentlyViewed');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setRecentProducts(parsed.slice(0, 3));
-      } catch (e) {
+    const handleStorageChange = () => {
+      const stored = localStorage.getItem('recentlyViewed');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0].id) {
+            setRecentProducts(parsed.slice(0, 5));
+          } else {
+            setRecentProducts([]);
+          }
+        } catch (e) {
+          setRecentProducts([]);
+        }
+      } else {
         setRecentProducts([]);
       }
-    }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Back to top visibility
@@ -54,7 +81,9 @@ export default function FloatingElements() {
     setShowRecentlyViewed(false);
   };
 
-  
+  const getImageUrl = (product) => {
+    return product?.image || product?.primary_image || product?.images?.[0]?.image || '/images/placeholder.jpg';
+  };
 
   return (
     <>
@@ -98,19 +127,24 @@ export default function FloatingElements() {
                 Clear
               </button>
             </div>
-            <div className="p-2 space-y-2 max-h-80 overflow-y-auto">
+            <div className="p-2 space-y-2 max-h-80 overflow-y-auto custom-scroll">
               {recentProducts.map((product, index) => (
                 <Link
                   key={product?.id || `recent-${index}`}
-                  href={`/product/${product.slug}`}
+                  href={`/product/productlistingpage?product_id=${product.id}`}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition-all group"
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-xs">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-md" />
+                  <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-xs flex-shrink-0">
+                    <img 
+                      src={getImageUrl(product)} 
+                      alt={product?.name || 'Product'} 
+                      className="w-full h-full object-cover rounded-md" 
+                      onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-800 truncate">{product.name}</p>
-                    <p className="text-[10px] text-primary-600">₹{product.price}</p>
+                    <p className="text-xs font-medium text-gray-800 truncate">{product?.name || 'Product'}</p>
+                    <p className="text-[10px] text-primary-600">₹{product?.price || 0}</p>
                   </div>
                 </Link>
               ))}
@@ -140,7 +174,7 @@ export default function FloatingElements() {
         </div>
       )}
 
-      {/* Styles for animations */}
+      {/* Styles for animations and custom scroll */}
       <style jsx>{`
         @keyframes fadeInUp {
           from {
@@ -167,6 +201,20 @@ export default function FloatingElements() {
         }
         .animate-slideUp {
           animation: slideUp 0.3s ease-out forwards;
+        }
+        .custom-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
         }
       `}</style>
     </>

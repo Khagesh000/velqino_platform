@@ -11,7 +11,7 @@ export const wishlistApi = createApi({
             async queryFn(params = {}) {
                 try {
                     const response = await wishlistAPI.getWishlist(params);
-                    return { data: response.data };
+                    return { data: response.data.data };  // ✅ Extract only the data array
                 } catch (error) {
                     return { error };
                 }
