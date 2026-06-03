@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ShoppingBag, Heart, MapPin, User, Settings, Package, LogOut } from '../../../utils/icons';
 
-export default function DashboardSidebar({ isMobileMenuOpen }) {
+export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
   const pathname = usePathname();
   
   const navItems = [
