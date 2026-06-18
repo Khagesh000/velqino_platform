@@ -95,64 +95,78 @@ console.log('Products array:', products); // Debug to see what you're getting
   if (error || relatedProducts.length === 0) return null;
 
   return (
-    <div className="mt-12">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">You May Also Like</h2>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => scroll('left')} 
-            className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button 
-            onClick={() => scroll('right')} 
-            className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            aria-label="Scroll right"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-      <div 
-        ref={scrollRef} 
-        className="flex gap-4 overflow-x-auto pb-4 scroll-smooth"
-        style={{ scrollbarWidth: 'thin' }}
+    <div className="mt-10 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+
+  <div className="flex items-center justify-between mb-5">
+    <div className="flex items-center gap-2">
+      <div className="w-1 h-5 bg-primary-500 rounded-full" />
+      <h2 className="text-base font-bold text-gray-900">You May Also Like</h2>
+    </div>
+    <div className="flex gap-2">
+      <button
+        onClick={() => scroll('left')}
+        className="w-8 h-8 bg-gray-50 border border-gray-200 hover:border-primary-300 hover:bg-primary-50 rounded-xl flex items-center justify-center transition-all hover:scale-105"
       >
-        {relatedProducts.map((product) => (
-          <Link 
-            key={product.id} 
-            href={`/product/${product.slug || product.id}`} 
-            className="flex-shrink-0 w-48 bg-white rounded-xl border border-gray-100 p-3 hover:shadow-lg transition-all duration-300 group"
-          >
-            <div className="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden">
-              <img 
-                src={product.image} 
-                alt={product.name} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-              />
-            </div>
-            <h3 className="font-medium text-gray-800 text-sm line-clamp-1">{product.name}</h3>
-            <div className="flex items-center gap-1 mt-1">
-              <div className="flex items-center">
+        <ChevronLeft size={16} className="text-gray-600" />
+      </button>
+      <button
+        onClick={() => scroll('right')}
+        className="w-8 h-8 bg-gray-50 border border-gray-200 hover:border-primary-300 hover:bg-primary-50 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+      >
+        <ChevronRight size={16} className="text-gray-600" />
+      </button>
+    </div>
+  </div>
+
+  <div
+    ref={scrollRef}
+    className="flex gap-3 overflow-x-auto pb-2 scroll-smooth"
+    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+  >
+    {relatedProducts.map((product) => (
+      <Link
+        key={product.id}
+        href={`/product/${product.slug || product.id}`}
+        className="flex-shrink-0 w-44 group"
+      >
+        <div className="bg-white rounded-2xl border border-gray-100 hover:border-primary-100 hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1">
+          <div className="aspect-square bg-gray-50 overflow-hidden relative">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
+              onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+            />
+            {product.discount && (
+              <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                -{product.discount}%
+              </div>
+            )}
+          </div>
+          <div className="p-3">
+            <h3 className="font-semibold text-gray-800 text-xs line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors mb-1.5">
+              {product.name}
+            </h3>
+            <div className="flex items-center gap-1 mb-2">
+              <div className="flex items-center gap-0.5">
                 {renderStars(product.rating)}
               </div>
-              <span className="text-xs text-gray-500">{product.rating}</span>
+              <span className="text-[10px] text-gray-400 font-medium">{product.rating}</span>
             </div>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-sm font-bold text-primary-600">₹{product.price}</span>
               {product.originalPrice && product.originalPrice > product.price && (
                 <span className="text-xs text-gray-400 line-through">₹{product.originalPrice}</span>
               )}
-              {product.discount && (
-                <span className="text-xs text-green-600 font-medium">{product.discount}% off</span>
-              )}
             </div>
-          </Link>
-        ))}
-      </div>
-    </div>
+            {product.discount && (
+              <span className="text-[10px] text-green-600 font-semibold">{product.discount}% off</span>
+            )}
+          </div>
+        </div>
+      </Link>
+    ))}
+  </div>
+</div>
   );
 }

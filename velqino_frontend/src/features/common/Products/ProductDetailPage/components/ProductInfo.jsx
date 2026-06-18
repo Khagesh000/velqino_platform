@@ -69,74 +69,85 @@ export default function ProductInfo({ product }) {
     };
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-5">
+
   {/* Brand */}
-  <div className="text-xs sm:text-sm text-primary-600 font-semibold sm:font-medium uppercase tracking-wide">
-    {product?.brand || 'Premium Brand'}
+  <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary-50 border border-primary-100 rounded-full">
+    <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+    <span className="text-xs font-bold text-primary-600 uppercase tracking-widest">
+      {product?.brand || 'Premium Brand'}
+    </span>
   </div>
 
   {/* Title */}
-  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight tracking-tight">
     {product?.name}
   </h1>
 
   {/* Rating */}
-  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-    <div className="flex items-center gap-0.5">
-      {[...Array(5)].map((_, i) => (
-        <Star key={i} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-      ))}
+  <div className="flex flex-wrap items-center gap-3">
+    <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-100 px-2.5 py-1 rounded-lg">
+      <div className="flex items-center gap-0.5">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-200 fill-current'}`} />
+        ))}
+      </div>
+      <span className="text-xs font-bold text-yellow-700 ml-1">{rating}</span>
     </div>
-    <span className="text-xs sm:text-sm text-gray-600">{rating} ({reviews} reviews)</span>
-    <span className="text-xs sm:text-sm text-green-600">| {soldCount.toLocaleString()} sold</span>
+    <span className="text-xs text-gray-500 font-medium">{reviews} reviews</span>
+    <div className="w-px h-3.5 bg-gray-200" />
+    <span className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">
+      {soldCount.toLocaleString()} sold
+    </span>
   </div>
 
   {/* Price */}
-  <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-    <span className="text-2xl sm:text-3xl font-bold text-primary-600">₹{price.toLocaleString()}</span>
+  <div className="flex flex-wrap items-baseline gap-3 py-4 px-4 bg-gray-50 rounded-2xl border border-gray-100">
+    <span className="text-3xl sm:text-4xl font-bold text-primary-600">₹{price.toLocaleString()}</span>
     {originalPrice > price && (
       <>
-        <span className="text-base sm:text-lg text-gray-400 line-through">₹{originalPrice.toLocaleString()}</span>
-        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs sm:text-sm font-semibold rounded-lg">
+        <span className="text-base text-gray-400 line-through font-medium">₹{originalPrice.toLocaleString()}</span>
+        <span className="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-lg">
           {discount}% OFF
         </span>
       </>
     )}
+    {youSave > 0 && (
+      <span className="ml-auto text-xs text-green-600 font-semibold bg-green-50 border border-green-100 px-2.5 py-1 rounded-lg">
+        You save ₹{youSave.toLocaleString()}
+      </span>
+    )}
   </div>
 
-    {/* Min Order Badge - Only for Retailer/Wholesaler */}
+  {/* Min Order Badge */}
   {isBulkBuyer && minOrderQty > 1 && (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-      <span className="text-xs sm:text-sm font-semibold text-orange-600">
+    <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-orange-50 border border-orange-200 rounded-xl">
+      <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+      <span className="text-xs font-semibold text-orange-600">
         Minimum Order: {minOrderQty} pieces
       </span>
-    </div>
-  )}
-  
-  {/* You Save */}
-  {youSave > 0 && (
-    <div className="text-xs sm:text-sm text-green-600 bg-green-50 inline-block px-3 py-1.5 rounded-lg font-medium">
-      You save: ₹{youSave.toLocaleString()}
     </div>
   )}
 
   {/* Size Selector */}
   {sizes.length > 0 && (
-    <div className="space-y-2 sm:space-y-3">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-sm sm:text-base font-medium text-gray-700">Select Size</span>
-        <button className="text-xs sm:text-sm text-primary-600 hover:text-primary-700">Size Guide</button>
+        <span className="text-sm font-semibold text-gray-800">Select Size</span>
+        <button className="text-xs text-primary-600 hover:text-primary-700 font-semibold underline underline-offset-2 transition-colors">
+          Size Guide
+        </button>
       </div>
-      <div className="flex flex-wrap gap-2 sm:gap-3">
+      <div className="flex flex-wrap gap-2">
         {sizes.map((size) => (
           <button
             key={size}
             onClick={() => setSelectedSize(size)}
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg border font-medium text-sm transition-all ${
-              selectedSize === size
-                ? 'border-primary-500 bg-primary-50 text-primary-600'
-                : 'border-gray-200 hover:border-primary-300 text-gray-600'
-            }`}
+            className={`w-10 h-10 rounded-xl border-2 font-semibold text-sm transition-all duration-200
+              ${selectedSize === size
+                ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-md shadow-primary-100 scale-105'
+                : 'border-gray-200 hover:border-primary-300 text-gray-600 hover:scale-105'
+              }`}
           >
             {size}
           </button>
@@ -146,150 +157,143 @@ export default function ProductInfo({ product }) {
   )}
 
   {/* Color Selector */}
-  <div className="space-y-2 sm:space-y-3">
-    <span className="text-sm sm:text-base font-medium text-gray-700">Select Color</span>
-    <div className="flex flex-wrap gap-2 sm:gap-3">
+  <div className="space-y-2.5">
+    <span className="text-sm font-semibold text-gray-800">Select Color</span>
+    <div className="flex flex-wrap gap-2.5">
       {colors.map((color) => (
         <button
           key={color.value}
           onClick={() => setSelectedColor(color.value)}
-          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${color.class} transition-all ${
-            selectedColor === color.value
-              ? 'ring-2 ring-offset-2 ring-primary-500'
-              : 'ring-1 ring-gray-200'
-          }`}
           title={color.name}
+          className={`w-8 h-8 rounded-full ${color.class} transition-all duration-200 hover:scale-110
+            ${selectedColor === color.value
+              ? 'ring-2 ring-offset-2 ring-primary-500 scale-110'
+              : 'ring-1 ring-gray-300 ring-offset-1'
+            }`}
         />
       ))}
     </div>
   </div>
 
   {/* Stock Status */}
-  <div className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-lg ${isInStock ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-    <Check size={16} className="sm:w-4 sm:h-4" />
-    <span className="text-sm sm:text-base font-medium">
-      {isInStock ? `In Stock (${stock} units available)` : 'Out of Stock'}
+  <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border ${isInStock ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
+    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isInStock ? 'bg-green-500' : 'bg-red-500'}`} />
+    <span className="text-sm font-semibold">
+      {isInStock ? `In Stock — ${stock} units available` : 'Out of Stock'}
     </span>
   </div>
 
-    
-    {/* Quantity Selector */}
+  {/* Quantity Selector */}
   {isInStock && (
-    <div className="space-y-2 sm:space-y-3">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-sm sm:text-base font-medium text-gray-700">Quantity</span>
+        <span className="text-sm font-semibold text-gray-800">Quantity</span>
         {isBulkBuyer && minOrderQty > 1 && (
-          <span className="text-xs text-orange-600">Min: {minOrderQty}</span>
+          <span className="text-xs text-orange-600 font-medium">Min: {minOrderQty} pcs</span>
         )}
       </div>
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-0 bg-gray-100 rounded-xl p-1 w-fit">
         <button
           onClick={() => setQuantity(Math.max(isBulkBuyer ? minOrderQty : 1, quantity - 1))}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 flex items-center justify-center hover:border-primary-500 transition-all disabled:opacity-50"
           disabled={quantity <= (isBulkBuyer ? minOrderQty : 1)}
+          className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-40 border border-gray-200"
         >
-          <Minus size={14} className="sm:w-4 sm:h-4" />
+          <Minus size={14} className="text-gray-700" />
         </button>
-        <span className="w-10 sm:w-12 text-center font-semibold text-base sm:text-lg">{quantity}</span>
+        <span className="w-12 text-center font-bold text-base text-gray-900">{quantity}</span>
         <button
           onClick={() => setQuantity(Math.min(stock, quantity + 1))}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 flex items-center justify-center hover:border-primary-500 transition-all"
+          disabled={quantity >= stock}
+          className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-40 border border-gray-200"
         >
-          <Plus size={14} className="sm:w-4 sm:h-4" />
+          <Plus size={14} className="text-gray-700" />
         </button>
-        <span className="text-xs sm:text-sm text-gray-400">(Max {stock})</span>
+        <span className="text-xs text-gray-400 font-medium ml-3 mr-1">Max {stock}</span>
       </div>
     </div>
   )}
 
   {/* Action Buttons */}
-<div className="flex flex-col sm:flex-row gap-3 pt-4">
-  <button 
-    onClick={handleAddToCart}
-    disabled={!isInStock || isAddingToCart}
-    className={`flex-1 py-3 font-semibold rounded-full transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-95 ${
-      isInStock && !isAddingToCart
-        ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-primary-50 hover:from-primary-600 hover:to-primary-700' 
-        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-    }`}
-  >
-    {isAddingToCart ? (
-      <Loader2 size={18} className="animate-spin" />
-    ) : (
-      <ShoppingCart size={18} />
-    )}
-    <span className="font-medium">{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
-  </button>
-  
-  <button 
-    disabled={!isInStock}
-    className={`flex-1 py-3 font-semibold rounded-full transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-95 ${
-      isInStock 
-        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700' 
-        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-    }`}
-  >
-    <Zap size={18} />
-    <span className="font-medium">Buy Now</span>
-  </button>
-  
-  <div className="flex gap-2">
+  <div className="flex flex-col sm:flex-row gap-3 pt-2">
     <button
-      onClick={() => setIsWishlist(!isWishlist)}
-      className="p-3 bg-white border-2 border-gray-200 rounded-full hover:border-red-300 hover:bg-red-50 transition-all duration-300 transform hover:scale-105 active:scale-95 group"
+      onClick={handleAddToCart}
+      disabled={!isInStock || isAddingToCart}
+      className={`flex-1 py-3.5 font-bold rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 text-sm
+        ${isInStock && !isAddingToCart
+          ? 'bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white hover:shadow-lg hover:shadow-primary-200 hover:-translate-y-0.5'
+          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
     >
-      <Heart 
-        size={18} 
-        className={`transition-all duration-300 ${
-          isWishlist 
-            ? 'fill-red-500 text-red-500' 
-            : 'text-gray-500 group-hover:text-red-500'
-        }`} 
-      />
+      {isAddingToCart ? <Loader2 size={18} className="animate-spin" /> : <ShoppingCart size={18} />}
+      {isAddingToCart ? 'Adding...' : 'Add to Cart'}
     </button>
-    
-    <button className="p-3 bg-white border-2 border-gray-200 rounded-full hover:border-primary-300 hover:bg-primary-50 transition-all duration-300 transform hover:scale-105 active:scale-95 group">
-      <Share2 size={18} className="text-gray-500 group-hover:text-primary-500 transition-colors" />
+
+    <button
+      disabled={!isInStock}
+      className={`flex-1 py-3.5 font-bold rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 text-sm
+        ${isInStock
+          ? 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white hover:shadow-lg hover:shadow-orange-200 hover:-translate-y-0.5'
+          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
+    >
+      <Zap size={18} />
+      Buy Now
     </button>
+
+    <div className="flex gap-2">
+      <button
+        onClick={() => setIsWishlist(!isWishlist)}
+        className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-200 hover:scale-105
+          ${isWishlist
+            ? 'border-red-300 bg-red-50 text-red-500'
+            : 'border-gray-200 hover:border-red-200 hover:bg-red-50 text-gray-400'
+          }`}
+      >
+        <Heart size={18} className={isWishlist ? 'fill-red-500 text-red-500' : ''} />
+      </button>
+      <button className="w-12 h-12 rounded-2xl border-2 border-gray-200 hover:border-primary-200 hover:bg-primary-50 flex items-center justify-center transition-all duration-200 hover:scale-105 text-gray-400 hover:text-primary-500">
+        <Share2 size={18} />
+      </button>
+    </div>
   </div>
-</div>
 
   {/* Delivery Info */}
-  <div className="space-y-2 sm:space-y-3 pt-4 sm:pt-6 border-t border-gray-100">
-    <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
-      <Truck size={14} className="text-primary-500 sm:w-4 sm:h-4" />
-      <span>Free delivery on orders above ₹999</span>
-    </div>
-    <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
-      <RotateCcw size={14} className="text-primary-500 sm:w-4 sm:h-4" />
-      <span>30 days easy returns</span>
-    </div>
-    <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
-      <Shield size={14} className="text-primary-500 sm:w-4 sm:h-4" />
-      <span>2 year warranty</span>
-    </div>
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100">
+    {[
+      { icon: Truck, text: 'Free delivery above ₹999' },
+      { icon: RotateCcw, text: '30 days easy returns' },
+      { icon: Shield, text: '2 year warranty' },
+    ].map(({ icon: Icon, text }) => (
+      <div key={text} className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
+        <div className="w-7 h-7 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center flex-shrink-0">
+          <Icon size={13} className="text-primary-600" />
+        </div>
+        <span className="text-xs text-gray-600 font-medium leading-tight">{text}</span>
+      </div>
+    ))}
   </div>
 
   {/* PIN Code Check */}
-  <div className="pt-2 sm:pt-4">
-    <div className="flex gap-2 sm:gap-3">
+  <div className="pt-1">
+    <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Check Delivery</p>
+    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:border-primary-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100 transition-all duration-200">
       <input
         type="text"
-        placeholder="Enter PIN code"
+        placeholder="Enter 6-digit PIN code"
         value={pinCode}
-        onChange={(e) => setPinCode(e.target.value)}
+        onChange={(e) => setPinCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
         maxLength={6}
-        className="flex-1 px-3 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-sm sm:text-base focus:outline-none focus:border-primary-500"
+        className="flex-1 px-3.5 py-2.5 bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none"
       />
-      <button 
+      <button
         onClick={handlePinCheck}
-        className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-primary-500 hover:text-white transition-all text-sm sm:text-base font-medium"
+        className="flex-shrink-0 m-1.5 px-4 py-1.5 bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold rounded-lg transition-all"
       >
         Check
       </button>
     </div>
     {pinMessage && (
-      <p className={`text-xs sm:text-sm mt-2 ${pinMessage.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
+      <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${pinMessage.includes('✓') ? 'text-green-600' : 'text-red-500'}`}>
         {pinMessage}
       </p>
     )}
