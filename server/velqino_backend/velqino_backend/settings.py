@@ -12,6 +12,8 @@ from decouple import config
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import pymysql
+pymysql.install_as_MySQLdb()
 
 # Load environment variables from .env file
 load_dotenv()
@@ -230,9 +232,10 @@ if DATABASE_URL:
         'default': dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=300,
-            engine='django.db.backends.mysql'
+            engine='django.db.backends.mysql',
         )
     }
+    DATABASES['default']['OPTIONS'] = {'ssl': {'ssl_mode': 'REQUIRED'}}
 else:
     DATABASES = {
         'default': {
