@@ -4,7 +4,7 @@ import retailerStatsAPI from '../Api/statsAPI';
 export const retailerStatsApi = createApi({
     reducerPath: 'retailerStatsApi',
     baseQuery: fakeBaseQuery(),
-    tagTypes: ['RetailerKPI', 'RetailerSales', 'RetailerProducts', 'RetailerCustomers', 'RetailerOrders', 'RetailerAlerts'],
+    tagTypes: ['RetailerKPI', 'RetailerSales', 'RetailerProducts', 'RetailerCustomers', 'RetailerOrders', 'RetailerAlerts', 'RetailerDashboard'],
     
     endpoints: (builder) => ({
         // KPI Stats - Dashboard cards
@@ -110,6 +110,19 @@ export const retailerStatsApi = createApi({
             },
             providesTags: ['RetailerProducts']
         }),
+
+        // ---- ADD THIS: single combined endpoint for dashboard page ----
+        getRetailerDashboardSummary: builder.query({
+            async queryFn() {
+                try {
+                    const response = await retailerStatsAPI.getDashboardSummary();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error: error.response?.data || error };
+                }
+            },
+            providesTags: ['RetailerDashboard']
+        }),
     }),
 });
 
@@ -123,4 +136,5 @@ export const {
     useGetRetailerLowStockAlertsQuery,
     useGetRetailerTodaySummaryQuery,
     useGetRetailerQuickReorderQuery,
+    useGetRetailerDashboardSummaryQuery,
 } = retailerStatsApi;

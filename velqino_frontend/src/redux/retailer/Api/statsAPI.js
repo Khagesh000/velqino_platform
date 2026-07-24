@@ -24,6 +24,9 @@ const retailerStatsAPI = {
     
     // Quick Reorder
     getQuickReorder: () => API.get('analytics/retailer/quick-reorder/'),
+
+    // Single dashboard endpoint - replaces all 8 calls
+    getDashboardSummary: () => API.get('analytics/retailer/dashboard-summary/'),
 };
 
 export default retailerStatsAPI;

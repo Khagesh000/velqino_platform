@@ -2,17 +2,7 @@
 
 import React, { useState, lazy, Suspense } from 'react'
 import WholesaleNavbar from './components/WholesaleNavbar'
-import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice'
-import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice'
-import { useGetSalesAnalyticsQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetCategoryPerformanceQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetRecentOrdersQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetLowStockAlertsQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetRecentActivityQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetTopCustomersQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetPendingTasksQuery } from '@/redux/wholesaler/slices/statsSlice'
-import { useGetOrderStatsQuery } from '@/redux/wholesaler/slices/statsSlice'
+import { useGetWholesalerDashboardQuery } from '@/redux/wholesaler/slices/statsSlice'
 
 // Lazy load components
 import KPIStatsCards from './components/KPIStatsCards'
@@ -57,42 +47,42 @@ export default function Dashboard() {
   const handleTabChange = (tab) => setActiveTab(tab)
   const handleChartPeriodChange = (period) => setChartPeriod(period)
 
-  // Fetch data ONCE at parent level
-  const { data: statsData, isLoading: statsLoading } = useGetWholesalerStatsQuery()
-  const { data: productsData } = useGetProductsQuery({ per_page: 100 })
-  const { data: ordersData } = useGetOrdersQuery({ per_page: 100 })
-  const { data: salesData, isLoading: salesLoading } = useGetSalesAnalyticsQuery(chartPeriod)
-  const { data: categoryData } = useGetCategoryPerformanceQuery()
-  const { data: recentOrdersData } = useGetRecentOrdersQuery({ page: ordersPage, per_page: 10 })
-  const { data: lowStockData, isLoading: lowStockLoading, refetch: refetchLowStock  } = useGetLowStockAlertsQuery({ page: lowStockPage, per_page: 8 })
-  const { data: activityData } = useGetRecentActivityQuery({ page: activityPage, per_page: 8 })
-  const { data: topCustomersData, isLoading: customersLoading } = useGetTopCustomersQuery({ page: customersPage, per_page: 6 })
-  const { data: pendingTasksData } = useGetPendingTasksQuery({ page: tasksPage, per_page: 8, type: activeTab })
-  const { data: orderStatsData } = useGetOrderStatsQuery()
+  // ✅ SINGLE API CALL — replaces all 9 separate calls
+  const { 
+    data: dashboardData, 
+    isLoading: dashboardLoading, 
+    isFetching: dashboardFetching 
+  } = useGetWholesalerDashboardQuery()
 
-  // Extract data for children
-  const stats = statsData?.data || {}
-  const products = productsData?.data?.products || []
-  const orders = ordersData?.data || []
-  const salesChart = salesData?.data || {}
-  const categories = categoryData?.data || {}
-  const recentOrders = recentOrdersData?.data || []
-  const lowStockItems = lowStockData?.data || []
-  const activities = activityData?.data || []
-  const topCustomers = topCustomersData?.data || []
-  const pendingTasks = pendingTasksData?.data || []
-  const orderStats = orderStatsData?.data || {}
+  // Single loading flag for ALL components
+  const isLoading = dashboardLoading || dashboardFetching
+
+  // Extract ALL data from single response
+  const dashboard = dashboardData?.data || {}
   
-  // Pagination metadata
-  const ordersTotalPages = recentOrdersData?.total_pages || 1
-  const lowStockTotalPages = lowStockData?.total_pages || 1
-  const activityTotalPages = activityData?.total_pages || 1
-  const customersTotalPages = topCustomersData?.total_pages || 1
-  const tasksTotalPages = pendingTasksData?.total_pages || 1
-  const customersTotalSpent = topCustomersData?.total_spent || '₹0'
-  const customersGrowth = topCustomersData?.growth || '0%'
-  const customersTotalCount = topCustomersData?.count || 0
-  const tasksStats = pendingTasksData?.stats || {}
+  const stats = dashboard.stats || {}
+  const products = dashboard.products || []
+  const orders = dashboard.orders || []
+  const salesChart = dashboard.salesAnalytics || {}
+  const categories = dashboard.categoryPerformance || []
+  const recentOrders = dashboard.recentOrders || []
+  const lowStockItems = dashboard.lowStockAlerts || []
+  const activities = dashboard.recentActivity || []
+  const topCustomers = dashboard.topCustomers || []
+  const pendingTasks = dashboard.pendingTasks || []
+  const orderStats = dashboard.orderStats || {}
+  const quickInsights = dashboard.quickInsights || {}
+  
+  // Pagination metadata (keep for future use)
+  const ordersTotalPages = 1
+  const lowStockTotalPages = 1
+  const activityTotalPages = 1
+  const customersTotalPages = 1
+  const tasksTotalPages = 1
+  const customersTotalSpent = '₹0'
+  const customersGrowth = '0%'
+  const customersTotalCount = 0
+  const tasksStats = {}
 
   return (
     <div className="pb-20">
@@ -105,7 +95,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto">
           
           {/* Critical components - load immediately */}
-          <KPIStatsCards stats={stats} isLoading={statsLoading} />
+          <KPIStatsCards stats={stats} isLoading={isLoading} />
           
           <div className="mt-6">
             <QuickActionsRow 
@@ -120,7 +110,7 @@ export default function Dashboard() {
             <Suspense fallback={<ChartPlaceholder />}>
               <SalesAnalyticsChart 
                 data={salesChart} 
-                isLoading={salesLoading} 
+                isLoading={isLoading} 
                 activePeriod={chartPeriod} 
                 onPeriodChange={handleChartPeriodChange}  
               />
@@ -129,7 +119,7 @@ export default function Dashboard() {
 
           <div className="mt-6" style={{ minHeight: '350px' }}>
             <Suspense fallback={<CategoryPlaceholder />}>
-              <CategoryPerformance data={categories} />
+              <CategoryPerformance data={categories} isLoading={isLoading} />
             </Suspense>
           </div>
 
@@ -137,7 +127,7 @@ export default function Dashboard() {
             <Suspense fallback={<TablePlaceholder />}>
               <RecentOrdersTable 
                 orders={recentOrders} 
-                isLoading={statsLoading}
+                isLoading={isLoading}
                 currentPage={ordersPage}
                 totalPages={ordersTotalPages}
                 onPageChange={handleOrdersPageChange}
@@ -149,11 +139,10 @@ export default function Dashboard() {
             <Suspense fallback={<AlertPlaceholder />}>
               <LowStockAlerts 
                 items={lowStockItems}
-                isLoading={statsLoading}
+                isLoading={isLoading}
                 currentPage={lowStockPage}
                 totalPages={lowStockTotalPages}
                 onPageChange={handleLowStockPageChange}
-                refetch={refetchLowStock}
               />
             </Suspense>
           </div>
@@ -162,7 +151,7 @@ export default function Dashboard() {
             <Suspense fallback={<ActivityPlaceholder />}>
               <RecentActivityFeed 
                 activities={activities}
-                isLoading={statsLoading}
+                isLoading={isLoading}
                 currentPage={activityPage}
                 totalPages={activityTotalPages}
                 onPageChange={handleActivityPageChange}
@@ -174,7 +163,7 @@ export default function Dashboard() {
             <Suspense fallback={<CustomersPlaceholder />}>
               <TopCustomersList 
                 customers={topCustomers} 
-                isLoading={customersLoading}
+                isLoading={isLoading}
                 currentPage={customersPage}
                 totalPages={customersTotalPages}
                 totalCount={customersTotalCount}
@@ -189,7 +178,7 @@ export default function Dashboard() {
             <Suspense fallback={<TasksPlaceholder />}>
               <PendingTasks 
                 tasks={pendingTasks}
-                isLoading={statsLoading}
+                isLoading={isLoading}
                 activeTab={activeTab}
                 currentPage={tasksPage}
                 totalPages={tasksTotalPages}
@@ -205,7 +194,7 @@ export default function Dashboard() {
               <QuickInsights 
                 stats={stats} 
                 orderStats={orderStats} 
-                isLoading={statsLoading}
+                isLoading={isLoading}
               />
             </Suspense>
           </div>

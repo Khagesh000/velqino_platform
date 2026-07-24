@@ -36,6 +36,246 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def wholesaler_dashboard_summary(request):
+    """SINGLE ENDPOINT — replaces all 9 wholesaler dashboard calls."""
+    user = request.user
+
+    if user.role != 'wholesaler':
+        return Response({'status': 'error', 'message': 'Only wholesalers can access'}, status=403)
+
+    cache_key = f"wholesaler_dashboard:{user.id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
+
+    try:
+        from django.db.models import Sum, Count, Avg, F, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        from catalog.models import Product, ProductImage
+        from commerce.models import Order, OrderItem
+
+        today = timezone.now().date()
+        last_7_days = today - timedelta(days=7)
+        last_30_days = today - timedelta(days=30)
+
+        # ---- 1. STATS ----
+        total_products = Product.objects.filter(seller=user, seller_type='wholesaler').count()
+        total_orders = Order.objects.filter(wholesaler=user).count()
+        total_customers = Order.objects.filter(wholesaler=user).values('customer').distinct().count()
+        
+        revenue_data = Order.objects.filter(
+            wholesaler=user,
+            status='completed'
+        ).aggregate(
+            total_revenue=Sum('total_amount'),
+            today_revenue=Sum('total_amount', filter=Q(created_at__date=today)),
+            week_revenue=Sum('total_amount', filter=Q(created_at__date__gte=last_7_days)),
+            month_revenue=Sum('total_amount', filter=Q(created_at__date__gte=last_30_days))
+        )
+        
+        order_stats = {
+            'total_orders': total_orders,
+            'pending_orders': Order.objects.filter(wholesaler=user, status='pending').count(),
+            'processing_orders': Order.objects.filter(wholesaler=user, status='processing').count(),
+            'completed_orders': Order.objects.filter(wholesaler=user, status='completed').count(),
+            'cancelled_orders': Order.objects.filter(wholesaler=user, status='cancelled').count(),
+            'total_revenue': float(revenue_data['total_revenue'] or 0),
+            'today_revenue': float(revenue_data['today_revenue'] or 0),
+            'week_revenue': float(revenue_data['week_revenue'] or 0),
+            'month_revenue': float(revenue_data['month_revenue'] or 0),
+            'total_customers': total_customers,
+            'total_products': total_products,
+        }
+
+        # ---- 2. SALES ANALYTICS ----
+        daily_sales = Order.objects.filter(
+            wholesaler=user,
+            status='completed',
+            created_at__date__gte=last_30_days
+        ).values('created_at__date').annotate(
+            revenue=Sum('total_amount'),
+            orders=Count('id')
+        ).order_by('created_at__date')
+
+        sales_analytics = {
+            'daily': [
+                {
+                    'date': str(item['created_at__date']),
+                    'revenue': float(item['revenue'] or 0),
+                    'orders': item['orders']
+                }
+                for item in daily_sales
+            ],
+            'total_revenue': float(revenue_data['total_revenue'] or 0),
+            'growth': 0
+        }
+
+        # ---- 3. CATEGORY PERFORMANCE (FIXED) ----
+        category_performance = Product.objects.filter(
+            seller=user,
+            seller_type='wholesaler'
+        ).values('category__name').annotate(
+            total_sold=Sum('orderitem__quantity'),
+            total_revenue=Sum(F('orderitem__quantity') * F('orderitem__price')),  # ✅ FIXED
+            product_count=Count('id')
+        ).order_by('-total_revenue')[:10]
+
+        categories_data = [
+            {
+                'category': item['category__name'] or 'Uncategorized',
+                'total_sold': item['total_sold'] or 0,
+                'total_revenue': float(item['total_revenue'] or 0),
+                'product_count': item['product_count']
+            }
+            for item in category_performance
+        ]
+
+        # ---- 4. RECENT ORDERS ----
+        recent_orders = Order.objects.filter(
+            wholesaler=user
+        ).select_related('customer').order_by('-created_at')[:10]
+
+        recent_orders_data = [
+            {
+                'id': o.id,
+                'order_number': o.order_number or f"ORD-{o.id}",
+                'customer': o.customer.get_full_name() or o.customer.email if o.customer else 'Guest',
+                'total_amount': float(o.total_amount),
+                'status': o.status,
+                'created_at': o.created_at.isoformat(),
+            }
+            for o in recent_orders
+        ]
+
+        # ---- 5. LOW STOCK ALERTS ----
+        low_stock_products = Product.objects.filter(
+            seller=user,
+            seller_type='wholesaler',
+            status='active',
+            stock__lte=F('threshold')
+        )[:10]
+
+        low_stock_ids = [p.id for p in low_stock_products]
+        low_stock_image_map = {}
+        if low_stock_ids:
+            images = ProductImage.objects.filter(product_id__in=low_stock_ids, is_primary=True)
+            for img in images:
+                if img.product_id not in low_stock_image_map:
+                    low_stock_image_map[img.product_id] = img.image.url if img.image else None
+
+        low_stock_alerts = [
+            {
+                'id': p.id,
+                'name': p.name,
+                'sku': p.sku,
+                'currentStock': p.stock,
+                'reorderLevel': p.threshold,
+                'image_url': low_stock_image_map.get(p.id),
+                'status': 'critical' if p.stock == 0 or p.stock <= p.threshold // 2 else 'warning',
+            }
+            for p in low_stock_products
+        ]
+
+        # ---- 6. RECENT ACTIVITY ----
+        recent_activities = Order.objects.filter(
+            wholesaler=user
+        ).select_related('customer').order_by('-created_at')[:8]
+
+        activities_data = [
+            {
+                'id': o.id,
+                'type': 'order',
+                'message': f"New order #{o.order_number or o.id} from {o.customer.get_full_name() or 'Guest'}",
+                'amount': float(o.total_amount),
+                'status': o.status,
+                'time': o.created_at.strftime('%I:%M %p'),
+                'date': o.created_at.strftime('%b %d, %Y'),
+            }
+            for o in recent_activities
+        ]
+
+        # ---- 7. TOP CUSTOMERS ----
+        top_customers = Order.objects.filter(
+            wholesaler=user,
+            status='completed'
+        ).values('customer').annotate(
+            total_spent=Sum('total_amount'),
+            order_count=Count('id')
+        ).order_by('-total_spent')[:6]
+
+        customer_ids = [c['customer'] for c in top_customers if c['customer']]
+        customer_map = {u.id: u for u in User.objects.filter(id__in=customer_ids)}
+
+        top_customers_data = [
+            {
+                'id': c['customer'],
+                'name': customer_map.get(c['customer']).get_full_name() or 'Unknown',
+                'total_spent': float(c['total_spent'] or 0),
+                'order_count': c['order_count'],
+            }
+            for c in top_customers if c['customer'] in customer_map
+        ]
+
+        # ---- 8. PENDING TASKS ----
+        pending_orders = Order.objects.filter(
+            wholesaler=user,
+            status__in=['pending', 'processing']
+        ).select_related('customer')[:8]
+
+        pending_tasks = [
+            {
+                'id': o.id,
+                'type': 'order',
+                'title': f"Order #{o.order_number or o.id}",
+                'description': f"Customer: {o.customer.get_full_name() or 'Guest'}",
+                'status': o.status,
+                'priority': 'high' if o.status == 'pending' else 'medium',
+                'due_date': o.created_at.strftime('%b %d'),
+                'created_at': o.created_at.isoformat(),
+            }
+            for o in pending_orders
+        ]
+
+        # ---- 9. QUICK INSIGHTS ----
+        quick_insights = {
+            'total_revenue': float(revenue_data['total_revenue'] or 0),
+            'total_orders': total_orders,
+            'total_products': total_products,
+            'total_customers': total_customers,
+            'low_stock_count': low_stock_products.count(),
+            'pending_orders_count': Order.objects.filter(wholesaler=user, status='pending').count(),
+            'average_order_value': float(revenue_data['total_revenue'] / total_orders if total_orders > 0 else 0),
+            'growth_percentage': 0,
+        }
+
+        # ---- FINAL RESPONSE ----
+        response_data = {
+            'stats': order_stats,
+            'salesAnalytics': sales_analytics,
+            'categoryPerformance': categories_data,
+            'recentOrders': recent_orders_data,
+            'lowStockAlerts': low_stock_alerts,
+            'recentActivity': activities_data,
+            'topCustomers': top_customers_data,
+            'pendingTasks': pending_tasks,
+            'quickInsights': quick_insights,
+        }
+
+        cache.set(cache_key, response_data, timeout=120)
+        return Response({'status': 'success', 'data': response_data})
+
+    except Exception as e:
+        logger.error(f"Wholesaler dashboard error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error',
+            'message': str(e),
+            'detail': 'Unable to load dashboard'
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def wholesaler_dashboard_stats(request):
     """Get all dashboard statistics for wholesaler"""
     user = request.user
@@ -830,6 +1070,252 @@ class ExportReportAPIView(APIView):
 
 
 # -------------------------------------------------------------------RETAILERS-------------------------------------------
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_dashboard_summary(request):
+    """SINGLE ENDPOINT — replaces all 8 retailer dashboard calls. Bulk queries only."""
+    user = request.user
+
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
+
+    cache_key = f"retailer_dashboard:{user.id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
+
+    try:
+        from django.db.models.functions import ExtractHour
+        from django.db.models import Sum, Count, Max, F
+        from django.utils import timezone
+        from datetime import timedelta
+        from catalog.models import ProductImage
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        last_week = today - timedelta(days=7)
+        last_30_days = today - timedelta(days=30)
+        start_of_day = timezone.datetime.combine(today, timezone.datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+
+        all_orders = Order.objects.filter(retailer=user)
+        
+        # ---- 1. KPI STATS ----
+        today_orders = all_orders.filter(status='completed', created_at__gte=start_of_day, created_at__lt=end_of_day)
+        today_sales = today_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+        yesterday_sales = all_orders.filter(status='completed', created_at__date=yesterday).aggregate(total=Sum('total_amount'))['total'] or 0
+        sales_change = round(((today_sales - yesterday_sales) / yesterday_sales) * 100, 1) if yesterday_sales else (100 if today_sales else 0)
+        total_orders_7d = all_orders.filter(created_at__date__gte=last_week).count()
+        total_customers = all_orders.values('customer').distinct().count()
+        total_products = Product.objects.filter(seller=user, seller_type='retailer').count()
+
+        kpi_stats = {
+            'today_sales': {'value': today_sales, 'change': sales_change, 'trend': 'up' if sales_change >= 0 else 'down'},
+            'total_orders': {'value': total_orders_7d},
+            'total_customers': {'value': total_customers},
+            'total_products': {'value': total_products},
+        }
+
+        # ---- 2. DAILY SALES / HOURLY BREAKDOWN ----
+        hourly_qs = today_orders.filter(created_at__hour__gte=10, created_at__hour__lt=22).annotate(
+            hour=ExtractHour('created_at')
+        ).values('hour').annotate(
+            total=Sum('total_amount'), count=Count('id')
+        ).order_by('hour')
+        hourly_map = {row['hour']: {'sales': row['total'] or 0, 'transactions': row['count']} for row in hourly_qs}
+        daily_sales = [
+            {'hour': f"{h} AM" if h < 12 else f"{h-12} PM" if h > 12 else "12 PM",
+             'amount': hourly_map.get(h, {}).get('sales', 0),
+             'transactions': hourly_map.get(h, {}).get('transactions', 0)}
+            for h in range(10, 22)
+        ]
+
+        busiest = max(daily_sales, key=lambda h: h['amount']) if daily_sales else {'hour': 'N/A', 'amount': 0, 'transactions': 0}
+
+        # ---- 3. TODAY SUMMARY ----
+        total_transactions = today_orders.count()
+        average_bill = today_sales / total_transactions if total_transactions else 0
+        total_items = today_orders.aggregate(total=Sum('items__quantity'))['total'] or 0
+        payment_methods = {
+            'upi': today_orders.filter(payment_method='upi').count(),
+            'card': today_orders.filter(payment_method='card').count(),
+            'cash': today_orders.filter(payment_method='cash').count(),
+            'wallet': today_orders.filter(payment_method='wallet').count(),
+        }
+        avg_daily_target = all_orders.filter(
+            status='completed', created_at__date__gte=last_week
+        ).aggregate(avg=Sum('total_amount'))['avg'] or 25000
+        avg_daily_target = avg_daily_target / 7 if avg_daily_target else 25000
+
+        today_summary = {
+            'totalTransactions': total_transactions,
+            'averageBill': round(average_bill, 2),
+            'totalItems': total_items,
+            'revenue': today_sales,
+            'target': round(avg_daily_target, 2),
+            'paymentMethods': payment_methods,
+            'hourlyBreakdown': daily_sales,
+            'busiestHour': busiest['hour'],
+            'busiestHourSales': busiest['amount'],
+            'peakHourCustomers': busiest['transactions'],
+        }
+
+        # ---- 4. TOP PRODUCTS (WITH IMAGES) ----
+        top_products_qs = list(OrderItem.objects.filter(
+            order__retailer=user, order__status='completed', order__created_at__date__gte=last_30_days
+        ).values('product_id', 'product__name', 'product__sku', 'product__stock').annotate(
+            total_sales=Sum('quantity'),
+            total_revenue=Sum(F('quantity') * F('price'))
+        ).order_by('-total_sales')[:5])
+
+        product_ids = [p['product_id'] for p in top_products_qs if p['product_id']]
+        image_map = {}
+        if product_ids:
+            from catalog.models import ProductImage
+            images = ProductImage.objects.filter(product_id__in=product_ids, is_primary=True)
+            for img in images:
+                if img.product_id not in image_map:
+                    image_map[img.product_id] = img.image.url if img.image else None
+
+        top_products = []
+        for p in top_products_qs:
+            top_products.append({
+                'id': p['product_id'],
+                'name': p['product__name'],
+                'sku': p['product__sku'],
+                'sales': p['total_sales'] or 0,
+                'revenue': float(p['total_revenue']) if p['total_revenue'] else 0,
+                'stock': p['product__stock'] or 0,
+                'image_url': image_map.get(p['product_id']),  # ✅ ONLY image_url
+            })
+
+        # ---- 5. RECENT TRANSACTIONS ----
+        recent_orders = all_orders.select_related('customer').order_by('-created_at')[:10]
+        recent_transactions = [{
+            'id': f"#TR-{o.id:04d}",
+            'customer': o.customer.get_full_name() or o.customer.email.split('@')[0] if o.customer else 'Guest',
+            'amount': float(o.total_amount),
+            'status': o.status,
+            'time': o.created_at.strftime('%I:%M %p'),
+        } for o in recent_orders]
+
+
+        # ---- 6. LOW STOCK ALERTS (WITH IMAGES) ----
+        low_stock_qs = Product.objects.filter(
+            seller=user, seller_type='retailer', status='active', stock__lte=F('threshold')
+        )[:10]
+
+        low_stock_product_ids = [p.id for p in low_stock_qs]
+        low_stock_image_map = {}
+        if low_stock_product_ids:
+            from catalog.models import ProductImage
+            low_stock_images = ProductImage.objects.filter(product_id__in=low_stock_product_ids, is_primary=True)
+            for img in low_stock_images:
+                if img.product_id not in low_stock_image_map:
+                    low_stock_image_map[img.product_id] = img.image.url if img.image else None
+
+        low_stock_alerts = [{
+            'id': p.id,
+            'name': p.name,
+            'sku': p.sku,
+            'currentStock': p.stock,
+            'reorderLevel': p.threshold,
+            'image_url': low_stock_image_map.get(p.id),  # ✅ ONLY image_url
+            'status': 'critical' if p.stock == 0 or p.stock <= p.threshold // 2 else 'warning',
+        } for p in low_stock_qs]
+
+        # ---- 7. CUSTOMER ACTIVITY ----
+        customer_qs = all_orders.filter(status='completed').values('customer').annotate(
+            total_orders=Count('id'), total_amount=Sum('total_amount'), last_order=Max('created_at')
+        ).order_by('-last_order')[:10]
+        customer_ids = [c['customer'] for c in customer_qs if c['customer']]
+        customers_map = {c.id: c for c in User.objects.filter(id__in=customer_ids)}
+        customer_activity = []
+        for c in customer_qs:
+            cust = customers_map.get(c['customer'])
+            if not cust:
+                continue
+            customer_activity.append({
+                'id': cust.id,
+                'name': cust.get_full_name() or cust.email.split('@')[0],
+                'visits': c['total_orders'],
+                'amount': c['total_amount'] or 0,
+                'lastVisit': c['last_order'].strftime('%b %d, %I:%M %p') if c['last_order'] else 'Never',
+                'status': 'vip' if c['total_orders'] > 10 else 'active',
+            })
+
+        # ---- 8. QUICK REORDER (WITH IMAGES) ----
+        products_qs = Product.objects.filter(seller=user, seller_type='retailer', status='active')
+
+        # ✅ Pre-fetch images
+        all_product_ids = [p.id for p in products_qs]
+        reorder_image_map = {}
+        if all_product_ids:
+            from catalog.models import ProductImage
+            images = ProductImage.objects.filter(product_id__in=all_product_ids, is_primary=True)
+            for img in images:
+                if img.product_id not in reorder_image_map:
+                    reorder_image_map[img.product_id] = img.image.url if img.image else None
+
+        sales_map_qs = OrderItem.objects.filter(
+            order__retailer=user, order__status='completed', order__created_at__date__gte=last_30_days,
+            product__in=products_qs
+        ).values('product_id').annotate(total_sold=Sum('quantity'))
+        sales_map = {row['product_id']: row['total_sold'] or 0 for row in sales_map_qs}
+
+        reorder_suggestions = []
+        for p in products_qs:
+            total_sold = sales_map.get(p.id, 0)
+            daily_velocity = total_sold / 30 if total_sold else 0
+            days_until_out = int(p.stock / daily_velocity) if daily_velocity > 0 and p.stock > 0 else 999
+            needs_reorder = p.stock <= p.threshold or (0 < days_until_out < 7)
+            if not needs_reorder:
+                continue
+            urgency = 'critical' if (p.stock == 0 or days_until_out <= 3) else 'high' if (p.stock <= p.threshold // 2 or days_until_out <= 7) else 'medium'
+            suggested_qty = int((daily_velocity * 30) + p.threshold) if daily_velocity > 0 else p.threshold * 2
+            reorder_suggestions.append({
+                'id': p.id,
+                'name': p.name,
+                'sku': p.sku,
+                'currentStock': p.stock,
+                'reorderLevel': p.threshold,
+                'salesVelocity': round(daily_velocity, 1),
+                'daysUntilOut': days_until_out,
+                'suggestedQty': suggested_qty,
+                'urgency': urgency,
+                'image_url': reorder_image_map.get(p.id),  # ✅ ONLY image_url
+            })
+        urgency_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        reorder_suggestions.sort(key=lambda x: urgency_order.get(x['urgency'], 4))
+        reorder_suggestions = reorder_suggestions[:10]
+
+        # ---- FINAL RESPONSE ----
+        response_data = {
+            'kpiStats': kpi_stats,
+            'todaySummary': today_summary,
+            'dailySales': daily_sales,
+            'topProducts': top_products,
+            'recentTransactions': recent_transactions,
+            'lowStockAlerts': low_stock_alerts,
+            'customerActivity': customer_activity,
+            'quickReorder': reorder_suggestions,
+        }
+
+        cache.set(cache_key, response_data, timeout=120)
+        return Response({'status': 'success', 'data': response_data})
+
+    except Exception as e:
+        logger.error(f"Retailer dashboard error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error', 
+            'message': str(e),
+            'detail': 'Unable to load dashboard'
+        }, status=500)
+
+    
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def retailer_kpi_stats(request):

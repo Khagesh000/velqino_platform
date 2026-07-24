@@ -93,17 +93,11 @@ const { data: productsData, refetch, isLoading } = useGetRetailerProductsQuery({
   ...filterParams
 });
 
-// Add this useEffect to debug
-useEffect(() => {
-  console.log('🔴 API will call with search:', searchQuery);
-  console.log('🔴 API will call with filters:', filterParams);
-}, [searchQuery, filterParams, currentPage]);
-
-
 
   const products = productsData?.data?.products || [];
   const totalProducts = productsData?.data?.pagination?.total || 0;
   const totalPages = productsData?.data?.pagination?.total_pages || 1;
+
 
       const handleAddProduct = (type) => {
       if (type === 'single') {

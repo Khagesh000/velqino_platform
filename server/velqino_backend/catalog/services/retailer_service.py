@@ -40,7 +40,7 @@ class RetailerProductService:
             per_page = int(limit)
         
         # Base queryset - only retailer products
-        queryset = Product.objects.filter(seller_type='retailer', status='active')
+        queryset = Product.objects.filter(seller=request.user, seller_type='retailer', status='active')
         
         # Apply search
         if search:
@@ -107,7 +107,7 @@ class RetailerProductService:
         }
         
         cache.set(cache_key, response_data, 300)
-        return response_data
+        return {'status': 'success', 'data': response_data, 'source': 'live'}
     
     @staticmethod
     def create_single_product(request):

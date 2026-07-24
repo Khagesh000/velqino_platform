@@ -6,15 +6,8 @@ import RetailerNavbar from './components/RetailerNavbar';
 import RetailerKPIStatsCards from './components/RetailerKPIStatsCards';
 import RetailerQuickActionsRow from './components/RetailerQuickActionsRow';
 
-// Import all hooks
-import { useGetRetailerKPIStatsQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerDailySalesQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerTopProductsQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerCustomerActivityQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerRecentTransactionsQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerLowStockAlertsQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerTodaySummaryQuery } from '@/redux/retailer/slices/statsSlice';
-import { useGetRetailerQuickReorderQuery } from '@/redux/retailer/slices/statsSlice';
+// Single combined hook - replaces all 8 individual calls
+import { useGetRetailerDashboardSummaryQuery } from '@/redux/retailer/slices/statsSlice';
 
 // Lazy load all non-critical components
 const DailySalesChart = lazy(() => import('./components/DailySalesChart'));
@@ -39,26 +32,29 @@ export default function RetailerDashboard() {
     const [customerFilter, setCustomerFilter] = useState('all');
     const [transactionFilter, setTransactionFilter] = useState('all');
     const [stockFilter, setStockFilter] = useState('all');
-    
-    // ✅ ALL API CALLS FIRE SIMULTANEOUSLY (PARALLEL)
-    const { data: kpiData, isLoading: kpiLoading } = useGetRetailerKPIStatsQuery();
-    const { data: salesData, isLoading: salesLoading } = useGetRetailerDailySalesQuery();
-    const { data: topProductsData, isLoading: topProductsLoading } = useGetRetailerTopProductsQuery();
-    const { data: customerData, isLoading: customerLoading } = useGetRetailerCustomerActivityQuery({ filter: customerFilter });
-    const { data: transactionsData, isLoading: transactionsLoading } = useGetRetailerRecentTransactionsQuery({ mode: transactionFilter });
-    const { data: lowStockData, isLoading: lowStockLoading } = useGetRetailerLowStockAlertsQuery({ filter: stockFilter });
-    const { data: summaryData, isLoading: summaryLoading } = useGetRetailerTodaySummaryQuery();
-    const { data: reorderData, isLoading: reorderLoading } = useGetRetailerQuickReorderQuery();
-    
+
+    // ✅ SINGLE API CALL — 1 DB connection instead of 8
+    const { data: dashboardData, isLoading: dashboardLoading, isFetching: dashboardFetching } = useGetRetailerDashboardSummaryQuery();
+
     // Extract data for props
-    const kpiStats = kpiData?.data;
-    const salesChart = salesData?.data;
-    const topProducts = topProductsData?.data || [];
-    const customers = customerData?.data || [];
-    const transactions = transactionsData?.data || [];
-    const lowStockItems = lowStockData?.data || [];
-    const todaySummary = summaryData?.data;
-    const reorderSuggestions = reorderData?.data || [];
+    const kpiStats = dashboardData?.data?.kpiStats;
+    const salesChart = dashboardData?.data?.dailySales;
+    const topProducts = dashboardData?.data?.topProducts || [];
+    const customers = dashboardData?.data?.customerActivity || [];
+    const transactions = dashboardData?.data?.recentTransactions || [];
+    const lowStockItems = dashboardData?.data?.lowStockAlerts || [];
+    const todaySummary = dashboardData?.data?.todaySummary;
+    const reorderSuggestions = dashboardData?.data?.quickReorder || [];
+
+    // Single loading flag — drive all placeholders off this instead of 8 separate ones
+    const kpiLoading = dashboardLoading;
+    const salesLoading = dashboardLoading;
+    const topProductsLoading = dashboardLoading;
+    const customerLoading = dashboardLoading;
+    const transactionsLoading = dashboardLoading;
+    const lowStockLoading = dashboardLoading;
+    const summaryLoading = dashboardLoading;
+    const reorderLoading = dashboardLoading;
     
     return (
         <div className="pb-20 lg:pb-0">

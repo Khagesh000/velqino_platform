@@ -42,6 +42,12 @@ export default function ProductsGrid({
 
   const [deleteProduct] = useDeleteRetailerProductMutation();
 
+  const handlePageChange = (newPage) => {
+    if (onPageChange) {
+      onPageChange(newPage);  // This calls setCurrentPage from parent
+    }
+  };
+
 
   useEffect(() => {
   if (refreshTrigger && onRefresh) {
@@ -145,6 +151,7 @@ export default function ProductsGrid({
   const getImageUrl = (product) => {
     return product?.primary_image || product?.images?.[0]?.image || null;
   };
+
 
   
 
@@ -382,15 +389,31 @@ export default function ProductsGrid({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between">
-          <div className="text-xs text-gray-500">Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts}</div>
-          <div className="flex gap-1">
-            <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-2 py-1 text-xs border rounded disabled:opacity-50 hover:bg-gray-100">Previous</button>
-            <span className="px-2 py-1 text-xs bg-primary-500 text-white rounded">{currentPage}</span>
-            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-2 py-1 text-xs border rounded disabled:opacity-50 hover:bg-gray-100">Next</button>
-          </div>
+      <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="text-xs text-gray-500">
+          Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts}
         </div>
-      )}
+        <div className="flex gap-1">
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)} 
+            disabled={currentPage === 1} 
+            className="px-2 py-1 text-xs border rounded disabled:opacity-50 hover:bg-gray-100"
+          >
+            Previous
+          </button>
+          <span className="px-2 py-1 text-xs bg-primary-500 text-white rounded">
+            {currentPage}
+          </span>
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)} 
+            disabled={currentPage === totalPages} 
+            className="px-2 py-1 text-xs border rounded disabled:opacity-50 hover:bg-gray-100"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    )}
 
       {/* Modals */}
       {showEditModal && <EditProductModal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setEditingProduct(null); }} product={editingProduct} onSave={handleUpdateProduct} categories={categories} />}

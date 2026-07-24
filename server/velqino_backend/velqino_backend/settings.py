@@ -231,7 +231,7 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=300,
+            conn_max_age=0,
             engine='django.db.backends.mysql',
         )
     }
@@ -245,7 +245,8 @@ else:
             'PASSWORD': os.getenv('DB_PASSWORD', 'veltrix@123'),
             'HOST': os.getenv('DB_HOST', '127.0.0.1'),
             'PORT': os.getenv('DB_PORT', '3306'),
-            'CONN_MAX_AGE': 300,
+            'CONN_MAX_AGE': 0,  # Keep connection alive for 60 seconds
+            'CONN_HEALTH_CHECKS': True,
             'OPTIONS': {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             }

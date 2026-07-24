@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef, memo } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Heart, Eye, Star, Sparkles, ChevronRight, TrendingUp, Gift, Sun, Snowflake } from '../../../../utils/icons';
+import { ShoppingCart, Heart, ChevronRight, Sparkles, TrendingUp, Gift, Sun, Snowflake } from '../../../../utils/icons';
 import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
 import { toast } from 'react-toastify';
+import Image from 'next/image';
+
 const ProductCard = memo(({ product, wishlistIds = [] }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -12,32 +14,19 @@ const ProductCard = memo(({ product, wishlistIds = [] }) => {
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
 
   useEffect(() => {
-      const productId = Number(product?.id);
-      setIsWishlist(wishlistIds?.includes(productId) || false);
-    }, [wishlistIds, product?.id]);
+    const productId = Number(product?.id);
+    setIsWishlist(wishlistIds?.includes(productId) || false);
+  }, [wishlistIds, product?.id]);
 
-  const getImageUrl = () => {
-  return product?.image || '/images/placeholder.jpg';
-};
-
-  const getPrice = () => {
-    return product?.display_price || product?.price || 0;
-  };
-
-  const getOriginalPrice = () => {
-    return product?.retail_price || product?.compare_price || null;
-  };
+  const getImageUrl = () => product?.image || '/images/placeholder.jpg';
+  const getPrice = () => product?.display_price || product?.price || 0;
+  const getOriginalPrice = () => product?.retail_price || product?.compare_price || null;
 
   const handleAddToCart = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      await addToCart({
-        product_id: product.id,
-        quantity: 1,
-        selected_size: '',
-        selected_color: ''
-      }).unwrap();
+      await addToCart({ product_id: product.id, quantity: 1, selected_size: '', selected_color: '' }).unwrap();
       toast.success(`${product.name} added to cart!`);
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to add to cart');
@@ -46,46 +35,76 @@ const ProductCard = memo(({ product, wishlistIds = [] }) => {
 
   return (
     <div
-      className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
+      className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 border border-gray-100 hover:border-primary-200"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         {!isLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <div className="w-6 h-6 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        <img
+        <Image
           src={getImageUrl()}
           alt={product?.name}
-          loading="lazy"
-          className={`w-full h-full object-cover transition-transform duration-500 ${
+          fill
+          className={`object-cover transition-all duration-500 ease-out ${
             isLoaded ? 'opacity-100' : 'opacity-0'
-          } ${isHovered ? 'scale-110' : 'scale-100'}`}
-          onLoad={() => setIsLoaded(true)}
-          onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+          } ${isHovered ? 'scale-105' : 'scale-100'}`}
+          sizes="(max-width: 768px) 50vw, 25vw"
+          priority={false}
+          onLoadingComplete={() => setIsLoaded(true)}
         />
+
+        {/* Wishlist button */}
         <button
           onClick={() => setIsWishlist(!isWishlist)}
-          className="absolute top-1 right-1 p-1 bg-white rounded-full shadow-sm"
+          className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm transition-transform duration-200 hover:scale-110 active:scale-95"
         >
-          <Heart size={12} className={`${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+          <Heart size={14} className={`transition-colors duration-200 ${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
         </button>
+
+        {/* Discount badge */}
+        {getOriginalPrice() && (
+          <div className="absolute top-2 left-2 px-2 py-0.5 bg-primary-500 text-white text-[10px] font-semibold rounded-full shadow-sm">
+            SALE
+          </div>
+        )}
+
+        {/* Quick add overlay on hover (desktop) */}
+        <div
+          className={`hidden sm:flex absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/60 to-transparent transition-all duration-300 ${
+            isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+          }`}
+        >
+          <button
+            onClick={(e) => handleAddToCart(e, product)}
+            disabled={isAddingToCart}
+            className="w-full py-1.5 bg-white text-primary-600 rounded-lg text-xs font-semibold hover:bg-primary-50 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <ShoppingCart size={12} />
+            {isAddingToCart ? 'Adding...' : 'Quick Add'}
+          </button>
+        </div>
       </div>
-      <div className="p-2">
+
+      <div className="p-2.5">
         <h4 className="text-xs font-medium text-gray-800 truncate">{product?.name}</h4>
-        <div className="flex items-center gap-1 mt-1">
-          <span className="text-xs font-bold text-primary-600">₹{getPrice()}</span>
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className="text-sm font-bold text-primary-600">₹{getPrice()}</span>
           {getOriginalPrice() && (
-            <span className="text-[9px] text-gray-400 line-through">₹{getOriginalPrice()}</span>
+            <span className="text-[10px] text-gray-400 line-through">₹{getOriginalPrice()}</span>
           )}
         </div>
+
+        {/* Mobile always-visible add button */}
         <button
-        onClick={(e) => handleAddToCart(e, product)}
-        disabled={isAddingToCart}
-        className="w-full mt-2 py-1 bg-primary-500 text-white rounded text-[10px] font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-1">
-          <ShoppingCart size={10} />
+          onClick={(e) => handleAddToCart(e, product)}
+          disabled={isAddingToCart}
+          className="sm:hidden w-full mt-2 py-1.5 bg-primary-500 text-white rounded-lg text-[11px] font-medium hover:bg-primary-600 active:scale-95 transition-all flex items-center justify-center gap-1"
+        >
+          <ShoppingCart size={11} />
           <span>{isAddingToCart ? 'Adding...' : 'Add'}</span>
         </button>
       </div>
@@ -101,7 +120,6 @@ export default function FeaturedCollections({ collections = [], wishlistIds = []
   const [visibleProducts, setVisibleProducts] = useState([]);
   const sectionRef = useRef(null);
 
-  // Get current collection from props (passed from HomePage)
   const currentCollection = collections.find(c => c.season === activeSeason);
 
   const seasons = [
@@ -110,7 +128,6 @@ export default function FeaturedCollections({ collections = [], wishlistIds = []
     { id: 'festive', label: 'Festive', icon: <Gift size={16} /> },
   ];
 
-  // Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -121,37 +138,26 @@ export default function FeaturedCollections({ collections = [], wishlistIds = []
       },
       { threshold: 0.1 }
     );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
+    if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Progressive loading
   useEffect(() => {
     if (isInView && currentCollection?.products) {
       setVisibleProducts(currentCollection.products.slice(0, 2));
-      const timer = setTimeout(() => {
-        setVisibleProducts(currentCollection.products);
-      }, 200);
+      const timer = setTimeout(() => setVisibleProducts(currentCollection.products), 200);
       return () => clearTimeout(timer);
     }
   }, [isInView, currentCollection]);
 
-  // If no collections data, don't render
-if (!collections.length) {
-    return null;
-}
+  if (!collections.length) return null;
 
-// Check if current season has products
-const hasProducts = currentCollection?.products?.length > 0;
+  const hasProducts = currentCollection?.products?.length > 0;
 
   return (
     <section ref={sectionRef} className="featured-collections-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Section Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -164,27 +170,31 @@ const hasProducts = currentCollection?.products?.length > 0;
           <div className="w-20 h-1 bg-primary-500 mx-auto mt-4 rounded-full" />
         </div>
 
-        {/* Season Tabs */}
-        <div className="flex justify-center gap-2 sm:gap-4 mb-8">
+        {/* Season Tabs — animated sliding indicator */}
+        <div className="relative flex justify-center gap-1 sm:gap-2 mb-8 bg-white/60 backdrop-blur-sm rounded-full p-1.5 max-w-md mx-auto shadow-sm border border-gray-100">
           {seasons.map((season) => (
             <button
               key={season.id}
               onClick={() => setActiveSeason(season.id)}
-              className={`flex items-center gap-2 px-4 sm:px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                activeSeason === season.id
-                  ? 'bg-primary-500 text-white shadow-md'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-primary-50'
+              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors duration-300 ${
+                activeSeason === season.id ? 'text-white' : 'text-gray-600 hover:text-primary-600'
               }`}
             >
               {season.icon}
               <span>{season.label}</span>
+              {activeSeason === season.id && (
+                <span className="absolute inset-0 -z-10 bg-primary-500 rounded-full shadow-md animate-[fadeIn_0.3s_ease-out]" />
+              )}
             </button>
           ))}
         </div>
 
         {/* Collection Card */}
         {currentCollection && (
-          <div className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100">
+          <div
+            key={activeSeason}
+            className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 animate-[fadeIn_0.4s_ease-out]"
+          >
             {/* Collection Header */}
             <div className={`bg-gradient-to-r ${currentCollection.gradient} p-4 sm:p-6`}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -199,7 +209,7 @@ const hasProducts = currentCollection?.products?.length > 0;
                 </div>
                 <Link
                   href={`/collections/${currentCollection.season}`}
-                  className="text-white text-sm font-medium hover:underline flex items-center gap-1"
+                  className="text-white text-sm font-medium hover:underline flex items-center gap-1 transition-transform hover:translate-x-0.5"
                 >
                   View Collection <ChevronRight size={14} />
                 </Link>
@@ -209,7 +219,7 @@ const hasProducts = currentCollection?.products?.length > 0;
             {/* Curator Note */}
             <div className="bg-primary-50 px-4 py-2 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <TrendingUp size={14} className="text-primary-500" />
+                <TrendingUp size={14} className="text-primary-500 shrink-0" />
                 <span className="text-xs text-gray-600">
                   <span className="font-semibold">Curator's Pick:</span> {currentCollection.curatorNote || 'Trending this season'}
                 </span>
@@ -219,14 +229,17 @@ const hasProducts = currentCollection?.products?.length > 0;
             {/* Products Grid */}
             <div className="p-4">
               {hasProducts ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   {visibleProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} wishlistIds={wishlistIds}/>
+                    <ProductCard key={product.id} product={product} wishlistIds={wishlistIds} />
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No products available in this season yet.</p>
+                <div className="text-center py-10">
+                  <div className="w-14 h-14 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-3">
+                    <Gift size={22} className="text-primary-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">No products available in this season yet.</p>
                   <p className="text-sm text-gray-400 mt-1">Check back soon for new arrivals!</p>
                 </div>
               )}
@@ -234,14 +247,14 @@ const hasProducts = currentCollection?.products?.length > 0;
           </div>
         )}
 
-        {/* View All Collections Button */}
+        {/* View All Button */}
         <div className="text-center mt-8 sm:mt-12">
           <Link
             href={`/product/productlistingpage?season=${activeSeason}`}
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-full hover:bg-primary-500 hover:text-white transition-all duration-300 group shadow-sm hover:shadow-md"
           >
             <span>View All {currentCollection?.name}</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
           </Link>
         </div>
       </div>

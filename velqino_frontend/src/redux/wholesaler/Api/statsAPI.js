@@ -2,6 +2,9 @@ import API from '../../../utils/apiConfig';
 
 const statsAPI = {
     // Wholesaler Dashboard Stats
+    getWholesalerDashboard: () =>
+    API.get('analytics/wholesaler/dashboard-summary/'),
+
     getWholesalerStats: (params) =>
     API.get('analytics/wholesaler/stats/', { params }),
     

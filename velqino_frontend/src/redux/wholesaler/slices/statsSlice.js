@@ -7,10 +7,24 @@ export const statsApi = createApi({
     tagTypes: ['Stats', 'OrderStats', 'RevenueStats', 'ProductStats', 'SalesAnalytics',
                'CategoryPerformance', 'LowStockAlerts', 'RecentOrders', 'RecentActivity',
                'TopCustomers', 'PendingTasks', 'WithdrawalStats', 'TopProducts', 'GeoSales',
-               'HourlySales'
+               'HourlySales', 'WholesalerDashboard'
     ],
     endpoints: (builder) => ({
         // Wholesaler Dashboard Stats
+
+        getWholesalerDashboard: builder.query({
+            async queryFn() {
+                try {
+                    const response = await statsAPI.getWholesalerDashboard();
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['WholesalerDashboard'],
+            keepUnusedDataFor: 120, // 2 minutes cache
+        }),
+
         getWholesalerStats: builder.query({
             async queryFn(params) {
                 try {
@@ -209,6 +223,7 @@ export const statsApi = createApi({
 });
 
 export const {
+    useGetWholesalerDashboardQuery,
     useGetWholesalerStatsQuery,
     useGetOrderStatsQuery,
     useGetRevenueStatsQuery,

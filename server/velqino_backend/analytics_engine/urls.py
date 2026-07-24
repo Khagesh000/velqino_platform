@@ -4,6 +4,7 @@ from .views import CategoryPerformanceAPIView, LowStockAlertsAPIView, RecentOrde
 
 
 urlpatterns = [
+    path('wholesaler/dashboard-summary/', views.wholesaler_dashboard_summary, name='wholesaler-dashboard-summary'),
     path('wholesaler/stats/', views.wholesaler_dashboard_stats, name='wholesaler-stats'),
     path('wholesaler/order-stats/', views.order_stats, name='order-stats'),
     path('wholesaler/revenue-stats/', views.revenue_stats, name='revenue-stats'),
@@ -24,6 +25,8 @@ urlpatterns = [
     path('wholesaler/export-report/', ExportReportAPIView.as_view(), name='export-report'),
 
     #-----------------------------------------------RETAILERS---------------------------------------
+    path('retailer/dashboard-summary/', views.retailer_dashboard_summary, name='retailer-dashboard-summary'),
+
     path('retailer/kpi-stats/', views.retailer_kpi_stats, name='retailer-kpi-stats'),
     path('retailer/daily-sales/', views.retailer_daily_sales, name='retailer-daily-sales'),
     path('retailer/top-products/', views.retailer_top_products, name='retailer-top-products'),

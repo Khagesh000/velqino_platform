@@ -42,7 +42,7 @@ export default function TodaysSummary({ data, isLoading }) {
             <Calendar size={18} className="text-primary-500" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Today's Summary</h3>
+            <h3 className="text-base font-semibold text-gray-600">Today's Summary</h3>
             <p className="text-xs text-gray-500 mt-0.5">Daily performance overview</p>
           </div>
         </div>
