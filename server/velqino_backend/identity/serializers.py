@@ -222,40 +222,51 @@ class RetailerProfileUpdateSerializer(serializers.ModelSerializer):
 
 # identity/serializers.py
 
-# ✅ ADD Customer Register Serializer
 class CustomerRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True, min_length=8)
-    date_of_birth = serializers.DateField(required=False, allow_null=True)  # ✅ ADD THIS LINE
-    
+    date_of_birth = serializers.DateField(
+        required=False,
+        allow_null=True
+    )
+
     class Meta:
         model = User
-        fields = ['email', 'mobile', 'password', 'confirm_password', 'username', 'date_of_birth']  # ✅ ADD date_of_birth
-    
+        fields = [
+            'email',
+            'mobile',
+            'password',
+            'confirm_password',
+            'username',
+            'date_of_birth'
+        ]
+
     def validate(self, data):
         if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError("Passwords don't match")
+            raise serializers.ValidationError(
+                "Passwords don't match"
+            )
         return data
-    
+
     def create(self, validated_data):
         validated_data.pop('confirm_password')
-        date_of_birth = validated_data.pop('date_of_birth', None)  # ✅ ADD THIS LINE
-        
+
+        date_of_birth = validated_data.pop(
+            'date_of_birth',
+            None
+        )
+
         user = User.objects.create_user(
-            username=validated_data.get('username', validated_data['email'].split('@')[0]),
+            username=validated_data.get(
+                'username',
+                validated_data['email'].split('@')[0]
+            ),
             email=validated_data['email'],
             mobile=validated_data['mobile'],
             password=validated_data['password'],
             role='customer'
         )
-        
-        # ✅ ADD THIS BLOCK
-        if date_of_birth:
-            from .models import CustomerProfile
-            profile, created = CustomerProfile.objects.get_or_create(user=user)
-            profile.date_of_birth = date_of_birth
-            profile.save()
-        
+
         return user
 
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useRegisterCustomerMutation } from '../../redux/customer/slices/customerSlice';
-import { Eye, EyeOff, User, Mail, Phone, Lock, Calenda } from '../../utils/icons';
+import { Eye, EyeOff, User, Mail, Phone, Lock, Calendar } from '../../utils/icons';
 import { toast } from 'react-toastify';
 
 export default function CustomerRegistration() {
@@ -328,22 +328,22 @@ export default function CustomerRegistration() {
         
         {/* Submit Button */}
         <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-gradient-to-r from-primary-600 to-primary-500 text-white py-3 sm:py-3.5 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base shadow-md hover:shadow-lg mt-4"
-        >
-          {isLoading ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Creating Account...</span>
-            </>
-          ) : (
-            <>
-              <User size={18} />
-              <span>Create Account</span>
-            </>
-          )}
-        </button>
+  type="submit"
+  disabled={isLoading}
+  className="w-full bg-[var(--primary-color)] text-[var(--text-color)] py-3 sm:py-3.5 rounded-xl font-semibold hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base shadow-md hover:shadow-lg mt-4"
+>
+  {isLoading ? (
+    <>
+      <div className="w-5 h-5 border-2 border-[var(--text-color)] border-t-transparent rounded-full animate-spin" />
+      <span>Creating Account...</span>
+    </>
+  ) : (
+    <>
+      <User size={18} />
+      <span>Create Account</span>
+    </>
+  )}
+</button>
       </form>
       
       {/* Divider */}
