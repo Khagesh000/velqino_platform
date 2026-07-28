@@ -95,7 +95,7 @@ export default function FloatingElements({ allProducts = [] }) {
       </div>
 
       {/* ── Recently Viewed Side Panel ── */}
-      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-[100] transition-transform duration-300 ease-in-out">
+      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-30 transition-transform duration-300 ease-in-out">
         <div
           className="transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(${showRecentlyViewed ? '0px' : '-256px'})` }}
