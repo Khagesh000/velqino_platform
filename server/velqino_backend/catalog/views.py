@@ -489,17 +489,7 @@ def product_detail(request, product_id):
     
     if request.method == 'GET':
         product = get_object_or_404(Product, id=product_id)
-
-        if not request.user.is_authenticated or request.user.role == 'customer':
-            if product.seller_type != 'retailer':
-                return Response({'status': 'error', 'message': 'Access denied'}, status=403)
-        elif request.user.role == 'wholesaler':
-            if product.seller != request.user:
-                return Response({'status': 'error', 'message': 'Access denied'}, status=403)
-        elif request.user.role == 'retailer':
-            if product.seller != request.user and product.seller_type != 'wholesaler':
-                return Response({'status': 'error', 'message': 'Access denied'}, status=403)
-
+        
         cache_key = f"product:{product_id}"
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -521,33 +511,26 @@ def product_detail(request, product_id):
             if serializer.is_valid():
                 updated_product = serializer.save()
                 
-                # ✅ Handle sizes - works for both JSON and FormData
                 sizes_data = []
                 if hasattr(request.data, 'getlist'):
-                    # FormData (multipart) case
                     sizes_data = request.data.getlist('sizes')
                 elif isinstance(request.data, dict):
-                    # JSON case
                     sizes = request.data.get('sizes', [])
                     if isinstance(sizes, list):
                         sizes_data = sizes
                 
-                # ✅ Update variant prices when product price changes
                 if 'price' in request.data or (hasattr(request.data, 'get') and request.data.get('price')):
                     new_price = updated_product.price
                     updated_product.variants.update(price=new_price)
                     print(f"✅ Updated {updated_product.variants.count()} variants to price {new_price}")
                 
-                # ✅ Update sizes if provided
                 if sizes_data:
                     existing_sizes = list(updated_product.variants.values_list('size', flat=True))
                     
-                    # Remove sizes not in new list
                     for variant in updated_product.variants.all():
                         if variant.size not in sizes_data:
                             variant.delete()
                     
-                    # Add new sizes
                     for size in sizes_data:
                         if size and size not in existing_sizes:
                             from catalog.models import ProductVariant
