@@ -15,7 +15,7 @@ from .serializers import (
 from django.db import models
 from catalog.models import Product
 from commerce.models import Order, OrderItem
-from django.db.models import Q, Sum, Count, Max, ExpressionWrapper, DecimalField
+from django.db.models import Q, Sum, Count, Max, F, Avg, ExpressionWrapper, DecimalField
 from django.core.paginator import Paginator
 from identity.models import User
 from datetime import timedelta
@@ -30,6 +30,7 @@ import csv
 import io
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -66,24 +67,29 @@ def wholesaler_dashboard_summary(request):
         
         revenue_data = Order.objects.filter(
             wholesaler=user,
-            status='completed'
+            status='delivered'
         ).aggregate(
             total_revenue=Sum('total_amount'),
             today_revenue=Sum('total_amount', filter=Q(created_at__date=today)),
             week_revenue=Sum('total_amount', filter=Q(created_at__date__gte=last_7_days)),
             month_revenue=Sum('total_amount', filter=Q(created_at__date__gte=last_30_days))
         )
+
+        total_revenue = revenue_data['total_revenue'] or 0
+        today_revenue = revenue_data['today_revenue'] or 0
+        week_revenue = revenue_data['week_revenue'] or 0
+        month_revenue = revenue_data['month_revenue'] or 0
         
         order_stats = {
             'total_orders': total_orders,
             'pending_orders': Order.objects.filter(wholesaler=user, status='pending').count(),
             'processing_orders': Order.objects.filter(wholesaler=user, status='processing').count(),
-            'completed_orders': Order.objects.filter(wholesaler=user, status='completed').count(),
+            'completed_orders': Order.objects.filter(wholesaler=user, status='delivered').count(),
             'cancelled_orders': Order.objects.filter(wholesaler=user, status='cancelled').count(),
-            'total_revenue': float(revenue_data['total_revenue'] or 0),
-            'today_revenue': float(revenue_data['today_revenue'] or 0),
-            'week_revenue': float(revenue_data['week_revenue'] or 0),
-            'month_revenue': float(revenue_data['month_revenue'] or 0),
+            'total_revenue': float(total_revenue),
+            'today_revenue': float(today_revenue),
+            'week_revenue': float(week_revenue),
+            'month_revenue': float(month_revenue),
             'total_customers': total_customers,
             'total_products': total_products,
         }
@@ -91,7 +97,7 @@ def wholesaler_dashboard_summary(request):
         # ---- 2. SALES ANALYTICS ----
         daily_sales = Order.objects.filter(
             wholesaler=user,
-            status='completed',
+            status='delivered',
             created_at__date__gte=last_30_days
         ).values('created_at__date').annotate(
             revenue=Sum('total_amount'),
@@ -112,24 +118,37 @@ def wholesaler_dashboard_summary(request):
         }
 
         # ---- 3. CATEGORY PERFORMANCE (FIXED) ----
-        category_performance = Product.objects.filter(
-            seller=user,
-            seller_type='wholesaler'
-        ).values('category__name').annotate(
-            total_sold=Sum('orderitem__quantity'),
-            total_revenue=Sum(F('orderitem__quantity') * F('orderitem__price')),  # ✅ FIXED
-            product_count=Count('id')
-        ).order_by('-total_revenue')[:10]
-
-        categories_data = [
-            {
-                'category': item['category__name'] or 'Uncategorized',
-                'total_sold': item['total_sold'] or 0,
-                'total_revenue': float(item['total_revenue'] or 0),
-                'product_count': item['product_count']
-            }
-            for item in category_performance
-        ]
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    COALESCE(c.name, 'Uncategorized') as category_name,
+                    COALESCE(SUM(oi.quantity), 0) as total_sold,
+                    COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue,
+                    COUNT(DISTINCT p.id) as product_count
+                FROM catalog_product p
+                LEFT JOIN catalog_category c ON p.category_id = c.id
+                LEFT JOIN commerce_orderitem oi ON oi.product_id = p.id
+                WHERE p.seller_id = %s 
+                    AND p.seller_type = 'wholesaler'
+                    AND oi.order_id IN (
+                        SELECT id FROM commerce_order 
+                        WHERE wholesaler_id = %s AND status = 'delivered'
+                    )
+                GROUP BY c.id, c.name
+                ORDER BY total_revenue DESC
+                LIMIT 10
+            """, [user.id, user.id])
+            
+            rows = cursor.fetchall()
+            categories_data = [
+                {
+                    'category': row[0],
+                    'total_sold': row[1],
+                    'total_revenue': float(row[2]),
+                    'product_count': row[3]
+                }
+                for row in rows
+            ]
 
         # ---- 4. RECENT ORDERS ----
         recent_orders = Order.objects.filter(
@@ -140,7 +159,9 @@ def wholesaler_dashboard_summary(request):
             {
                 'id': o.id,
                 'order_number': o.order_number or f"ORD-{o.id}",
-                'customer': o.customer.get_full_name() or o.customer.email if o.customer else 'Guest',
+                'customer_name': o.customer.username or o.customer.get_full_name() or 'Guest',
+                'customer_email': o.customer.email if o.customer else None,
+                'items_count': o.items.count(),
                 'total_amount': float(o.total_amount),
                 'status': o.status,
                 'created_at': o.created_at.isoformat(),
@@ -198,7 +219,7 @@ def wholesaler_dashboard_summary(request):
         # ---- 7. TOP CUSTOMERS ----
         top_customers = Order.objects.filter(
             wholesaler=user,
-            status='completed'
+            status='delivered'
         ).values('customer').annotate(
             total_spent=Sum('total_amount'),
             order_count=Count('id')
@@ -210,7 +231,10 @@ def wholesaler_dashboard_summary(request):
         top_customers_data = [
             {
                 'id': c['customer'],
-                'name': customer_map.get(c['customer']).get_full_name() or 'Unknown',
+                'name': customer_map.get(c['customer']).username or 
+                        customer_map.get(c['customer']).get_full_name() or 
+                        'Unknown',
+                'email': customer_map.get(c['customer']).email,
                 'total_spent': float(c['total_spent'] or 0),
                 'order_count': c['order_count'],
             }
@@ -228,7 +252,7 @@ def wholesaler_dashboard_summary(request):
                 'id': o.id,
                 'type': 'order',
                 'title': f"Order #{o.order_number or o.id}",
-                'description': f"Customer: {o.customer.get_full_name() or 'Guest'}",
+                'description': f"Customer: {o.customer.username or o.customer.get_full_name() or o.customer.email or 'Guest'}",
                 'status': o.status,
                 'priority': 'high' if o.status == 'pending' else 'medium',
                 'due_date': o.created_at.strftime('%b %d'),
@@ -245,7 +269,7 @@ def wholesaler_dashboard_summary(request):
             'total_customers': total_customers,
             'low_stock_count': low_stock_products.count(),
             'pending_orders_count': Order.objects.filter(wholesaler=user, status='pending').count(),
-            'average_order_value': float(revenue_data['total_revenue'] / total_orders if total_orders > 0 else 0),
+            'average_order_value': float(total_revenue / total_orders if total_orders > 0 else 0),
             'growth_percentage': 0,
         }
 
@@ -271,6 +295,305 @@ def wholesaler_dashboard_summary(request):
             'status': 'error',
             'message': str(e),
             'detail': 'Unable to load dashboard'
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def wholesaler_analytics_summary(request):
+    """
+    SINGLE ENDPOINT — Replaces all analytics/stats page calls.
+    Returns ALL analytics data in ONE request.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Sum, Count, Avg, F, Q
+    from django.db import connection
+    from catalog.models import Product
+    from commerce.models import Order, OrderItem
+    import logging
+    from decimal import Decimal
+    
+    logger = logging.getLogger(__name__)
+    
+    user = request.user
+
+    if user.role != 'wholesaler':
+        return Response({
+            'status': 'error',
+            'message': 'Only wholesalers can access'
+        }, status=403)
+
+    # Get date range from query params
+    range_param = request.GET.get('range', 'last30days')
+    period = request.GET.get('period', 'weekly')
+    
+    # Calculate date range
+    today = timezone.now().date()
+    if range_param == 'last7days':
+        start_date = today - timedelta(days=7)
+    elif range_param == 'last30days':
+        start_date = today - timedelta(days=30)
+    elif range_param == 'last90days':
+        start_date = today - timedelta(days=90)
+    elif range_param == 'last12months':
+        start_date = today - timedelta(days=365)
+    else:
+        start_date = today - timedelta(days=30)
+
+  
+    # Cache key with range
+    cache_key = f"wholesaler_analytics:v2:{user.id}:{range_param}:{period}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response({
+            'status': 'success',
+            'data': cached_data,
+            'source': 'cache'
+        })
+
+    try:
+        # ---- 1. STATS ----
+        total_orders = Order.objects.filter(wholesaler=user).count()
+        delivered_orders = Order.objects.filter(wholesaler=user, status='delivered')
+        
+        revenue_data = delivered_orders.aggregate(
+            total_revenue=Sum('grand_total'),
+            period_revenue=Sum('grand_total', filter=Q(created_at__date__gte=start_date))
+        )
+        
+        total_revenue = revenue_data['total_revenue'] or 0
+        period_revenue = revenue_data['period_revenue'] or 0
+
+        # ---- 2. DAILY SALES ----
+        daily_sales = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).values('created_at__date').annotate(
+            revenue=Sum('grand_total'),
+            orders=Count('id')
+        ).order_by('created_at__date')
+
+        # ---- 3. TOP PRODUCTS ----
+        top_products = OrderItem.objects.filter(
+            order__wholesaler=user,
+            order__status='delivered',
+            order__created_at__date__gte=start_date
+        ).values('product__id', 'product__name', 'product__sku').annotate(
+            total_sold=Sum('quantity'),
+            total_revenue=Sum(F('quantity') * F('price')),
+            total_orders=Count('order', distinct=True)
+        ).order_by('-total_revenue')[:10]
+
+        # ---- 4. WEEKLY SALES ----
+        weekly_sales = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).values('created_at__week').annotate(
+            revenue=Sum('grand_total'),
+            orders=Count('id')
+        ).order_by('created_at__week')
+
+        # ---- 5. CATEGORY PERFORMANCE ----
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    COALESCE(c.name, 'Uncategorized') as category_name,
+                    COALESCE(SUM(oi.quantity), 0) as total_sold,
+                    COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue,
+                    COUNT(DISTINCT p.id) as product_count
+                FROM catalog_product p
+                LEFT JOIN catalog_category c ON p.category_id = c.id
+                LEFT JOIN commerce_orderitem oi ON oi.product_id = p.id
+                LEFT JOIN commerce_order o ON oi.order_id = o.id
+                WHERE p.seller_id = %s 
+                    AND p.seller_type = 'wholesaler'
+                    AND o.wholesaler_id = %s 
+                    AND o.status = 'delivered'
+                    AND o.created_at >= %s
+                GROUP BY c.id, c.name
+                ORDER BY total_revenue DESC
+                LIMIT 10
+            """, [user.id, user.id, start_date])
+            
+            rows = cursor.fetchall()
+            category_data = [
+                {
+                    'category': row[0],
+                    'total_sold': row[1],
+                    'total_revenue': float(row[2]),
+                    'product_count': row[3]
+                }
+                for row in rows
+            ]
+
+        # ---- 6. MONTHLY REVENUE ----
+        monthly_revenue = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).values('created_at__month', 'created_at__year').annotate(
+            revenue=Sum('grand_total'),
+            orders=Count('id')
+        ).order_by('created_at__year', 'created_at__month')
+
+        # ---- 7. LOW STOCK PRODUCTS ----
+        low_stock_count = Product.objects.filter(
+            seller=user,
+            seller_type='wholesaler',
+            status='active',
+            stock__lte=F('threshold')
+        ).count()
+
+        total_products = Product.objects.filter(
+            seller=user,
+            seller_type='wholesaler',
+            status='active'
+        ).count()
+
+        # ---- 8. CUSTOMER STATS ----
+        customer_stats = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).aggregate(
+            total_customers=Count('customer', distinct=True),
+            avg_order_value=Avg('grand_total')
+        )
+
+        # ---- 9. ORDER STATUS DISTRIBUTION ----
+        order_status_distribution = Order.objects.filter(
+            wholesaler=user
+        ).values('status').annotate(
+            count=Count('id')
+        )
+
+        # ---- 10. PERIOD ORDERS COUNT ----
+        period_orders = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).count()
+
+        # ---- GEOGRAPHIC SALES ----
+        geo_sales = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).values('shipping_city').annotate(
+            total=Sum('grand_total'),
+            orders=Count('id')
+        ).order_by('-total')[:10]
+
+        # ---- HOURLY SALES ----
+        hourly_sales = Order.objects.filter(
+            wholesaler=user,
+            status='delivered',
+            created_at__date__gte=start_date
+        ).extra(
+            select={'hour': "EXTRACT(HOUR FROM created_at)"}
+        ).values('hour').annotate(
+            total=Sum('grand_total'),
+            orders=Count('id')
+        ).order_by('hour')
+
+        # ---- FINAL RESPONSE ----
+        response_data = {
+            'stats': {
+                'total_revenue': float(total_revenue),
+                'period_revenue': float(period_revenue),
+                'total_orders': total_orders,
+                'period_orders': period_orders,
+                'total_customers': customer_stats['total_customers'] or 0,
+                'avg_order_value': float(customer_stats['avg_order_value'] or 0),
+                'low_stock_count': low_stock_count,
+                'total_products': total_products,
+                'growth_percentage': 0,
+            },
+            'salesAnalytics': {
+                'daily': [
+                    {
+                        'date': str(item['created_at__date']),
+                        'revenue': float(item['revenue'] or 0),
+                        'orders': item['orders']
+                    }
+                    for item in daily_sales
+                ],
+                'weekly': [
+                    {
+                        'week': f"Week {item['created_at__week']}",
+                        'revenue': float(item['revenue'] or 0),
+                        'orders': item['orders']
+                    }
+                    for item in weekly_sales
+                ],
+                'monthly': [
+                    {
+                        'month': f"{item['created_at__year']}-{item['created_at__month']:02d}",
+                        'revenue': float(item['revenue'] or 0),
+                        'orders': item['orders']
+                    }
+                    for item in monthly_revenue
+                ]
+            },
+            'topProducts': [
+                {
+                    'id': item['product__id'],
+                    'name': item['product__name'],
+                    'sku': item['product__sku'],
+                    'total_sold': item['total_sold'],
+                    'total_revenue': float(item['total_revenue'] or 0),
+                    'total_orders': item['total_orders']
+                }
+                for item in top_products
+            ],
+            'categoryPerformance': category_data,
+            'geoSales': [
+                {
+                    'shipping_city': item['shipping_city'] or 'Unknown',
+                    'total': float(item['total'] or 0),
+                    'orders': item['orders']
+                }
+                for item in geo_sales
+            ],
+            'hourlySales': [
+                {
+                    'hour': f"{int(item['hour']):02d}:00",
+                    'total': float(item['total'] or 0),
+                    'orders': item['orders']
+                }
+                for item in hourly_sales
+            ],
+            'orderStatusDistribution': [
+                {
+                    'status': item['status'],
+                    'count': item['count']
+                }
+                for item in order_status_distribution
+            ],
+            'dateRange': {
+                'start': start_date.isoformat(),
+                'end': today.isoformat(),
+                'range': range_param
+            }
+        }
+
+        # Cache for 5 minutes
+        cache.set(cache_key, response_data, timeout=300)
+        
+        return Response({
+            'status': 'success',
+            'data': response_data
+        })
+
+    except Exception as e:
+        logger.error(f"Wholesaler analytics error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error',
+            'message': str(e),
+            'detail': 'Unable to load analytics data'
         }, status=500)
 
 

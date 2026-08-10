@@ -5,6 +5,7 @@ from .views import CategoryPerformanceAPIView, LowStockAlertsAPIView, RecentOrde
 
 urlpatterns = [
     path('wholesaler/dashboard-summary/', views.wholesaler_dashboard_summary, name='wholesaler-dashboard-summary'),
+    path('wholesaler/analytics-summary/', views.wholesaler_analytics_summary, name='wholesaler-analytics-summary'),
     path('wholesaler/stats/', views.wholesaler_dashboard_stats, name='wholesaler-stats'),
     path('wholesaler/order-stats/', views.order_stats, name='order-stats'),
     path('wholesaler/revenue-stats/', views.revenue_stats, name='revenue-stats'),

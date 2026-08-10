@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation';
 import Link from 'next/link'
 import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, 
          Package, Grid, BarChart3, ShoppingBag, Heart, Settings, PlusCircle,
          ShoppingCart, Users, Box, Wallet, Truck, Star    } from '../../../../utils/icons';
 import '../../../../styles/Retailer/RetailerDashboard/RetailerNavbar.scss'
+
 
 export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -17,6 +19,7 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
   const navbarRef = useRef(null)
   const profileDropdownRef = useRef(null)
   const notificationsRef = useRef(null)
+  const pathname = usePathname();
 
   // Handle click outside for dropdowns
   useEffect(() => {
@@ -79,6 +82,11 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
     { icon: <Settings size={20} />, label: 'Settings', href: '/retailer/retailersettings', badge: null },
   ]
 
+  const isActive = (href) => {
+    if (pathname === href) return true;
+    return pathname?.startsWith(href) && pathname?.charAt(href.length) === '/';
+  };
+
   return (
     <>
       {/* Top Navigation Bar */}
@@ -96,7 +104,7 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
 
               <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors">
+              <span className="text-2xl font-bold text-primary-700 hover:text-primary-700 transition-colors">
                 VELTRIX
               </span>
               </Link>
@@ -267,33 +275,45 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
 `}>
   <div className="py-4 px-3 flex flex-col h-full">
     <nav className="space-y-1 flex-1">
-      {navItems.map((item, index) => (
-        <Link
-          key={index}
-          href={item.href}
-          className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all group relative text-sm"
-        >
-          <span className="text-gray-500 group-hover:text-primary-600 transition-all w-5 h-5 flex items-center justify-center">
-            {item.icon}
-          </span>
-          {!isSidebarCollapsed && (
-            <>
-              <span className="text-sm font-medium flex-1">{item.label}</span>
-              {item.badge && (
-                <span className="px-2 py-0.5 bg-primary-500 text-white text-xs font-medium rounded-full">
+        {navItems.map((item, index) => {
+          const active = isActive(item.href);
+          
+          return (
+            <Link
+              key={index}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all group relative text-sm ${
+                active
+                  ? 'bg-primary-50 text-primary-700 font-semibold'
+                  : 'text-gray-600 hover:bg-primary-50 hover:text-primary-600'
+              }`}
+            >
+              <span className={`transition-all w-5 h-5 flex items-center justify-center ${
+                active ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-600'
+              }`}>
+                {item.icon}
+              </span>
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="text-sm font-medium flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className={`px-2 py-0.5 text-white text-xs font-medium rounded-full ${
+                      active ? 'bg-primary-600' : 'bg-primary-500'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </>
+              )}
+              {isSidebarCollapsed && item.badge && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 text-white text-[9px] font-medium rounded-full flex items-center justify-center">
                   {item.badge}
                 </span>
               )}
-            </>
-          )}
-          {isSidebarCollapsed && item.badge && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 text-white text-[9px] font-medium rounded-full flex items-center justify-center">
-              {item.badge}
-            </span>
-          )}
-        </Link>
-      ))}
-    </nav>
+            </Link>
+          );
+        })}
+      </nav>
 
     <div className="pt-4 mt-2 border-t border-gray-100">
       <Link
@@ -330,28 +350,45 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
 
     <div className="p-4 overflow-y-auto h-[calc(100%-70px)]">
       <nav className="space-y-1">
-        {navItems.map((item, index) => (
-          <Link
-            key={index}
-            href={item.href}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all"
-          >
-            <span className="text-gray-500">{item.icon}</span>
-            <span className="text-sm font-medium flex-1">{item.label}</span>
-            {item.badge && (
-              <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
-                {item.badge}
+        {navItems.map((item, index) => {
+          const active = isActive(item.href);
+          
+          return (
+            <Link
+              key={index}
+              href={item.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                active
+                  ? 'bg-primary-50 text-primary-700 font-semibold'
+                  : 'text-gray-600 hover:bg-primary-50 hover:text-primary-600'
+              }`}
+            >
+              <span className={`${active ? 'text-primary-600' : 'text-gray-500'}`}>
+                {item.icon}
               </span>
-            )}
-          </Link>
-        ))}
+              <span className="text-sm font-medium flex-1">{item.label}</span>
+              {item.badge && (
+                <span className={`px-2 py-0.5 text-white text-xs rounded-full ${
+                  active ? 'bg-primary-600' : 'bg-primary-500'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+        
         <Link
           href="/retailer/retailersupport"
           onClick={() => setIsMobileMenuOpen(false)}
-          className="flex items-center gap-3 px-3 py-3 text-gray-600 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all"
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+            isActive('/retailer/retailersupport')
+              ? 'bg-primary-50 text-primary-700 font-semibold'
+              : 'text-gray-600 hover:bg-primary-50 hover:text-primary-600'
+          }`}
         >
-          <HelpCircle size={18} className="text-gray-500" />
+          <HelpCircle size={18} className={`${isActive('/retailer/retailersupport') ? 'text-primary-600' : 'text-gray-500'}`} />
           <span className="text-sm font-medium">Support</span>
         </Link>
       </nav>

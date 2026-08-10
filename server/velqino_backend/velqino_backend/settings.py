@@ -114,7 +114,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================================================
 # SECURITY SETTINGS
 # ============================================================
-SECRET_KEY = os.getenv('SECRET_KEY', 'i9!k6b_xqtab_)c5l3exew!z7-5*4p06lqxau!^ny9st#9_$_4')
+SECRET_KEY = config('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,velqino-backend.onrender.com').split(',')
 
@@ -225,7 +225,7 @@ WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 # ============================================================
 # DATABASE
 # ============================================================
-DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_URL = config('DATABASE_URL', default=None)
 
 if DATABASE_URL:
     DATABASES = {
@@ -240,12 +240,12 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DB_NAME', 'veltrix_db'),
-            'USER': os.getenv('DB_USER', 'veltrix_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'veltrix@123'),
-            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-            'PORT': os.getenv('DB_PORT', '3306'),
-            'CONN_MAX_AGE': 0,  # Keep connection alive for 60 seconds
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST', default='127.0.0.1'),
+            'PORT': config('DB_PORT', default='3306'),
+            'CONN_MAX_AGE': 0,
             'CONN_HEALTH_CHECKS': True,
             'OPTIONS': {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",

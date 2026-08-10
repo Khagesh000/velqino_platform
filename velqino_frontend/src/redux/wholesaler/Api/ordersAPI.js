@@ -4,6 +4,12 @@ const ordersAPI = {
     // Create new order
     createOrder: (data) =>
         API.post('commerce/orders/create/', data),
+
+    updateOrderStatus: (orderId, status) =>
+        API.patch(`commerce/orders/${orderId}/status/`, { status }),
+
+    updatePaymentStatus: (orderId, paymentStatus) =>
+        API.patch(`commerce/orders/${orderId}/payment-status/`, { payment_status: paymentStatus }),
     
     // Get all user orders
     getOrders: (params) => API.get('commerce/orders/', { params }),

@@ -1,6 +1,6 @@
 export default function GeographicChart({ data }) {
-  const cities = data?.data || [];
-  const maxValue = Math.max(...cities.map(c => c.total), 1);
+  const cities = data || [];
+  const maxValue = Math.max(...cities.map(c => c.total || 0), 1);
   
   return (
     <div className="h-64 relative">

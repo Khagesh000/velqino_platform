@@ -1,23 +1,59 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useGetOrderQuery } from '@/redux/wholesaler/slices/ordersSlice';
+import { useGetOrderQuery, useUpdateOrderStatusMutation, useUpdatePaymentStatusMutation } from '@/redux/wholesaler/slices/ordersSlice';
 import { 
   X, Clock, User, Package, CreditCard, Truck, FileText, 
   MessageCircle, Download, Printer, Edit, ChevronRight, 
   CheckCircle, AlertCircle, MapPin, Phone, Mail, Calendar, 
-  MoreVertical, Loader2
+  MoreVertical, Loader2, ChevronDown
 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/OrdersManagment/OrderDetailsPanel.scss';
 
+// Status options with colors
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'confirmed', label: 'Confirmed', color: 'bg-blue-100 text-blue-700' },
+  { value: 'processing', label: 'Processing', color: 'bg-indigo-100 text-indigo-700' },
+  { value: 'shipped', label: 'Shipped', color: 'bg-purple-100 text-purple-700' },
+  { value: 'out_for_delivery', label: 'Out for Delivery', color: 'bg-orange-100 text-orange-700' },
+  { value: 'delivered', label: 'Delivered', color: 'bg-teal-100 text-teal-700' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-700' },
+  { value: 'refund', label: 'Refund', color: 'bg-pink-100 text-pink-700' },
+];
+
+const PAYMENT_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'paid', label: 'Paid', color: 'bg-green-100 text-green-700' },
+  { value: 'failed', label: 'Failed', color: 'bg-red-100 text-red-700' },
+  { value: 'refunded', label: 'Refunded', color: 'bg-pink-100 text-pink-700' },
+];
+
 export default function OrderDetailsPanel({ orderId, onClose }) {
   const [activeTab, setActiveTab] = useState('timeline');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('');
   
   // ✅ Fetch real order data
-  const { data: orderData, isLoading, error } = useGetOrderQuery(orderId);
+  const { data: orderData, isLoading, error, refetch } = useGetOrderQuery(orderId);
+  
+  // ✅ Update status mutation
+  const [updateOrderStatus] = useUpdateOrderStatusMutation();
+  const [updatePaymentStatus] = useUpdatePaymentStatusMutation();
   
   const order = orderData?.data;
   
+  // Set initial status when order loads
+    useEffect(() => {
+    if (order?.status) {
+      setSelectedStatus(order.status);
+    }
+    if (order?.payment_status) {
+      setSelectedPaymentStatus(order.payment_status);
+    }
+  }, [order]);
+
   // Build timeline from order status
   const getTimeline = (order) => {
     if (!order) return [];
@@ -26,20 +62,24 @@ export default function OrderDetailsPanel({ orderId, onClose }) {
       { status: 'Order Placed', date: order.created_at, by: order.customer?.name || 'Customer', icon: Clock, completed: true },
     ];
     
-    if (order.status === 'confirmed' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered') {
+    if (order.status === 'confirmed' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' || order.status === 'completed') {
       timeline.push({ status: 'Payment Confirmed', date: order.created_at, by: 'System', icon: CreditCard, completed: true });
     }
     
-    if (order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered') {
+    if (order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' || order.status === 'completed') {
       timeline.push({ status: 'Processing', date: order.updated_at, by: 'Warehouse', icon: Package, completed: true });
     }
     
-    if (order.status === 'shipped' || order.status === 'delivered') {
+    if (order.status === 'shipped' || order.status === 'delivered' || order.status === 'completed') {
       timeline.push({ status: 'Shipped', date: order.updated_at, by: 'Logistics', icon: Truck, completed: true });
     }
     
-    if (order.status === 'delivered') {
+    if (order.status === 'delivered' || order.status === 'completed') {
       timeline.push({ status: 'Delivered', date: order.delivered_at || order.updated_at, by: 'Courier', icon: CheckCircle, completed: true });
+    }
+    
+    if (order.status === 'completed') {
+      timeline.push({ status: '✅ Completed', date: order.updated_at, by: 'System', icon: CheckCircle, completed: true });
     }
     
     return timeline;
@@ -66,6 +106,54 @@ export default function OrderDetailsPanel({ orderId, onClose }) {
     });
   };
 
+  const handlePaymentStatusUpdate = async () => {
+      if (selectedPaymentStatus === order?.payment_status) {
+          return;
+      }
+      setIsUpdating(true);
+      try {
+          await updatePaymentStatus({ 
+              orderId: orderId, 
+              paymentStatus: selectedPaymentStatus 
+          }).unwrap();
+          
+          await refetch();
+          console.log('Payment status updated successfully');
+      } catch (error) {
+          console.error('Failed to update payment status:', error);
+          setSelectedPaymentStatus(order?.payment_status);
+      } finally {
+          setIsUpdating(false);
+      }
+  };
+
+
+  // ✅ Handle status update
+  const handleStatusUpdate = async () => {
+    if (selectedStatus === order?.status) {
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      await updateOrderStatus({ 
+        orderId: orderId, 
+        status: selectedStatus 
+      }).unwrap();
+      
+      // Refetch order to get updated data
+      await refetch();
+      
+      // Show success message (you can add toast here)
+      console.log('Order status updated successfully');
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      // Revert status on error
+      setSelectedStatus(order?.status);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white border-l border-gray-200 w-full max-w-2xl h-full flex items-center justify-center">
@@ -87,7 +175,7 @@ export default function OrderDetailsPanel({ orderId, onClose }) {
   }
 
   return (
-    <div className="order-details-panel bg-white border-l border-gray-200 w-full max-w-2xl h-full flex flex-col pt-[65px] sm:pt-0">
+    <div className="order-details-panel bg-white h-full flex flex-col">
       {/* Header */}
       <div className="order-details-header px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -137,7 +225,7 @@ export default function OrderDetailsPanel({ orderId, onClose }) {
       </div>
 
       {/* Content */}
-      <div className="order-details-content p-3 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+      <div className="order-details-content p-3 sm:p-6 overflow-y-auto flex-1" style={{ maxHeight: 'calc(100vh - 240px)' }}>
         
         {/* Timeline Tab */}
         {activeTab === 'timeline' && (
@@ -230,21 +318,43 @@ export default function OrderDetailsPanel({ orderId, onClose }) {
         )}
 
         {/* Payment Tab */}
+
         {activeTab === 'payment' && (
           <div className="payment-container">
             <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-3 sm:mb-4 flex items-center gap-2">
               <CreditCard size={12} className="sm:w-4 sm:h-4 text-gray-400" />
               Payment Information
             </h4>
-            <div className="payment-card p-3 sm:p-4 bg-gray-50 rounded-xl space-y-2 sm:space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs sm:text-sm text-gray-600">Status</span>
-                <span className={`px-2 sm:px-3 py-0.5 sm:py-1 text-xxs sm:text-xs font-medium rounded-full ${
-                  order.payment_status === 'paid' ? 'bg-success-50 text-success-700' : 'bg-warning-50 text-warning-700'
-                }`}>
-                  {order.payment_status || 'Pending'}
-                </span>
+            
+            {/* Payment Status Dropdown */}
+            <div className="payment-card p-3 sm:p-4 bg-gray-50 rounded-xl space-y-3 sm:space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-gray-600">Status</span>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <select
+                    value={selectedPaymentStatus}
+                    onChange={(e) => setSelectedPaymentStatus(e.target.value)}
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 appearance-none bg-white pr-8 w-40 sm:w-48"
+                  >
+                    {PAYMENT_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+                <button
+                  onClick={handlePaymentStatusUpdate}
+                  disabled={isUpdating || selectedPaymentStatus === order?.payment_status}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {isUpdating ? '...' : 'Update'}
+                </button>
               </div>
+            </div>
+              
               <div className="flex items-center justify-between">
                 <span className="text-xs sm:text-sm text-gray-600">Method</span>
                 <span className="text-xs sm:text-sm font-medium text-gray-900 capitalize">{order.payment_method || 'COD'}</span>
@@ -346,21 +456,46 @@ export default function OrderDetailsPanel({ orderId, onClose }) {
         )}
       </div>
 
-      {/* Footer Actions */}
-      <div className="order-details-footer px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0">
-        <button className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all order-2 sm:order-1">
-          <Edit size={12} className="sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
-          <span className="sm:hidden">Edit</span>
-          <span className="hidden sm:inline">Edit Order</span>
-        </button>
-        <div className="flex items-center gap-2 order-1 sm:order-2">
+      {/* Footer Actions with Status Dropdown */}
+      <div className="order-details-footer px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        {/* Status Dropdown */}
+        <div className="flex items-center gap-2 order-2 sm:order-1 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full sm:w-48 px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 appearance-none bg-white pr-8"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
+          <button
+            onClick={handleStatusUpdate}
+            disabled={isUpdating || selectedStatus === order.status}
+            className="flex-1 sm:flex-none px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUpdating ? (
+              <Loader2 size={14} className="animate-spin inline mr-1" />
+            ) : null}
+            {isUpdating ? 'Updating...' : 'Update Status'}
+          </button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">
+          <button className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all">
+            <Edit size={12} className="sm:w-4 sm:h-4 inline mr-1 sm:mr-2" />
+            <span className="sm:hidden">Edit</span>
+            <span className="hidden sm:inline">Edit Order</span>
+          </button>
           <button className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-error-600 bg-error-50 rounded-lg hover:bg-error-100 transition-all">
             <span className="sm:hidden">Cancel</span>
             <span className="hidden sm:inline">Cancel Order</span>
-          </button>
-          <button className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all">
-            <span className="sm:hidden">Update</span>
-            <span className="hidden sm:inline">Update Status</span>
           </button>
         </div>
       </div>

@@ -7,20 +7,24 @@ import ExportButton from '@/shared/ExportButton';
 export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onPeriodChange }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
   
-  
   const periods = [
     { id: 'daily', label: 'Daily' },
     { id: 'weekly', label: 'Weekly' },
     { id: 'monthly', label: 'Monthly' }
   ];
   
-  // ✅ Extract data from API response
-  const dataPoints = data?.values || [];
-  const labels = data?.labels || [];
-  const maxValue = data?.max_value || 1;
-  const totalRevenue = data?.total || 0;
+  // ✅ Extract data from API response - FIXED for your API structure
+  const dataPoints = data?.daily?.map(item => item.revenue) || data?.values || [];
+  const labels = data?.daily?.map(item => {
+    // Format date from "2026-08-05" to "Aug 5"
+    const date = new Date(item.date);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }) || data?.labels || [];
   
-  // ✅ Calculate current period total (last non-zero value or sum of all)
+  // ✅ Get total revenue from API
+  const totalRevenue = data?.total_revenue || data?.total || 0;
+  
+  // ✅ Calculate current period total
   const currentTotal = dataPoints.reduce((sum, val) => sum + val, 0);
   
   // ✅ Calculate previous period (shifted by one)
@@ -34,9 +38,10 @@ export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onP
   
   const avgOrderValue = dataPoints.length > 0 ? totalRevenue / dataPoints.length : 0;
   
-  // ✅ Find the maximum value for scaling (ensure bars are visible)
-  const chartMaxValue = Math.max(maxValue, 1000); // Minimum 1000 for visibility
+  // ✅ Find the maximum value for scaling
+  const chartMaxValue = Math.max(...dataPoints, 1000);
 
+  // ✅ Prepare export data
   const exportData = labels.map((label, index) => ({
     period: label,
     revenue: dataPoints[index] || 0
@@ -108,15 +113,15 @@ export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onP
           </div>
           
           <ExportButton 
-              data={exportData} 
-              filename="sales_analytics" 
-              columns={exportColumns}
-              title="Sales Analytics Report"
-            />
+            data={exportData} 
+            filename="sales_analytics" 
+            columns={exportColumns}
+            title="Sales Analytics Report"
+          />
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-surface-1 rounded-xl p-4">
           <p className="text-xs text-tertiary mb-1">Current period</p>
@@ -153,7 +158,7 @@ export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onP
         </div>
       </div>
 
-      {/* Chart Area with Mobile Scroll */}
+      {/* Chart Area */}
       <div className="relative mb-6">
         {/* Y-axis labels */}
         <div className="absolute left-0 top-0 bottom-6 w-10 flex flex-col justify-between text-right pr-2 z-10 bg-white">
@@ -178,7 +183,6 @@ export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onP
             {/* Bars container */}
             <div className="absolute inset-0 flex items-end justify-around gap-1">
               {dataPoints.map((value, index) => {
-                // Calculate height percentage based on max value in chart data
                 const maxDataValue = Math.max(...dataPoints, 1);
                 const height = maxDataValue > 0 ? (value / maxDataValue) * 100 : 0;
                 
@@ -190,11 +194,13 @@ export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onP
                     onMouseLeave={() => setHoveredPoint(null)}
                   >
                     <div 
-                      className={`w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t-lg transition-all duration-300 group-hover:from-primary-600 group-hover:to-primary-500 cursor-pointer`}
-                      style={{ height: `${height}%`,
-                      backgroundColor: '#CE8E6A',  // ✅ Add this to force visibility
-                      minHeight: value > 0 ? '4px' : '0px' }}
-                      >
+                      className="w-full rounded-t-lg transition-all duration-300 cursor-pointer"
+                      style={{ 
+                        height: `${height}%`,
+                        backgroundColor: '#CE8E6A',
+                        minHeight: value > 0 ? '4px' : '0px'
+                      }}
+                    >
                       {hoveredPoint === index && value > 0 && (
                         <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-primary-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-20">
                           <div className="font-medium">{labels[index]}</div>
@@ -221,7 +227,7 @@ export default function SalesAnalyticsChart({ data, isLoading, activePeriod, onP
       {/* Summary Footer */}
       <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-light">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary-500" />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#CE8E6A' }} />
           <span className="text-xs text-secondary">Total revenue: ₹{totalRevenue.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-2">

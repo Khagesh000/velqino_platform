@@ -18,6 +18,30 @@ export const ordersApi = createApi({
             },
             invalidatesTags: ['Orders']
         }),
+
+        updateOrderStatus: builder.mutation({
+            async queryFn({ orderId, status }) {
+                try {
+                    const response = await ordersAPI.updateOrderStatus(orderId, status);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            invalidatesTags: ['Orders']
+        }),
+
+        updatePaymentStatus: builder.mutation({
+        async queryFn({ orderId, paymentStatus }) {
+            try {
+                const response = await ordersAPI.updatePaymentStatus(orderId, paymentStatus);
+                return { data: response.data };
+            } catch (error) {
+                return { error };
+            }
+        },
+        invalidatesTags: ['Orders']
+    }),
         
         getOrders: builder.query({
     async queryFn(params) {
@@ -109,6 +133,8 @@ export const ordersApi = createApi({
 
 export const {
     useCreateOrderMutation,
+    useUpdateOrderStatusMutation,
+    useUpdatePaymentStatusMutation,
     useGetOrdersQuery,
     useGetOrderQuery,
     useCancelOrderMutation,

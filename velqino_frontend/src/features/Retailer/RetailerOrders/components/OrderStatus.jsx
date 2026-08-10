@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Clock, Package, Truck, CheckCircle, XCircle, RefreshCw, AlertCircle, Send } from '../../../../utils/icons'
 import '../../../../styles/Retailer/RetailerOrders/OrderStatus.scss'
+import ordersAPI from '@/redux/wholesaler/Api/ordersAPI'
 
 export default function OrderStatus({ selectedOrder, onStatusUpdate, onRefresh }) {
   const [mounted, setMounted] = useState(false)
@@ -51,81 +52,53 @@ export default function OrderStatus({ selectedOrder, onStatusUpdate, onRefresh }
 
   // Real API call to update order status
   const handleStatusUpdate = async (newStatus) => {
-    if (!selectedOrder) return
+  if (!selectedOrder) return
+  
+  setIsUpdating(true)
+  setError(null)
+  
+  try {
+    // Call your API service
+    const response = await ordersAPI.updateOrderStatus(selectedOrder.order_number, newStatus);
     
-    setIsUpdating(true)
-    setError(null)
-    
-    try {
-      // Call your backend API
-      const response = await fetch(`/api/commerce/orders/${selectedOrder.order_number}/status/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to update status')
-      }
-      
-      const data = await response.json()
-      
-      // Update local state
+    if (response.data) {
       setCurrentStatus(newStatus)
       setSelectedStatus(newStatus)
-      
-      // Notify parent component
       if (onStatusUpdate) onStatusUpdate(newStatus)
-      
-      // Refresh orders list to get updated data from backend
       if (onRefresh) onRefresh()
-      
-    } catch (err) {
-      console.error('Status update error:', err)
-      setError(err.message)
-    } finally {
-      setIsUpdating(false)
     }
+  } catch (err) {
+    console.error('Status update error:', err)
+    setError(err.message)
+  } finally {
+    setIsUpdating(false)
   }
+}
 
   // Real API call to cancel order
-  const handleCancelOrder = async () => {
-    if (!selectedOrder) return
+  // ✅ Use this instead of fetch
+const handleCancelOrder = async () => {
+  if (!selectedOrder) return
+  
+  setIsUpdating(true)
+  setError(null)
+  
+  try {
+    const response = await ordersAPI.cancelOrder(selectedOrder.order_number);
     
-    setIsUpdating(true)
-    setError(null)
-    
-    try {
-      const response = await fetch(`/api/commerce/orders/${selectedOrder.order_number}/cancel/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to cancel order')
-      }
-      
-      const data = await response.json()
-      
+    if (response.data) {
       setCurrentStatus('cancelled')
       setSelectedStatus('cancelled')
-      
       if (onStatusUpdate) onStatusUpdate('cancelled')
       if (onRefresh) onRefresh()
-      
-    } catch (err) {
-      console.error('Cancel order error:', err)
-      setError(err.message)
-    } finally {
-      setIsUpdating(false)
     }
+  } catch (err) {
+    console.error('Cancel order error:', err)
+    setError(err.message)
+  } finally {
+    setIsUpdating(false)
   }
+}
 
   if (!selectedOrder) {
     return (

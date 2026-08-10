@@ -3,7 +3,7 @@
 import React from 'react';
 
 export default function CustomerChart({ data, dateRange, customDate }) {
-  const statsData = data?.data || {};
+  const statsData = data || {};
   const totalCustomers = statsData.total_customers || 0;
   
   // Mock weekly customer growth data (since backend doesn't have this yet)

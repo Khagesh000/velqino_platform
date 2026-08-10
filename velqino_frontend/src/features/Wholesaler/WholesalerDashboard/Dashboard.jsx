@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, lazy, Suspense, useEffect } from 'react'
 import WholesaleNavbar from './components/WholesaleNavbar'
 import { useGetWholesalerDashboardQuery } from '@/redux/wholesaler/slices/statsSlice'
 
@@ -53,6 +53,15 @@ export default function Dashboard() {
     isLoading: dashboardLoading, 
     isFetching: dashboardFetching 
   } = useGetWholesalerDashboardQuery()
+
+  // ✅ Store only pending_orders and total_customers in localStorage
+  useEffect(() => {
+    if (dashboardData?.data?.stats) {
+      const stats = dashboardData.data.stats;
+      localStorage.setItem('wholesaler_pending_orders', stats.pending_orders || 0);
+      localStorage.setItem('wholesaler_customers_count', stats.total_customers || 0);
+    }
+  }, [dashboardData]);
 
   // Single loading flag for ALL components
   const isLoading = dashboardLoading || dashboardFetching

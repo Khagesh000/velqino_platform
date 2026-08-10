@@ -5,6 +5,7 @@ import { Package, AlertTriangle, RefreshCw, ChevronRight } from '../../../../uti
 import '../../../../styles/Wholesaler/WholesalerDashboard/LowStockAlerts.scss';
 import { toast } from 'react-toastify';
 import { useUpdateProductMutation } from '@/redux/wholesaler/slices/productsSlice';
+import Image from 'next/image';
 
 export default function LowStockAlerts({ items, isLoading, page, onPageChange, refetch }) {
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -26,17 +27,19 @@ export default function LowStockAlerts({ items, isLoading, page, onPageChange, r
   };
 
   const getStockLevelClass = (stock) => {
-    if (stock <= 2) return 'bg-error-100 text-error-600';
-    if (stock <= 5) return 'bg-warning-100 text-warning-600';
-    return 'bg-accent-100 text-accent-600';
-  };
+  if (stock === 0) return 'bg-red-500 text-white';
+  if (stock <= 5) return 'bg-orange-500 text-white';
+  if (stock <= 10) return 'bg-yellow-500 text-white';
+  return 'bg-green-500 text-white';
+};
 
-  const getProgressColor = (stock, threshold) => {
-    const percentage = (stock / threshold) * 100;
-    if (percentage <= 20) return 'bg-error-500';
-    if (percentage <= 40) return 'bg-warning-500';
-    return 'bg-accent-500';
-  };
+const getProgressColor = (stock, threshold) => {
+  const percentage = (stock / threshold) * 100;
+  if (percentage <= 25) return 'bg-red-500';
+  if (percentage <= 50) return 'bg-orange-500';
+  if (percentage <= 75) return 'bg-yellow-500';
+  return 'bg-green-500';
+};
 
   const handleReorder = (product) => {
   setSelectedProduct(product)
@@ -135,8 +138,24 @@ export default function LowStockAlerts({ items, isLoading, page, onPageChange, r
             }`} />
 
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-white border border-light flex items-center justify-center text-xl">
-                📦
+              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-white border border-light flex items-center justify-center overflow-hidden flex-shrink-0">
+                {item.image_url ? (
+                  <Image
+                    src={item.image_url}
+                    alt={item.name}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML = '📦';
+                    }}
+                  />
+                ) : (
+                  <span className="text-xl">📦</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm lg:text-base font-semibold text-primary truncate">{item.name}</h4>
@@ -146,30 +165,32 @@ export default function LowStockAlerts({ items, isLoading, page, onPageChange, r
             </div>
 
             <div className="space-y-2 mb-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-secondary">Current Stock</span>
-                <span className={`font-semibold px-2 py-0.5 rounded-full ${getStockLevelClass(item.stock)}`}>
-                  {item.stock} units
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-secondary">Threshold</span>
-                <span className="text-primary font-medium">{item.threshold} units</span>
-              </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-secondary">Current Stock</span>
+              <span className={`font-semibold px-2 py-0.5 rounded-full ${getStockLevelClass(item.currentStock)}`}>
+                {item.currentStock} units
+              </span>
             </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-secondary">Threshold</span>
+              <span className="text-primary font-medium">{item.reorderLevel} units</span>
+            </div>
+          </div>
 
-            <div className="space-y-1 mb-4">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-tertiary">Stock level</span>
-                <span className="text-tertiary">{Math.round((item.stock / item.threshold) * 100)}%</span>
-              </div>
-              <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${getProgressColor(item.stock, item.threshold)}`}
-                  style={{ width: `${(item.stock / item.threshold) * 100}%` }}
-                />
-              </div>
+          <div className="space-y-1 mb-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-tertiary">Stock level</span>
+              <span className="text-tertiary">
+                {Math.round((item.currentStock / item.reorderLevel) * 100)}%
+              </span>
             </div>
+            <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${getProgressColor(item.currentStock, item.reorderLevel)}`}
+                style={{ width: `${(item.currentStock / item.reorderLevel) * 100}%` }}
+              />
+            </div>
+          </div>
 
             <div className="flex items-center gap-2">
               <button 

@@ -149,56 +149,46 @@ export default function PendingTasks({ tasks, isLoading, activeTab, page, onTabC
 
                   {/* Task Card */}
                   <div className="flex-1 bg-surface-1 rounded-xl p-3 lg:p-4 border border-light transition-all hover:shadow-md">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${getTypeColor(task.type)} flex items-center justify-center flex-shrink-0`}>
-                          {getTypeIcon(task.type)}
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-semibold text-primary">{task.task}</h4>
-                          <p className="text-xs text-secondary mt-0.5">
-                            {task.customer && task.customer}
-                            {task.product && `${task.product} • SKU: ${task.sku}`}
-                            {task.vendor && task.vendor}
-                          </p>
-                        </div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-lg ${getTypeColor(task.type)} flex items-center justify-center flex-shrink-0`}>
+                        {getTypeIcon(task.type)}
                       </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold text-primary">{task.title}</h4>
+                        <p className="text-xs text-secondary mt-0.5">{task.description}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                      {task.amount && (
-                        <span className="text-sm font-semibold text-primary bg-white px-2 py-1 rounded-lg border border-light">
-                          {task.amount}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                        task.priority === 'high' ? 'bg-error-100 text-error-600' :
+                        task.priority === 'medium' ? 'bg-warning-100 text-warning-600' :
+                        'bg-primary-100 text-primary-600'
+                      }`}>
+                        {getPriorityIcon(task.priority)}
+                        <span className="capitalize">{task.priority}</span>
+                      </span>
+
+                      {task.due_date && (
+                        <span className="flex items-center gap-1 text-xs text-tertiary">
+                          <Clock size={12} />
+                          Due: {task.due_date}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                          task.priority === 'high' ? 'bg-error-100 text-error-600' :
-                          task.priority === 'medium' ? 'bg-warning-100 text-warning-600' :
-                          'bg-accent-100 text-accent-600'
-                        }`}>
-                          {getPriorityIcon(task.priority)}
-                          <span className="capitalize">{task.priority}</span>
-                        </span>
-
-                        {task.time && (
-                          <span className={`flex items-center gap-1 text-xs ${getTimeColor(task.time)}`}>
-                            <Clock size={12} />
-                            {task.time}
-                          </span>
-                        )}
-                      </div>
-
-                      <button className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
-                        <span>Handle</span>
-                        <ArrowRight size={12} />
-                      </button>
-                    </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <button className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
+                      <span>Handle</span>
+                      <ArrowRight size={12} />
+                    </button>
                   </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
 
                   {hoveredTask === task.id && (
                     <div className={`absolute inset-0 rounded-xl opacity-5 blur-lg pointer-events-none ${

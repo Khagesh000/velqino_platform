@@ -1,11 +1,10 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation';
 import Link from 'next/link'
 import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, Package, Grid, BarChart3, Users, Wallet, Settings, PlusCircle, Upload } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
-import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
-import { useListRetailersQuery } from '@/redux/retailer/slices/retailerSlice';
 import ImportImagesModal from '../../ProductsCatalog/Modals/ImportImagesModal';
 import ImportModal from '../../ProductsCatalog/Modals/ImportModal';
 
@@ -24,11 +23,10 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
   const [showAddProductModal, setShowAddProductModal] = useState(false)
   const [showImportImagesModal, setShowImportImagesModal] = useState(false)
   const [showImportVideoModal, setShowImportVideoModal] = useState(false)
-  const { data: ordersData } = useGetOrdersQuery();
-  const pendingOrdersCount = ordersData?.data?.filter(order => order.status === 'pending' || order.status === 'confirmed').length || 0;
+  const pendingOrdersCount = parseInt(localStorage.getItem('wholesaler_pending_orders')) || 0;
+  const customersCount = parseInt(localStorage.getItem('wholesaler_customers_count')) || 0;
 
-  const { data: retailersData } = useListRetailersQuery();
-  const customersCount = retailersData?.data?.length || 0;
+  const pathname = usePathname();
 
   // Handle click outside for dropdowns
   useEffect(() => {
@@ -89,6 +87,11 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
     { icon: <Wallet size={20} />, label: 'Payments & Payouts', href: '/wholesaler/paymentsandpayouts', badge: null },
     { icon: <Settings size={20} />, label: 'Settings', href: '/wholesaler/settings', badge: null },
   ]
+
+  const isActive = (href) => {
+    if (pathname === href) return true;
+    return pathname?.startsWith(href) && pathname?.charAt(href.length) === '/';
+  };
 
   const handleAddProduct = () => {
     setShowAddProductModal(true)
@@ -164,32 +167,32 @@ const handleImportVideo = () => {
               {/* Quick Add Product Button - Desktop */}
               <div className="flex items-center gap-2">
             <div className="relative">
-  {/* Add Product Button with Dropdown */}
-  <button 
-    onClick={() => setShowImportDropdown(!showImportDropdown)}
-    className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-fast shadow-sm"
-  >
-    <PlusCircle size={16} />
-    <span>Add Product</span>
-  </button>
-  
-  {showImportDropdown && (
-    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-      <button 
-        onClick={handleImportImages}
-        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg"
-      >
-        📷 Bulk Images
-      </button>
-      <button 
-        onClick={handleImportVideo}
-        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg"
-      >
-        🎥 Bulk Video
-      </button>
-    </div>
-  )}
-</div>
+            {/* Add Product Button with Dropdown */}
+            <button 
+              onClick={() => setShowImportDropdown(!showImportDropdown)}
+              className="hidden lg:flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-fast shadow-sm"
+            >
+              <PlusCircle size={16} />
+              <span>Add Product</span>
+            </button>
+            
+            {showImportDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <button 
+                  onClick={handleImportImages}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg"
+                >
+                  📷 Bulk Images
+                </button>
+                <button 
+                  onClick={handleImportVideo}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg"
+                >
+                  🎥 Bulk Video
+                </button>
+              </div>
+            )}
+          </div>
                 
               </div>
 
@@ -346,34 +349,46 @@ const handleImportVideo = () => {
               <span>Add Product</span>
             </button>
 
-            <nav className="space-y-1">
-              {navItems.map((item, index) => (
-                <Link
-                  key={index}
-                  href={item.href}
-                  className="flex items-center gap-3 px-3 py-2.5 text-secondary hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-fast group relative"
-                >
-                  <span className="text-secondary group-hover:text-primary-600 transition-fast">
-                    {item.icon}
+            <nav className="space-y-1 flex-1">
+          {navItems.map((item, index) => {
+            const active = isActive(item.href);
+            
+            return (
+              <Link
+                key={index}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-fast group relative ${
+                  active
+                    ? 'bg-primary-100 text-primary-700 font-semibold'
+                    : 'text-secondary hover:bg-primary-100 hover:text-primary-600'
+                }`}
+              >
+                <span className={`transition-fast ${
+                  active ? 'text-primary-600' : 'text-secondary group-hover:text-primary-600'
+                }`}>
+                  {item.icon}
+                </span>
+                {!isSidebarCollapsed && (
+                  <>
+                    <span className="text-sm font-medium flex-1">{item.label}</span>
+                    {item.badge && (
+                      <span className={`px-2 py-0.5 text-white text-xs rounded-full ${
+                        active ? 'bg-primary-600' : 'bg-primary-500'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+                {isSidebarCollapsed && item.badge && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {item.badge}
                   </span>
-                  {!isSidebarCollapsed && (
-                    <>
-                      <span className="text-sm font-medium flex-1">{item.label}</span>
-                      {item.badge && (
-                        <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                    </>
-                  )}
-                  {isSidebarCollapsed && item.badge && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </nav>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
 
             {/* Support Link at Bottom */}
             {!isSidebarCollapsed && (
@@ -413,29 +428,45 @@ const handleImportVideo = () => {
 
             <div className="p-4">
               <nav className="space-y-1">
-                {navItems.map((item, index) => (
-                  <Link
-                    key={index}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-3 text-secondary hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-fast"
-                  >
-                    <span className="text-secondary">{item.icon}</span>
-                    <span className="text-sm font-medium flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
-                        {item.badge}
+                {navItems.map((item, index) => {
+                  const active = isActive(item.href);
+                  
+                  return (
+                    <Link
+                      key={index}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-fast ${
+                        active
+                          ? 'bg-primary-100 text-primary-700 font-semibold'
+                          : 'text-secondary hover:bg-primary-100 hover:text-primary-600'
+                      }`}
+                    >
+                      <span className={active ? 'text-primary-600' : 'text-secondary'}>
+                        {item.icon}
                       </span>
-                    )}
-                  </Link>
-                ))}
+                      <span className="text-sm font-medium flex-1">{item.label}</span>
+                      {item.badge && (
+                        <span className={`px-2 py-0.5 text-white text-xs rounded-full ${
+                          active ? 'bg-primary-600' : 'bg-primary-500'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
 
                 <Link
                   href="/wholesaler/support"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-3 text-secondary hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-fast"
+                  className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-fast ${
+                    isActive('/wholesaler/support')
+                      ? 'bg-primary-100 text-primary-700 font-semibold'
+                      : 'text-secondary hover:bg-primary-100 hover:text-primary-600'
+                  }`}
                 >
-                  <HelpCircle size={20} />
+                  <HelpCircle size={20} className={isActive('/wholesaler/support') ? 'text-primary-600' : 'text-secondary'} />
                   <span className="text-sm font-medium">Support</span>
                 </Link>
               </nav>

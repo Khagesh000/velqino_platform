@@ -2,7 +2,7 @@
 
 import React, { useState, lazy, Suspense, useEffect } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
-import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice'
+import { useGetWholesalerAnalyticsSummaryQuery } from '@/redux/wholesaler/slices/statsSlice'
 
 // Lazy load all non-critical components
 const OverviewCards = lazy(() => import('./components/OverviewCards'))
@@ -11,7 +11,7 @@ const ReportsSection = lazy(() => import('./components/ReportsSection'))
 const DateRangeSelector = lazy(() => import('./components/DateRangeSelector'))
 const ComparisonTool = lazy(() => import('./components/ComparisonTool')) 
 
-// Loading placeholders with EXACT heights to prevent layout shift
+// Loading placeholders
 const OverviewPlaceholder = () => <div className="w-full h-[140px] bg-gray-50 rounded-xl animate-pulse" />
 const ChartsPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
 const ReportsPlaceholder = () => <div className="w-full h-[300px] bg-gray-50 rounded-xl animate-pulse" />
@@ -24,24 +24,38 @@ export default function Reports() {
   const [customDate, setCustomDate] = useState({ start: '', end: '' })
   const [showComparison, setShowComparison] = useState(false)
   const [reportType, setReportType] = useState('sales')
-  const [isLoading, setIsLoading] = useState(false)
-
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const getDateParams = () => {
-      if (dateRange === 'custom' && customDate.start && customDate.end) {
-        return { start_date: customDate.start, end_date: customDate.end };
-      }
-      return { range: dateRange };
-    };
+    if (dateRange === 'custom' && customDate.start && customDate.end) {
+      return { start_date: customDate.start, end_date: customDate.end }
+    }
+    return { range: dateRange }
+  }
 
-    // Use in query
-    const { data: statsData, refetch } = useGetWholesalerStatsQuery(getDateParams());
+  // ✅ SINGLE API CALL - Replaces all separate calls!
+  const { 
+    data: analyticsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useGetWholesalerAnalyticsSummaryQuery(getDateParams())
 
   // Refetch when date range changes
   useEffect(() => {
-    refetch();
-  }, [dateRange, customDate, refetch]);
+    refetch()
+  }, [dateRange, customDate, refetch])
+
+  // ✅ Extract ALL data from single response
+  const data = analyticsData?.data || {}
+  const stats = data.stats || {}
+  const salesAnalytics = data.salesAnalytics || {}
+  const topProducts = data.topProducts || []
+  const categoryPerformance = data.categoryPerformance || []
+  const orderStatusDistribution = data.orderStatusDistribution || []
+  const geoSales = data.geoSales || []           // ✅ new
+  const hourlySales = data.hourlySales || []
+  const dateRangeInfo = data.dateRange || {}
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -50,7 +64,6 @@ export default function Reports() {
         setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
       
-      {/* Main content with dynamic margin based on sidebar state */}
       <main className={`
         transition-all duration-300 p-3 sm:p-4 lg:p-6
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
@@ -69,41 +82,39 @@ export default function Reports() {
               </div>
             </div>
             
-            {/* Date Range Selector - Critical for data filtering */}
-              <div className="w-full sm:w-auto" style={{ minHeight: '80px' }}>
+            <div className="w-full sm:w-auto" style={{ minHeight: '80px' }}>
               <Suspense fallback={<DateRangePlaceholder />}>
                 <DateRangeSelector 
                   value={dateRange}
                   onChange={(range) => {
-                    setDateRange(range);
-                    // trigger refresh
-                    setRefreshTrigger(prev => prev + 1);
+                    setDateRange(range)
+                    setRefreshTrigger(prev => prev + 1)
                   }}
                   customDate={customDate}
                   onCustomDateChange={(dates) => {
-                    setCustomDate(dates);
-                    setDateRange('custom');
-                    setRefreshTrigger(prev => prev + 1);
+                    setCustomDate(dates)
+                    setDateRange('custom')
+                    setRefreshTrigger(prev => prev + 1)
                   }}
                 />
               </Suspense>
             </div> 
           </div>
 
-          {/* Overview Cards - Key metrics load first */}
+          {/* ✅ Pass data to OverviewCards */}
           <div style={{ minHeight: '140px' }}>
             <Suspense fallback={<OverviewPlaceholder />}>
               <OverviewCards 
                 dateRange={dateRange}
                 customDate={customDate}
                 isLoading={isLoading}
-                statsData={statsData}
+                statsData={data}
               />
             </Suspense>
           </div>
 
           {/* Comparison Tool Toggle */}
-         <div className="mt-4 flex items-center justify-end">
+          <div className="mt-4 flex items-center justify-end">
             <button
               onClick={() => setShowComparison(!showComparison)}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-primary-600 transition-all"
@@ -120,58 +131,66 @@ export default function Reports() {
             </button>
           </div> 
 
-          {/* Comparison Tool (Conditional) */}
-           {showComparison && (
+          {/* ✅ Pass data to ComparisonTool */}
+          {showComparison && (
             <div className="mt-4" style={{ minHeight: '200px' }}>
               <Suspense fallback={<ComparisonPlaceholder />}>
                 <ComparisonTool 
                   dateRange={dateRange}
                   customDate={customDate}
-                  statsData={statsData}
+                  statsData={stats}  // ← Pass data
                 />
               </Suspense>
             </div>
           )}  
 
-          {/* Charts Section - Main visual data */}
+          {/* ✅ Pass ALL data to ChartsSection */}
           <div className="mt-6" style={{ minHeight: '400px' }}>
             <Suspense fallback={<ChartsPlaceholder />}>
               <ChartsSection 
                 dateRange={dateRange}
                 customDate={customDate}
                 showComparison={showComparison}
-                statsData={statsData}
+                statsData={stats}
+                salesData={salesAnalytics}
+                categoryData={categoryPerformance}
+                topProductsData={topProducts}
+                orderStatusData={orderStatusDistribution}
+                geoData={geoSales}  
+                hourlyData={hourlySales}
               />
             </Suspense>
           </div> 
 
           {/* Report Type Tabs */}
-        <div className="mt-8 overflow-x-auto scrollbar-hide -mb-px">
-  <div className="flex items-center gap-2 border-b border-gray-200 min-w-max pb-px">
-    {['sales', 'inventory', 'customer', 'tax', 'payout', 'product'].map((type) => (
-      <button
-        key={type}
-        onClick={() => setReportType(type)}
-        className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium capitalize border-b-2 transition-all whitespace-nowrap ${
-          reportType === type
-            ? 'border-primary-500 text-primary-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700'
-        }`}
-      >
-        {type} Report
-      </button>
-    ))}
-  </div>
-</div>
+          <div className="mt-8 overflow-x-auto scrollbar-hide -mb-px">
+            <div className="flex items-center gap-2 border-b border-gray-200 min-w-max pb-px">
+              {['sales', 'inventory', 'customer', 'tax', 'payout', 'product'].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setReportType(type)}
+                  className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium capitalize border-b-2 transition-all whitespace-nowrap ${
+                    reportType === type
+                      ? 'border-primary-500 text-primary-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {type} Report
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {/* Reports Section - Exportable data */}
+          {/* ✅ Pass data to ReportsSection */}
           <div className="mt-6" style={{ minHeight: '300px' }}>
             <Suspense fallback={<ReportsPlaceholder />}>
               <ReportsSection 
                 type={reportType}
                 dateRange={dateRange}
                 customDate={customDate}
-                statsData={statsData}
+                statsData={data}
+                topProducts={topProducts}
+                orderStatus={orderStatusDistribution}
               />
             </Suspense>
           </div> 

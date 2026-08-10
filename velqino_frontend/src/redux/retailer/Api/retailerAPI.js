@@ -15,12 +15,8 @@ const retailerAPI = {
     
     // ✅ FIXED - Accepts params and builds query string
     listRetailers: (params = {}) => {
-        console.log('📤 listRetailers called with params:', params);
-        const queryString = new URLSearchParams(params).toString();
-        const url = queryString ? `identity/retailers/list/?${queryString}` : 'identity/retailers/list/';
-        console.log('📍 Final URL:', url);
-        return API.get(url);
-    },
+    return API.get('identity/retailers/list/');  // ← This is calling retailers/list/
+}
 };
 
 export default retailerAPI;

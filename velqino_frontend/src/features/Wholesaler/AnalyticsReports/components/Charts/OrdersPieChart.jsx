@@ -3,13 +3,15 @@
 import React from 'react';
 
 export default function OrdersPieChart({ data }) {
-  const statsData = data?.data || {};
-  
-  const orderStatusData = [
-    { label: 'Pending', value: statsData.pending_orders || 0, color: '#f59e0b' },
-    { label: 'Completed', value: statsData.completed_orders || 0, color: '#10b981' }
-  ];
-  
+  const statusList = Array.isArray(data) ? data : [];
+  const statusColors = { delivered: '#10b981', pending: '#f59e0b', processing: '#3b82f6', cancelled: '#ef4444', shipped: '#8b5cf6' };
+
+  const orderStatusData = statusList.map(item => ({
+    label: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+    value: item.count,
+    color: statusColors[item.status] || '#6b7280'
+  }));
+
   const total = orderStatusData.reduce((sum, item) => sum + item.value, 0);
   
   if (total === 0) {

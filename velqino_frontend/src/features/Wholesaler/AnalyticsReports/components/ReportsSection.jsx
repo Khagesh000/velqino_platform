@@ -21,12 +21,17 @@ import {
   AlertCircle,
   Loader2
 } from '../../../../utils/icons';
-import { useGetWholesalerStatsQuery, useExportReportMutation } from '@/redux/wholesaler/slices/statsSlice';
-import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
-import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import '../../../../styles/Wholesaler/AnalyticsReports/ReportsSection.scss';
+import { useExportReportMutation } from '@/redux/wholesaler/slices/statsSlice';
 
-export default function ReportsSection({ type = 'sales', dateRange, customDate }) {
+export default function ReportsSection({ 
+  type = 'sales', 
+  dateRange, 
+  customDate,
+  statsData = {},      // ✅ Add this
+  topProducts = [],    // ✅ Add this
+  orderStatus = []     // ✅ Add this
+}) {
   const [selectedReport, setSelectedReport] = useState(type);
   const [exportFormat, setExportFormat] = useState('pdf');
   const [showExportOptions, setShowExportOptions] = useState(false);
@@ -37,14 +42,9 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
   const [exportReport, { isLoading: isExporting }] = useExportReportMutation();
   const [exportSuccess, setExportSuccess] = useState(false);
 
-  // Fetch data based on report type
-  const { data: statsData } = useGetWholesalerStatsQuery();
-  const { data: productsData } = useGetProductsQuery({ per_page: 100 });
-  const { data: ordersData } = useGetOrdersQuery({ per_page: 100 });
-
   useEffect(() => {
     generateReportData();
-  }, [selectedReport, dateRange, customDate, statsData, productsData, ordersData]);
+  }, [selectedReport, dateRange, customDate, statsData, topProducts, orderStatus]);
 
   const generateReportData = () => {
     setIsLoading(true);
@@ -52,40 +52,27 @@ export default function ReportsSection({ type = 'sales', dateRange, customDate }
     
     switch(selectedReport) {
       case 'sales':
-        const orders = ordersData?.data || [];
-        data = orders.map(order => ({
-          'Date': new Date(order.created_at).toLocaleDateString(),
-          'Order ID': order.order_number,
-          'Amount': order.total_amount,
-          'Status': order.status,
-          'Payment': order.payment_status
+        data = orderStatus.map(item => ({
+          'Status': item.status,
+          'Count': item.count
         }));
         break;
         
       case 'inventory':
-        const products = productsData?.data?.products || [];
-        data = products.map(product => ({
-          'SKU': product.sku,
+        data = topProducts.map(product => ({
           'Product': product.name,
-          'Category': product.category_name || '-',
-          'Stock': product.stock,
-          'Threshold': product.threshold,
-          'Status': product.stock <= product.threshold ? 'Low Stock' : 'In Stock'
+          'SKU': product.sku,
+          'Total Sold': product.total_sold,
+          'Revenue': product.total_revenue
         }));
         break;
         
       case 'customer':
-        const customers = ordersData?.data?.reduce((acc, order) => {
-          if (!acc.find(c => c.customer === order.customer_name)) {
-            acc.push({ customer: order.customer_name, orders: 1 });
-          }
-          return acc;
-        }, []) || [];
-        data = customers.map(c => ({
-          'Customer': c.customer,
-          'Orders': c.orders,
-          'Spent': ordersData?.data?.filter(o => o.customer_name === c.customer).reduce((sum, o) => sum + o.total_amount, 0)
-        }));
+        data = [
+          { 'Metric': 'Total Customers', 'Value': statsData.total_customers || 0 },
+          { 'Metric': 'Total Orders', 'Value': statsData.total_orders || 0 },
+          { 'Metric': 'Avg Order Value', 'Value': statsData.avg_order_value || 0 }
+        ];
         break;
         
       default:

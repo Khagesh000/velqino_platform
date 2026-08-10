@@ -440,6 +440,8 @@ def get_order(request, order_id):
     })
 
 
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def cancel_order(request, order_id):
@@ -1074,7 +1076,7 @@ def download_invoice(request, order_id):
     return response
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])  # ✅ Add PATCH method
 @permission_classes([IsAuthenticated])
 def update_order_status(request, order_id):
     """
@@ -1186,6 +1188,86 @@ def update_order_status(request, order_id):
             'previous_status': current_status,
             'current_status': order.status,
             'tracking_number': order.tracking_number,
+            'updated_at': order.updated_at
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_payment_status(request, order_id):
+    """
+    Update order payment status (Wholesaler/Admin only)
+    Payment status: pending → paid → failed → refunded
+    """
+    from .models import Order
+    
+    user = request.user
+    
+    # ✅ Only wholesaler, admin can update payment status
+    if user.role not in ['wholesaler', 'admin']:
+        return Response({
+            'status': 'error',
+            'message': 'You are not authorized to update payment status'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # ✅ Get order
+    try:
+        if str(order_id).startswith('ORD-'):
+            order = Order.objects.get(order_number=order_id)
+        else:
+            order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # ✅ Check if wholesaler owns this order
+    if user.role == 'wholesaler' and order.wholesaler and order.wholesaler.id != user.id:
+        return Response({
+            'status': 'error',
+            'message': 'You can only update your own orders'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # ✅ Get new payment status
+    new_payment_status = request.data.get('payment_status')
+    
+    if not new_payment_status:
+        return Response({
+            'status': 'error',
+            'message': 'Payment status is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # ✅ Validate payment status
+    valid_payment_statuses = ['pending', 'paid', 'failed', 'refunded']
+    if new_payment_status not in valid_payment_statuses:
+        return Response({
+            'status': 'error',
+            'message': f'Invalid payment status. Must be one of: {", ".join(valid_payment_statuses)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # ✅ Update payment status
+    old_payment_status = order.payment_status
+    order.payment_status = new_payment_status
+    order.updated_at = timezone.now()
+    
+    if new_payment_status == 'paid':
+        order.paid_at = timezone.now()
+    
+    order.save()
+    
+    # ✅ Log payment status change
+    logger.info(f"Order {order.order_number} payment status updated from {old_payment_status} to {new_payment_status} by {user.email}")
+    
+    return Response({
+        'status': 'success',
+        'message': f'Payment status updated to {new_payment_status}',
+        'data': {
+            'order_id': order.order_number,
+            'previous_payment_status': old_payment_status,
+            'current_payment_status': order.payment_status,
+            'paid_at': order.paid_at,
             'updated_at': order.updated_at
         }
     }, status=status.HTTP_200_OK)

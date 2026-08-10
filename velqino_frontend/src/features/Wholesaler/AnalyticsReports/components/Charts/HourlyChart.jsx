@@ -1,6 +1,6 @@
 export default function HourlyChart({ data }) {
-  const hourlyData = data?.data || [];
-  const maxValue = Math.max(...hourlyData.map(h => h.total), 1);
+  const hourlyData = data || [];
+  const maxValue = Math.max(...hourlyData.map(h => h.total || 0), 1);
   
   return (
     <div className="h-64 relative overflow-x-auto">

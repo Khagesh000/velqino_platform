@@ -5,6 +5,10 @@ const statsAPI = {
     getWholesalerDashboard: () =>
     API.get('analytics/wholesaler/dashboard-summary/'),
 
+        // In statsAPI object
+    getWholesalerAnalyticsSummary: (params) =>
+        API.get('analytics/wholesaler/analytics-summary/', { params }),
+
     getWholesalerStats: (params) =>
     API.get('analytics/wholesaler/stats/', { params }),
     

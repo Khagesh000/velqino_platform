@@ -152,7 +152,7 @@ export default function RecentOrdersTable({ orders, isLoading, currentPage, tota
                       {order.order_number || order.id}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-sm font-medium text-primary">{order.customer}</td>
+                  <td className="py-3 px-4 text-sm font-medium text-primary">{order.customer_name}</td>
                   <td className="py-3 px-4">
                     <span className="inline-block px-2 py-1 bg-surface-2 rounded-full text-xs text-secondary">
                       {order.items_count || order.items}
@@ -298,7 +298,7 @@ export default function RecentOrdersTable({ orders, isLoading, currentPage, tota
               {/* Customer */}
               <div className="mb-3">
                 <p className="text-xs text-tertiary mb-0.5">Customer</p>
-                <p className="text-sm font-medium text-primary">{order.customer}</p>
+                <p className="text-sm font-medium text-primary">{order.customer_name}</p>
               </div>
 
               {/* Items + Total */}

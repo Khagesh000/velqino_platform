@@ -13,7 +13,6 @@ import {
   Maximize2,
   Loader2
 } from '../../../../utils/icons';
-import { useGetSalesAnalyticsQuery, useGetWholesalerStatsQuery, useGetCategoryPerformanceQuery, useGetTopProductsQuery, useGetGeographicSalesQuery, useGetHourlySalesQuery } from '@/redux/wholesaler/slices/statsSlice';
 import '../../../../styles/Wholesaler/AnalyticsReports/ChartsSection.scss';
 
 // Lazy load chart components
@@ -31,16 +30,20 @@ const ChartPlaceholder = () => (
   </div>
 );
 
-export default function ChartsSection({ dateRange, customDate, showComparison = false }) {
+export default function ChartsSection({ 
+  dateRange, 
+  customDate, 
+  showComparison = false,
+  statsData = {},      // ← Add these
+  salesData = {},      // ← Add these
+  categoryData = [],   // ← Add these
+  topProductsData = [], // ← Add these
+  geoData = [],        // ← Add these
+  orderStatusData = [],
+  hourlyData = []      // ← Add these
+}) {
   const [activeChart, setActiveChart] = useState('revenue');
   
-  // ✅ Lazy load data - ONLY for active chart
-  const { data: statsData } = useGetWholesalerStatsQuery(undefined, { skip: activeChart !== 'orders' && activeChart !== 'customers' });
-  const { data: salesData } = useGetSalesAnalyticsQuery('weekly', { skip: activeChart !== 'revenue' });
-  const { data: categoryData } = useGetCategoryPerformanceQuery(undefined, { skip: activeChart !== 'category' });
-  const { data: topProductsData } = useGetTopProductsQuery(undefined, { skip: activeChart !== 'products' });
-  const { data: geoData } = useGetGeographicSalesQuery(undefined, { skip: activeChart !== 'geographic' });
-  const { data: hourlyData } = useGetHourlySalesQuery(undefined, { skip: activeChart !== 'hourly' });
 
   const charts = [
     { id: 'revenue', title: 'Revenue Over Time', icon: TrendingUp, description: 'Daily/weekly/monthly revenue trends', color: 'primary', component: RevenueChart, props: { data: salesData } },

@@ -149,40 +149,33 @@ export default function QuickActions({ selectedCustomer, selectedCount = 0, onSe
   }
 
   // ✅ Create Order - Backend Integration
-  const handleCreateOrder = async () => {
-    if (!selectedCustomer && selectedCount === 0) return
-    
-    setIsLoading(true)
-    try {
-      const customerId = selectedCustomer?.id
-      if (!customerId) {
-        alert('Please select a customer to create order')
-        return
-      }
-      
-      const response = await fetch('/api/commerce/orders/create/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          retailer_id: customerId,
-          status: 'pending'
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to create order')
-      
-      const result = await response.json()
-      alert(`Order created successfully! Order ID: ${result.order_id}`)
-      onCreateOrder?.()
-    } catch (error) {
-      alert('Failed to create order: ' + error.message)
-    } finally {
-      setIsLoading(false)
+  // ✅ Use this instead of fetch
+const handleCreateOrder = async () => {
+  if (!selectedCustomer && selectedCount === 0) return
+  
+  setIsLoading(true)
+  try {
+    const customerId = selectedCustomer?.id
+    if (!customerId) {
+      alert('Please select a customer to create order')
+      return
     }
+    
+    const response = await ordersAPI.createOrder({
+      retailer_id: customerId,
+      status: 'pending'
+    });
+    
+    if (response.data) {
+      alert(`Order created successfully! Order ID: ${response.data.order_id}`)
+      onCreateOrder?.()
+    }
+  } catch (error) {
+    alert('Failed to create order: ' + error.message)
+  } finally {
+    setIsLoading(false)
   }
+}
 
   // ✅ Add Note - Backend Integration
   const handleAddNote = async () => {

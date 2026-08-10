@@ -610,14 +610,13 @@ console.log('selectedCategory:', selectedCategory); */
                 <th className="w-10 px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 style={{ animation: 'none !important' }}">
               {filteredProducts.map((product, index) => (
                 <tr 
                   key={product.id}
                   className={`products-list-row hover:bg-gray-50 transition-all ${
                     selectedProducts.includes(product.id) ? 'bg-primary-50/30' : ''
                   }`}
-                  style={{ animationDelay: `${index * 0.03}s` }}
                 >
                   <td className="px-4 py-3">
                     <input 

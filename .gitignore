@@ -1,9 +1,6 @@
-# Create new .gitignore file
-@"
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
 .Python
 
@@ -11,51 +8,31 @@ __pycache__/
 venv/
 env/
 ENV/
-venv.bak/
-env.bak/
-velqino_platform/venv/
 
 # Django
 *.log
 local_settings.py
 db.sqlite3
-db.sqlite3-journal
-media/
 staticfiles/
-static/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
-server/velqino_backend/.env
 
-# Logs
-logs/
-server/logs/
-server/velqino_backend/logs/
-*.log
+# Frontend
+velqino_frontend/node_modules/
+velqino_frontend/.next/
+velqino_frontend/out/
+
+# Media / large files
+media/
+*.pt
+*.pth
+temp_product.png
+temp_video.mp4
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 .DS_Store
-
-# Database
-*.sqlite3
-
-# Uploads
-uploads/
-media/
-
-# Frontend - NO node_modules
-velqino_frontend/node_modules/
-velqino_frontend/.next/
-velqino_frontend/out/
-velqino_frontend/build/
-velqino_frontend/dist/
-velqino_frontend/.env.local
-"@ | Out-File -FilePath .gitignore -Encoding utf8
