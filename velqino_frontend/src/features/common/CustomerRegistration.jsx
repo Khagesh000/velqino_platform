@@ -121,7 +121,7 @@ export default function CustomerRegistration() {
 };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-8 sm:py-12 md:py-16">
+    <div className="min-h-screen bg-gray-50 py-8 sm:py-12 md:py-16">
   <div className="container mx-auto px-4 sm:px-6 max-w-3xl">
     
     {/* Header */}
@@ -367,7 +367,7 @@ export default function CustomerRegistration() {
       </div>
       
       {/* Benefits Section */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-xl">
+      <div className="mt-6 p-4 bg-primary-50/60 border border-primary-100/80 rounded-xl">
         <p className="text-xs sm:text-sm font-semibold text-primary-700 mb-2 flex items-center gap-2">
           <span className="inline-block w-1.5 h-1.5 bg-primary-500 rounded-full"></span>
           Benefits of your account:

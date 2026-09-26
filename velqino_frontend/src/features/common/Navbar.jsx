@@ -1,7 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, ShoppingCart, MapPin, User, ChevronDown, Menu, X, Store, Package, LogIn, Heart, Truck, Shield, Bell, Sun, Moon } from '../../utils/icons';
+import { 
+  Search, 
+  ShoppingCart, 
+  MapPin, 
+  User, 
+  ChevronDown, 
+  Menu, 
+  X, 
+  Store, 
+  Package, 
+  LogIn, 
+  Heart, 
+  Truck, 
+  Shield, 
+  Bell, 
+  Sparkles,
+  ArrowRight
+} from '../../utils/icons';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import WholesalerLoginModal from "./WholesalerLoginModal";
@@ -9,6 +26,7 @@ import RetailerLoginModal from "./RetailerLoginModal";
 import CustomerLoginModal from "./CustomerLoginModal";
 import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
 import { toast } from 'react-toastify';
+import '../../styles/common/Navbar.scss';
 
 export default function Navbar() {
   const router = useRouter();
@@ -23,6 +41,7 @@ export default function Navbar() {
   
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  
   // Modal states
   const [isWholesalerLoginOpen, setIsWholesalerLoginOpen] = useState(false);
   const [isRetailerLoginOpen, setIsRetailerLoginOpen] = useState(false);
@@ -36,7 +55,6 @@ export default function Navbar() {
   const citiesHoverTimeout = useRef(null);
   const sellerHoverTimeout = useRef(null);
 
-  // Add this at the top of Navbar component
   const pathname = usePathname();
   const isHomePage = pathname === '/';
 
@@ -46,7 +64,6 @@ export default function Navbar() {
 
   useEffect(() => {
     setMounted(true);
-    // Check if user is logged in
     const token = localStorage.getItem('access');
     const role = localStorage.getItem('user_role');
     const name = localStorage.getItem('user_name');
@@ -57,92 +74,86 @@ export default function Navbar() {
     }
   }, []);
 
-    // Add this useEffect
-    useEffect(() => {
-      const handleScroll = () => {
-        if (window.scrollY > lastScrollY && window.scrollY > 100) {
-          setIsVisible(false); // Scrolling down - hide navbar
-        } else {
-          setIsVisible(true); // Scrolling up - show navbar
-        }
-        setLastScrollY(window.scrollY);
-      };
-
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
-
-    useEffect(() => {
-      if (mounted && (isLoggedIn || !isLoggedIn)) {
-        refetchCart();
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY && window.scrollY > 120) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
       }
-    }, [isLoggedIn, mounted, refetchCart]);
+      setLastScrollY(window.scrollY);
+    };
 
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
-      // Add this useEffect with your other useEffects
-    useEffect(() => {
-      function handleClickOutside(event) {
-        // Close user dropdown when clicking outside
-        if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-          setIsUserDropdownOpen(false);
-        }
-        // Close cities dropdown
-        if (citiesDropdownRef.current && !citiesDropdownRef.current.contains(event.target)) {
-          setIsCitiesDropdownOpen(false);
-        }
-        // Close become seller dropdown
-        if (becomeSellerDropdownRef.current && !becomeSellerDropdownRef.current.contains(event.target)) {
-          setIsBecomeSellerOpen(false);
-        }
+  useEffect(() => {
+    if (mounted) {
+      refetchCart();
+    }
+  }, [isLoggedIn, mounted, refetchCart]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setIsUserDropdownOpen(false);
       }
+      if (citiesDropdownRef.current && !citiesDropdownRef.current.contains(event.target)) {
+        setIsCitiesDropdownOpen(false);
+      }
+      if (becomeSellerDropdownRef.current && !becomeSellerDropdownRef.current.contains(event.target)) {
+        setIsBecomeSellerOpen(false);
+      }
+    }
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const handleDashboardNavigation = useMemo(() => {
-      return () => {
-        const token = localStorage.getItem('access');
-        const role = localStorage.getItem('user_role');
-        
-        if (!token || !role) {
-          toast.error('Please login to access dashboard', {
-            position: 'bottom-right',
-            duration: 3000
-          });
-          router.push('/');
-          return;
-        }
-        
-        const dashboardMap = {
-          wholesaler: '/wholesaler/wholesalerdashboard',
-          retailer: '/retailer/retailerdashboard',
-          customer: '/customer/dashboard'
-        };
-        
-        const dashboardUrl = dashboardMap[role];
-        
-        if (!dashboardUrl) {
-          toast.error('Invalid user role');
-          return;
-        }
-        
-        router.push(dashboardUrl);
+  const handleDashboardNavigation = useMemo(() => {
+    return () => {
+      const token = localStorage.getItem('access');
+      const role = localStorage.getItem('user_role');
+      
+      if (!token || !role) {
+        toast.error('Please login to access dashboard', {
+          position: 'bottom-right',
+          duration: 3000
+        });
+        router.push('/');
+        return;
+      }
+      
+      const dashboardMap = {
+        wholesaler: '/wholesaler/wholesalerdashboard',
+        retailer: '/retailer/retailerdashboard',
+        customer: '/customer/dashboard'
       };
-    }, [router]);
+      
+      const dashboardUrl = dashboardMap[role];
+      
+      if (!dashboardUrl) {
+        toast.error('Invalid user role');
+        return;
+      }
+      
+      router.push(dashboardUrl);
+    };
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
-    localStorage.removeItem('user_id')
+    localStorage.removeItem('user_id');
     setIsLoggedIn(false);
     setUserRole(null);
     router.push('/');
   };
 
-  const cities = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Pune', 'Jaipur', 'Hyderabad', 'Ahmedabad', 'Lucknow'];
+  const cities = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Pune', 'Jaipur', 'Hyderabad', 'Ahmedabad', 'Surat'];
 
   const handleCitiesMouseEnter = () => {
     if (citiesHoverTimeout.current) clearTimeout(citiesHoverTimeout.current);
@@ -176,15 +187,13 @@ export default function Navbar() {
 
   const handleRoleLogin = (role) => {
     const token = localStorage.getItem('access');
-    const userRole = localStorage.getItem('user_role');
+    const userRoleCurrent = localStorage.getItem('user_role');
     
-    // If already logged in with same role, redirect directly
-    if (token && userRole === role) {
+    if (token && userRoleCurrent === role) {
       if (role === 'wholesaler') router.push('/wholesaler/wholesalerdashboard');
       else if (role === 'retailer') router.push('/retailer/retailerdashboard');
       else router.push('/customer/dashboard');
     } else {
-      // Otherwise open login modal
       if (role === 'wholesaler') setIsWholesalerLoginOpen(true);
       else if (role === 'retailer') setIsRetailerLoginOpen(true);
       else setIsCustomerLoginOpen(true);
@@ -207,21 +216,22 @@ export default function Navbar() {
     else router.push('/customer/dashboard');
   };
 
-  
-
   const getRoleBadgeColor = () => {
-    if (userRole === 'wholesaler') return 'bg-purple-100 text-purple-700';
-    if (userRole === 'retailer') return 'bg-blue-100 text-blue-700';
-    return 'bg-green-100 text-green-700';
+    if (userRole === 'wholesaler') return 'bg-primary-100 text-primary-800 border border-primary-200';
+    if (userRole === 'retailer') return 'bg-accent-100 text-accent-800 border border-accent-200';
+    return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
   };
 
   if (!mounted) {
     return (
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+      <nav className="bg-white border-b border-primary-100 sticky top-0 z-50 shadow-2xs">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-2">
+          <div className="flex items-center justify-between h-16 lg:h-20">
             <div className="flex-shrink-0">
-              <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">VELTRIX</Link>
+              <Link href="/" className="flex items-center gap-1.5">
+                <span className="text-2xl font-black tracking-tight text-gray-900">VELTRIX</span>
+                <span className="w-2 h-2 rounded-full bg-accent-500" />
+              </Link>
             </div>
           </div>
         </div>
@@ -231,46 +241,64 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className={`bg-white border-b border-gray-200 fixed top-0 w-full z-50 shadow-sm transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-  <div className="container mx-auto px-4 py-2">
-          {/* Top Bar - Free Shipping Banner */}
+      <nav className={`bg-white/95 backdrop-blur-md border-b border-primary-200/80 fixed top-0 w-full z-50 shadow-2xs transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="container mx-auto px-4">
+          
+          {/* Top Bar - Free Shipping & Trust Bar */}
           {isHomePage && (
-          <div className="hidden lg:flex items-center justify-between py-1.5 border-b border-gray-100 text-xs">
-            <div className="flex items-center gap-4">
-              <span className="text-green-600 font-medium">✓ Free Shipping on orders above ₹999</span>
-              <span className="text-gray-400">|</span>
-              <span className="text-gray-500">30 Days Return Policy</span>
-              <span className="text-gray-400">|</span>
-              <span className="text-gray-500">100% Secure Payments</span>
+            <div className="hidden lg:flex items-center justify-between py-1.5 border-b border-primary-100/70 text-[11px] font-medium text-gray-500">
+              <div className="flex items-center gap-4">
+                <span className="inline-flex items-center gap-1.5 text-primary-700 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  Free Shipping on Orders Above ₹999
+                </span>
+                <span className="text-primary-200">|</span>
+                <span className="hover:text-primary-700 transition-colors">100% Escrow Trade Guarantee</span>
+                <span className="text-primary-200">|</span>
+                <span className="hover:text-primary-700 transition-colors">Direct Factory Mill Lots</span>
+              </div>
+              <div className="flex items-center gap-5">
+                <button 
+                  onClick={() => handleNavigation('/track-order')} 
+                  className="text-gray-500 hover:text-primary-600 transition-colors flex items-center gap-1"
+                >
+                  <Truck size={12} className="text-primary-500" />
+                  <span>Track Freight Order</span>
+                </button>
+                <button 
+                  onClick={() => handleNavigation('/profile/wishlist')} 
+                  className="text-gray-500 hover:text-primary-600 transition-colors flex items-center gap-1"
+                >
+                  <Heart size={12} className="text-primary-500" />
+                  <span>Wholesale Wishlist</span>
+                </button>
+                <button 
+                  onClick={() => handleNavigation('/help')} 
+                  className="text-gray-500 hover:text-primary-600 transition-colors flex items-center gap-1"
+                >
+                  <Shield size={12} className="text-primary-500" />
+                  <span>B2B Help Desk</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <button className="text-gray-500 hover:text-primary-600 transition-all flex items-center gap-1">
-                <Bell size={12} />
-                <span>Notifications</span>
-              </button>
-              <button className="text-gray-500 hover:text-primary-600 transition-all flex items-center gap-1">
-                <Heart size={12} />
-                <span>Wishlist</span>
-              </button>
-              <button className="text-gray-500 hover:text-primary-600 transition-all flex items-center gap-1">
-                <Truck size={12} />
-                <span>Track Order</span>
-              </button>
-            </div>
-          </div>
-        )}
+          )}
 
           {/* Main Navbar */}
-          <div className="flex items-center justify-between h-16 lg:h-20">
+          <div className="flex items-center justify-between h-16 lg:h-18">
+            
             {/* Logo */}
             <div className="flex-shrink-0">
-              <Link href="/" className="text-xl lg:text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors">
-                VELTRIX
+              <Link href="/" className="flex items-center gap-1.5 group">
+                <span className="text-xl lg:text-2xl font-black tracking-tight text-gray-900 group-hover:text-primary-600 transition-colors">
+                  VELTRIX
+                </span>
+                <span className="w-2 h-2 rounded-full bg-accent-500 group-hover:scale-125 transition-transform" />
               </Link>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center flex-1 ml-8 gap-3">
+            {/* Desktop Navigation Controls */}
+            <div className="hidden lg:flex items-center flex-1 ml-6 gap-3">
+              
               {/* Cities Dropdown */}
               <div 
                 className="relative" 
@@ -278,30 +306,34 @@ export default function Navbar() {
                 onMouseEnter={handleCitiesMouseEnter}
                 onMouseLeave={handleCitiesMouseLeave}
               >
-                <button className="flex items-center gap-2 text-gray-700 hover:text-primary-600 transition-all px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:border-primary-300">
-                  <span className="text-sm font-medium">📍 Select City</span>
-                  <ChevronDown size={16} className={`transition-transform duration-200 ${isCitiesDropdownOpen ? 'rotate-180' : ''}`} />
+                <button className="flex items-center gap-1.5 text-gray-800 hover:text-primary-700 transition-all px-3 py-1.5 rounded-xl border border-primary-200/80 bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 shadow-2xs font-semibold text-xs">
+                  <MapPin size={14} className="text-primary-600" />
+                  <span>Select City</span>
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${isCitiesDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isCitiesDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 animate-fadeIn">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <span className="text-sm font-semibold text-gray-900">Select your city</span>
+                  <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-primary-200/90 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
+                    <div className="px-4 py-2 border-b border-primary-100 flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Select Hub City</span>
+                      <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full">Pan-India</span>
                     </div>
-                    <div className="py-1 max-h-64 overflow-y-auto">
+                    <div className="py-1 max-h-60 overflow-y-auto">
                       {cities.map((city, index) => (
                         <button
                           key={index}
                           onClick={() => handleNavigation(`/city/${city.toLowerCase()}`)}
-                          className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all"
+                          className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-all flex items-center justify-between"
                         >
-                          {city}
+                          <span>{city}</span>
+                          <span className="text-[10px] text-gray-400">Hub Active</span>
                         </button>
                       ))}
                     </div>
-                    <div className="px-4 py-2 border-t border-gray-100">
-                      <button onClick={() => handleNavigation('/locations')} className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
-                        View all locations →
+                    <div className="px-4 py-2 border-t border-primary-100">
+                      <button onClick={() => handleNavigation('/locations')} className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                        <span>View all 19,000+ PIN hubs</span>
+                        <ArrowRight size={12} />
                       </button>
                     </div>
                   </div>
@@ -315,67 +347,77 @@ export default function Navbar() {
                 onMouseEnter={handleBecomeSellerMouseEnter}
                 onMouseLeave={handleBecomeSellerMouseLeave}
               >
-                <button className="flex items-center gap-2 text-gray-700 hover:text-primary-600 transition-all px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:border-primary-300">
-                  <Store size={16} />
-                  <span className="text-sm font-medium">Become a Seller</span>
-                  <ChevronDown size={16} className={`transition-transform duration-200 ${isBecomeSellerOpen ? 'rotate-180' : ''}`} />
+                <button className="flex items-center gap-1.5 text-gray-800 hover:text-primary-700 transition-all px-3 py-1.5 rounded-xl border border-primary-200/80 bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 shadow-2xs font-semibold text-xs">
+                  <Store size={14} className="text-primary-600" />
+                  <span>Become a Seller</span>
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${isBecomeSellerOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isBecomeSellerOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 animate-fadeIn">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <span className="text-sm font-semibold text-gray-900">Sell on VELTRIX</span>
+                  <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-primary-200/90 rounded-2xl shadow-xl p-2 z-50 animate-fadeIn">
+                    <div className="px-3 py-2 border-b border-primary-100">
+                      <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Sell on VELTRIX B2B</span>
                     </div>
-                    <div className="py-1">
+                    <div className="py-1 space-y-1">
                       <button 
                         onClick={() => handleRoleLogin('wholesaler')}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100"
+                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-primary-50/60 transition-all text-left group"
                       >
-                        <Shield size={18} className="text-purple-500" />
-                        <div className="text-left">
-                          <div className="text-sm font-medium">Wholesaler</div>
-                          <div className="text-xs text-gray-400">Sell in bulk to retailers</div>
+                        <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                          <Shield size={16} />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-gray-900 group-hover:text-primary-700">Wholesale Mill / Supplier</div>
+                          <div className="text-[11px] text-gray-500">List volume denim & fabric lots</div>
                         </div>
                       </button>
                       
                       <button 
                         onClick={() => handleRoleLogin('retailer')}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all"
+                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-primary-50/60 transition-all text-left group"
                       >
-                        <Store size={18} className="text-blue-500" />
-                        <div className="text-left">
-                          <div className="text-sm font-medium">Retailer</div>
-                          <div className="text-xs text-gray-400">Sell to customers in your store</div>
+                        <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                          <Store size={16} />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-gray-900 group-hover:text-primary-700">Verified Retail Buyer</div>
+                          <div className="text-[11px] text-gray-500">Source direct stock for your store</div>
                         </div>
                       </button>
                     </div>
                   </div>
                 )}
               </div>
+
             </div>
 
-            {/* Search Bar */}
-            <div className="hidden lg:block flex-1 max-w-xl mx-6">
+            {/* Center Omni Search Bar */}
+            <div className="hidden lg:block flex-1 max-w-xl mx-4 xl:mx-6">
               <div className="relative group">
                 <input
                   type="text"
-                  placeholder="Search for products, brands and more..."
-                  className="w-full pl-11 pr-28 py-2.5 border border-gray-200 rounded-full focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 bg-gray-50 text-gray-700 placeholder-gray-400 transition-all"
+                  placeholder="Search fabric lots, baggy denim, cotton shirts, brands..."
+                  className="w-full pl-10 pr-24 py-2 border border-primary-200/80 rounded-full focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200/50 bg-primary-50/30 text-xs sm:text-sm text-gray-900 placeholder-gray-400 transition-all font-medium"
                 />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-primary-500 transition-colors" size={18} />
-                <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-1 bg-primary-500 text-white rounded-full text-sm font-medium hover:bg-primary-600 transition-all">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-600 transition-colors" size={16} />
+                <button className="absolute right-1 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white rounded-full text-xs font-bold transition-all shadow-xs">
                   Search
                 </button>
               </div>
             </div>
 
-            {/* Right Section - Cart & User */}
-            <div className="flex items-center gap-4">
-              {/* Cart */}
-              <button onClick={() => handleNavigation('/product/cartpage')} className="relative text-gray-700 hover:text-primary-600 transition-all p-1.5">
-                <ShoppingCart size={24} />
+            {/* Right Section - Cart & Account Controls */}
+            <div className="flex items-center gap-3">
+              
+              {/* Cart Button */}
+              <button 
+                onClick={() => handleNavigation('/product/cartpage')} 
+                className="relative text-gray-700 hover:text-primary-600 hover:bg-primary-50/60 p-2 rounded-xl transition-all"
+                aria-label="View Cart"
+              >
+                <ShoppingCart size={22} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium">
+                  <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-xs border-2 border-white">
                     {cartCount}
                   </span>
                 )}
@@ -385,147 +427,200 @@ export default function Navbar() {
               <div className="relative" ref={userDropdownRef}>
                 <button 
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="flex items-center gap-2 text-gray-700 hover:text-primary-600 transition-all p-1.5"
+                  className="flex items-center gap-1.5 text-gray-800 hover:text-primary-700 transition-all px-3 py-1.5 rounded-xl border border-primary-200/80 bg-primary-50/40 hover:bg-primary-50 hover:border-primary-400 shadow-2xs font-semibold text-xs"
                 >
-                  <User size={22} />
-                  <span className="hidden lg:block text-sm font-medium">
+                  <User size={16} className="text-primary-600" />
+                  <span className="hidden lg:block">
                     {isLoggedIn ? `Hi, ${userName}` : 'Account'}
                   </span>
-                  <ChevronDown size={14} className={`hidden lg:block transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={13} className={`hidden lg:block transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isUserDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 animate-fadeIn">
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-primary-200/90 rounded-2xl shadow-xl p-2 z-50 animate-fadeIn">
                     {isLoggedIn ? (
                       <>
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-semibold text-gray-900">{userName}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{userRole === 'wholesaler' ? 'Wholesaler Account' : userRole === 'retailer' ? 'Retailer Account' : 'Customer Account'}</p>
-                          <span className={`inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full ${getRoleBadgeColor()}`}>
+                        <div className="px-3 py-2.5 border-b border-primary-100">
+                          <p className="text-xs font-bold text-gray-900">{userName}</p>
+                          <p className="text-[11px] text-gray-500 mt-0.5">{userRole === 'wholesaler' ? 'Wholesaler Account' : userRole === 'retailer' ? 'Retailer Account' : 'Customer Account'}</p>
+                          <span className={`inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full font-bold ${getRoleBadgeColor()}`}>
                             {userRole?.charAt(0).toUpperCase() + userRole?.slice(1)}
                           </span>
                         </div>
                         
-                        <button 
+                        <div className="py-1">
+                          <button 
                             onClick={handleDashboardNavigation}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100"
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all"
                           >
-                            <Package size={16} />
-                            <span className="text-sm">Dashboard</span>
+                            <Package size={15} className="text-primary-500" />
+                            <span>Dashboard</span>
                           </button>
-                        
-                        <button onClick={() => handleNavigation('/product/orderslist')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <Truck size={16} />
-                          <span className="text-sm">My Orders</span>
-                        </button>
+                          
+                          <button 
+                            onClick={() => handleNavigation('/product/orderslist')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all"
+                          >
+                            <Truck size={15} className="text-primary-500" />
+                            <span>My Orders</span>
+                          </button>
 
-                        <button onClick={() => router.push('/profile/addresses')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <MapPin size={16} />
-                          <span className="text-sm">Saved Addresses</span>
-                        </button>
+                          <button 
+                            onClick={() => router.push('/profile/addresses')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all"
+                          >
+                            <MapPin size={15} className="text-primary-500" />
+                            <span>Saved Addresses</span>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleNavigation('/profile/wishlist')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all"
+                          >
+                            <Heart size={15} className="text-primary-500" />
+                            <span>Wishlist</span>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleNavigation('/settings')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all"
+                          >
+                            <User size={15} className="text-primary-500" />
+                            <span>Profile Settings</span>
+                          </button>
+                        </div>
                         
-                        <button onClick={() => handleNavigation('/profile/wishlist')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <Heart size={16} />
-                          <span className="text-sm">Wishlist</span>
-                        </button>
-                        
-                        <button onClick={() => handleNavigation('/settings')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <User size={16} />
-                          <span className="text-sm">Profile Settings</span>
-                        </button>
-                        
-                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-all">
-                          <LogIn size={16} />
-                          <span className="text-sm">Sign Out</span>
-                        </button>
+                        <div className="pt-1 border-t border-primary-100">
+                          <button 
+                            onClick={handleLogout} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <LogIn size={15} />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-semibold text-gray-900">Welcome to VELTRIX!</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Sign in to get personalized experience</p>
+                        <div className="px-3 py-2.5 border-b border-primary-100">
+                          <p className="text-xs font-bold text-gray-900">Welcome to VELTRIX B2B</p>
+                          <p className="text-[11px] text-gray-500 mt-0.5">Select your portal to log in:</p>
                         </div>
                         
-                        <button onClick={() => handleRoleLogin('customer')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <User size={16} className="text-green-500" />
-                          <div className="text-left">
-                            <div className="text-sm font-medium">Customer Sign In</div>
-                            <div className="text-xs text-gray-400">Shop for personal use</div>
-                          </div>
-                        </button>
-                        
-                        <button onClick={() => handleRoleLogin('retailer')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                          <Store size={16} className="text-blue-500" />
-                          <div className="text-left">
-                            <div className="text-sm font-medium">Retailer Sign In</div>
-                            <div className="text-xs text-gray-400">Bulk purchases & wholesale</div>
-                          </div>
-                        </button>
-                        
-                        <button onClick={() => handleRoleLogin('wholesaler')} className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
-                          <Shield size={16} className="text-purple-500" />
-                          <div className="text-left">
-                            <div className="text-sm font-medium">Wholesaler Sign In</div>
-                            <div className="text-xs text-gray-400">Sell products in bulk</div>
-                          </div>
-                        </button>
+                        <div className="py-1 space-y-1">
+                          <button 
+                            onClick={() => handleRoleLogin('customer')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all text-left"
+                          >
+                            <User size={15} className="text-emerald-600" />
+                            <div>
+                              <div className="text-xs font-bold">Customer Portal</div>
+                              <div className="text-[10px] text-gray-400">Personal retail purchases</div>
+                            </div>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleRoleLogin('retailer')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all text-left"
+                          >
+                            <Store size={15} className="text-primary-600" />
+                            <div>
+                              <div className="text-xs font-bold">Retailer Portal</div>
+                              <div className="text-[10px] text-gray-400">Store orders & wholesale lots</div>
+                            </div>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleRoleLogin('wholesaler')} 
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-all text-left"
+                          >
+                            <Shield size={15} className="text-accent-600" />
+                            <div>
+                              <div className="text-xs font-bold">Wholesaler Mill Portal</div>
+                              <div className="text-[10px] text-gray-400">Factory lot distribution</div>
+                            </div>
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Mobile Menu Button */}
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden text-gray-700 hover:text-primary-600 p-1.5">
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {/* Mobile Menu Toggle Button */}
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                className="lg:hidden text-gray-700 hover:text-primary-600 p-2 rounded-xl hover:bg-primary-50 transition-all"
+                aria-label="Toggle mobile menu"
+              >
+                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
+
           </div>
 
-          {/* Mobile Search */}
+          {/* Mobile Search Bar */}
           <div className="lg:hidden pb-3">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search products..."
-                className="w-full pl-10 pr-16 py-2 border border-gray-200 rounded-full bg-gray-50 text-sm focus:outline-none focus:border-primary-400"
+                placeholder="Search products, denim, fabric lots..."
+                className="w-full pl-10 pr-16 py-2 border border-primary-200/80 rounded-full bg-primary-50/40 text-xs focus:outline-none focus:border-primary-500 text-gray-900"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-0.5 bg-primary-500 text-white rounded-full text-xs">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+              <button className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary-600 text-white rounded-full text-xs font-bold">
                 Go
               </button>
             </div>
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile Menu Drawer */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden border-t border-gray-100 py-3 animate-slideDown" ref={mobileMenuRef}>
-              <button onClick={() => handleRoleLogin('customer')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                <User size={18} />
-                <span className="text-sm font-medium">Customer Sign In</span>
-              </button>
-              
-              <button onClick={() => handleRoleLogin('retailer')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                <Store size={18} />
-                <span className="text-sm font-medium">Retailer Sign In</span>
-              </button>
-              
-              <button onClick={() => handleRoleLogin('wholesaler')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                <Shield size={18} />
-                <span className="text-sm font-medium">Wholesaler Sign In</span>
-              </button>
-              
-              <button onClick={() => handleNavigation('/product/cartpage')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 border-b border-gray-100">
-                <ShoppingCart size={18} />
-                <span className="text-sm font-medium">Cart ({cartCount})</span>
-              </button>
-              
-              <button onClick={() => handleNavigation('/profile/wishlist')} className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50">
-                <Heart size={18} />
-                <span className="text-sm font-medium">Wishlist</span>
-              </button>
+            <div className="lg:hidden border-t border-primary-100 py-3 animate-slideDown" ref={mobileMenuRef}>
+              <div className="space-y-1">
+                <button 
+                  onClick={() => handleRoleLogin('customer')} 
+                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                >
+                  <User size={16} className="text-emerald-600" />
+                  <span>Customer Sign In</span>
+                </button>
+                
+                <button 
+                  onClick={() => handleRoleLogin('retailer')} 
+                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                >
+                  <Store size={16} className="text-primary-600" />
+                  <span>Retailer Sign In</span>
+                </button>
+                
+                <button 
+                  onClick={() => handleRoleLogin('wholesaler')} 
+                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                >
+                  <Shield size={16} className="text-accent-600" />
+                  <span>Wholesaler Sign In</span>
+                </button>
+                
+                <button 
+                  onClick={() => handleNavigation('/product/cartpage')} 
+                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                >
+                  <ShoppingCart size={16} className="text-primary-600" />
+                  <span>View Cart ({cartCount})</span>
+                </button>
+                
+                <button 
+                  onClick={() => handleNavigation('/profile/wishlist')} 
+                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                >
+                  <Heart size={16} className="text-primary-600" />
+                  <span>Wholesale Wishlist</span>
+                </button>
+              </div>
             </div>
           )}
+
         </div>
       </nav>
 

@@ -25,18 +25,47 @@ body {
    Layout & Container Classes
 ================================ */
 .container {
-  max-width: $container-width;
-  margin: 0 auto;
-  padding: 0 $space-4;
+  width: 100% !important;
+  max-width: 1560px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+
+  @media (min-width: 640px) {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+  @media (min-width: 1024px) {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+  @media (min-width: 1440px) {
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+  }
 }
 
 .container-large {
-  max-width: $container-large;
-  margin: 0 auto;
+  width: 100% !important;
+  max-width: 1680px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+
+  @media (min-width: 640px) {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+  @media (min-width: 1024px) {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
 }
 
 .container-full {
-  width: $container-full;
+  width: 100% !important;
 }
 
 /* ================================

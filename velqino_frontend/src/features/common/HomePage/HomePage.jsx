@@ -6,6 +6,8 @@ import { useGetWishlistQuery } from '@/redux/wholesaler/slices/wishlistSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 import LogoLoader from '../LogoLoader';
 
+import ReviewsSection from './components/ReviewsSection';
+
 // YOUR EXISTING LAZY IMPORTS (NO CHANGES)
 const CategoriesMegaMenu = lazy(() => import('./components/CategoriesMegaMenu'));
 const HeroBanner = lazy(() => import('./components/HeroBanner'));
@@ -16,7 +18,6 @@ const NewArrivals = lazy(() => import('./components/NewArrivals'));
 const TopBrands = lazy(() => import('./components/TopBrands'));
 const PromotionBanners = lazy(() => import('./components/PromotionBanners'));
 const FeaturedCollections = lazy(() => import('./components/FeaturedCollections'));
-const ReviewsSection = lazy(() => import('./components/ReviewsSection'));
 const BenefitsSection = lazy(() => import('./components/BenefitsSection'));
 const RecentlyViewed = lazy(() => import('./components/RecentlyViewed'));
 const NewsletterSection = lazy(() => import('./components/NewsletterSection'));
@@ -192,7 +193,7 @@ export default function HomePage() {
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-80" />}>
-          <FeaturedCollections collections={seasonalCollections} wishlistIds={wishlistIds}/>
+          <FeaturedCollections collections={seasonalCollections} allProducts={allProducts} wishlistIds={wishlistIds}/>
         </Suspense>
         
         <Suspense fallback={<SectionPlaceholder height="h-60" />}>
@@ -203,9 +204,7 @@ export default function HomePage() {
           <PromotionBanners />
         </Suspense>
         
-        <Suspense fallback={<SectionPlaceholder height="h-96" />}>
-          <ReviewsSection />
-        </Suspense>
+        <ReviewsSection />
         
         <Suspense fallback={<SectionPlaceholder height="h-32" />}>
           <BenefitsSection />

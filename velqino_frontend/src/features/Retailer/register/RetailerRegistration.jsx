@@ -149,7 +149,7 @@ export default function RetailerRegistration() {
 };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-10 sm:py-14 md:py-20">
+    <div className="min-h-screen bg-[#F9F8F6] py-10 sm:py-14 md:py-20">
   <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
     
     {/* Header */}
@@ -530,7 +530,7 @@ export default function RetailerRegistration() {
       </div>
       
       {/* Benefits Section */}
-      <div className="mt-8 p-5 bg-gradient-to-r from-primary-50 to-secondary-50 rounded-xl">
+      <div className="mt-8 p-5 bg-primary-50/60 border border-primary-100/80 rounded-xl">
         <p className="text-base font-bold text-primary-700 mb-3 flex items-center gap-2">
           <CheckCircle size={18} />
           Benefits of Retailer Account:

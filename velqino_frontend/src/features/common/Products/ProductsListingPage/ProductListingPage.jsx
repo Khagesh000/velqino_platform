@@ -10,22 +10,18 @@ export default function ProductListingPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   return (
-    <>
-      {/* Remove the outer div with background - PageWrapper already has it */}
-      <div className="px-4 py-4 sm:py-6 lg:px-8 xl:px-12">
-        <div className="lg:px-8 xl:px-12">
-          <ProductTopBar onMobileFilterClick={() => setShowMobileFilters(true)} />
-        </div>
+    <div className="container py-4 sm:py-6">
+      <ProductTopBar onMobileFilterClick={() => setShowMobileFilters(true)} />
 
-        {/* Desktop Layout */}
-        <div className="hidden lg:flex lg:flex-row gap-6 mt-6">
-          <div className="lg:w-80 flex-shrink-0">
-            <ProductFilters />
-          </div>
-          <div className="flex-1">
-            <ProductGrid />
-          </div>
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex lg:flex-row gap-6 mt-6">
+        <div className="lg:w-72 xl:w-80 flex-shrink-0">
+          <ProductFilters />
         </div>
+        <div className="flex-1 min-w-0">
+          <ProductGrid />
+        </div>
+      </div>
 
         {/* Mobile Layout */}
         <div className="lg:hidden mt-4">
@@ -49,7 +45,6 @@ export default function ProductListingPage() {
             </div>
           </div>
         )}
-      </div>
-    </>
+    </div>
   )
 }

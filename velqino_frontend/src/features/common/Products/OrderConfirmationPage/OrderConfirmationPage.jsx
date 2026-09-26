@@ -73,7 +73,7 @@ export default function OrderConfirmationPage({ orderId }) {
   
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 py-8 sm:py-12">
+    <div className="min-h-screen bg-gray-50 py-8 sm:py-12">
       <SuccessAnimation onComplete={() => setShowAnimation(false)} />
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">

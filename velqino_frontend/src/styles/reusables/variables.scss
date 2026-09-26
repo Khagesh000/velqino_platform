@@ -11,6 +11,12 @@ $gradient-sunset: linear-gradient(135deg, $accent-500 0%, $error-400 100%);
 $gradient-earth: linear-gradient(135deg, $primary-700 0%, $accent-600 100%);
 $gradient-luxury: linear-gradient(135deg, $secondary-600 0%, $primary-500 100%);
 $gradient-warm: linear-gradient(135deg, $primary-500 0%, $accent-400 100%);
+$gradient-precious: linear-gradient(135deg, $precious-50 0%, $precious-200 100%);
+$gradient-precious-card: linear-gradient(180deg, #FFFFFF 0%, $precious-100 100%);
+$gradient-brand-canvas: linear-gradient(135deg, $brand-canvas-100 0%, $brand-canvas-200 50%, $brand-canvas-300 100%);
+$gradient-brand-card: linear-gradient(180deg, $brand-canvas-50 0%, $brand-canvas-100 100%);
+$gradient-studio: linear-gradient(135deg, $studio-50 0%, $studio-100 50%, $studio-200 100%);
+$gradient-studio-card: linear-gradient(180deg, #FFFFFF 0%, $studio-100 100%);
 
 /* --------------------------------
    GLASS EFFECT
@@ -51,8 +57,8 @@ $space-24: 96px;
 /* --------------------------------
    CONTAINER WIDTHS
 -------------------------------- */
-$container-width: 1280px;
-$container-large: 1440px;
+$container-width: 1560px;
+$container-large: 1680px;
 $container-full: 100%;
 
 /* --------------------------------

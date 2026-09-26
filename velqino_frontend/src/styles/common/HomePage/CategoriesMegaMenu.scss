@@ -1,8 +1,12 @@
-/* animations.scss or global.css */
-@keyframes slideDown {
+@import '../../../styles/reusables/variables.scss';
+
+/* ========================================================
+   Categories Mega Menu - Luxury B2B Styling & Animations
+   ======================================================== */
+@keyframes megaMenuSlideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
@@ -11,7 +15,7 @@
 }
 
 .animate-slideDown {
-  animation: slideDown 0.2s ease-out forwards;
+  animation: megaMenuSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -21,4 +25,266 @@
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Clear visual divider separating header from homepage sections */
+.categories-mega-menu {
+  position: relative;
+  background: $surface-1;
+  border-bottom: 2px solid rgba($primary-300, 0.75);
+  box-shadow: 0 4px 14px -3px rgba($primary-900, 0.05);
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    background: linear-gradient(90deg, rgba($primary-300, 0.2) 0%, rgba($accent-500, 0.65) 50%, rgba($primary-300, 0.2) 100%);
+    pointer-events: none;
+  }
+}
+
+/* Ultra-Premium Mega Dropdown Container - Reliable Width & Geometry Across All Screens */
+.categories-mega-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  background: $surface-1;
+  border-radius: 1rem;
+  border: 1.5px solid rgba($primary-300, 0.85);
+  box-shadow: 0 20px 45px -10px rgba($primary-900, 0.18), 0 0 0 1px rgba($primary-300, 0.25);
+  z-index: 50;
+  overflow: hidden;
+  animation: megaMenuSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  /* Desktop generous width: 860px - Generous breathing room without truncation */
+  width: 860px;
+  max-width: min(860px, calc(100vw - 32px));
+
+  @media (min-width: 1280px) {
+    width: 900px;
+    max-width: min(900px, calc(100vw - 32px));
+  }
+
+  @media (max-width: 1023px) and (min-width: 768px) {
+    width: 740px;
+    max-width: calc(100vw - 32px);
+  }
+
+  @media (max-width: 767px) and (min-width: 640px) {
+    width: 620px;
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Mobile: Anchored within viewport, NEVER overflows or sticks out */
+  @media (max-width: 639px) {
+    position: fixed !important;
+    top: 125px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(85vh - 125px) !important;
+    overflow-y: auto !important;
+    border-radius: 1rem !important;
+  }
+
+  /* ========================================================
+     High-Contrast Interactive States (Zero Contrast Loss on Hover/Active)
+     ======================================================== */
+
+  /* Active Category Item in Left Catalog Column */
+  .cat-item-active {
+    background: $primary-600 !important;
+    color: $surface-1 !important;
+    box-shadow: 0 2px 8px rgba($primary-900, 0.16) !important;
+
+    * {
+      color: $surface-1 !important;
+    }
+
+    .cat-name {
+      color: $surface-1 !important;
+      font-weight: 700 !important;
+    }
+
+    .cat-badge {
+      background: rgba($surface-1, 0.25) !important;
+      color: $surface-1 !important;
+    }
+
+    svg {
+      color: $surface-1 !important;
+    }
+
+    &:hover {
+      background: $primary-700 !important;
+      color: $surface-1 !important;
+
+      * {
+        color: $surface-1 !important;
+      }
+    }
+  }
+
+  /* Inactive Category Item in Left Catalog Column */
+  .cat-item-inactive {
+    background: transparent;
+    color: $text-secondary !important;
+    transition: all 0.18s ease-in-out;
+
+    .cat-name {
+      color: $text-primary !important;
+      font-weight: 600;
+    }
+
+    .cat-badge {
+      background: rgba($primary-100, 0.85) !important;
+      color: $primary-800 !important;
+    }
+
+    svg {
+      color: $text-tertiary !important;
+    }
+
+    &:hover {
+      background: rgba($primary-50, 0.85) !important;
+      color: $primary-800 !important;
+
+      .cat-name {
+        color: $primary-800 !important;
+        font-weight: 700 !important;
+      }
+
+      svg {
+        color: $primary-600 !important;
+      }
+    }
+  }
+
+  /* Explore All Button - High Visibility with Permanent Contrast on Hover/Active */
+  .explore-all-btn {
+    background: linear-gradient(135deg, $primary-600 0%, $primary-500 100%) !important;
+    color: $surface-1 !important;
+    text-decoration: none !important;
+    box-shadow: 0 2px 6px rgba($primary-900, 0.18) !important;
+    transition: all 0.2s ease-in-out !important;
+
+    * {
+      color: $surface-1 !important;
+    }
+
+    span {
+      color: $surface-1 !important;
+      font-weight: 700 !important;
+    }
+
+    svg {
+      color: $surface-1 !important;
+    }
+
+    &:hover, &:focus, &:active {
+      background: linear-gradient(135deg, $primary-700 0%, $primary-600 100%) !important;
+      color: $surface-1 !important;
+      box-shadow: 0 4px 14px rgba($primary-900, 0.26) !important;
+      transform: translateY(-1px);
+
+      * {
+        color: $surface-1 !important;
+      }
+
+      span {
+        color: $surface-1 !important;
+      }
+
+      svg {
+        color: $surface-1 !important;
+      }
+    }
+  }
+
+  /* Subcategory Pills in Right Column */
+  .subcat-pill {
+    border: 1px solid rgba($primary-200, 0.8) !important;
+    background: $surface-1 !important;
+    color: $text-primary !important;
+    text-decoration: none !important;
+    transition: all 0.18s ease-in-out !important;
+
+    .subcat-dot {
+      background: $primary-400 !important;
+      transition: background 0.18s ease-in-out;
+    }
+
+    .subcat-name {
+      color: $text-primary !important;
+      font-weight: 600;
+      transition: color 0.18s ease-in-out;
+    }
+
+    .subcat-arrow {
+      color: $text-tertiary !important;
+      transition: all 0.18s ease-in-out;
+    }
+
+    &:hover, &:focus, &:active {
+      background: rgba($primary-50, 0.6) !important;
+      border-color: $primary-400 !important;
+
+      .subcat-dot {
+        background: $primary-600 !important;
+      }
+
+      .subcat-name {
+        color: $primary-800 !important;
+        font-weight: 700 !important;
+      }
+
+      .subcat-arrow {
+        color: $primary-600 !important;
+        transform: translateX(2px);
+      }
+    }
+  }
+
+  /* Mobile Categories List & Accordion */
+  .mobile-cat-header-btn {
+    color: $text-primary !important;
+    transition: all 0.18s ease-in-out;
+
+    .mobile-cat-name {
+      color: $text-primary !important;
+    }
+
+    &.mobile-cat-header-btn-expanded {
+      background: rgba($primary-100, 0.6) !important;
+      border-color: rgba($primary-300, 0.8) !important;
+
+      .mobile-cat-name {
+        color: $primary-900 !important;
+        font-weight: 700 !important;
+      }
+    }
+
+    &:hover, &:active {
+      background: rgba($primary-50, 0.8) !important;
+    }
+  }
+
+  .mobile-subcat-pill {
+    background: $surface-1 !important;
+    border: 1px solid rgba($primary-200, 0.8) !important;
+    color: $text-primary !important;
+    transition: all 0.18s ease-in-out;
+
+    &:hover, &:active {
+      background: rgba($primary-50, 0.95) !important;
+      color: $primary-800 !important;
+      border-color: $primary-400 !important;
+      font-weight: 600;
+    }
+  }
 }

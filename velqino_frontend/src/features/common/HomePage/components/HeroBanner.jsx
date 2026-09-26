@@ -1,50 +1,59 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ChevronLeft, ChevronRight, TrendingUp, Clock, Zap } from '../../../../utils/icons';
-import '../../../../styles/common/HomePage/HeroBanner.scss'
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  TrendingUp, 
+  Clock, 
+  Zap, 
+  ArrowRight, 
+  Sparkles, 
+  ShoppingBag, 
+  CheckCircle,
+  Tag
+} from '../../../../utils/icons';
 
-const slides = [
+const mainSlides = [
   {
     id: 1,
-    title: "Summer Sale Extravaganza",
-    subtitle: "Up to 50% off on selected items",
-    description: "Shop the latest summer collection with exclusive discounts. Limited time offer!",
-    ctaText: "Shop Now",
-    ctaLink: "/products",
-    image: "/images/placeholder.jpg",
-    mobileImage: "/images/placeholder.jpg",
-    badge: { text: "50% OFF", color: "bg-red-500" },
-    icon: <Zap size={20} />,
-    gradient: "from-orange-500 to-red-500"
+    tag: "NEW SEASON 2026",
+    title: "Premium Heavyweight",
+    titleHighlight: "Denim & Streetwear",
+    subtitle: "Direct Factory Wholesale Rates · Up to 50% Margins",
+    description: "Curated heavy denim, oversized silhouettes, and wardrobe staples engineered for high-volume retail boutiques.",
+    ctaText: "Shop Collection",
+    ctaLink: "/product/productlistingpage",
+    image: "https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048693/retailer/products/2026/07/RET-80409D4B_image_1",
+    badge: "50% OFF",
+    perks: ["⚡ 24h Factory Dispatch", "🏭 Tier-1 Mill Quality", "📦 Low MOQ"]
   },
   {
     id: 2,
-    title: "New Arrivals",
-    subtitle: "Fresh from the runway",
-    description: "Discover the latest trends and styles. Be the first to shop!",
-    ctaText: "Explore Now",
-    ctaLink: "/new-arrivals",
-    image: "/images/placeholder.jpg",
-    mobileImage: "/images/placeholder.jpg",
-    badge: { text: "NEW", color: "bg-green-500" },
-    icon: <TrendingUp size={20} />,
-    gradient: "from-green-500 to-teal-500"
+    tag: "RUNWAY EDITION",
+    title: "Relaxed Silhouette",
+    titleHighlight: "Modern Baggy Cargo",
+    subtitle: "Fresh Off Production · Rapid Sell-Through",
+    description: "Multi-pocket cargo detailing and relaxed street fits crafted with durable stretch weave for fast seasonal turnover.",
+    ctaText: "Explore New In",
+    ctaLink: "/product/productlistingpage?new_arrivals=true",
+    image: "https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048593/retailer/products/2026/07/RET-84B74D80_image_1",
+    badge: "NEW IN",
+    perks: ["💎 High Margin Stock", "🎨 5 Color Washes", "🛡️ Assured QC"]
   },
   {
     id: 3,
-    title: "Flash Sale",
-    subtitle: "Limited time only",
-    description: "Hurry up! Grab your favorites before they're gone.",
-    ctaText: "Shop Sale",
-    ctaLink: "/deals",
-    image: "/images/placeholder.jpg",
-    mobileImage: "/images/placeholder.jpg",
-    badge: { text: "LIMITED", color: "bg-yellow-500" },
-    icon: <Clock size={20} />,
-    gradient: "from-purple-500 to-pink-500"
+    tag: "WHOLESALE LIQUIDATION",
+    title: "Curated Bulk Lots &",
+    titleHighlight: "Factory Steal Deals",
+    subtitle: "Guaranteed Factory Direct · Hourly Refresh",
+    description: "Pre-packed wholesale cartons ready for immediate dispatch at unbeatable rate-per-piece pricing for maximum profit.",
+    ctaText: "Grab Deal Lots",
+    ctaLink: "/product/productlistingpage?deals=true",
+    image: "https://res.cloudinary.com/dfv1k6imi/image/upload/v1785050400/products/2026/07/PROD-B834A209_image_1",
+    badge: "FLASH LOT",
+    perks: ["🔥 Up to 60% Savings", "🚚 Free Shipping > ₹10k", "⚡ Ready Stock"]
   }
 ];
 
@@ -53,25 +62,39 @@ export default function HeroBanner() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 42, seconds: 19 });
+
+  // Live Timer for Flash Spotlight
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: 8, minutes: 0, seconds: 0 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setCurrentSlide((prev) => (prev + 1) % mainSlides.length);
   }, []);
 
   const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentSlide((prev) => (prev - 1 + mainSlides.length) % mainSlides.length);
   }, []);
 
   const goToSlide = (index) => {
     setCurrentSlide(index);
     setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 5000);
+    setTimeout(() => setIsAutoPlaying(true), 6000);
   };
 
-  // Auto-play
+  // Auto-play interval
   useEffect(() => {
     if (!isAutoPlaying) return;
-    const interval = setInterval(nextSlide, 5000);
+    const interval = setInterval(nextSlide, 5500);
     return () => clearInterval(interval);
   }, [isAutoPlaying, nextSlide]);
 
@@ -79,7 +102,7 @@ export default function HeroBanner() {
   const handleMouseEnter = () => setIsAutoPlaying(false);
   const handleMouseLeave = () => setIsAutoPlaying(true);
 
-  // Touch events for mobile swipe
+  // Mobile Touch Gestures
   const handleTouchStart = (e) => {
     setTouchStart(e.targetTouches[0].clientX);
   };
@@ -91,132 +114,262 @@ export default function HeroBanner() {
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    if (isLeftSwipe) nextSlide();
-    if (isRightSwipe) prevSlide();
+    if (distance > 50) nextSlide();
+    if (distance < -50) prevSlide();
     setTouchStart(null);
     setTouchEnd(null);
   };
 
+  const activeSlide = mainSlides[currentSlide];
+
   return (
-    <div 
-      className="relative w-full overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Slides Container */}
-      <div 
-        className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[400px] transition-transform duration-500 ease-out"
-        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-      >
-        <div className="flex w-full h-full">
-          {slides.map((slide, index) => (
-            <div
-              key={slide.id}
-              className="relative w-full h-full flex-shrink-0"
-              style={{ width: '100%' }}
-            >
-              {/* Background Image with Overlay */}
-              <div className="absolute inset-0">
-                {/* Desktop Image */}
-                <picture>
-                  <source media="(max-width: 640px)" srcSet={slide.mobileImage} />
-                  <source media="(min-width: 641px)" srcSet={slide.image} />
-                  <img
-                    src={slide.image}
-                    alt={slide.title}
-                    className="w-full h-full object-cover"
-                    loading={index === 0 ? "eager" : "lazy"}
-                  />
-                </picture>
-                {/* Dark Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
+    <section className="hero-banner-section py-2 sm:py-3 lg:py-3.5 bg-studio-50/80 border-b border-studio-200">
+      <div className="container">
+        
+        {/* Modern Bento Hero Grid: 8 Cols Main Hero + 4 Cols Stacked Spotlights */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
+          
+          {/* Main Hero Showcase (8 Columns on Desktop) */}
+          <div 
+            className="lg:col-span-8 relative rounded-2xl sm:rounded-3xl border-2 border-studio-300 bg-gradient-to-br from-studio-100 via-studio-50 to-studio-200/70 overflow-hidden shadow-sm hover:border-studio-400 transition-all duration-300 flex flex-col justify-between min-h-[380px] sm:min-h-[400px] lg:min-h-[410px]"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Background Decorative Ambient Tints */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-primary-100/30 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-studio-300/40 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Inner Content Grid */}
+            <div className="relative z-10 p-5 sm:p-7 lg:p-8 flex-1 flex flex-col sm:flex-row items-center justify-between gap-5">
+              
+              {/* Left Column: Clean Editorial Typography */}
+              <div className="flex-1 max-w-md flex flex-col justify-center">
+                
+                {/* Eyebrow Tag + Discount Badge */}
+                <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-studio-200 text-studio-900 border border-studio-300">
+                    <Sparkles size={11} className="text-primary-600" />
+                    <span>{activeSlide.tag}</span>
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary-600 text-white shadow-2xs">
+                    {activeSlide.badge}
+                  </span>
+                </div>
+
+                {/* Headline */}
+                <h1 className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-black text-gray-900 tracking-tight leading-tight mb-2">
+                  {activeSlide.title}{' '}
+                  <span className="text-primary-600">
+                    {activeSlide.titleHighlight}
+                  </span>
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-xs sm:text-sm font-bold text-studio-800 mb-2">
+                  {activeSlide.subtitle}
+                </p>
+
+                {/* Description */}
+                <p className="text-xs sm:text-sm text-gray-600 font-medium mb-3.5 line-clamp-2 leading-relaxed">
+                  {activeSlide.description}
+                </p>
+
+                {/* Perks Micro-Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-4">
+                  {activeSlide.perks.map((perk, pIdx) => (
+                    <span 
+                      key={pIdx} 
+                      className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold text-gray-800 bg-white/90 border border-studio-200 px-2 py-0.5 rounded-md shadow-2xs"
+                    >
+                      {perk}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Action CTAs */}
+                <div className="flex items-center gap-2.5">
+                  <Link
+                    href={activeSlide.ctaLink}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 active:scale-98 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all duration-200 group/btn"
+                  >
+                    <span>{activeSlide.ctaText}</span>
+                    <ArrowRight size={14} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                  </Link>
+
+                  <Link
+                    href="/product/productlistingpage"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-studio-100 text-gray-900 hover:text-primary-700 border border-studio-300 rounded-xl font-semibold text-xs sm:text-sm transition-all"
+                  >
+                    <ShoppingBag size={13} className="text-primary-600" />
+                    <span>Catalog</span>
+                  </Link>
+                </div>
+
               </div>
 
-              {/* Content */}
-              <div className="relative h-full flex items-center">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="max-w-xl lg:max-w-2xl">
-                    {/* Badge */}
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 ${slide.badge.color} rounded-full text-white text-xs font-semibold mb-3 sm:mb-4 animate-fadeInUp`}>
-                      {slide.icon}
-                      <span>{slide.badge.text}</span>
-                    </div>
-
-                    {/* Title */}
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-2 sm:mb-3 animate-fadeInUp animation-delay-100">
-                      {slide.title}
-                    </h1>
-
-                    {/* Subtitle */}
-                    <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-2 sm:mb-3 animate-fadeInUp animation-delay-200">
-                      {slide.subtitle}
-                    </p>
-
-                    {/* Description - Hide on mobile */}
-                    <p className="hidden sm:block text-sm sm:text-base text-white/80 mb-4 sm:mb-6 max-w-lg animate-fadeInUp animation-delay-300">
-                      {slide.description}
-                    </p>
-
-                    {/* CTA Button */}
-                    <Link
-                      href={slide.ctaLink}
-                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 animate-fadeInUp animation-delay-400"
-                    >
-                      {slide.ctaText}
-                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </div>
+              {/* Right Column: Full-Height Clean Fashion Image */}
+              <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center">
+                <div className="relative w-44 sm:w-48 md:w-56 lg:w-52 xl:w-60 aspect-[3/4] rounded-2xl overflow-hidden bg-white border-2 border-studio-300 shadow-md group/photo">
+                  <img
+                    src={activeSlide.image}
+                    alt={activeSlide.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover/photo:scale-105"
+                    onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-50" />
                 </div>
               </div>
+
             </div>
-          ))}
+
+            {/* Bottom Controls Bar */}
+            <div className="relative z-10 px-5 sm:px-7 py-3 border-t border-studio-300/80 bg-white/70 backdrop-blur-xs flex items-center justify-between">
+              
+              {/* Slide Dots Indicator */}
+              <div className="flex items-center gap-1.5">
+                {mainSlides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      currentSlide === index
+                        ? 'w-6 bg-primary-600'
+                        : 'w-1.5 bg-studio-300 hover:bg-primary-400'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Arrow Controls */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={prevSlide}
+                  className="w-7 h-7 rounded-lg bg-white border border-studio-300 text-gray-800 hover:bg-primary-600 hover:text-white hover:border-primary-600 flex items-center justify-center transition-all duration-200 shadow-2xs"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="w-7 h-7 rounded-lg bg-white border border-studio-300 text-gray-800 hover:bg-primary-600 hover:text-white hover:border-primary-600 flex items-center justify-center transition-all duration-200 shadow-2xs"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* Right Bento Spotlights (4 Columns on Desktop, Vertically Stacked so NEVER cut off) */}
+          <div className="lg:col-span-4 flex flex-col gap-3.5 sm:grid sm:grid-cols-2 lg:flex lg:flex-col justify-between">
+            
+            {/* Spotlight Card 1: Trending Season Drop (Baggy Jeans Dark Wash - Tested Live 200 OK Image) */}
+            <div className="flex-1 bg-gradient-to-br from-studio-50 via-white to-studio-100/90 rounded-2xl border-2 border-studio-300 p-3.5 sm:p-4 shadow-xs hover:shadow-md hover:border-studio-400 transition-all duration-300 flex items-center justify-between gap-3 group">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-studio-200 text-studio-900 border border-studio-300">
+                    <TrendingUp size={10} className="text-primary-600" />
+                    <span>Trending Drop</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold text-primary-700 bg-primary-50 px-1.5 py-0.2 rounded border border-primary-200">
+                    38% OFF
+                  </span>
+                </div>
+                
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900 truncate group-hover:text-primary-600 transition-colors">
+                  Baggy Jeans (Dark Wash)
+                </h4>
+                
+                <div className="flex items-baseline gap-1.5 mt-0.5 mb-2">
+                  <span className="text-sm sm:text-base font-extrabold text-gray-900">₹1,100</span>
+                  <span className="text-xs text-gray-400 line-through">₹1,799</span>
+                </div>
+                
+                <Link
+                  href="/product/productlistingpage?product_id=88"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 group/link"
+                >
+                  <span>Explore Drop</span>
+                  <ArrowRight size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+
+              {/* Product Thumbnail (Live Cloudinary 200 OK) */}
+              <div className="w-20 h-24 sm:w-22 sm:h-26 flex-shrink-0 rounded-xl overflow-hidden bg-white border border-studio-300 flex items-center justify-center shadow-xs">
+                <img
+                  src="https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048593/retailer/products/2026/07/RET-84B74D80_image_1"
+                  alt="Baggy Jeans Dark Wash"
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                />
+              </div>
+            </div>
+
+            {/* Spotlight Card 2: Live Flash Wholesale Deal */}
+            <div className="flex-1 bg-gradient-to-br from-studio-50 via-white to-studio-100/90 rounded-2xl border-2 border-studio-300 p-3.5 sm:p-4 shadow-xs hover:shadow-md hover:border-studio-400 transition-all duration-300 flex items-center justify-between gap-3 group">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-studio-200 text-studio-900 border border-studio-300">
+                    <Zap size={10} className="text-primary-600" />
+                    <span>Flash Deal</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold text-primary-700 bg-primary-50 px-1.5 py-0.2 rounded border border-primary-200">
+                    32% OFF
+                  </span>
+                </div>
+                
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900 truncate group-hover:text-primary-600 transition-colors">
+                  Denim Sherpa Jacket
+                </h4>
+                
+                <div className="flex items-baseline gap-1.5 mt-0.5 mb-1.5">
+                  <span className="text-sm sm:text-base font-extrabold text-gray-900">₹1,700</span>
+                  <span className="text-xs text-gray-400 line-through">₹2,499</span>
+                </div>
+
+                {/* Live Countdown Clock */}
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-studio-900 bg-studio-200/80 border border-studio-300 px-2 py-0.5 rounded-md mb-1.5 shadow-2xs">
+                  <Clock size={11} className="text-primary-600 animate-pulse" />
+                  <span className="font-mono">
+                    {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+                  </span>
+                </div>
+                
+                <div>
+                  <Link
+                    href="/product/productlistingpage?product_id=89"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 group/link"
+                  >
+                    <span>Claim Deal</span>
+                    <ArrowRight size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Product Thumbnail (Live Cloudinary 200 OK) */}
+              <div className="w-20 h-24 sm:w-22 sm:h-26 flex-shrink-0 rounded-xl overflow-hidden bg-white border border-studio-300 flex items-center justify-center shadow-xs">
+                <img
+                  src="https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048693/retailer/products/2026/07/RET-80409D4B_image_1"
+                  alt="Sherpa Jacket"
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                />
+              </div>
+            </div>
+
+          </div>
+
         </div>
-      </div>
 
-      {/* Navigation Arrows - Desktop only */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white transition-all duration-300 hover:scale-110 hidden sm:block"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white transition-all duration-300 hover:scale-110 hidden sm:block"
-        aria-label="Next slide"
-      >
-        <ChevronRight size={20} className="sm:w-6 sm:h-6" />
-      </button>
-
-      {/* Dots Indicator */}
-      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
-              currentSlide === index
-                ? 'w-6 sm:w-8 bg-primary-500'
-                : 'w-1.5 sm:w-2 bg-white/50 hover:bg-white/80'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
       </div>
-
-      {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20">
-        <div 
-          className="h-full bg-primary-500 transition-all duration-5000 linear"
-          style={{ width: `${((currentSlide + 1) / slides.length) * 100}%` }}
-        />
-      </div>
-    </div>
+    </section>
   );
 }

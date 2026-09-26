@@ -79,72 +79,82 @@ const reviews = [
   }
 ];
 
-const ReviewCard = memo(({ review, isActive }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
+const ReviewCard = memo(({ review, isActive = true }) => {
+  const [isLoaded, setIsLoaded] = useState(true);
 
   return (
-    <div className={`bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 transition-all duration-300 ${
-      isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+    <div className={`relative bg-gradient-to-b from-white via-precious-50/60 to-precious-100/60 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md border-2 border-precious-200/90 hover:border-precious-400 transition-all duration-300 flex flex-col justify-between h-full overflow-hidden ${
+      isActive ? 'opacity-100 scale-100' : 'opacity-100 scale-100'
     }`}>
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-3">
-        {/* Avatar */}
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-primary-100 to-secondary-100 flex items-center justify-center overflow-hidden">
-            {!isLoaded && (
-              <div className="w-full h-full bg-gray-200 animate-pulse" />
-            )}
-            <img
-              src={review.avatar}
-              alt={review.name}
-              loading="lazy"
-              className={`w-full h-full object-cover ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-              onLoad={() => setIsLoaded(true)}
-            />
+      {/* Delicate Top Brand Accent */}
+      <div className="absolute top-0 left-5 right-5 h-0.5 bg-gradient-to-r from-precious-300 via-primary-500 to-precious-300 rounded-full opacity-80" />
+
+      <div>
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3 pt-0.5">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-primary-200 bg-primary-50 flex items-center justify-center overflow-hidden">
+              <img
+                src={review.avatar}
+                alt={review.name}
+                onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                className="w-full h-full object-cover"
+                onLoad={() => setIsLoaded(true)}
+              />
+            </div>
+          </div>
+          
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <h4 className="text-sm sm:text-base font-bold text-gray-900 truncate">{review.name}</h4>
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                {[...Array(5)].map((_, i) => (
+                  <Star 
+                    key={i} 
+                    className={`w-3.5 h-3.5 ${i < review.rating ? 'text-accent-500 fill-current' : 'text-gray-200'}`} 
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+              <span className="text-[10px] sm:text-xs text-gray-400">{review.date}</span>
+              {review.verified && (
+                <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full font-semibold">
+                  <CheckCircle size={8} />
+                  Verified Purchase
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        
-        {/* Info */}
-        <div className="flex-1">
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-    <h4 className="text-sm sm:text-base font-semibold text-gray-900">{review.name}</h4>
-    <div className="flex items-center gap-0.5">
-      {[...Array(5)].map((_, i) => (
-        <Star key={i} className={`w-3 h-3 sm:w-4 sm:h-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-      ))}
-    </div>
-  </div>
-          <div className="flex flex-wrap items-center gap-2 mt-0.5">
-            <span className="text-[10px] sm:text-xs text-gray-400">{review.date}</span>
-            {review.verified && (
-              <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
-                <CheckCircle size={8} />
-                Verified Purchase
-              </span>
-            )}
-          </div>
+
+        {/* Review Text */}
+        <div className="relative mb-3 pt-0.5">
+          <Quote size={16} className="absolute -top-1 -left-1 text-primary-300 opacity-70" />
+          <p className="text-xs sm:text-sm text-gray-600 pl-4 sm:pl-5 line-clamp-3 leading-relaxed">
+            {review.review}
+          </p>
         </div>
       </div>
 
-      {/* Review Text */}
-      <div className="relative mb-3">
-        <Quote size={16} className="absolute -top-1 -left-1 text-primary-200 opacity-50" />
-        <p className="text-xs sm:text-sm text-gray-600 pl-4 sm:pl-5 line-clamp-3">{review.review}</p>
-      </div>
+      {/* Footer Info */}
+      <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 mt-2">
+        {/* Product Link */}
+        <Link
+          href={`/product/${review.productSlug}`}
+          className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-primary-700 hover:text-primary-800 bg-primary-50 hover:bg-primary-100/80 border border-primary-200/70 px-2.5 py-1 rounded-lg transition-colors font-medium truncate max-w-[65%]"
+        >
+          <ShoppingBag size={11} className="flex-shrink-0 text-primary-500" />
+          <span className="truncate">{review.productName}</span>
+        </Link>
 
-      {/* Product Link */}
-      <Link
-        href={`/product/${review.productSlug}`}
-        className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-primary-600 hover:text-primary-700 transition-colors"
-      >
-        <ShoppingBag size={10} />
-        <span>{review.productName}</span>
-      </Link>
-
-      {/* Location */}
-      <div className="mt-2 text-[9px] sm:text-[10px] text-gray-400 flex items-center gap-1">
-        <User size={8} />
-        <span>{review.location}</span>
+        {/* Location */}
+        <div className="text-[10px] sm:text-[11px] text-gray-400 flex items-center gap-1 flex-shrink-0">
+          <User size={9} className="text-gray-400" />
+          <span>{review.location}</span>
+        </div>
       </div>
     </div>
   );
@@ -165,7 +175,16 @@ export default function ReviewsSection() {
     desktop: 3
   };
 
-  const [itemsToShow, setItemsToShow] = useState(3);
+  const getInitialItems = () => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      if (width < 640) return 1;
+      if (width < 1024) return 2;
+    }
+    return 3;
+  };
+
+  const [itemsToShow, setItemsToShow] = useState(getInitialItems);
   const totalSlides = Math.ceil(reviews.length / itemsToShow);
 
   // Responsive items per view
@@ -180,6 +199,13 @@ export default function ReviewsSection() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Bounds safety: clamp currentIndex if totalSlides changes
+  useEffect(() => {
+    if (currentIndex >= totalSlides && totalSlides > 0) {
+      setCurrentIndex(0);
+    }
+  }, [totalSlides, currentIndex]);
 
   // Intersection Observer
   useEffect(() => {
@@ -232,59 +258,58 @@ export default function ReviewsSection() {
   const totalReviews = reviews.length;
 
   return (
-    <section ref={sectionRef} className="reviews-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={sectionRef} className="reviews-section py-4 sm:py-5 lg:py-6 bg-primary-50/35 border-y border-primary-100/70">
+      <div className="container">
         
         {/* Section Header */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Quote size={24} className="text-primary-500" />
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-              What Our <span className="text-primary-500">Customers</span> Say
+        <div className="text-center mb-4 sm:mb-6">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Quote size={20} className="text-primary-500" />
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+              What Our <span className="text-primary-600">Customers</span> Say
             </h2>
           </div>
-          <p className="text-sm text-gray-500">Real reviews from verified buyers</p>
-          <div className="w-20 h-1 bg-primary-500 mx-auto mt-4 rounded-full" />
+          <p className="text-xs sm:text-sm text-gray-500">Real feedback from verified retailers & buyers</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-  {/* Average Rating - Left */}
-  <div className="flex items-center gap-3">
-    <div className="text-center">
-      <p className="text-3xl sm:text-4xl font-bold text-gray-900">{avgRating}</p>
-      <div className="flex items-center gap-0.5 mt-1">
-        {[...Array(5)].map((_, i) => (
-          <Star key={i} className={`w-4 h-4 ${i < Math.floor(avgRating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-        ))}
-      </div>
-    </div>
-    <div className="h-10 w-px bg-gray-200 hidden sm:block" />
-    <div className="sm:hidden w-full h-px bg-gray-200 my-2" />
-    <div>
-      <p className="text-2xl sm:text-3xl font-bold text-gray-900">{totalReviews}+</p>
-      <p className="text-xs text-gray-500">Happy Customers</p>
-    </div>
-  </div>
-
-  {/* Rating Distribution - Vertical on Mobile, Horizontal on Desktop */}
-  <div className="w-full sm:w-auto">
-    <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-      {[5, 4, 3, 2, 1].map((star) => {
-        const count = reviews.filter(r => r.rating === star).length;
-        const percentage = (count / totalReviews) * 100;
-        return (
-          <div key={star} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg sm:min-w-[140px]">
-            <span className="text-sm font-semibold text-gray-700 w-8">{star}★</span>
-            <div className="flex-1 w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${percentage}%` }} />
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-7">
+          {/* Average Rating - Left */}
+          <div className="flex items-center gap-3">
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-bold text-gray-900">{avgRating}</p>
+              <div className="flex items-center gap-0.5 mt-1 justify-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`w-4 h-4 ${i < Math.floor(avgRating) ? 'text-accent-500 fill-current' : 'text-gray-200'}`} />
+                ))}
+              </div>
             </div>
-            <span className="text-xs font-medium text-gray-500 min-w-[30px] text-right">{count}</span>
+            <div className="h-10 w-px bg-primary-200 hidden sm:block" />
+            <div className="sm:hidden w-full h-px bg-primary-100 my-2" />
+            <div>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{totalReviews}+</p>
+              <p className="text-xs text-gray-500">Happy Customers</p>
+            </div>
           </div>
-        );
-      })}
-    </div>
-  </div>
-</div>
+
+          {/* Rating Distribution */}
+          <div className="w-full sm:w-auto">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              {[5, 4, 3, 2, 1].map((star) => {
+                const count = reviews.filter(r => r.rating === star).length;
+                const percentage = (count / totalReviews) * 100;
+                return (
+                  <div key={star} className="flex items-center gap-2 bg-white border border-primary-100/90 px-3 py-1.5 rounded-lg shadow-2xs sm:min-w-[125px]">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-700 w-7">{star}★</span>
+                    <div className="flex-1 w-20 sm:w-24 h-2 bg-primary-100/70 rounded-full overflow-hidden">
+                      <div className="h-full bg-accent-500 rounded-full transition-all duration-300" style={{ width: `${percentage}%` }} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 min-w-[20px] text-right">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
         {/* Carousel */}
         <div 
@@ -295,13 +320,13 @@ export default function ReviewsSection() {
           {/* Navigation Arrows */}
           <button
             onClick={handlePrev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-4 z-10 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-primary-500 hover:text-white transition-all duration-300"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-4 z-10 w-8 h-8 bg-white border border-primary-200/80 text-gray-700 rounded-full shadow-md flex items-center justify-center hover:bg-primary-500 hover:text-white hover:border-primary-500 transition-all duration-300"
           >
             <ChevronLeft size={18} />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-4 z-10 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-primary-500 hover:text-white transition-all duration-300"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-4 z-10 w-8 h-8 bg-white border border-primary-200/80 text-gray-700 rounded-full shadow-md flex items-center justify-center hover:bg-primary-500 hover:text-white hover:border-primary-500 transition-all duration-300"
           >
             <ChevronRight size={18} />
           </button>
@@ -346,7 +371,7 @@ export default function ReviewsSection() {
 
         {/* Write a Review Button */}
         <div className="text-center mt-8">
-          <button className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-600 hover:text-primary-50 transition-all duration-300">
+          <button className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-xl hover:bg-primary-500 hover:text-white transition-all duration-300 shadow-xs">
             Write a Review
           </button>
         </div>

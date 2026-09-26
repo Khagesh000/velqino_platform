@@ -1,317 +1,260 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ShoppingCart, Clock, Zap, TrendingUp, Eye, ChevronRight } from '../../../../utils/icons';
-import '../../../../styles/common/HomePage/DealsOfTheDay.scss'
+import { ShoppingCart, Clock, Zap, ChevronRight, Flame } from '../../../../utils/icons';
 import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
 import { toast } from 'react-toastify';
-// Timer Component with performance optimization
-const CountdownTimer = memo(({ targetDate }) => {
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
-  const [isClient, setIsClient] = useState(false);
-  
+
+// Live Countdown Timer
+const CountdownTimer = memo(({ targetHours = 8 }) => {
+  const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 42, seconds: 19 });
+
   useEffect(() => {
-    setIsClient(true);
     const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
-
-      if (distance < 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-        clearInterval(timer);
-        return;
-      }
-
-      setTimeLeft({
-        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((distance % (1000 * 60)) / 1000)
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: targetHours, minutes: 0, seconds: 0 };
       });
     }, 1000);
-
     return () => clearInterval(timer);
-  }, [targetDate]);
-
-  if (!isClient) {
-    return (
-      <div className="flex gap-2">
-        <div className="bg-primary-100 rounded-lg px-2 py-1 min-w-[50px] text-center animate-pulse">Loading</div>
-      </div>
-    );
-  }
+  }, [targetHours]);
 
   return (
-    <div className="flex gap-2 sm:gap-3">
-      <div className="bg-primary-100 rounded-lg px-2 sm:px-3 py-1 sm:py-2 text-center min-w-[50px] sm:min-w-[60px]">
-        <span className="text-lg sm:text-2xl font-bold text-primary-700">{String(timeLeft.hours).padStart(2, '0')}</span>
-        <p className="text-[9px] sm:text-xs text-gray-500">Hours</p>
-      </div>
-      <div className="text-xl sm:text-2xl font-bold text-primary-500 self-center">:</div>
-      <div className="bg-primary-100 rounded-lg px-2 sm:px-3 py-1 sm:py-2 text-center min-w-[50px] sm:min-w-[60px]">
-        <span className="text-lg sm:text-2xl font-bold text-primary-700">{String(timeLeft.minutes).padStart(2, '0')}</span>
-        <p className="text-[9px] sm:text-xs text-gray-500">Minutes</p>
-      </div>
-      <div className="text-xl sm:text-2xl font-bold text-primary-500 self-center">:</div>
-      <div className="bg-primary-100 rounded-lg px-2 sm:px-3 py-1 sm:py-2 text-center min-w-[50px] sm:min-w-[60px]">
-        <span className="text-lg sm:text-2xl font-bold text-primary-700">{String(timeLeft.seconds).padStart(2, '0')}</span>
-        <p className="text-[9px] sm:text-xs text-gray-500">Seconds</p>
-      </div>
+    <div className="inline-flex items-center gap-1.5 bg-primary-50 text-primary-900 px-2.5 py-1 rounded-full border border-primary-200 text-[11px] font-bold shadow-xs">
+      <Clock size={13} className="text-primary-600 animate-pulse" />
+      <span className="text-primary-700">ENDS IN:</span>
+      <span className="font-mono tracking-wider text-primary-900">
+        {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+      </span>
     </div>
   );
 });
 
 CountdownTimer.displayName = 'CountdownTimer';
 
-// Product Card Component with memoization
-const ProductCard = memo(({ product, index, wishlistIds = [] }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
+const DealCard = memo(({ product, wishlistIds = [] }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
-  const [isWishlist, setIsWishlist] = useState(wishlistIds?.includes(product?.id) || false);
-  const soldPercentage = product.totalStock ? (product.sold / product.totalStock) * 100 : 0;
-  
-  useEffect(() => {
-    const productId = Number(product?.id);
-    setIsWishlist(wishlistIds?.includes(productId) || false);
-  }, [wishlistIds, product?.id]);
 
-
-  const handleAddToCart = async (e, product) => {
+  const handleAddToCart = async (e, prod) => {
     e.preventDefault();
     e.stopPropagation();
-    
     try {
       await addToCart({
-        product_id: product.id,
+        product_id: prod.id,
         quantity: 1,
         selected_size: '',
         selected_color: ''
       }).unwrap();
-      
-      toast.success(`${product.name} added to cart!`);
+      toast.success(`${prod.name} added to cart!`);
     } catch (error) {
       toast.error(error?.data?.message || 'Failed to add to cart');
     }
   };
 
+  const soldPercentage = Math.min(100, Math.round(((product.sold || 12) / ((product.sold || 12) + (product.stock || 8))) * 100));
+
   return (
-    <div
-      className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
+    <div 
+      className="group bg-white rounded-2xl border border-gray-200/80 p-2.5 sm:p-3 hover:shadow-lg hover:border-primary-400 transition-all duration-300 flex flex-col justify-between"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ animationDelay: `${index * 0.05}s` }}
     >
-      {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
-        {!isLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      <div>
+        {/* Deal Product Image with Balanced Height on Laptop */}
+        <div className="relative aspect-square max-h-48 sm:max-h-52 lg:max-h-48 w-full rounded-xl overflow-hidden bg-gray-50 mb-2.5 border border-gray-100 flex items-center justify-center">
+          <Link href={`/product/productlistingpage?product_id=${product.id}`} className="w-full h-full flex items-center justify-center">
+            <img
+              src={product.image}
+              alt={product.name}
+              loading="lazy"
+              onError={(e) => { e.target.src = '/images/products/placeholder.jpg'; }}
+              className={`w-full h-full object-cover transition-transform duration-500 ${isHovered ? 'scale-105' : 'scale-100'}`}
+            />
+          </Link>
+
+          {/* Discount Pill */}
+          <div className="absolute top-2 left-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs">
+            {product.discount > 0 ? `${product.discount}% OFF` : 'DEAL'}
           </div>
-        )}
-        <img
-            src={product.image}
-            alt={product.name}
-            loading={index < 4 ? "eager" : "lazy"}
-            className={`w-full h-full object-cover transition-transform duration-500 ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            } ${isHovered ? 'scale-110' : 'scale-100'}`}
-            onLoad={() => setIsLoaded(true)}
-            onError={(e) => { e.target.src = '/images/products/placeholder.jpg' }}
-          />
-        
-        {/* Discount Badge */}
-        {product.discount > 0 && (
-          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
-            -{product.discount}%
+
+          {/* Quick View Button */}
+          <div className={`absolute inset-0 bg-black/25 flex items-center justify-center transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+              <span className="bg-white text-gray-900 text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xs hover:bg-primary-500 hover:text-white transition-colors">
+                Quick View
+              </span>
+            </Link>
           </div>
-        )}
-        
-        {/* Quick View Button */}
-        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <Link href={`/product/productlistingpage?product_id=${product.id}`}>
-          <button className="bg-white text-primary-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-500 hover:bg-primary-950 hover:text-primary-500 transition-all transform -translate-y-2 group-hover:translate-y-0">
-            Quick View
-          </button>
+        </div>
+
+        {/* Title */}
+        <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+          <h4 className="text-xs font-semibold text-gray-800 line-clamp-1 hover:text-primary-600 transition-colors">
+            {product.name}
+          </h4>
         </Link>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-3 sm:p-4">
-        <h3 className="text-sm sm:text-base font-semibold text-gray-800 line-clamp-1 mb-1">
-          {product.name}
-        </h3>
-        
-        {/* Rating */}
-        <div className="flex items-center gap-1 mb-2">
-          <div className="flex items-center">
-            {[...Array(5)].map((_, i) => (
-              <svg key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            ))}
-          </div>
-          <span className="text-xs text-gray-500">({product.rating})</span>
-        </div>
-
-        {/* Price */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg sm:text-xl font-bold text-primary-600">₹{product.discountedPrice}</span>
+        {/* Pricing */}
+        <div className="flex items-baseline gap-1.5 mt-1 mb-1.5">
+          <span className="text-sm sm:text-base font-bold text-gray-900">
+            ₹{product.discountedPrice}
+          </span>
           {product.originalPrice > product.discountedPrice && (
-            <span className="text-xs sm:text-sm text-gray-400 line-through">₹{product.originalPrice}</span>
+            <span className="text-[11px] text-gray-400 line-through">
+              ₹{product.originalPrice}
+            </span>
           )}
         </div>
 
-        {/* Stock Progress Bar */}
-        {product.totalStock && (
-          <div className="mb-3">
-            <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 mb-1">
-              <span>Sold: {product.sold}</span>
-              <span>Available: {product.stock}</span>
-            </div>
-            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary-500 rounded-full transition-all duration-500"
-                style={{ width: `${soldPercentage}%` }}
-              />
-            </div>
+        {/* Stock Meter */}
+        <div className="mb-2">
+          <div className="flex justify-between text-[9px] sm:text-[10px] text-gray-500 mb-1 font-medium">
+            <span>Sold: {product.sold || 18}</span>
+            <span className="text-primary-700 font-bold">{product.stock || 8} left</span>
           </div>
-        )}
-
-        {/* Add to Cart Button */}
-        <button 
-            onClick={(e) => handleAddToCart(e, product)}
-            disabled={isAddingToCart}
-            className="w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2"
-          >
-            <ShoppingCart size={16} />
-            <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
-          </button>
+          <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-accent-400 to-primary-600 rounded-full transition-all duration-500"
+              style={{ width: `${soldPercentage}%` }}
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Compact Add To Cart */}
+      <button 
+        onClick={(e) => handleAddToCart(e, product)}
+        disabled={isAddingToCart}
+        className="w-full py-1.5 bg-primary-500 text-white rounded-xl text-xs font-semibold hover:bg-primary-600 active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-xs"
+      >
+        <ShoppingCart size={13} />
+        <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+      </button>
     </div>
   );
 });
 
-ProductCard.displayName = 'ProductCard';
+DealCard.displayName = 'DealCard';
 
 export default function DealsOfTheDay({ deals = [], loading = false, wishlistIds = [] }) {
-  const [visibleDeals, setVisibleDeals] = useState([]);
-  const [isInView, setIsInView] = useState(false);
   const sectionRef = useRef(null);
-  
-  // Remove shouldFetch - not needed
-  
-  const formattedDeals = React.useMemo(() => {
-    if (!deals || deals.length === 0) return [];
-    return deals.slice(0, 6).map((deal) => ({
-      id: deal.id,
-      name: deal.name,
-      slug: deal.slug,
-      originalPrice: parseFloat(deal.retail_price) || parseFloat(deal.price) || 0,
-      discountedPrice: parseFloat(deal.price) || 0,
-      discount: deal.discount_percentage || Math.round(((parseFloat(deal.retail_price) - parseFloat(deal.price)) / parseFloat(deal.retail_price)) * 100) || 0,
-      image: deal.image || deal.primary_image || '/images/products/placeholder.jpg',
-      stock: deal.stock || 0,
-      totalStock: deal.total_stock || deal.stock || 100,
-      sold: (deal.total_stock || 100) - (deal.stock || 0),
-      rating: deal.rating || 4.5,
-      endTime: deal.deal_end_time ? new Date(deal.deal_end_time).getTime() : new Date().getTime() + 24 * 60 * 60 * 1000
+
+  const formattedDeals = useMemo(() => {
+    if (!deals || deals.length === 0) {
+      return [
+        {
+          id: 88,
+          name: 'Baggy Jeans 20 (Dark Wash)',
+          image: 'https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048593/retailer/products/2026/07/RET-84B74D80_image_1',
+          originalPrice: 1699,
+          discountedPrice: 1100,
+          discount: 35,
+          stock: 6,
+          sold: 24,
+        },
+        {
+          id: 87,
+          name: 'Baggy Jeans 19 (Cargo Khaki)',
+          image: 'https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048509/retailer/products/2026/07/RET-2F212480_image_1',
+          originalPrice: 1799,
+          discountedPrice: 1100,
+          discount: 38,
+          stock: 4,
+          sold: 28,
+        },
+        {
+          id: 91,
+          name: 'White Track Pants (Bulk Pack)',
+          image: 'https://res.cloudinary.com/dfv1k6imi/image/upload/v1785050400/products/2026/07/PROD-B834A209_image_1',
+          originalPrice: 799,
+          discountedPrice: 400,
+          discount: 50,
+          stock: 12,
+          sold: 48,
+        },
+        {
+          id: 89,
+          name: 'Denim Black Sherpa Jacket',
+          image: 'https://res.cloudinary.com/dfv1k6imi/image/upload/v1785048693/retailer/products/2026/07/RET-80409D4B_image_1',
+          originalPrice: 2499,
+          discountedPrice: 1700,
+          discount: 32,
+          stock: 3,
+          sold: 19,
+        }
+      ];
+    }
+    return deals.slice(0, 4).map(deal => ({
+      ...deal,
+      discountedPrice: deal.price || deal.discounted_price,
+      originalPrice: deal.retail_price || deal.compare_price || (deal.price ? Math.round(deal.price * 1.3) : 999),
+      discount: deal.discount_percent || 25,
+      stock: deal.stock || 8,
+      sold: deal.sold || 15,
     }));
   }, [deals]);
 
-  // Intersection Observer for isInView
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  // Progressive loading of deals
-  useEffect(() => {
-    if (isInView && formattedDeals.length > 0 && visibleDeals.length === 0) {
-      setVisibleDeals(formattedDeals.slice(0, 3));
-      const timer = setTimeout(() => {
-        setVisibleDeals(formattedDeals);
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [isInView, formattedDeals, visibleDeals.length]);
-
-  // Loading state
   if (loading) {
     return (
-      <section className="deals-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-200 rounded-xl h-80"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className="container py-3 sm:py-4">
+        <div className="h-64 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+      </div>
     );
   }
 
-  if (formattedDeals.length === 0) {
-    return null;
-  }
-
-  
-
   return (
-    <section ref={sectionRef} className="deals-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={sectionRef} className="py-3.5 sm:py-4.5 lg:py-5 bg-primary-50/40 border-y border-primary-100/70">
+      <div className="container">
         
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 sm:mb-12">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Zap size={24} className="text-primary-500" />
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-                Deals of the <span className="text-primary-500">Day</span>
-              </h2>
-            </div>
-            <p className="text-sm text-gray-500">Limited time offers. Hurry up!</p>
-          </div>
+        {/* Flipkart-Style Dedicated Deal Zone Shelf */}
+        <div className="bg-white rounded-2xl border border-primary-200/80 p-3 sm:p-4 md:p-5 shadow-xs">
           
-          {/* Countdown Timer */}
-          <CountdownTimer targetDate={visibleDeals[0]?.endTime} />
+          {/* Deal Shelf Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 sm:mb-4 pb-2.5 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white shadow-xs">
+                <Flame size={17} className="fill-current animate-bounce" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-none">
+                    Grab or Gone Deals
+                  </h3>
+                  <span className="text-[9px] font-extrabold uppercase bg-accent-100 text-accent-900 border border-accent-300/80 px-2 py-0.5 rounded-full">
+                    Flash Wholesale
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Highest saving bulk lots with guaranteed instant factory dispatch
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <CountdownTimer targetHours={8} />
+              <Link
+                href="/product/productlistingpage?deals=true"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 group"
+              >
+                <span>View All Deals</span>
+                <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          </div>
+
+          {/* 4-Column Deal Shelf */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+            {formattedDeals.map((product) => (
+              <DealCard key={product.id} product={product} wishlistIds={wishlistIds} />
+            ))}
+          </div>
+
         </div>
 
-        {/* Deals Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
-          {visibleDeals.map((deal, index) => (
-            <ProductCard key={deal.id} product={deal} index={index} wishlistIds={wishlistIds}/>
-          ))}
-        </div>
-
-        {/* View All Deals Button */}
-        <div className="text-center mt-8 sm:mt-12">
-          <Link
-            href="/product/productlistingpage?deals_of_day=true"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
-          >
-            <span>View All Deals</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
       </div>
     </section>
   );

@@ -319,8 +319,8 @@ useEffect(() => {
   }
 
   return (
-    <section ref={sectionRef} className="recently-viewed-section py-8 sm:py-12 bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={sectionRef} className="recently-viewed-section py-4 sm:py-5 bg-secondary-50/60 border-b border-secondary-200/70">
+      <div className="container">
         
         {/* Section Header */}
         <div className="flex items-center justify-between mb-4 sm:mb-6">

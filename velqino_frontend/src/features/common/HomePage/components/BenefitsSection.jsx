@@ -131,21 +131,20 @@ export default function BenefitsSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="benefits-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={sectionRef} className="benefits-section py-4 sm:py-5 lg:py-6 bg-white border-y border-gray-100">
+      <div className="container">
         
         {/* Section Header */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <CheckCircle size={24} className="text-primary-500" />
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+        <div className="text-center mb-4 sm:mb-6">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <CheckCircle size={20} className="text-primary-500" />
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
               Why Choose <span className="text-primary-500">Us</span>
             </h2>
           </div>
-          <p className="text-sm text-gray-500 max-w-2xl mx-auto">
-            We provide the best shopping experience with these amazing benefits
+          <p className="text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto">
+            Seamless wholesale ordering, secure payments & verified manufacturers
           </p>
-          <div className="w-20 h-1 bg-primary-500 mx-auto mt-4 rounded-full" />
         </div>
 
         {/* Benefits Grid */}

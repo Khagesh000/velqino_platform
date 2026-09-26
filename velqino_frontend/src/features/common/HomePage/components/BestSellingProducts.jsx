@@ -1,26 +1,52 @@
 "use client";
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Heart, Eye, Star, ChevronRight, TrendingUp } from '../../../../utils/icons';
+import { ShoppingCart, Heart, TrendingUp, ChevronRight, Star } from '../../../../utils/icons';
 import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
 import { useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/redux/wholesaler/slices/wishlistSlice';
 import { toast } from 'react-toastify';
-const ProductCard = memo(({ product, index, wishlistIds = [] }) => {
+
+const rankBadges = [
+  { rank: '#1', label: 'Top Seller', badgeColor: 'bg-amber-500 text-white' },
+  { rank: '#2', label: 'Trending', badgeColor: 'bg-primary-600 text-white' },
+  { rank: '#3', label: 'Popular', badgeColor: 'bg-orange-500 text-white' },
+  { rank: '#4', label: 'Hot Pick', badgeColor: 'bg-red-500 text-white' },
+  { rank: '#5', label: 'Rising', badgeColor: 'bg-emerald-600 text-white' },
+  { rank: '#6', label: 'Featured', badgeColor: 'bg-indigo-600 text-white' },
+];
+
+const BestsellerCard = memo(({ product, index, wishlistIds = [] }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
-  const [isWishlist, setIsWishlist] = useState(wishlistIds?.includes(product?.id) || false);
   const [addToWishlist] = useAddToWishlistMutation();
   const [removeFromWishlist] = useRemoveFromWishlistMutation();
+  const [isWishlist, setIsWishlist] = useState(false);
 
-    useEffect(() => {
-    const productId = Number(product?.id);
-    setIsWishlist(wishlistIds?.includes(productId) || false);
+  useEffect(() => {
+    setIsWishlist(wishlistIds?.includes(Number(product?.id)) || false);
   }, [wishlistIds, product?.id]);
 
-  
-  const handleAddToCart = async (e, product) => {
+  const handleWishlistClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newState = !isWishlist;
+    setIsWishlist(newState);
+    try {
+      if (isWishlist) {
+        await removeFromWishlist(product.id).unwrap();
+        toast.success('Removed from wishlist');
+      } else {
+        await addToWishlist(product.id).unwrap();
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      setIsWishlist(!newState);
+      toast.error('Please login to update wishlist');
+    }
+  };
+
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     try {
@@ -36,201 +62,156 @@ const ProductCard = memo(({ product, index, wishlistIds = [] }) => {
     }
   };
 
-
-  const handleWishlistClick = async (e, product) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const newState = !isWishlist;
-    setIsWishlist(newState);
-    try {
-      if (isWishlist) {
-        await removeFromWishlist(product.id).unwrap();
-        toast.success('Removed from wishlist');
-      } else {
-        await addToWishlist(product.id).unwrap();
-        toast.success('Added to wishlist');
-      }
-    } catch (error) {
-      setIsWishlist(!newState);
-      toast.error(error?.data?.message || 'Please login to add to wishlist');
-    }
-  };
-
+  const rankInfo = rankBadges[index] || { rank: `#${index + 1}`, label: 'Bestseller', badgeColor: 'bg-gray-700 text-white' };
 
   return (
     <div
-  className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100"
-  onMouseEnter={() => setIsHovered(true)}
-  onMouseLeave={() => setIsHovered(false)}
-  style={{ animationDelay: `${index * 0.05}s` }}
->
-  <div className="relative aspect-square overflow-hidden bg-gray-100">
-    <Link href={`/product/productlistingpage?product_id=${product.id}`}>
-      <div className="relative w-full h-full">
-        {!isLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      className="group bg-white rounded-2xl border border-gray-200/80 p-3 hover:shadow-xl hover:border-primary-400 transition-all duration-300 flex flex-col justify-between"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div>
+        {/* Image Container with Rank Badge */}
+        <div className="relative aspect-[4/5] sm:aspect-square w-full rounded-xl overflow-hidden bg-gray-50 mb-2.5 border border-gray-100 flex items-center justify-center">
+          <Link href={`/product/productlistingpage?product_id=${product.id}`} className="w-full h-full flex items-center justify-center">
+            <img
+              src={product.image || product.primary_image || '/images/products/placeholder.jpg'}
+              alt={product.name}
+              loading="lazy"
+              onError={(e) => { e.target.src = '/images/products/placeholder.jpg'; }}
+              className={`w-full h-full object-cover transition-transform duration-500 ${isHovered ? 'scale-105' : 'scale-100'}`}
+            />
+          </Link>
+
+          {/* Rank Badge */}
+          <div className="absolute top-2 left-2 flex items-center gap-1 shadow-xs">
+            <span className={`px-2 py-0.5 rounded-md text-[11px] font-extrabold ${rankInfo.badgeColor}`}>
+              {rankInfo.rank}
+            </span>
           </div>
-        )}
-        <img
-          src={product.image || product.primary_image || product.images?.[0]?.image || '/images/products/placeholder.jpg'}
-          alt={product.name}
-          loading={index < 4 ? "eager" : "lazy"}
-          className={`w-full h-full object-cover transition-transform duration-500 ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          } ${isHovered ? 'scale-110' : 'scale-100'}`}
-          onLoad={() => setIsLoaded(true)}
-        />
+
+          {/* Wishlist Button */}
+          <button
+            onClick={handleWishlistClick}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-xs hover:scale-110 active:scale-95 transition-all z-10"
+            aria-label="Save to wishlist"
+          >
+            <Heart size={14} className={isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 block mb-0.5">
+            {rankInfo.label}
+          </span>
+
+          <Link href={`/product/productlistingpage?product_id=${product.id}`}>
+            <h4 className="text-xs sm:text-sm font-semibold text-gray-800 line-clamp-1 hover:text-primary-600 transition-colors">
+              {product.name}
+            </h4>
+          </Link>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1 mt-1 mb-1.5">
+            <div className="flex items-center text-amber-400">
+              <Star size={12} className="fill-current" />
+            </div>
+            <span className="text-[11px] font-bold text-gray-700">{product.rating || '4.8'}</span>
+            <span className="text-[10px] text-gray-400">({product.reviews_count || '120+'})</span>
+          </div>
+
+          {/* Price */}
+          <div className="flex items-baseline gap-1.5 mb-2.5">
+            <span className="text-base font-bold text-gray-900">
+              ₹{product.display_price || product.price}
+            </span>
+            {product.retail_price > product.price && (
+              <span className="text-xs text-gray-400 line-through">
+                ₹{product.retail_price}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
-    </Link>
-    
-    {/* Wishlist button - NOW OUTSIDE the Link */}
-    <button
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleWishlistClick(e, product);
-      }}
-      className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md hover:shadow-lg transition-all z-10"
-    >
-      <Heart size={16} className={`${isWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-    </button>
-    
-    {/* Quick View - also separate */}
-    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300 ${
-      isHovered ? 'opacity-100' : 'opacity-0'
-    }`}>
-      <Link href={`/product/productlistingpage?product_id=${product.id}`}>
-        <button className="bg-white text-primary-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-950 hover:text-primary-500 transition-all cursor-pointer">
-          Quick View
-        </button>
-      </Link>
-    </div>
-  </div>
 
-  <div className="p-3">
-    <Link href={`/product/productlistingpage?product_id=${product.id}`}>
-      <h3 className="text-sm font-semibold text-gray-800 line-clamp-1 mb-1 hover:text-primary-600 transition-colors">
-        {product.name}
-      </h3>
-    </Link>
-    
-    <div className="flex items-center gap-1 mb-2">
-      <div className="flex items-center">
-        {[...Array(5)].map((_, i) => (
-          <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating || 4.5) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-        ))}
-      </div>
-      <span className="text-xs text-gray-500">({product.total_sold || 0} sold)</span>
+      {/* Add To Cart */}
+      <button
+        onClick={handleAddToCart}
+        disabled={isAddingToCart}
+        className="w-full py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-semibold active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-xs"
+      >
+        <ShoppingCart size={13} />
+        <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+      </button>
     </div>
-
-    <div className="flex items-center gap-2 mb-3">
-      <span className="text-lg font-bold text-primary-600">₹{product.display_price || product.price}</span>
-      {product.retail_price > product.price && (
-        <span className="text-xs text-gray-400 line-through">₹{product.retail_price}</span>
-      )}
-    </div>
-
-    <button
-      onClick={(e) => handleAddToCart(e, product)}
-      disabled={isAddingToCart}
-      className="w-full py-1.5 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-all flex items-center justify-center gap-2 cursor-pointer"
-    >
-      <ShoppingCart size={14} />
-      <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
-    </button>
-  </div>
-</div>
   );
 });
 
-ProductCard.displayName = 'ProductCard';
+BestsellerCard.displayName = 'BestsellerCard';
 
 export default function BestSellingProducts({ products = [], loading = false, wishlistIds = [] }) {
-  const [visibleProducts, setVisibleProducts] = useState([]);
-  const [isInView, setIsInView] = useState(false);
   const sectionRef = useRef(null);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (isInView && products.length > 0 && visibleProducts.length === 0) {
-      setVisibleProducts(products.slice(0, 6));
-      const timer = setTimeout(() => {
-        setVisibleProducts(products);
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [isInView, products, visibleProducts.length]);
+  const visibleProducts = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    return products.slice(0, 6);
+  }, [products]);
 
   if (loading) {
     return (
-      <section className="best-selling-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
-        <div className="container mx-auto px-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-200 rounded-xl h-80"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className="container py-4 sm:py-5">
+        <div className="h-80 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+      </div>
     );
   }
 
-  if (products.length === 0) {
-    return null;
-  }
+  if (visibleProducts.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="best-selling-section py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={sectionRef} className="py-4 sm:py-5 lg:py-6 bg-white border-b border-gray-100">
+      <div className="container">
         
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 sm:mb-12">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <TrendingUp size={24} className="text-primary-500" />
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-                Best <span className="text-primary-500">Selling</span> Products
-              </h2>
+        {/* Amazon-Style Best Sellers Leaderboard Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4 sm:mb-5 pb-3 border-b border-gray-100">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                Customer Top Picks
+              </span>
             </div>
-            <p className="text-sm text-gray-500">Most popular products based on sales</p>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">
+              Best Selling Products
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Highest rated wholesale garments & sarees based on repeat buyer orders
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/product/productlistingpage?sort=bestselling"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 group"
+            >
+              <span>View Leaderboard</span>
+              <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
+        {/* 6-Column Leaderboard Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {visibleProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} wishlistIds={wishlistIds} />
+            <BestsellerCard
+              key={product.id}
+              product={product}
+              index={index}
+              wishlistIds={wishlistIds}
+            />
           ))}
         </div>
 
-        <div className="text-center mt-8 sm:mt-12">
-          <Link
-            href="/product/productlistingpage?sort=-total_sold"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-white border-2 border-primary-500 text-primary-600 font-semibold rounded-lg hover:bg-primary-950 hover:text-primary-500 transition-all duration-300 group"
-          >
-            <span>View All Best Sellers</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
       </div>
     </section>
   );
