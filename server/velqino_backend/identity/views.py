@@ -482,46 +482,54 @@ def login(request):
     return Response({'error': 'Invalid credentials'}, status=400) """
 
 
-#Retialers
+# Retailers
 @api_view(['POST'])
-#@ratelimit(key='ip', rate='10/hour', method='POST')
+@permission_classes([AllowAny])
 def register_retailer(request):
     """
     Register a new retailer (automatically sets role='retailer')
+    with comprehensive validation and structured error responses.
     """
     try:
         serializer = RetailerRegisterSerializer(data=request.data)
         
         if serializer.is_valid():
             with transaction.atomic():
-                # Create user
+                # Create user and profile (handled within serializer.create)
                 user = serializer.save()
                 
-                # Create empty retailer profile (will be filled later)
-                RetailerProfile.objects.create(
-                    user=user,
-                    business_name=user.username,
-                    shipping_address="",
-                    city="",
-                    state="",
-                    pincode=""
-                )
+                # Fetch profile
+                profile = RetailerProfile.objects.filter(user=user).first()
                 
                 # Generate JWT token
                 refresh = RefreshToken.for_user(user)
                 
                 logger.info(f"New retailer registered: {user.email}")
                 
+                profile_data = RetailerProfileSerializer(profile).data if profile else {}
+                
                 return Response({
                     'status': 'success',
-                    'message': 'Retailer registered successfully',
+                    'message': 'Retailer registered successfully! Welcome to Velqino.',
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
-                    'user_id': user.id
+                    'user_id': user.id,
+                    'role': 'retailer',
+                    'data': profile_data
                 }, status=status.HTTP_201_CREATED)
         else:
+            first_error = None
+            for field, err_list in serializer.errors.items():
+                if isinstance(err_list, list) and len(err_list) > 0:
+                    first_error = str(err_list[0])
+                    break
+                elif isinstance(err_list, str):
+                    first_error = err_list
+                    break
+            
             return Response({
                 'status': 'error',
+                'message': first_error or 'Validation failed. Please correct the highlighted errors.',
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
             
@@ -529,48 +537,97 @@ def register_retailer(request):
         logger.error(f"Retailer registration failed: {e}")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': str(e) or 'Registration failed due to a server error. Please try again.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def retailer_login(request):
     """
-    Retailer login
+    Retailer login with case-insensitive email lookup, role verification,
+    and structured field-level error messages.
     """
     try:
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = request.data.get('email', '').strip().lower()
+        password = request.data.get('password', '')
         
-        user = User.objects.filter(email=email).first()
-        
-        if not user or not user.check_password(password):
+        errors = {}
+        if not email:
+            errors['email'] = ['Email address is required.']
+        if not password:
+            errors['password'] = ['Password is required.']
+            
+        if errors:
             return Response({
                 'status': 'error',
-                'message': 'Invalid credentials'
+                'message': 'Please provide both email and password.',
+                'errors': errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = User.objects.filter(email__iexact=email).first()
+        
+        if not user:
+            return Response({
+                'status': 'error',
+                'message': 'No retailer account found with this email address. Please register or check your email.',
+                'errors': {'email': ['No retailer account found with this email address.']}
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Incorrect password. Please verify and try again.',
+                'errors': {'password': ['Incorrect password. Please verify and try again.']}
             }, status=status.HTTP_401_UNAUTHORIZED)
         
+        if not user.is_active:
+            return Response({
+                'status': 'error',
+                'message': 'Your retailer account is deactivated. Please contact customer support.',
+                'errors': {'general': ['Your retailer account is deactivated. Please contact customer support.']}
+            }, status=status.HTTP_403_FORBIDDEN)
+            
         if user.role != 'retailer':
             return Response({
                 'status': 'error',
-                'message': 'Account is not a retailer account'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+                'message': f'This email is registered as a {user.role.title()}. Please sign in using the {user.role.title()} portal.',
+                'errors': {'general': [f'This email is registered as a {user.role.title()}. Please sign in using the {user.role.title()} portal.']}
+            }, status=status.HTTP_403_FORBIDDEN)
         
         refresh = RefreshToken.for_user(user)
         
+        # Ensure profile exists or retrieve it
+        profile = RetailerProfile.objects.filter(user=user).first()
+        if not profile:
+            profile = RetailerProfile.objects.create(
+                user=user,
+                business_name=user.username,
+                shipping_address='',
+                city='',
+                state='',
+                pincode=''
+            )
+            
+        profile_serializer = RetailerProfileSerializer(profile)
+        
         return Response({
             'status': 'success',
+            'message': 'Welcome back! Logged in successfully.',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-            'user_id': user.id
+            'user_id': user.id,
+            'role': 'retailer',
+            'data': profile_serializer.data
         })
         
     except Exception as e:
         logger.error(f"Retailer login failed: {e}")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': str(e) or 'Login failed due to a server error. Please try again.'
         }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @api_view(['GET', 'PUT'])

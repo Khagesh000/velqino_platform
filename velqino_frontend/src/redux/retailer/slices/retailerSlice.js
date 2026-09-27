@@ -12,7 +12,7 @@ export const retailerApi = createApi({
                     const response = await retailerAPI.registerRetailer(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || { message: error.message } };
                 }
             },
         }),
@@ -23,7 +23,7 @@ export const retailerApi = createApi({
                     const response = await retailerAPI.loginRetailer(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || { message: error.message } };
                 }
             },
         }),

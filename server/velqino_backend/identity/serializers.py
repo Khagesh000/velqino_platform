@@ -299,27 +299,163 @@ class WholesalerProfileListSerializer(serializers.ModelSerializer):
 # identity/serializers.py - ADD THIS
 
 class RetailerRegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-    confirm_password = serializers.CharField(write_only=True, min_length=8)
-    
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            'min_length': 'Password must be at least 8 characters long.',
+            'required': 'Password is required.',
+            'blank': 'Password cannot be blank.'
+        }
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            'min_length': 'Confirm password must be at least 8 characters long.',
+            'required': 'Please confirm your password.',
+            'blank': 'Confirm password cannot be blank.'
+        }
+    )
+    username = serializers.CharField(
+        required=True,
+        error_messages={'required': 'Username is required.'}
+    )
+    email = serializers.EmailField(
+        required=True,
+        error_messages={'required': 'Email address is required.'}
+    )
+    mobile = serializers.CharField(
+        required=True,
+        error_messages={'required': 'Mobile number is required.'}
+    )
+    business_name = serializers.CharField(
+        required=True,
+        error_messages={'required': 'Business or store name is required.'}
+    )
+    gst_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True
+    )
+    shipping_address = serializers.CharField(
+        required=True,
+        error_messages={'required': 'Shipping address is required.'}
+    )
+    city = serializers.CharField(
+        required=True,
+        error_messages={'required': 'City is required.'}
+    )
+    state = serializers.CharField(
+        required=True,
+        error_messages={'required': 'State is required.'}
+    )
+    pincode = serializers.CharField(
+        required=True,
+        error_messages={'required': 'Pincode is required.'}
+    )
+
     class Meta:
         model = User
-        fields = ['email', 'mobile', 'password', 'confirm_password', 'username']
-    
+        fields = [
+            'username', 'email', 'mobile', 'password', 'confirm_password',
+            'business_name', 'gst_number', 'shipping_address', 'city', 'state', 'pincode'
+        ]
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if not email:
+            raise serializers.ValidationError("Email address is required.")
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            raise serializers.ValidationError("Please enter a valid email address.")
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("An account with this email address already exists. Please sign in or use another email.")
+        return email
+
+    def validate_username(self, value):
+        username = value.strip()
+        if not username:
+            raise serializers.ValidationError("Username is required.")
+        if len(username) < 3:
+            raise serializers.ValidationError("Username must be at least 3 characters long.")
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
+            raise serializers.ValidationError("Username can only contain letters, numbers, dots, and underscores.")
+        if User.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError("This username is already taken. Please choose another username.")
+        return username
+
+    def validate_mobile(self, value):
+        mobile = re.sub(r'[\s\-\(\)\+]', '', str(value))
+        if len(mobile) == 12 and mobile.startswith('91'):
+            mobile = mobile[2:]
+        if not re.match(r'^[6-9]\d{9}$', mobile):
+            raise serializers.ValidationError("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
+        if User.objects.filter(mobile=mobile).exists():
+            raise serializers.ValidationError("This mobile number is already registered. Please sign in or use another number.")
+        return mobile
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if not re.search(r'[A-Za-z]', value):
+            raise serializers.ValidationError("Password must contain at least one letter.")
+        if not re.search(r'\d', value):
+            raise serializers.ValidationError("Password must contain at least one number.")
+        return value
+
+    def validate_pincode(self, value):
+        pincode = str(value).strip()
+        if not re.match(r'^\d{6}$', pincode):
+            raise serializers.ValidationError("Pincode must be exactly 6 digits.")
+        return pincode
+
+    def validate_gst_number(self, value):
+        if value:
+            gst = value.strip().upper()
+            if not re.match(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$', gst):
+                raise serializers.ValidationError("Please enter a valid 15-character GST number (e.g. 22AAAAA0000A1Z5).")
+            return gst
+        return value
+
     def validate(self, data):
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError("Passwords don't match")
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
+        if password and confirm_password and password != confirm_password:
+            raise serializers.ValidationError({
+                'confirm_password': ['Passwords do not match. Please verify your password.']
+            })
         return data
-    
+
     def create(self, validated_data):
-        validated_data.pop('confirm_password')
+        validated_data.pop('confirm_password', None)
+        
+        business_name = validated_data.pop('business_name').strip()
+        gst_number = validated_data.pop('gst_number', None)
+        if gst_number:
+            gst_number = gst_number.strip().upper()
+        shipping_address = validated_data.pop('shipping_address').strip()
+        city = validated_data.pop('city').strip()
+        state = validated_data.pop('state').strip()
+        pincode = validated_data.pop('pincode').strip()
+        
         user = User.objects.create_user(
-            username=validated_data.get('username', validated_data['email'].split('@')[0]),
+            username=validated_data['username'],
             email=validated_data['email'],
             mobile=validated_data['mobile'],
             password=validated_data['password'],
-            role='retailer'  # ✅ Auto-set role
+            role='retailer'
         )
+        
+        RetailerProfile.objects.create(
+            user=user,
+            business_name=business_name,
+            gst_number=gst_number,
+            shipping_address=shipping_address,
+            city=city,
+            state=state,
+            pincode=pincode
+        )
+        
         return user
 
 
