@@ -54,22 +54,50 @@ class WholesalerProfileSerializer(serializers.ModelSerializer):
 
 
 class WholesalerProfileCreateSerializer(serializers.ModelSerializer):
-    """Serializer for CREATING a new wholesaler"""
+    """Serializer for CREATING a new wholesaler with full validations"""
     
-    # User fields
-    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
-    confirm_password = serializers.CharField(write_only=True, style={'input_type': 'password'})  # ⭐ NEW
-    first_name = serializers.CharField(write_only=True)
-    last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    email = serializers.EmailField(write_only=True)
-    mobile = serializers.CharField(write_only=True)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            'min_length': 'Password must be at least 8 characters long.',
+            'required': 'Password is required.',
+            'blank': 'Password cannot be blank.'
+        }
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            'min_length': 'Confirm password must be at least 8 characters long.',
+            'required': 'Please confirm your password.',
+            'blank': 'Confirm password cannot be blank.'
+        }
+    )
+    first_name = serializers.CharField(
+        write_only=True,
+        error_messages={'required': 'First name is required.'}
+    )
+    last_name = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True
+    )
+    email = serializers.EmailField(
+        write_only=True,
+        error_messages={'required': 'Email address is required.'}
+    )
+    mobile = serializers.CharField(
+        write_only=True,
+        error_messages={'required': 'Mobile number is required.'}
+    )
     
     class Meta:
         model = WholesalerProfile
         fields = [
             # User fields
             'first_name', 'last_name', 'email', 'mobile', 
-            'password', 'confirm_password',  # ⭐ BOTH password fields
+            'password', 'confirm_password',
             
             # Business info
             'business_name', 'business_type', 'gst_number', 'pan_number',
@@ -84,34 +112,125 @@ class WholesalerProfileCreateSerializer(serializers.ModelSerializer):
             # Bank details
             'account_holder', 'bank_name', 'account_number', 'ifsc_code', 'upi_id',
         ]
-    
-    # ⭐ NEW: Validate password match
+        extra_kwargs = {
+            'business_name': {'required': True, 'error_messages': {'required': 'Business name is required.'}},
+            'business_type': {'required': True, 'error_messages': {'required': 'Business type is required.'}},
+            'shop_address': {'required': True, 'error_messages': {'required': 'Shop/Office address is required.'}},
+            'city': {'required': True, 'error_messages': {'required': 'City is required.'}},
+            'state': {'required': True, 'error_messages': {'required': 'State is required.'}},
+            'pincode': {'required': True, 'error_messages': {'required': 'Pincode is required.'}},
+        }
+
+    def to_internal_value(self, data):
+        # Map frontend aliases gracefully
+        mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
+        if 'moq' in mutable_data and 'minimum_order_quantity' not in mutable_data:
+            try:
+                mutable_data['minimum_order_quantity'] = int(mutable_data['moq'])
+            except (ValueError, TypeError):
+                mutable_data['minimum_order_quantity'] = 1
+        if 'business_desc' in mutable_data and 'business_description' not in mutable_data:
+            mutable_data['business_description'] = mutable_data['business_desc']
+        if 'priceRange' in mutable_data and 'price_range' not in mutable_data:
+            mutable_data['price_range'] = mutable_data['priceRange']
+
+        return super().to_internal_value(mutable_data)
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if not email:
+            raise serializers.ValidationError("Email address is required.")
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            raise serializers.ValidationError("Please enter a valid email address.")
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("An account with this email address already exists. Please sign in or use another email.")
+        return email
+
+    def validate_mobile(self, value):
+        mobile = re.sub(r'[\s\-\(\)\+]', '', str(value))
+        if len(mobile) == 12 and mobile.startswith('91'):
+            mobile = mobile[2:]
+        if not re.match(r'^[6-9]\d{9}$', mobile):
+            raise serializers.ValidationError("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
+        if User.objects.filter(mobile=mobile).exists():
+            raise serializers.ValidationError("This mobile number is already registered. Please sign in or use another number.")
+        return mobile
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if not re.search(r'[A-Za-z]', value):
+            raise serializers.ValidationError("Password must contain at least one letter.")
+        if not re.search(r'\d', value):
+            raise serializers.ValidationError("Password must contain at least one number.")
+        return value
+
+    def validate_gst_number(self, value):
+        if value:
+            gst = value.strip().upper()
+            if not re.match(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$', gst):
+                raise serializers.ValidationError("Please enter a valid 15-character GST number (e.g. 22AAAAA0000A1Z5).")
+            return gst
+        return value
+
+    def validate_pan_number(self, value):
+        if value:
+            pan = value.strip().upper()
+            if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$', pan):
+                raise serializers.ValidationError("Please enter a valid 10-character PAN number (e.g. ABCDE1234F).")
+            return pan
+        return value
+
+    def validate_pincode(self, value):
+        pincode = str(value).strip()
+        if not re.match(r'^\d{6}$', pincode):
+            raise serializers.ValidationError("Pincode must be exactly 6 digits.")
+        return pincode
+
+    def validate_ifsc_code(self, value):
+        if value:
+            ifsc = value.strip().upper()
+            if not re.match(r'^[A-Z]{4}0[A-Z0-9]{6}$', ifsc):
+                raise serializers.ValidationError("Please enter a valid 11-character IFSC code (e.g. HDFC0001234).")
+            return ifsc
+        return value
+
     def validate(self, data):
-        if data['password'] != data['confirm_password']:
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
+        if password and confirm_password and password != confirm_password:
             raise serializers.ValidationError({
-                'password': 'Passwords do not match'
+                'confirm_password': ['Passwords do not match. Please verify your password.']
             })
         return data
-    
+
     def create(self, validated_data):
-        # Remove confirm_password (not needed in DB)
-        validated_data.pop('confirm_password')
+        validated_data.pop('confirm_password', None)
         
-        # Extract user data
-        user_data = {
-            'username': validated_data.get('email'),
-            'email': validated_data.pop('email'),
-            'password': validated_data.pop('password'),  # Django hashes it!
-            'first_name': validated_data.pop('first_name', ''),
-            'last_name': validated_data.pop('last_name', ''),
-            'mobile': validated_data.pop('mobile'),
-            'role': 'wholesaler'
-        }
+        email = validated_data.pop('email').strip().lower()
+        first_name = validated_data.pop('first_name', '').strip()
+        last_name = validated_data.pop('last_name', '').strip()
+        mobile = validated_data.pop('mobile').strip()
+        password = validated_data.pop('password')
         
-        # Create user (password auto-hashed)
-        user = User.objects.create_user(**user_data)
+        # Unique username derived from email or business
+        username = email.split('@')[0]
+        base_username = username
+        counter = 1
+        while User.objects.filter(username__iexact=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            mobile=mobile,
+            role='wholesaler'
+        )
         
-        # Create profile
         profile = WholesalerProfile.objects.create(
             user=user,
             **validated_data

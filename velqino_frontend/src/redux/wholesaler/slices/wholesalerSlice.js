@@ -11,7 +11,7 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     const response = await wholesalerAPI.register(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || { message: error.message || 'Registration failed' } };
                 }
             }
         }),
@@ -21,7 +21,7 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     const response = await wholesalerAPI.getProfile(userId);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || error };
                 }
             }
         }),
@@ -31,7 +31,7 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     const response = await wholesalerAPI.updateProfile(userId, data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || error };
                 }
             }
         }),
@@ -41,7 +41,7 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     await wholesalerAPI.deleteProfile(userId);
                     return { data: userId };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || error };
                 }
             }
         }),
@@ -51,7 +51,7 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     const response = await wholesalerAPI.getAll(params);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || error };
                 }
             }
         }),
@@ -61,7 +61,7 @@ export const wholesalerApi = createApi({  // Keep as wholesalerApi
                     const response = await wholesalerAPI.login(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || { message: error.message || 'Login failed' } };
                 }
             }
         }),

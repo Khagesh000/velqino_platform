@@ -139,34 +139,20 @@ def get_all_users(request):
 
 
 @api_view(['POST'])
-#@ratelimit(key='ip', rate='5/hour', method='POST')
 @permission_classes([AllowAny])
 def register_wholesaler(request):
     """
-    Register a new wholesaler (automatically sets role)
+    Register a new wholesaler (automatically sets role='wholesaler')
+    with comprehensive validation and structured error responses.
     """
-
-    
-    #print("=" * 60, flush=True)
-    #print("🔵 REGISTER ENDPOINT HIT", flush=True)
-    #print(f"📌 Request Method: {request.method}", flush=True)
-    #print(f"📌 Request Path: {request.path}", flush=True)
-    #print(f"📌 Content-Type: {request.headers.get('Content-Type')}", flush=True)
-    #print(f"📌 Is Authenticated: {request.user.is_authenticated if request.user else 'No'}", flush=True)
-    #print(f"📌 CSRF Token in Header: {'X-CSRFToken' in request.headers}", flush=True)
-    #print("=" * 60, flush=True)
-
-
     try:
-        # Use serializer for validation and creation
         serializer = WholesalerProfileCreateSerializer(data=request.data)
         
         if serializer.is_valid():
             with transaction.atomic():
-                # Create user and profile
                 profile = serializer.save()
                 
-                # Trigger verification asynchronously
+                # Trigger verification asynchronously if task available
                 try:
                     verify_wholesaler_profile.delay(profile.id)
                 except Exception:
@@ -180,64 +166,116 @@ def register_wholesaler(request):
                 
                 # Generate JWT token
                 refresh = RefreshToken.for_user(profile.user)
-                
-                # Return response with serialized data
                 response_serializer = WholesalerProfileSerializer(profile)
                 
                 logger.info(f"New wholesaler registered: {profile.user.email}")
                 
                 return Response({
                     'status': 'success',
-                    'message': 'Wholesaler registered successfully',
+                    'message': 'Wholesaler account created successfully! Welcome to Velqino.',
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
+                    'user_id': profile.user.id,
+                    'role': 'wholesaler',
                     'data': response_serializer.data
                 }, status=status.HTTP_201_CREATED)
         else:
+            first_error = None
+            for field, err_list in serializer.errors.items():
+                if isinstance(err_list, list) and len(err_list) > 0:
+                    first_error = str(err_list[0])
+                    break
+                elif isinstance(err_list, str):
+                    first_error = err_list
+                    break
+            
             return Response({
                 'status': 'error',
+                'message': first_error or 'Validation failed. Please correct the highlighted errors.',
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
             
     except Exception as e:
-        logger.error(f"Registration failed: {e}")
+        logger.error(f"Wholesaler registration failed: {e}")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': str(e) or 'Registration failed due to a server error. Please try again.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 def wholesaler_login(request):
     """
-    Wholesaler login
+    Wholesaler login with case-insensitive email lookup, role verification,
+    and structured field-level error messages.
     """
     try:
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = request.data.get('email', '').strip().lower()
+        password = request.data.get('password', '')
         
-        user = User.objects.filter(email=email).first()
-        
-        if not user or not user.check_password(password):
+        errors = {}
+        if not email:
+            errors['email'] = ['Email address is required.']
+        if not password:
+            errors['password'] = ['Password is required.']
+            
+        if errors:
             return Response({
                 'status': 'error',
-                'message': 'Invalid credentials'
+                'message': 'Please provide both email and password.',
+                'errors': errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = User.objects.filter(email__iexact=email).first()
+        
+        if not user:
+            return Response({
+                'status': 'error',
+                'message': 'No wholesaler account found with this email address. Please register or check your email.',
+                'errors': {'email': ['No wholesaler account found with this email address.']}
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Incorrect password. Please verify and try again.',
+                'errors': {'password': ['Incorrect password. Please verify and try again.']}
             }, status=status.HTTP_401_UNAUTHORIZED)
         
+        if not user.is_active:
+            return Response({
+                'status': 'error',
+                'message': 'Your wholesaler account is deactivated. Please contact customer support.',
+                'errors': {'general': ['Your wholesaler account is deactivated. Please contact customer support.']}
+            }, status=status.HTTP_403_FORBIDDEN)
+            
         if user.role != 'wholesaler':
             return Response({
                 'status': 'error',
-                'message': 'Account is not a wholesaler account'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+                'message': f'This email is registered as a {user.role.title()}. Please sign in using the {user.role.title()} portal.',
+                'errors': {'general': [f'This email is registered as a {user.role.title()}. Please sign in using the {user.role.title()} portal.']}
+            }, status=status.HTTP_403_FORBIDDEN)
         
         refresh = RefreshToken.for_user(user)
         
-        # Get wholesaler profile data
-        profile = WholesalerProfile.objects.get(user=user)
+        # Ensure profile exists or retrieve it
+        profile = WholesalerProfile.objects.filter(user=user).first()
+        if not profile:
+            profile = WholesalerProfile.objects.create(
+                user=user,
+                business_name=user.first_name or user.username,
+                business_type='Wholesaler',
+                shop_address='',
+                city='',
+                state='',
+                pincode=''
+            )
+            
         profile_serializer = WholesalerProfileSerializer(profile)
         
         return Response({
             'status': 'success',
+            'message': 'Welcome back! Logged in successfully.',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user_id': user.id,
@@ -245,16 +283,11 @@ def wholesaler_login(request):
             'data': profile_serializer.data
         })
         
-    except WholesalerProfile.DoesNotExist:
-        return Response({
-            'status': 'error',
-            'message': 'Wholesaler profile not found'
-        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.error(f"Wholesaler login failed: {e}")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': 'An unexpected error occurred during login. Please try again.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
