@@ -1,0 +1,54 @@
+@import '../../styles/reusables/variables.scss';
+
+/* ========================================================
+   Velqino Luxury B2B Orders Ledger Page Styling
+   ======================================================== */
+
+.orders-page-wrapper {
+  background: linear-gradient(180deg, rgba($primary-50, 0.5) 0%, rgba(255, 255, 255, 0.95) 300px, $surface-1 100%);
+  min-height: calc(100vh - 80px);
+}
+
+/* Luxury B2B Order Card */
+.orders-card {
+  background: $surface-1;
+  border-radius: 1.25rem;
+  border: 1.5px solid rgba($primary-200, 0.85);
+  box-shadow: 0 4px 20px -4px rgba($primary-900, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    border-color: rgba($primary-400, 0.95);
+    box-shadow: 0 10px 30px -6px rgba($primary-900, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+/* Status Filter Pill */
+.order-filter-pill {
+  transition: all 0.18s ease-in-out;
+  cursor: pointer;
+
+  &.active {
+    background: linear-gradient(135deg, $primary-700 0%, $primary-600 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba($primary-900, 0.25);
+    border-color: transparent !important;
+  }
+}
+
+/* Shimmer Animation */
+@keyframes ordersShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.orders-skeleton-pulse {
+  background: linear-gradient(90deg, rgba($primary-100, 0.4) 25%, rgba($primary-50, 0.8) 50%, rgba($primary-100, 0.4) 75%);
+  background-size: 200% 100%;
+  animation: ordersShimmer 1.8s infinite;
+}

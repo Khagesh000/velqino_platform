@@ -9,9 +9,10 @@ import { useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/redux
 import '../../../../../styles/Products/ProductsListingPage/ProductGrid.scss';
 import { BASE_IMAGE_URL } from '@/utils/apiConfig';
 import { toast } from 'react-toastify';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const ProductCard = ({ product, onWishlistToggle }) => {
+  const router = useRouter();
   const [isWishlist, setIsWishlist] = useState(product?.is_wishlisted || false);
   const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -155,13 +156,15 @@ const ProductCard = ({ product, onWishlistToggle }) => {
           </button>
 
           {/* Quick View Overlay */}
-          <div className={`absolute inset-0 bg-black/30 flex items-end justify-center pb-4 transition-all duration-300 z-10 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`absolute inset-0 bg-black/25 flex items-end justify-center pb-4 transition-all duration-300 z-10 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
             <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                router.push(`/productdetail/${product.id}`);
               }}
-              className="px-5 py-1.5 bg-white/95 hover:bg-white text-gray-800 hover:text-primary-600 rounded-full text-xs font-semibold tracking-wide shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 border border-white/50 hover:border-primary-100"
+              className="px-5 py-1.5 bg-white/95 hover:bg-white text-gray-800 hover:text-primary-600 rounded-full text-xs font-semibold tracking-wide shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 border border-white/50 hover:border-primary-100 cursor-pointer pointer-events-auto"
             >
               Quick View
             </button>

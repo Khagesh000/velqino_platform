@@ -972,63 +972,91 @@ def download_invoice(request, order_id):
     
     # Check permission
     user = request.user
-    if user.role not in ['admin', 'support']:
-        if user.role == 'customer' and order.customer.id != user.id:
-            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
-        elif user.role == 'retailer' and order.retailer and order.retailer.id != user.id:
-            return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    is_owner = (
+        (order.customer and order.customer.id == user.id) or
+        (getattr(order, 'retailer', None) and order.retailer.id == user.id) or
+        (getattr(order, 'wholesaler', None) and order.wholesaler.id == user.id)
+    )
+    if user.role not in ['admin', 'support'] and not is_owner:
+        return Response({'status': 'error', 'message': 'Unauthorized'}, status=403)
     
-    # Create PDF
+    # Create PDF with Velqino Luxury B2B Theme
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.4*inch, bottomMargin=0.4*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
     styles = getSampleStyleSheet()
     elements = []
     
-    # Title Style
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=TA_CENTER, fontSize=24, textColor=colors.HexColor('#396d72'))
+    # Velqino Brand Colors
+    c_primary = colors.HexColor('#77523D')      # Warm Terracotta / Deep Chestnut
+    c_primary_light = colors.HexColor('#FAF4E5')# Warm Background Canvas
+    c_accent = colors.HexColor('#C59F47')       # Warm Gold Accent
+    c_border = colors.HexColor('#ECD2B2')       # Soft Border
+    c_dark = colors.HexColor('#3D2A1F')         # Text Dark
     
-    # Header
-    elements.append(Paragraph("VELTRIX", title_style))
-    elements.append(Paragraph("Invoice", styles['Heading2']))
-    elements.append(Spacer(1, 0.3*inch))
+    # Typography Styles
+    brand_style = ParagraphStyle('BrandStyle', parent=styles['Heading1'], alignment=TA_CENTER, fontSize=24, leading=28, textColor=c_primary, fontName='Helvetica-Bold')
+    subbrand_style = ParagraphStyle('SubBrandStyle', parent=styles['Normal'], alignment=TA_CENTER, fontSize=9, leading=12, textColor=c_accent, fontName='Helvetica-Bold')
+    invoice_title_style = ParagraphStyle('InvoiceTitle', parent=styles['Heading2'], alignment=TA_CENTER, fontSize=13, leading=16, textColor=c_dark, fontName='Helvetica-Bold')
+    escrow_badge_style = ParagraphStyle('EscrowBadge', parent=styles['Normal'], alignment=TA_CENTER, fontSize=8, leading=10, textColor=c_primary, fontName='Helvetica')
     
-    # Order Info Table
+    # Header Banner
+    elements.append(Paragraph("VELQINO", brand_style))
+    elements.append(Paragraph("DIRECT-FROM-MILL B2B WHOLESALE PLATFORM", subbrand_style))
+    elements.append(Spacer(1, 0.1*inch))
+    elements.append(Paragraph("OFFICIAL TAX INVOICE & ESCROW DISPATCH NOTE", invoice_title_style))
+    elements.append(Paragraph("100% ESCROW TRADE ASSURANCE PROTECTED TRANSACTION", escrow_badge_style))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Order Metadata Grid
     order_data = [
-        ['Order Number:', order.order_number, 'Order Date:', order.created_at.strftime('%d/%m/%Y')],
+        ['Invoice / Order No:', order.order_number, 'Invoice Date:', order.created_at.strftime('%d/%m/%Y')],
         ['Payment Method:', order.payment_method.upper(), 'Payment Status:', order.payment_status.upper()],
-        ['Order Status:', order.status.upper(), 'Delivery Type:', order.delivery_type.upper()]
+        ['Fulfillment Status:', order.status.upper(), 'Logistics Speed:', order.delivery_type.upper()]
     ]
     
-    order_table = Table(order_data, colWidths=[1.5*inch, 2*inch, 1.5*inch, 2*inch])
+    order_table = Table(order_data, colWidths=[1.6*inch, 2.0*inch, 1.6*inch, 2.0*inch])
     order_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('TEXTCOLOR', (0, 0), (-1, -1), c_dark),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BACKGROUND', (0, 0), (-1, -1), c_primary_light),
+        ('BOX', (0, 0), (-1, -1), 1, c_border),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, c_border),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
     ]))
     elements.append(order_table)
-    elements.append(Spacer(1, 0.3*inch))
+    elements.append(Spacer(1, 0.15*inch))
     
-    # Customer Info
+    # Customer and Delivery Address Information
     customer_data = [
-        ['Bill To:', 'Ship To:'],
+        ['Billed To (Buyer):', 'Dispatched To (Delivery Destination):'],
         [f"{order.customer.get_full_name() or order.customer.email}", f"{order.shipping_name}"],
-        [f"{order.customer.email}", f"{order.shipping_phone}"],
-        ['', f"{order.shipping_address}"],
-        ['', f"{order.shipping_city}, {order.shipping_state} - {order.shipping_pincode}"]
+        [f"Email: {order.customer.email}", f"Phone: +91 {order.shipping_phone}"],
+        ['', f"Address: {order.shipping_address}"],
+        ['', f"City/State: {order.shipping_city}, {order.shipping_state} - {order.shipping_pincode}"]
     ]
     
-    customer_table = Table(customer_data, colWidths=[3*inch, 4*inch])
+    customer_table = Table(customer_data, colWidths=[3.6*inch, 3.6*inch])
     customer_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TEXTCOLOR', (0, 0), (-1, 0), c_primary),
+        ('TEXTCOLOR', (0, 1), (-1, -1), c_dark),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('BOX', (0, 0), (-1, -1), 1, colors.grey),
+        ('BOX', (0, 0), (-1, -1), 1, c_border),
+        ('BACKGROUND', (0, 0), (-1, 0), c_primary_light),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
     ]))
     elements.append(customer_table)
-    elements.append(Spacer(1, 0.3*inch))
+    elements.append(Spacer(1, 0.2*inch))
     
-    # Items Table
-    items_data = [['#', 'Product', 'SKU', 'Quantity', 'Price', 'Total']]
+    # Wholesale Items Table
+    items_data = [['#', 'Wholesale Product Lot', 'SKU', 'Qty', 'Unit Price', 'Lot Total']]
     
     for idx, item in enumerate(order.items.all(), 1):
         items_data.append([
@@ -1036,36 +1064,44 @@ def download_invoice(request, order_id):
             item.product_name,
             item.product_sku,
             str(item.quantity),
-            f"₹{item.price}",
-            f"₹{item.total}"
+            f"INR {item.price}",
+            f"INR {item.total}"
         ])
     
-    # Add total row
-    items_data.append(['', '', '', '', 'Subtotal:', f"₹{order.total_amount}"])
-    items_data.append(['', '', '', '', 'Discount:', f"-₹{order.discount_amount}"])
-    items_data.append(['', '', '', '', 'Shipping:', f"₹{order.shipping_charge}"])
-    items_data.append(['', '', '', '', 'Tax (GST):', f"₹{order.tax_amount}"])
-    items_data.append(['', '', '', '', 'Grand Total:', f"₹{order.grand_total}"])
+    # Financial breakdown rows
+    items_data.append(['', '', '', '', 'Wholesale Subtotal:', f"INR {order.total_amount}"])
+    items_data.append(['', '', '', '', 'Wholesale Discount:', f"-INR {order.discount_amount}"])
+    items_data.append(['', '', '', '', 'Freight Logistics:', f"INR {order.shipping_charge}"])
+    items_data.append(['', '', '', '', 'GST Tax (5%):', f"INR {order.tax_amount}"])
+    items_data.append(['', '', '', '', 'Total Paid / Billed:', f"INR {order.grand_total}"])
     
-    items_table = Table(items_data, colWidths=[0.5*inch, 2.5*inch, 1.5*inch, 0.8*inch, 1.2*inch, 1.2*inch])
+    items_table = Table(items_data, colWidths=[0.4*inch, 2.8*inch, 1.4*inch, 0.6*inch, 1.0*inch, 1.0*inch])
     items_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#396d72')),
+        ('BACKGROUND', (0, 0), (-1, 0), c_primary),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('GRID', (0, 0), (-1, -6), 0.5, colors.grey),
-        ('BOX', (0, -5), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (0, 0), (0, -6), 'CENTER'),
+        ('ALIGN', (3, 0), (3, -6), 'CENTER'),
+        ('ALIGN', (4, 0), (-1, -1), 'RIGHT'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8.5),
+        ('GRID', (0, 0), (-1, -6), 0.5, c_border),
+        ('BOX', (0, -5), (-1, -1), 1, c_border),
         ('FONTNAME', (4, -5), (-1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, -1), (-1, -1), c_primary_light),
+        ('TEXTCOLOR', (4, -1), (-1, -1), c_primary),
+        ('FONTSIZE', (4, -1), (-1, -1), 9.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
     ]))
     elements.append(items_table)
-    elements.append(Spacer(1, 0.3*inch))
+    elements.append(Spacer(1, 0.25*inch))
     
-    # Footer
-    footer_style = ParagraphStyle('FooterStyle', parent=styles['Normal'], alignment=TA_CENTER, fontSize=8, textColor=colors.grey)
-    elements.append(Paragraph("Thank you for shopping with VELTRIX!", footer_style))
-    elements.append(Paragraph("For any queries, contact support@veltrix.com | +91 1800 123 4567", footer_style))
+    # Escrow Certification & Footer
+    footer_style = ParagraphStyle('FooterStyle', parent=styles['Normal'], alignment=TA_CENTER, fontSize=8, leading=11, textColor=c_dark)
+    elements.append(Paragraph("<b>VELQINO ESCROW TRADE GUARANTEE CERTIFIED</b>", footer_style))
+    elements.append(Paragraph("Buyer funds are securely maintained under Velqino Escrow Guarantee until delivery inspection verification.", footer_style))
+    elements.append(Paragraph("For support and order queries: support@velqino.com | Authentic Direct Mill Drops", footer_style))
     
     # Build PDF
     doc.build(elements)

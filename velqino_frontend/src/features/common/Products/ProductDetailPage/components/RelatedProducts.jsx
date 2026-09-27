@@ -2,171 +2,157 @@
 
 import React, { useRef } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Star } from '../../../../../utils/icons';
+import { ChevronLeft, ChevronRight, Star, ShoppingBag, Sparkles } from '@/utils/icons';
 import { BASE_IMAGE_URL } from '@/utils/apiConfig';
-import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice'; // ✅ Fixed import path
+import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 
 export default function RelatedProducts({ currentProductId, categoryId, subcategoryId }) {
   const scrollRef = useRef(null);
   
-  // Fetch related products based on category/subcategory
   const params = {
     ...(subcategoryId && { subcategory_id: subcategoryId }),
     ...(categoryId && !subcategoryId && { category_id: categoryId }),
     exclude: currentProductId,
-    limit: 10
+    limit: 8
   };
   
-  const { data: response, isLoading, error } = useGetProductsQuery(params);
+  const { data: response, isLoading } = useGetProductsQuery(params);
   
-// Extract products array safely
-let products = [];
-if (response?.data?.results && Array.isArray(response.data.results)) {
-  products = response.data.results;
-} else if (response?.results && Array.isArray(response.results)) {
-  products = response.results;
-} else if (response?.data && Array.isArray(response.data)) {
-  products = response.data;
-} else if (Array.isArray(response)) {
-  products = response;
-}
+  let products = [];
+  if (response?.data?.products && Array.isArray(response.data.products)) {
+    products = response.data.products;
+  } else if (response?.data?.results && Array.isArray(response.data.results)) {
+    products = response.data.results;
+  } else if (response?.data && Array.isArray(response.data)) {
+    products = response.data;
+  } else if (response?.results && Array.isArray(response.results)) {
+    products = response.results;
+  } else if (Array.isArray(response)) {
+    products = response;
+  }
 
-console.log('Products array:', products); // Debug to see what you're getting
-  
-  // Format products to match your structure
-  const relatedProducts = products.map(product => ({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    originalPrice: product.original_price || product.mrp || Math.round(product.price * 1.5),
-    rating: product.avg_rating || 4.0,
-    image: product.images?.[0]?.image 
-      ? `${BASE_IMAGE_URL}${product.images[0].image}` 
-      : '/images/placeholder.jpg',
-    slug: product.slug,
-    discount: product.discount
-  }));
+  const resolveImg = (prod) => {
+    const raw = prod?.primary_image || prod?.images?.[0]?.image || prod?.image;
+    if (!raw) return 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=400&q=80';
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    return `${BASE_IMAGE_URL}${raw}`;
+  };
 
   const scroll = (direction) => {
     if (scrollRef.current) {
-      const scrollAmount = 300;
       scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        left: direction === 'left' ? -320 : 320,
         behavior: 'smooth'
       });
     }
   };
 
-  // Helper to render stars
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, i) => (
-      <Star key={i} className={`w-3 h-3 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-    ));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">You May Also Like</h2>
-          <div className="flex gap-2">
-            <button className="p-2 bg-white border border-gray-200 rounded-lg opacity-50 cursor-not-allowed">
-              <ChevronLeft size={18} />
-            </button>
-            <button className="p-2 bg-white border border-gray-200 rounded-lg opacity-50 cursor-not-allowed">
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {[1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className="flex-shrink-0 w-48 bg-white rounded-xl border border-gray-100 p-3 animate-pulse">
-              <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2 mt-1"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  if (isLoading || products.length === 0) {
+    return null;
   }
 
-  if (error || relatedProducts.length === 0) return null;
-
   return (
-    <div className="mt-10 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-
-  <div className="flex items-center justify-between mb-5">
-    <div className="flex items-center gap-2">
-      <div className="w-1 h-5 bg-primary-500 rounded-full" />
-      <h2 className="text-base font-bold text-gray-900">You May Also Like</h2>
-    </div>
-    <div className="flex gap-2">
-      <button
-        onClick={() => scroll('left')}
-        className="w-8 h-8 bg-gray-50 border border-gray-200 hover:border-primary-300 hover:bg-primary-50 rounded-xl flex items-center justify-center transition-all hover:scale-105"
-      >
-        <ChevronLeft size={16} className="text-gray-600" />
-      </button>
-      <button
-        onClick={() => scroll('right')}
-        className="w-8 h-8 bg-gray-50 border border-gray-200 hover:border-primary-300 hover:bg-primary-50 rounded-xl flex items-center justify-center transition-all hover:scale-105"
-      >
-        <ChevronRight size={16} className="text-gray-600" />
-      </button>
-    </div>
-  </div>
-
-  <div
-    ref={scrollRef}
-    className="flex gap-3 overflow-x-auto pb-2 scroll-smooth"
-    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-  >
-    {relatedProducts.map((product) => (
-      <Link
-        key={product.id}
-        href={`/product/${product.slug || product.id}`}
-        className="flex-shrink-0 w-44 group"
-      >
-        <div className="bg-white rounded-2xl border border-gray-100 hover:border-primary-100 hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1">
-          <div className="aspect-square bg-gray-50 overflow-hidden relative">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-              onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-            />
-            {product.discount && (
-              <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                -{product.discount}%
-              </div>
-            )}
-          </div>
-          <div className="p-3">
-            <h3 className="font-semibold text-gray-800 text-xs line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors mb-1.5">
-              {product.name}
-            </h3>
-            <div className="flex items-center gap-1 mb-2">
-              <div className="flex items-center gap-0.5">
-                {renderStars(product.rating)}
-              </div>
-              <span className="text-[10px] text-gray-400 font-medium">{product.rating}</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-bold text-primary-600">₹{product.price}</span>
-              {product.originalPrice && product.originalPrice > product.price && (
-                <span className="text-xs text-gray-400 line-through">₹{product.originalPrice}</span>
-              )}
-            </div>
-            {product.discount && (
-              <span className="text-[10px] text-green-600 font-semibold">{product.discount}% off</span>
-            )}
-          </div>
+    <div className="space-y-4 pt-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <span>Related Wholesale Lots</span>
+            <span className="text-xs bg-primary-100 text-primary-900 font-bold px-2 py-0.5 rounded-full hidden sm:inline">
+              Verified Mill Batches
+            </span>
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">Explore similar bulk items in the same fabric category</p>
         </div>
-      </Link>
-    ))}
-  </div>
-</div>
+
+        {/* Carousel Arrow Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => scroll('left')}
+            className="w-9 h-9 rounded-full bg-white border border-primary-200 text-primary-900 flex items-center justify-center shadow-xs hover:border-primary-400 hover:shadow-sm transition-all cursor-pointer"
+            title="Scroll left"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => scroll('right')}
+            className="w-9 h-9 rounded-full bg-white border border-primary-200 text-primary-900 flex items-center justify-center shadow-xs hover:border-primary-400 hover:shadow-sm transition-all cursor-pointer"
+            title="Scroll right"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Carousel Track */}
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-3 pt-1 no-scrollbar scroll-smooth"
+      >
+        {products.map((prod) => {
+          const price = parseFloat(prod.price || 0);
+          const comparePrice = parseFloat(prod.compare_price || 0);
+          const hasDiscount = comparePrice > price;
+
+          return (
+            <Link
+              key={prod.id}
+              href={`/productdetail/${prod.id}`}
+              className="flex-shrink-0 w-64 sm:w-72 bg-white rounded-2xl border border-primary-100 overflow-hidden hover:border-primary-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col group"
+            >
+              {/* Product Image */}
+              <div className="relative aspect-square bg-gray-50 overflow-hidden">
+                <img
+                  src={resolveImg(prod)}
+                  alt={prod.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=400&q=80';
+                  }}
+                />
+
+                {hasDiscount && (
+                  <span className="absolute top-2.5 left-2.5 bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs">
+                    Wholesale Deal
+                  </span>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
+                <div>
+                  <span className="text-[10px] font-bold text-primary-700 uppercase tracking-wider block">
+                    {prod.category_name || 'Direct Mill'}
+                  </span>
+                  <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-primary-700 transition-colors">
+                    {prod.name}
+                  </h3>
+                </div>
+
+                <div className="flex items-baseline justify-between pt-1 border-t border-gray-100">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-black text-primary-900">
+                      ₹{price.toLocaleString()}
+                    </span>
+                    {hasDiscount && (
+                      <span className="text-xs text-gray-400 line-through">
+                        ₹{comparePrice.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="text-[11px] font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded-md">
+                    View Spec →
+                  </span>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 }

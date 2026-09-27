@@ -2,73 +2,70 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShoppingCart, ArrowRight } from '../../../../../utils/icons';
+import { 
+  ShoppingCart, 
+  ArrowRight, 
+  Package, 
+  ShieldCheck, 
+  Truck, 
+  Store,
+  ChevronRight
+} from '@/utils/icons';
 
 export default function EmptyCart() {
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4 py-16">
-      <div className="text-center max-w-sm mx-auto">
-
-        {/* Icon with rings */}
-        <div className="relative flex items-center justify-center mb-8">
-          {/* Outer pulse ring */}
-          <div className="absolute w-40 h-40 rounded-full bg-primary-50 animate-ping opacity-20" />
-          {/* Middle ring */}
-          <div className="absolute w-36 h-36 rounded-full bg-primary-50 border border-primary-100" />
-          {/* Inner ring */}
-          <div className="absolute w-28 h-28 rounded-full bg-primary-50 border border-primary-100" />
-          {/* Icon circle */}
-          <div className="relative w-24 h-24 rounded-full bg-primary-100 border-2 border-primary-200 flex items-center justify-center z-10 shadow-lg shadow-primary-100">
-            <ShoppingCart size={40} className="text-primary-500" />
+    <div className="min-h-[65vh] flex items-center justify-center px-4 py-12 sm:py-16">
+      <div className="max-w-md w-full text-center">
+        
+        {/* Luxury Icon Halo */}
+        <div className="relative inline-flex items-center justify-center mb-6">
+          <div className="absolute w-36 h-36 rounded-full bg-primary-100/60 animate-ping opacity-25 pointer-events-none" />
+          <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary-100 via-primary-50 to-white border-2 border-primary-200/80 flex items-center justify-center shadow-lg text-primary-600 relative z-10">
+            <ShoppingCart size={44} className="stroke-[1.6]" />
           </div>
-
-          {/* Floating dots */}
-          <div className="absolute top-2 right-6 w-3 h-3 rounded-full bg-primary-300 opacity-60 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '2s' }} />
-          <div className="absolute bottom-3 left-4 w-2 h-2 rounded-full bg-primary-400 opacity-50 animate-bounce" style={{ animationDelay: '400ms', animationDuration: '2.4s' }} />
-          <div className="absolute top-6 left-8 w-1.5 h-1.5 rounded-full bg-primary-200 opacity-70 animate-bounce" style={{ animationDelay: '800ms', animationDuration: '1.8s' }} />
         </div>
 
-        {/* Text */}
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
-          Your cart is empty
+        {/* Messaging */}
+        <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2.5 tracking-tight">
+          Your Wholesale Cart is Empty
         </h2>
-        <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-8 max-w-xs mx-auto">
-          Looks like you haven't added anything yet. Explore our collection and find something you love!
+        
+        <p className="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-sm mx-auto mb-8 font-normal">
+          You haven't selected any wholesale lots yet. Explore verified direct-from-mill denim, apparel, and seasonal collections at authentic wholesale rates.
         </p>
 
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
           <Link
             href="/product/productlistingpage"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white rounded-xl font-semibold text-sm
-              transition-all duration-200 hover:shadow-lg hover:shadow-primary-200 hover:-translate-y-0.5 group w-full sm:w-auto"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-98"
           >
-            Start Shopping
-            <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+            <span>Explore Wholesale Catalog</span>
+            <ArrowRight size={15} />
           </Link>
+
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-200 hover:border-primary-200 hover:bg-primary-50 text-gray-700 hover:text-primary-600 rounded-xl font-semibold text-sm
-              transition-all duration-200 w-full sm:w-auto"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-primary-50 text-gray-700 hover:text-primary-700 rounded-xl text-xs sm:text-sm font-semibold border border-gray-200 hover:border-primary-300 transition-all"
           >
-            Go Home
+            <span>Go to Homepage</span>
           </Link>
         </div>
 
-        {/* Trust strip */}
-        <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-center gap-6 flex-wrap">
-          <span className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-green-100 text-green-600 text-[9px] flex items-center justify-center font-bold">✓</span>
-            Free Shipping
-          </span>
-          <span className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-green-100 text-green-600 text-[9px] flex items-center justify-center font-bold">✓</span>
-            Secure Payments
-          </span>
-          <span className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-green-100 text-green-600 text-[9px] flex items-center justify-center font-bold">✓</span>
-            Easy Returns
-          </span>
+        {/* Trust Privileges Strip */}
+        <div className="pt-6 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+          <div className="flex flex-col items-center gap-1">
+            <Truck size={16} className="text-primary-600" />
+            <span className="text-[10px] font-bold text-gray-700">Pan-India Freight</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <ShieldCheck size={16} className="text-primary-600" />
+            <span className="text-[10px] font-bold text-gray-700">Escrow Protected</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <Store size={16} className="text-primary-600" />
+            <span className="text-[10px] font-bold text-gray-700">Direct Mill Lots</span>
+          </div>
         </div>
 
       </div>

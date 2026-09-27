@@ -1,27 +1,68 @@
 "use client";
 
 import React from 'react';
-import { Clock, CheckCircle, Truck, XCircle, Package } from '../../../../../utils/icons';
+import { Clock, CheckCircle, Truck, XCircle, Package } from '@/utils/icons';
 
 export default function OrderStatusBadge({ status }) {
-  const getStatusConfig = (status) => {
-    switch(status) {
+  const getStatusConfig = (rawStatus) => {
+    const s = String(rawStatus || '').toLowerCase();
+    switch (s) {
       case 'pending':
-        return { icon: Clock, label: 'Pending', color: 'bg-yellow-100 text-yellow-700' };
+        return { 
+          icon: Clock, 
+          label: 'Order Placed', 
+          color: 'bg-amber-50 text-amber-800 border-amber-200/90', 
+          dot: 'bg-amber-500' 
+        };
       case 'confirmed':
-        return { icon: CheckCircle, label: 'Confirmed', color: 'bg-blue-100 text-blue-700' };
+        return { 
+          icon: CheckCircle, 
+          label: 'Mill Confirmed', 
+          color: 'bg-primary-50 text-primary-900 border-primary-200/90', 
+          dot: 'bg-primary-600' 
+        };
       case 'processing':
-        return { icon: Package, label: 'Processing', color: 'bg-purple-100 text-purple-700' };
+        return { 
+          icon: Package, 
+          label: 'Packing Lot', 
+          color: 'bg-purple-50 text-purple-900 border-purple-200/90', 
+          dot: 'bg-purple-600' 
+        };
       case 'shipped':
-        return { icon: Truck, label: 'Shipped', color: 'bg-indigo-100 text-indigo-700' };
+        return { 
+          icon: Truck, 
+          label: 'In Transit', 
+          color: 'bg-sky-50 text-sky-900 border-sky-200/90', 
+          dot: 'bg-sky-500' 
+        };
       case 'out_for_delivery':
-        return { icon: Truck, label: 'Out for Delivery', color: 'bg-orange-100 text-orange-700' };
+        return { 
+          icon: Truck, 
+          label: 'Out for Delivery', 
+          color: 'bg-orange-50 text-orange-900 border-orange-200/90', 
+          dot: 'bg-orange-500' 
+        };
       case 'delivered':
-        return { icon: CheckCircle, label: 'Delivered', color: 'bg-green-100 text-green-700' };
+        return { 
+          icon: CheckCircle, 
+          label: 'Delivered & Verified', 
+          color: 'bg-emerald-50 text-emerald-900 border-emerald-200/90', 
+          dot: 'bg-emerald-600' 
+        };
       case 'cancelled':
-        return { icon: XCircle, label: 'Cancelled', color: 'bg-red-100 text-red-700' };
+        return { 
+          icon: XCircle, 
+          label: 'Cancelled', 
+          color: 'bg-rose-50 text-rose-800 border-rose-200/90', 
+          dot: 'bg-rose-500' 
+        };
       default:
-        return { icon: Package, label: status, color: 'bg-gray-100 text-gray-700' };
+        return { 
+          icon: Package, 
+          label: rawStatus || 'Order Active', 
+          color: 'bg-gray-50 text-gray-800 border-gray-200', 
+          dot: 'bg-gray-500' 
+        };
     }
   };
 
@@ -29,9 +70,10 @@ export default function OrderStatusBadge({ status }) {
   const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
-      <Icon size={12} />
-      {config.label}
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs tracking-wide ${config.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dot} animate-pulse`} />
+      <Icon size={12} className="flex-shrink-0" />
+      <span>{config.label}</span>
     </span>
   );
 }

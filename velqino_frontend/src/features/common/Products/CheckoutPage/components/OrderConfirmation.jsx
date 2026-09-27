@@ -1,81 +1,176 @@
 "use client";
 
 import React from 'react';
-import { useCreateOrderMutation } from '@/redux/wholesaler/slices/ordersSlice';
-import { CheckCircle, Lock, Loader2 } from '../../../../../utils/icons';
+import { useRouter } from 'next/navigation';
+import { 
+  CheckCircle, 
+  Lock, 
+  Loader2, 
+  ShieldCheck, 
+  Truck, 
+  MapPin, 
+  Wallet, 
+  ArrowLeft,
+  FileText
+} from '@/utils/icons';
 import { toast } from 'react-toastify';
 
-export default function OrderConfirmation({ currentStep, selectedAddress, deliveryType, paymentMethod, onBack, onPlaceOrder, isPlacingOrder }) {
+export default function OrderConfirmation({ 
+  currentStep, 
+  selectedAddress, 
+  deliveryType, 
+  paymentMethod, 
+  onBack, 
+  onPlaceOrder, 
+  isPlacingOrder 
+}) {
+  const router = useRouter();
+
+  // Active only on Step 3
   if (currentStep !== 3) return null;
 
   const handlePlaceOrderClick = () => {
-  const token = localStorage.getItem('access');
-  const userRole = localStorage.getItem('user_role');
-  
-  if (!token) {
-    toast.warning('⚠️ Please login to place order', {
-      position: "top-center",
-      autoClose: 3000,
-      onClick: () => router.push('/login')
-    });
-    return;
-  }
-  
-  // ✅ Only block wholesalers
-  if (userRole === 'wholesaler') {
-    toast.error('❌ Wholesalers cannot place orders. Only customers and retailers can place orders.', {
-      position: "top-center",
-      autoClose: 4000
-    });
-    return;
-  }
-  
-  // ✅ Allow customers and retailers
-  if (userRole === 'customer' || userRole === 'retailer') {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access') : null;
+    const userRole = typeof window !== 'undefined' ? localStorage.getItem('user_role') : null;
+    
+    if (!token) {
+      toast.warning('Please sign in to place your wholesale order', {
+        position: "top-center",
+        autoClose: 3000,
+        onClick: () => router.push('/login')
+      });
+      router.push('/login');
+      return;
+    }
+    
+    // Only block wholesalers if rule applies
+    if (userRole === 'wholesaler') {
+      toast.error('Wholesaler accounts cannot place orders. Only registered retailers and business buyers can place orders.', {
+        position: "top-center",
+        autoClose: 4000
+      });
+      return;
+    }
+    
     onPlaceOrder();
-  } else {
-    toast.error('❌ Invalid user role. Please login again.');
-  }
-};
+  };
+
+  const paymentLabels = {
+    cod: 'Cash on Delivery',
+    upi: 'Instant UPI Payment',
+    card: 'Credit / Debit Card',
+    netbanking: 'Net Banking'
+  };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-gray-100 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-          <CheckCircle size={16} />
+    <div className="checkout-card">
+      <div className="checkout-card-header flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-primary-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs">
+          3
         </div>
-        <h2 className="font-semibold text-gray-900">Confirm Order</h2>
+        <div>
+          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+            Review & Place Order
+          </h2>
+          <p className="text-[11px] text-gray-500">
+            Please verify all order specifications before placing your order
+          </p>
+        </div>
       </div>
       
-      <div className="p-5 space-y-4">
-        <div className="flex justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-600 text-sm">Delivery to</span>
-          <span className="font-medium text-gray-900 text-sm text-right">{selectedAddress?.full_name}, {selectedAddress?.city}</span>
-        </div>
-        <div className="flex justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-600 text-sm">Delivery Type</span>
-          <span className="font-medium text-gray-900 text-sm capitalize">{deliveryType}</span>
-        </div>
-        <div className="flex justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-600 text-sm">Payment Method</span>
-          <span className="font-medium text-gray-900 text-sm capitalize">{paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod}</span>
-        </div>
+      <div className="p-4 sm:p-6 space-y-4">
         
-        <div className="flex gap-3 pt-4">
-          <button onClick={onBack} className="flex-1 py-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">Back</button>
+        {/* Verification Summary Tiles */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          
+          {/* Destination Address */}
+          <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+              <MapPin size={13} className="text-primary-600" />
+              <span>Delivery Address</span>
+            </div>
+            <p className="text-sm font-bold text-gray-900 truncate">
+              {selectedAddress?.full_name}
+            </p>
+            <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">
+              {selectedAddress?.street}, {selectedAddress?.city} - {selectedAddress?.pincode}
+            </p>
+          </div>
+
+          {/* Delivery Option */}
+          <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+              <Truck size={13} className="text-primary-600" />
+              <span>Delivery Option</span>
+            </div>
+            <p className="text-sm font-bold text-gray-900">
+              {deliveryType === 'express' ? 'Priority Express Delivery' : 'Standard Delivery'}
+            </p>
+            <p className="text-xs text-gray-600 mt-0.5">
+              {deliveryType === 'express' ? '2-3 Business Days (+ ₹99.00)' : '5-7 Business Days (FREE)'}
+            </p>
+          </div>
+
+          {/* Payment Method */}
+          <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 sm:col-span-2">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+              <Wallet size={13} className="text-primary-600" />
+              <span>Payment Method</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-900">
+                {paymentLabels[paymentMethod] || paymentMethod}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                Verified Payment
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Security / Escrow Callout */}
+        <div className="p-4 bg-emerald-50/70 border border-emerald-200/90 rounded-2xl flex items-start gap-3">
+          <ShieldCheck size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-emerald-900 space-y-1">
+            <h4 className="font-bold">100% Escrow Trade Assurance Active</h4>
+            <p className="text-emerald-800/90 leading-relaxed">
+              Your wholesale payment is protected until verified delivery. Includes automated GST tax invoice dispatch upon fulfillment.
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="pt-2 flex items-center gap-3">
           <button 
+            type="button"
+            onClick={onBack} 
+            className="checkout-btn-secondary px-4 py-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5"
+          >
+            <ArrowLeft size={14} />
+            <span>Back</span>
+          </button>
+          
+          <button 
+            type="button"
             onClick={handlePlaceOrderClick}
             disabled={isPlacingOrder}
-            className={`flex-1 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
-              (localStorage.getItem('user_role') === 'retailer' || localStorage.getItem('user_role') === 'customer')
-                ? 'bg-green-600 text-white hover:bg-green-700' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            className="checkout-btn-primary flex-1 py-3.5 text-sm sm:text-base flex items-center justify-center gap-2"
           >
-            {isPlacingOrder ? <Loader2 size={18} className="animate-spin" /> : <Lock size={16} />}
-            {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+            {isPlacingOrder ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                <span>Securing Order...</span>
+              </>
+            ) : (
+              <>
+                <Lock size={16} />
+                <span>Place Wholesale Order</span>
+              </>
+            )}
           </button>
         </div>
+
       </div>
     </div>
   );

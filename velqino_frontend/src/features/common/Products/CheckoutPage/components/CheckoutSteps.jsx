@@ -1,41 +1,50 @@
 "use client";
 
 import React from 'react';
-import { MapPin, CreditCard, CheckCircle } from '../../../../../utils/icons';
+import { MapPin, Truck, CreditCard, ShieldCheck, CheckCircle } from '@/utils/icons';
 
 export default function CheckoutSteps({ currentStep, setCurrentStep }) {
   const steps = [
     { id: 1, name: 'Address', icon: MapPin },
-    { id: 2, name: 'Payment', icon: CreditCard },
-    { id: 3, name: 'Confirm', icon: CheckCircle }
+    { id: 2, name: 'Delivery & Payment', icon: CreditCard },
+    { id: 3, name: 'Confirm Order', icon: ShieldCheck }
+    /* Future Hub Logistics 4-step flow (uncomment when backend hub API is implemented):
+    { id: 1, name: 'Delivery Hub', icon: MapPin },
+    { id: 2, name: 'Freight Speed', icon: Truck },
+    { id: 3, name: 'Payment Method', icon: CreditCard },
+    { id: 4, name: 'Escrow Confirm', icon: ShieldCheck }
+    */
   ];
 
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between max-w-2xl mx-auto">
-        {steps.map((step, index) => (
+    <div className="checkout-stepper">
+      {steps.map((step, index) => {
+        const isCompleted = currentStep > step.id;
+        const isActive = currentStep === step.id;
+
+        return (
           <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center cursor-pointer" onClick={() => currentStep >= step.id && setCurrentStep(step.id)}>
-              <div className={`
-                w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all
-                ${currentStep >= step.id 
-                  ? 'bg-primary-500 text-white shadow-lg' 
-                  : 'bg-gray-200 text-gray-500'}
-              `}>
-                {currentStep > step.id ? <CheckCircle size={18} /> : step.id}
+            <div 
+              className={`step-item ${isActive ? 'step-active' : ''} ${isCompleted ? 'step-completed' : ''}`}
+              onClick={() => isCompleted && setCurrentStep(step.id)}
+              role="button"
+              tabIndex={isCompleted ? 0 : -1}
+              title={isCompleted ? `Return to ${step.name}` : step.name}
+            >
+              <div className="step-number">
+                {isCompleted ? <CheckCircle size={13} className="text-emerald-600" /> : step.id}
               </div>
-              <span className={`text-xs mt-2 font-medium ${currentStep >= step.id ? 'text-primary-600' : 'text-gray-400'}`}>
-                {step.name}
-              </span>
+              <span className="hidden sm:inline">{step.name}</span>
             </div>
+
             {index < steps.length - 1 && (
-              <div className="flex-1 h-0.5 bg-gray-200 mx-2">
-                <div className={`h-full bg-primary-500 transition-all duration-300 ${currentStep > step.id ? 'w-full' : 'w-0'}`} />
-              </div>
+              <div 
+                className={`step-divider ${currentStep > step.id ? 'step-divider-active' : ''}`} 
+              />
             )}
           </React.Fragment>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
