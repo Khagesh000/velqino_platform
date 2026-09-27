@@ -479,86 +479,92 @@ function RegistrationFormContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50/40 via-surface-0 to-surface-1 py-10 sm:py-16">
-      <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50/40 via-surface-0 to-surface-1 py-6 sm:py-10 lg:py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-secondary-600 hover:text-primary-700 transition-colors"
           >
             <span>← Back to Store</span>
           </Link>
-          <div className="flex items-center gap-2 text-xs font-medium text-secondary-500">
+          <div className="flex items-center gap-2 text-xs font-semibold text-secondary-500">
             <span>Wholesale Network</span>
             <span>•</span>
-            <span className="text-primary-600 font-semibold">Step {currentStep} of 5</span>
+            <span className="text-primary-700 font-bold">Step {currentStep} of 5</span>
           </div>
         </div>
 
-        {/* Hero Header */}
-        <div className="text-center max-w-xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary-100/70 border border-primary-200 text-primary-800 text-xs font-bold tracking-wide uppercase mb-3 shadow-2xs">
-            <Store size={14} className="text-primary-600" />
-            <span>Vendor Partner Registration</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-secondary-900 tracking-tight">
-            Register as a Verified Wholesaler
-          </h1>
-          <p className="text-sm sm:text-base text-secondary-600 mt-2.5 leading-relaxed">
-            Expand your wholesale business to verified retailers with automated B2B invoicing, fast settlements, and dedicated supplier support.
-          </p>
-        </div>
+        {/* 60/40 Split Grid on Laptop/Large Screens; Natural Stack on Mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+          
+          {/* Left Column (60-65%): Header + Stepper + Form */}
+          <div className="lg:col-span-7 xl:col-span-7 space-y-6">
 
-        {/* Multi-Step Stepper Header */}
-        <div className="mb-10 px-2 sm:px-6">
-          <div className="flex items-center justify-between relative">
-            {/* Background connecting bar */}
-            <div className="absolute top-5 left-6 right-6 h-1 bg-secondary-200 -z-0">
-              <div 
-                className="h-full bg-primary-600 transition-all duration-300"
-                style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
-              />
+            {/* Hero Header (Left-aligned, sleek, visible above the fold on laptop) */}
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-100/80 border border-primary-200 text-primary-800 text-xs font-bold tracking-wide uppercase shadow-2xs">
+                <Store size={14} className="text-primary-600" />
+                <span>Vendor Partner Registration</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-secondary-900 tracking-tight">
+                Register as a Verified Wholesaler
+              </h1>
+              <p className="text-xs sm:text-sm text-secondary-600 leading-relaxed max-w-2xl">
+                Expand your wholesale business to verified retailers with automated B2B invoicing, fast settlements, and dedicated supplier support.
+              </p>
             </div>
 
-            {steps.map((s) => {
-              const isPassed = currentStep > s.number;
-              const isCurrent = currentStep === s.number;
-              const StepIcon = s.icon;
-
-              return (
-                <div key={s.number} className="flex flex-col items-center relative z-10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (s.number < currentStep) setCurrentStep(s.number);
-                    }}
-                    disabled={s.number > currentStep}
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-bold text-sm transition-all duration-300 shadow-sm ${
-                      isPassed
-                        ? 'bg-emerald-600 text-white border-2 border-emerald-600'
-                        : isCurrent
-                        ? 'bg-primary-600 text-white border-2 border-primary-600 ring-4 ring-primary-100'
-                        : 'bg-white text-secondary-400 border-2 border-secondary-200 cursor-not-allowed'
-                    }`}
-                  >
-                    {isPassed ? <Check size={18} /> : <StepIcon size={18} />}
-                  </button>
-                  <span className={`text-[11px] sm:text-xs font-semibold mt-2 hidden sm:block ${
-                    isCurrent ? 'text-primary-700' : isPassed ? 'text-emerald-700' : 'text-secondary-400'
-                  }`}>
-                    {s.name}
-                  </span>
+            {/* Multi-Step Stepper Header */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-primary-100 shadow-2xs">
+              <div className="flex items-center justify-between relative px-2">
+                {/* Background connecting bar */}
+                <div className="absolute top-4 sm:top-5 left-6 right-6 h-1 bg-secondary-200 -z-0">
+                  <div 
+                    className="h-full bg-primary-600 transition-all duration-300"
+                    style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
+                  />
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-3xl shadow-xl border border-primary-200/60 p-6 sm:p-10 relative overflow-hidden">
-          {/* Top accent line */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-700" />
+                {steps.map((s) => {
+                  const isPassed = currentStep > s.number;
+                  const isCurrent = currentStep === s.number;
+                  const StepIcon = s.icon;
+
+                  return (
+                    <div key={s.number} className="flex flex-col items-center relative z-10">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (s.number < currentStep) setCurrentStep(s.number);
+                        }}
+                        disabled={s.number > currentStep}
+                        className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold text-xs sm:text-sm transition-all duration-300 shadow-sm ${
+                          isPassed
+                            ? 'bg-emerald-600 text-white border-2 border-emerald-600'
+                            : isCurrent
+                            ? 'bg-primary-600 text-white border-2 border-primary-600 ring-4 ring-primary-100'
+                            : 'bg-white text-secondary-400 border-2 border-secondary-200 cursor-not-allowed'
+                        }`}
+                      >
+                        {isPassed ? <Check size={16} /> : <StepIcon size={16} />}
+                      </button>
+                      <span className={`text-[10px] sm:text-xs font-semibold mt-1.5 hidden sm:block ${
+                        isCurrent ? 'text-primary-700' : isPassed ? 'text-emerald-700' : 'text-secondary-400'
+                      }`}>
+                        {s.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Form Card */}
+            <div className="bg-white rounded-3xl shadow-xl border border-primary-200/60 p-5 sm:p-8 relative overflow-hidden">
+              {/* Top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-700" />
 
           {/* General Error Banner */}
           {generalError && (
@@ -1342,62 +1348,181 @@ function RegistrationFormContent() {
             </div>
           </div>
 
-          {/* Sign In Trigger */}
-          <div className="text-center">
+          {/* Mobile-only Sign In Trigger */}
+          <div className="lg:hidden text-center mt-6 pt-6 border-t border-secondary-100">
             <button
               type="button"
               onClick={() => setIsLoginModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-primary-200 text-primary-700 font-bold text-sm hover:bg-primary-50 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-primary-200 text-primary-700 font-bold text-xs hover:bg-primary-50 transition-colors"
             >
               <span>Sign In to Existing Wholesaler Account</span>
-              <ArrowRight size={15} />
+              <ArrowRight size={14} />
             </button>
           </div>
         </div>
 
-        {/* Benefits Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+        {/* Mobile-only Benefits Grid */}
+        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-6">
           <div className="p-4 bg-white rounded-2xl border border-primary-100/70 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100/70 flex items-center justify-center text-primary-700 flex-shrink-0">
-              <ShieldCheck size={20} />
+            <div className="w-9 h-9 rounded-xl bg-primary-100/70 flex items-center justify-center text-primary-700 flex-shrink-0">
+              <ShieldCheck size={18} />
             </div>
             <div>
               <h4 className="text-xs font-bold text-secondary-800">Guaranteed Settlements</h4>
-              <p className="text-[11px] text-secondary-500 mt-0.5">Automated payouts upon delivery</p>
+              <p className="text-[11px] text-secondary-500">Automated payouts upon delivery</p>
             </div>
           </div>
 
           <div className="p-4 bg-white rounded-2xl border border-primary-100/70 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100/70 flex items-center justify-center text-primary-700 flex-shrink-0">
-              <Award size={20} />
+            <div className="w-9 h-9 rounded-xl bg-primary-100/70 flex items-center justify-center text-primary-700 flex-shrink-0">
+              <Award size={18} />
             </div>
             <div>
               <h4 className="text-xs font-bold text-secondary-800">Direct Retail Connections</h4>
-              <p className="text-[11px] text-secondary-500 mt-0.5">Verified buyers across India</p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-white rounded-2xl border border-primary-100/70 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100/70 flex items-center justify-center text-primary-700 flex-shrink-0">
-              <Package size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-secondary-800">Custom MOQ Controls</h4>
-              <p className="text-[11px] text-secondary-500 mt-0.5">Set minimums and tiered discounts</p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-white rounded-2xl border border-primary-100/70 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100/70 flex items-center justify-center text-primary-700 flex-shrink-0">
-              <Building size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-secondary-800">Tax Invoicing Automation</h4>
-              <p className="text-[11px] text-secondary-500 mt-0.5">Instant compliant B2B invoices</p>
+              <p className="text-[11px] text-secondary-500">10,000+ verified buyers across India</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Right Column (35-40%): Sticky Information Sidebar on Large Screens */}
+      <div className="hidden lg:block lg:col-span-5 xl:col-span-5 lg:sticky lg:top-20 space-y-6">
+        
+        {/* Sidebar Card 1: Wholesaler Partner Advantage */}
+        <div className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+          <div className="relative z-10 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center">
+              <Building size={24} className="text-white" />
+            </div>
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary-200">
+                Velqino Supplier Hub
+              </span>
+              <h3 className="text-xl font-extrabold text-white mt-0.5">
+                Wholesale Supplier Network
+              </h3>
+              <p className="text-xs text-primary-100/90 mt-1 leading-relaxed">
+                Reach verified retail store owners across India with automated order dispatch, instant settlements, and zero sales commissions for 30 days.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2 border-t border-white/15">
+              <div className="flex items-start gap-2.5 text-xs text-white/95">
+                <CheckCircle size={16} className="text-primary-200 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-semibold">10,000+ Verified Retail Buyers</strong>
+                  <span className="text-primary-100/80">Direct B2B purchase orders without brokers or distributors.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs text-white/95">
+                <CheckCircle size={16} className="text-primary-200 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-semibold">Guaranteed Direct Bank Payouts</strong>
+                  <span className="text-primary-100/80">Fast bank settlements released right after verified delivery.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs text-white/95">
+                <CheckCircle size={16} className="text-primary-200 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-semibold">Automated GST & E-Way Billing</strong>
+                  <span className="text-primary-100/80">Fully compliant invoices generated automatically per order.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Card 2: Interactive Step Progress Checklist */}
+        <div className="bg-white rounded-3xl p-6 border border-secondary-200/80 shadow-md">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-secondary-100">
+            <h4 className="text-xs font-bold text-secondary-900 uppercase tracking-wider">
+              Onboarding Checklist
+            </h4>
+            <span className="text-xs font-bold text-primary-600">
+              {currentStep} / 5 Completed
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {steps.map((s) => {
+              const isPassed = currentStep > s.number;
+              const isCurrent = currentStep === s.number;
+              const StepIcon = s.icon;
+
+              return (
+                <div
+                  key={s.number}
+                  className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                    isCurrent
+                      ? 'bg-primary-50/80 border border-primary-200/80 text-primary-900 font-bold'
+                      : isPassed
+                      ? 'bg-secondary-50/60 text-secondary-700 font-medium'
+                      : 'text-secondary-400 opacity-70'
+                  }`}
+                >
+                  <div
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
+                      isPassed
+                        ? 'bg-emerald-600 text-white'
+                        : isCurrent
+                        ? 'bg-primary-600 text-white ring-2 ring-primary-200'
+                        : 'bg-secondary-200 text-secondary-500'
+                    }`}
+                  >
+                    {isPassed ? <Check size={14} /> : <span>{s.number}</span>}
+                  </div>
+                  <div className="text-xs flex-1">
+                    <span>{s.name}</span>
+                  </div>
+                  {isCurrent && (
+                    <span className="text-[10px] uppercase font-bold text-primary-600 px-2 py-0.5 rounded-full bg-primary-100">
+                      Active
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sidebar Card 3: Already have an account? Sign In */}
+        <div className="bg-white rounded-3xl p-6 border border-secondary-200/80 shadow-md">
+          <div className="flex items-center gap-3 mb-2.5">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700">
+              <Store size={20} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-secondary-900">Existing Wholesaler?</h4>
+              <p className="text-xs text-secondary-500">Access your supplier dashboard</p>
+            </div>
+          </div>
+          <p className="text-xs text-secondary-600 mb-4 leading-relaxed">
+            Already verified on Velqino? Sign in to manage your wholesale catalog, process retail orders, and view settlement status.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsLoginModalOpen(true)}
+            className="w-full py-3 px-4 rounded-xl border-2 border-primary-200 hover:border-primary-400 bg-primary-50/60 hover:bg-primary-50 text-primary-700 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-2xs"
+          >
+            <span>Sign in to Wholesaler Portal</span>
+            <ArrowRight size={15} />
+          </button>
+        </div>
+
+        {/* Sidebar Card 4: Supplier Trust & Protection */}
+        <div className="bg-secondary-50/70 rounded-3xl p-5 border border-secondary-200/80 space-y-2.5">
+          <div className="flex items-center gap-2 text-secondary-900 font-bold text-xs">
+            <ShieldCheck size={17} className="text-emerald-600" />
+            <span>Supplier Protection Guarantee</span>
+          </div>
+          <p className="text-[11px] text-secondary-600 leading-relaxed">
+            Velqino verifies retail buyers before orders are placed. All payments are secured in escrow and settled promptly into your linked business account.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 
       {/* Embedded Wholesaler Login Modal */}
       <WholesalerLoginModal
