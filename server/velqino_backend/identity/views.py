@@ -739,12 +739,12 @@ def unblock_retailer(request, id):
 
 # identity/views.py
 
-# ✅ ADD Customer Registration
+# ✅ Customer Registration
 @api_view(['POST'])
-#@ratelimit(key='ip', rate='10/hour', method='POST')
 def register_customer(request):
     """
     Register a new customer (automatically sets role='customer')
+    with comprehensive validation and structured error responses.
     """
     try:
         serializer = CustomerRegisterSerializer(data=request.data)
@@ -753,11 +753,12 @@ def register_customer(request):
             with transaction.atomic():
                 user = serializer.save()
                 
-                # Create empty customer profile
+                # Create customer profile
                 CustomerProfile.objects.create(
                     user=user,
                     full_name=user.username,
                     phone=user.mobile,
+                    date_of_birth=user.date_of_birth,
                     address_line1="",
                     city="",
                     state="",
@@ -770,15 +771,32 @@ def register_customer(request):
                 
                 return Response({
                     'status': 'success',
-                    'message': 'Customer registered successfully',
+                    'message': 'Account created successfully! Welcome to Velqino.',
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
                     'user_id': user.id,
-                    'role': 'customer'
+                    'role': 'customer',
+                    'data': {
+                        'id': user.id,
+                        'email': user.email,
+                        'username': user.username,
+                        'full_name': user.username,
+                        'mobile': user.mobile
+                    }
                 }, status=status.HTTP_201_CREATED)
         else:
+            first_error = None
+            for field, err_list in serializer.errors.items():
+                if isinstance(err_list, list) and len(err_list) > 0:
+                    first_error = str(err_list[0])
+                    break
+                elif isinstance(err_list, str):
+                    first_error = err_list
+                    break
+            
             return Response({
                 'status': 'error',
+                'message': first_error or 'Validation failed. Please correct the highlighted errors.',
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
             
@@ -786,49 +804,101 @@ def register_customer(request):
         logger.error(f"Customer registration failed: {e}")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': str(e) or 'Registration failed due to a server error. Please try again.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ✅ ADD Customer Login (same as retailer/wholesaler, just check role)
+# ✅ Customer Login
 @api_view(['POST'])
 def customer_login(request):
     """
-    Customer login
+    Customer login with case-insensitive email lookup, role verification,
+    and structured field-level error messages.
     """
     try:
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = request.data.get('email', '').strip().lower()
+        password = request.data.get('password', '')
         
-        user = User.objects.filter(email=email).first()
-        
-        if not user or not user.check_password(password):
+        errors = {}
+        if not email:
+            errors['email'] = ['Email address is required.']
+        if not password:
+            errors['password'] = ['Password is required.']
+            
+        if errors:
             return Response({
                 'status': 'error',
-                'message': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+                'message': 'Please provide both email and password.',
+                'errors': errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = User.objects.filter(email__iexact=email).first()
         
+        if not user:
+            return Response({
+                'status': 'error',
+                'message': 'No account found with this email address. Please check your email or register.',
+                'errors': {'email': ['No account found with this email address.']}
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if not user.check_password(password):
+            return Response({
+                'status': 'error',
+                'message': 'Incorrect password. Please verify and try again.',
+                'errors': {'password': ['Incorrect password. Please verify and try again.']}
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if not user.is_active:
+            return Response({
+                'status': 'error',
+                'message': 'Your account is deactivated. Please contact customer support.',
+                'errors': {'general': ['Your account is deactivated. Please contact customer support.']}
+            }, status=status.HTTP_403_FORBIDDEN)
+            
         if user.role != 'customer':
             return Response({
                 'status': 'error',
-                'message': 'Account is not a customer account'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+                'message': f'This email is registered as a {user.role.title()}. Please sign in using the {user.role.title()} portal.',
+                'errors': {'general': [f'This email is registered as a {user.role.title()}. Please sign in using the {user.role.title()} portal.']}
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Ensure CustomerProfile exists
+        profile, _ = CustomerProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'full_name': user.username,
+                'phone': user.mobile,
+                'date_of_birth': user.date_of_birth,
+                'address_line1': '',
+                'city': '',
+                'state': '',
+                'pincode': ''
+            }
+        )
         
         refresh = RefreshToken.for_user(user)
         
         return Response({
             'status': 'success',
+            'message': 'Welcome back! Logged in successfully.',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user_id': user.id,
-            'role': 'customer'
+            'role': 'customer',
+            'data': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username,
+                'full_name': profile.full_name or user.username,
+                'mobile': user.mobile
+            }
         })
         
     except Exception as e:
         logger.error(f"Customer login failed: {e}")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': 'An unexpected error occurred during login. Please try again.'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 

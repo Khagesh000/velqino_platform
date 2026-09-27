@@ -13,7 +13,7 @@ export const customerApi = createApi({
                     const response = await customerAPI.registerCustomer(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || { message: error.message || 'Registration failed' } };
                 }
             },
         }),
@@ -25,7 +25,7 @@ export const customerApi = createApi({
                     const response = await customerAPI.loginCustomer(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return { error: error.response?.data || { message: error.message || 'Login failed' } };
                 }
             },
         }),

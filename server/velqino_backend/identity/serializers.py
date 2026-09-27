@@ -1,3 +1,5 @@
+import re
+from datetime import date
 from rest_framework import serializers
 from .models import User, WholesalerProfile, RetailerProfile, CustomerProfile, Address
 
@@ -223,11 +225,28 @@ class RetailerProfileUpdateSerializer(serializers.ModelSerializer):
 # identity/serializers.py
 
 class CustomerRegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-    confirm_password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            'min_length': 'Password must be at least 8 characters long.',
+            'blank': 'Password cannot be blank.',
+            'required': 'Password is required.'
+        }
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            'min_length': 'Confirm password must be at least 8 characters long.',
+            'blank': 'Confirm password cannot be blank.',
+            'required': 'Please confirm your password.'
+        }
+    )
     date_of_birth = serializers.DateField(
         required=False,
-        allow_null=True
+        allow_null=True,
+        error_messages={'invalid': 'Please enter a valid date of birth.'}
     )
 
     class Meta:
@@ -240,21 +259,71 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
             'username',
             'date_of_birth'
         ]
+        extra_kwargs = {
+            'email': {'required': True, 'error_messages': {'required': 'Email address is required.'}},
+            'username': {'required': True, 'error_messages': {'required': 'Username is required.'}},
+            'mobile': {'required': True, 'error_messages': {'required': 'Mobile number is required.'}},
+        }
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if not email:
+            raise serializers.ValidationError("Email address is required.")
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            raise serializers.ValidationError("Please enter a valid email address.")
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("An account with this email address already exists. Please sign in or use another email.")
+        return email
+
+    def validate_username(self, value):
+        username = value.strip()
+        if not username:
+            raise serializers.ValidationError("Username is required.")
+        if len(username) < 3:
+            raise serializers.ValidationError("Username must be at least 3 characters long.")
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
+            raise serializers.ValidationError("Username can only contain letters, numbers, dots, and underscores.")
+        if User.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError("This username is already taken. Please choose another username.")
+        return username
+
+    def validate_mobile(self, value):
+        mobile = re.sub(r'[\s\-\(\)\+]', '', str(value))
+        # If entered with 91 prefix and 12 digits, extract the 10 digits
+        if len(mobile) == 12 and mobile.startswith('91'):
+            mobile = mobile[2:]
+        if not re.match(r'^[6-9]\d{9}$', mobile):
+            raise serializers.ValidationError("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
+        if User.objects.filter(mobile=mobile).exists():
+            raise serializers.ValidationError("This mobile number is already registered. Please sign in or use another number.")
+        return mobile
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if not re.search(r'[A-Za-z]', value):
+            raise serializers.ValidationError("Password must contain at least one letter.")
+        if not re.search(r'\d', value):
+            raise serializers.ValidationError("Password must contain at least one number.")
+        return value
+
+    def validate_date_of_birth(self, value):
+        if value and value > date.today():
+            raise serializers.ValidationError("Date of birth cannot be in the future.")
+        return value
 
     def validate(self, data):
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError(
-                "Passwords don't match"
-            )
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
+        if password and confirm_password and password != confirm_password:
+            raise serializers.ValidationError({
+                "confirm_password": ["Passwords do not match. Please verify your password."]
+            })
         return data
 
     def create(self, validated_data):
-        validated_data.pop('confirm_password')
-
-        date_of_birth = validated_data.pop(
-            'date_of_birth',
-            None
-        )
+        validated_data.pop('confirm_password', None)
+        date_of_birth = validated_data.pop('date_of_birth', None)
 
         user = User.objects.create_user(
             username=validated_data.get(
@@ -266,6 +335,9 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             role='customer'
         )
+        if date_of_birth:
+            user.date_of_birth = date_of_birth
+            user.save(update_fields=['date_of_birth'])
 
         return user
 
