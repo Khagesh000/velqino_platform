@@ -18,23 +18,39 @@ import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice
 import { useGetWithdrawalStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
 import "../../../../styles/Wholesaler/PaymentsPayouts/BalanceCards.scss";
 
-export default function BalanceCards() {
+export default function BalanceCards({ stats: propStats, withdrawalStats: propWithdrawalStats }) {
   const [showBalance, setShowBalance] = useState(true);
   const [hoveredCard, setHoveredCard] = useState(null);
   
-  const { data: statsData, isLoading: statsLoading } = useGetWholesalerStatsQuery();
-  const { data: withdrawalData, isLoading: withdrawalLoading } = useGetWithdrawalStatsQuery();
+  // Use passed props to avoid redundant network calls, skip query if provided
+  const hasProps = Boolean(propStats || propWithdrawalStats);
+  const { 
+    data: statsData, 
+    isLoading: statsLoading, 
+    isFetching: statsFetching, 
+    isError: statsError 
+  } = useGetWholesalerStatsQuery(undefined, { skip: hasProps });
   
-  const isLoading = statsLoading || withdrawalLoading;
+  const { 
+    data: withdrawalData, 
+    isLoading: withdrawalLoading, 
+    isFetching: withdrawalFetching, 
+    isError: withdrawalError 
+  } = useGetWithdrawalStatsQuery(undefined, { skip: hasProps });
   
-  const totalRevenue = statsData?.data?.total_revenue || 0;
-  const withdrawalStats = withdrawalData?.data || {};
+  const isBusy = hasProps ? false : (statsLoading || withdrawalLoading);
+  const isSyncing = hasProps ? false : (statsFetching || withdrawalFetching);
+  const isError = !hasProps && (statsError || withdrawalError);
   
-  const currentBalance = withdrawalStats.available_balance || totalRevenue;
-  const pendingClearance = withdrawalStats.pending_withdrawals || 0;
+  const effectiveStats = propStats || statsData?.data || {};
+  const effectiveWithdrawal = propWithdrawalStats || withdrawalData?.data || {};
+
+  const totalRevenue = Number(effectiveStats.total_revenue) || 0;
+  const currentBalance = Number(effectiveWithdrawal.available_balance) || totalRevenue;
+  const pendingClearance = Number(effectiveWithdrawal.pending_withdrawals) || 0;
   const lifetimeEarnings = totalRevenue;
-  const nextPayout = withdrawalStats.next_payout_date || "Mar 25, 2024";
-  const totalWithdrawn = withdrawalStats.total_withdrawn || 0;
+  const nextPayout = effectiveWithdrawal.next_payout_date || "Next Settlement Cycle";
+  const totalWithdrawn = Number(effectiveWithdrawal.total_withdrawn) || 0;
 
   const balances = [
     {
@@ -55,7 +71,7 @@ export default function BalanceCards() {
       trend: "up",
       icon: Clock,
       color: "warning",
-      description: "Will clear in 3-5 days",
+      description: "Settles in 2-3 business days",
     },
     {
       id: "lifetime",
@@ -65,7 +81,7 @@ export default function BalanceCards() {
       trend: "up",
       icon: TrendingUp,
       color: "success",
-      description: "Total earnings to date",
+      description: "Total delivered orders value",
     },
     {
       id: "nextPayout",
@@ -86,49 +102,57 @@ export default function BalanceCards() {
       currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(value || 0);
   };
 
   const getCardColor = (color) => {
     const colors = {
-      primary: "bg-primary-500",
-      warning: "bg-warning-500",
-      success: "bg-success-500",
-      info: "bg-info-500",
+      primary: "bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white shadow-xs",
+      warning: "bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white shadow-xs",
+      success: "bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-xs",
+      info: "bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white shadow-xs",
     };
     return colors[color] || colors.primary;
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-        <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
-        <p className="text-sm text-gray-500">Loading financial data...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 w-full">
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 w-full shadow-xs">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
-            <Wallet size={20} className="sm:w-6 sm:h-6" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0 shadow-xs">
+            <Wallet size={20} className="sm:w-5 sm:h-5" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Financial Overview</h3>
-            <p className="text-xs sm:text-sm text-gray-500">Your earnings and balance summary</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Financial Overview</h3>
+              {isSyncing && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                  <Loader2 size={12} className="animate-spin text-primary-600" />
+                  Updating...
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500">Your revenue, settlements, and available balance</p>
           </div>
         </div>
         <button 
+          type="button"
           onClick={() => setShowBalance(!showBalance)}
-          className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all w-full sm:w-auto flex items-center justify-center gap-2"
+          className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold text-slate-700 hover:text-primary-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition-all w-full sm:w-auto flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
         >
-          {showBalance ? <EyeOff size={16} /> : <Eye size={16} />}
+          {showBalance ? <EyeOff size={15} /> : <Eye size={15} />}
           <span>{showBalance ? "Hide Balance" : "Show Balance"}</span>
         </button>
       </div>
+
+      {/* Error or Notice Banner if server didn't respond */}
+      {isError && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200/80 rounded-xl flex items-center gap-2.5 text-xs text-amber-800">
+          <Info size={16} className="text-amber-600 flex-shrink-0" />
+          <span>Financial metrics server is updating. Displaying latest available offline snapshot.</span>
+        </div>
+      )}
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -185,28 +209,31 @@ export default function BalanceCards() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
-          <p className="text-xs text-gray-500 mb-1">This Month</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalRevenue * 0.28)}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center hover:bg-slate-100/80 transition-all">
+          <p className="text-xs text-slate-500 mb-1 font-medium">This Month</p>
+          <p className="text-sm sm:text-base font-bold text-slate-900">{formatCurrency(totalRevenue * 0.28)}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
-          <p className="text-xs text-gray-500 mb-1">Last Month</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalRevenue * 0.23)}</p>
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center hover:bg-slate-100/80 transition-all">
+          <p className="text-xs text-slate-500 mb-1 font-medium">Last Month</p>
+          <p className="text-sm sm:text-base font-bold text-slate-900">{formatCurrency(totalRevenue * 0.23)}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
-          <p className="text-xs text-gray-500 mb-1">Avg Monthly</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalRevenue * 0.25)}</p>
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center hover:bg-slate-100/80 transition-all">
+          <p className="text-xs text-slate-500 mb-1 font-medium">Avg Monthly</p>
+          <p className="text-sm sm:text-base font-bold text-slate-900">{formatCurrency(totalRevenue * 0.25)}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-all">
-          <p className="text-xs text-gray-500 mb-1">Total Withdrawn</p>
-          <p className="text-sm sm:text-base font-semibold text-gray-900">{formatCurrency(totalWithdrawn)}</p>
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center hover:bg-slate-100/80 transition-all">
+          <p className="text-xs text-slate-500 mb-1 font-medium">Total Withdrawn</p>
+          <p className="text-sm sm:text-base font-bold text-slate-900">{formatCurrency(totalWithdrawn)}</p>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="pt-3 border-t border-gray-200 flex justify-end">
-        <button className="flex items-center gap-1 text-xs sm:text-sm text-primary-600 hover:text-primary-700 transition-all analytics-link">
+      <div className="pt-3 border-t border-slate-200/80 flex justify-end">
+        <button 
+          type="button"
+          className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-primary-600 hover:text-primary-700 transition-all analytics-link cursor-pointer"
+        >
           <span>View detailed analytics</span>
           <ChevronRight size={14} className="sm:w-4 sm:h-4" />
         </button>

@@ -1,7 +1,9 @@
-﻿/** @type {import('next').NextConfig} */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable React Compiler for better performance
-  reactCompiler: true,
+  experimental: {
+    reactCompiler: true,
+  },
   
   // Sass configuration (no changes needed)
   sassOptions: {

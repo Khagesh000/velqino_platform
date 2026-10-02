@@ -11,6 +11,10 @@ const ordersAPI = {
     updatePaymentStatus: (orderId, paymentStatus) =>
         API.patch(`commerce/orders/${orderId}/payment-status/`, { payment_status: paymentStatus }),
     
+    // Consolidated Wholesaler Orders Overview (Orders + Stats + Balance + Categories)
+    getWholesalerOrdersOverview: (params) => 
+        API.get('commerce/orders/wholesaler/overview/', { params }),
+
     // Get all user orders
     getOrders: (params) => API.get('commerce/orders/', { params }),
     

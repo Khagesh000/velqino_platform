@@ -36,7 +36,7 @@ def list_faqs(request):
         
         faqs = FAQService.get_all_faqs()
         
-        if category_slug:
+        if category_slug and category_slug not in ['undefined', 'null', 'all', '']:
             faqs = faqs.filter(category__slug=category_slug)
         
         # Pagination

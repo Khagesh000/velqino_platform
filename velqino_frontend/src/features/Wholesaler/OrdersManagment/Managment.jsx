@@ -2,7 +2,7 @@
 
 import React, { useState, lazy, Suspense, useEffect } from 'react';
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar';
-import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
+import { useGetWholesalerOrdersOverviewQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import { 
   Sparkles, 
   RefreshCw, 
@@ -40,19 +40,19 @@ export default function Management() {
     ...(activeFilters.amountRange?.max && { max_amount: activeFilters.amountRange.max }),
   };
 
-  // Single centralized query to avoid duplicate API calls
+  // Single consolidated query (replaces 4 separate endpoints)
   const { 
     data: liveOrdersData, 
     isLoading: ordersLoading, 
     isFetching: ordersFetching, 
     refetch: refetchOrders 
-  } = useGetOrdersQuery(queryParams);
+  } = useGetWholesalerOrdersOverviewQuery(queryParams);
 
   // Resilient cache to guarantee Frame 1 instant render with 0 blank flash
   const [cachedOrdersData, setCachedOrdersData] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = sessionStorage.getItem('velqino_wholesaler_orders_cache');
+        const stored = sessionStorage.getItem('velqino_wholesaler_orders_overview_cache') || sessionStorage.getItem('velqino_wholesaler_orders_cache');
         if (stored) return JSON.parse(stored);
       } catch (e) {
         console.error('Failed to parse orders cache:', e);
@@ -63,23 +63,34 @@ export default function Management() {
 
   // Keep cache synchronized
   useEffect(() => {
-    if (liveOrdersData && (Array.isArray(liveOrdersData?.data) || Array.isArray(liveOrdersData))) {
+    if (liveOrdersData && liveOrdersData.data) {
       setCachedOrdersData(liveOrdersData);
       try {
-        sessionStorage.setItem('velqino_wholesaler_orders_cache', JSON.stringify(liveOrdersData));
+        sessionStorage.setItem('velqino_wholesaler_orders_overview_cache', JSON.stringify(liveOrdersData));
       } catch (e) {}
     }
   }, [liveOrdersData]);
 
-  // Extract orders list safely
+  // Extract consolidated data safely (supports composite payload and legacy arrays)
   const effectiveData = liveOrdersData || cachedOrdersData;
-  const rawOrders = effectiveData?.data || effectiveData || [];
-  const orders = Array.isArray(rawOrders) ? rawOrders : [];
-  
-  const pagination = effectiveData?.pagination || {};
-  const totalOrders = pagination.total || orders.length;
+  const compositeData = (effectiveData?.data && !Array.isArray(effectiveData.data)) ? effectiveData.data : null;
+
+  const orders = Array.isArray(compositeData?.orders)
+    ? compositeData.orders
+    : Array.isArray(effectiveData?.data)
+      ? effectiveData.data
+      : Array.isArray(effectiveData)
+        ? effectiveData
+        : [];
+
+  const pagination = compositeData?.pagination || effectiveData?.pagination || {};
+  const totalOrders = pagination.total ?? orders.length;
   const totalPages = pagination.total_pages || Math.max(1, Math.ceil(totalOrders / pageSize));
-  
+
+  const stats = compositeData?.stats || null;
+  const withdrawalStats = compositeData?.withdrawal_stats || null;
+  const categories = compositeData?.categories || [];
+
   const isLoading = ordersLoading && orders.length === 0;
 
   const handleFilterChange = (filters) => {
@@ -157,6 +168,7 @@ export default function Management() {
               <OrdersFilters 
                 onFilterChange={handleFilterChange}
                 totalOrders={totalOrders}
+                categories={categories}
               />
             </Suspense>
           </div>
@@ -164,7 +176,10 @@ export default function Management() {
           {/* Financial Overview / Balance Cards */}
           <div>
             <Suspense fallback={<div className="w-full h-40 bg-white rounded-2xl border border-slate-200/80 animate-pulse" />}>
-              <BulkActions />
+              <BulkActions 
+                stats={stats}
+                withdrawalStats={withdrawalStats}
+              />
             </Suspense>
           </div>
 

@@ -336,6 +336,242 @@ def get_orders(request):
         }
     })
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def wholesaler_orders_overview(request):
+    """
+    Consolidated Wholesaler Orders Overview Endpoint.
+    Combines categories, stats, withdrawal balance, and paginated orders in ONE request.
+    Prevents multiple simultaneous DB connections and network bottlenecks.
+    """
+    user = request.user
+    if user.role not in ['wholesaler', 'admin', 'support']:
+        return Response({'status': 'error', 'message': 'Only wholesalers can access this endpoint'}, status=403)
+
+    from .models import Order, OrderItem
+    from django.db.models import Q, Prefetch, Sum
+    from django.core.paginator import Paginator
+    from django.utils import timezone
+    from datetime import timedelta
+    from decimal import Decimal
+
+    # 1. CATEGORIES (from cache if available)
+    categories_data = cache.get("categories:all")
+    if not categories_data:
+        try:
+            from catalog.models import Category
+            from catalog.serializers import CategorySerializer
+            categories = Category.objects.filter(parent=None, is_active=True)
+            categories_data = CategorySerializer(categories, many=True).data
+            cache.set("categories:all", categories_data, timeout=86400)
+        except Exception as cat_err:
+            logger.warning(f"Error fetching categories for overview: {cat_err}")
+            categories_data = []
+
+    # 2. STATS (from cache if available)
+    stats_cache_key = f"wholesaler_orders_stats:{user.id}"
+    stats_data = cache.get(stats_cache_key)
+    if not stats_data:
+        try:
+            from analytics_engine.services.analytics_service import AnalyticsService
+            from analytics_engine.serializers import WholesalerStatsSerializer
+            stats_obj = AnalyticsService.get_wholesaler_stats(user)
+            stats_data = WholesalerStatsSerializer(stats_obj).data
+            cache.set(stats_cache_key, stats_data, timeout=120)
+        except Exception as stats_err:
+            logger.warning(f"Error fetching wholesaler stats for overview: {stats_err}")
+            stats_data = {
+                "total_revenue": "0.00",
+                "revenue_change": "0.00",
+                "revenue_trend": "up",
+                "pending_orders": 0,
+                "pending_change": 0,
+                "total_products": 0,
+                "products_change": 0,
+                "low_stock_products": 0,
+                "out_of_stock_products": 0,
+                "total_customers": 0,
+                "customers_change": 0,
+                "avg_order_value": "0.00",
+                "completed_orders": 0,
+                "completion_rate": "0.00"
+            }
+
+    # 3. WITHDRAWAL STATS (from cache if available)
+    withdrawal_cache_key = f"wholesaler_withdrawal_stats:{user.id}"
+    withdrawal_data = cache.get(withdrawal_cache_key)
+    if not withdrawal_data:
+        try:
+            total_withdrawn = Decimal('0')
+            pending_withdrawals = Decimal('0')
+            next_payout_date = "Mar 25, 2024"
+            delivered_orders_total = Order.objects.filter(
+                items__product__seller=user,
+                status='delivered'
+            ).distinct().aggregate(total=Sum('grand_total'))['total'] or Decimal('0')
+            available_balance = delivered_orders_total - total_withdrawn
+            withdrawal_data = {
+                'total_withdrawn': float(total_withdrawn),
+                'pending_withdrawals': float(pending_withdrawals),
+                'available_balance': float(available_balance),
+                'next_payout_date': next_payout_date,
+                'total_revenue': float(delivered_orders_total)
+            }
+            cache.set(withdrawal_cache_key, withdrawal_data, timeout=120)
+        except Exception as w_err:
+            logger.warning(f"Error fetching withdrawal stats for overview: {w_err}")
+            withdrawal_data = {
+                'total_withdrawn': 0.0,
+                'pending_withdrawals': 0.0,
+                'available_balance': 0.0,
+                'next_payout_date': "Mar 25, 2024",
+                'total_revenue': 0.0
+            }
+
+    # 4. PAGINATED ORDERS QUERY
+    base_queryset = Order.objects.select_related('customer', 'retailer', 'wholesaler').prefetch_related(
+        Prefetch('items', queryset=OrderItem.objects.select_related('product').prefetch_related('product__images'))
+    )
+
+    if user.role in ['admin', 'support']:
+        orders_qs = base_queryset.all()
+    elif user.role == 'customer':
+        orders_qs = base_queryset.filter(customer=user)
+    elif user.role == 'retailer':
+        orders_qs = base_queryset.filter(retailer=user)
+    elif user.role == 'wholesaler':
+        orders_qs = base_queryset.filter(items__product__seller=user).distinct()
+    else:
+        orders_qs = Order.objects.none()
+
+    # Filters
+    status_filter = request.query_params.get('status')
+    if status_filter and status_filter != 'all':
+        orders_qs = orders_qs.filter(status=status_filter)
+
+    payment_filter = request.query_params.get('payment_status')
+    if payment_filter and payment_filter != 'all':
+        orders_qs = orders_qs.filter(payment_status=payment_filter)
+
+    search = request.query_params.get('search')
+    if search:
+        orders_qs = orders_qs.filter(
+            Q(order_number__icontains=search) |
+            Q(customer__email__icontains=search) |
+            Q(customer__first_name__icontains=search) |
+            Q(customer__last_name__icontains=search) |
+            Q(shipping_name__icontains=search)
+        )
+
+    days = request.query_params.get('days')
+    if days and days != 'custom':
+        try:
+            cutoff = timezone.now() - timedelta(days=int(days))
+            orders_qs = orders_qs.filter(created_at__gte=cutoff)
+        except (ValueError, TypeError):
+            pass
+
+    min_amount = request.query_params.get('min_amount')
+    max_amount = request.query_params.get('max_amount')
+    if min_amount:
+        try:
+            orders_qs = orders_qs.filter(grand_total__gte=float(min_amount))
+        except (ValueError, TypeError):
+            pass
+    if max_amount:
+        try:
+            orders_qs = orders_qs.filter(grand_total__lte=float(max_amount))
+        except (ValueError, TypeError):
+            pass
+
+    orders_qs = orders_qs.order_by('-created_at')
+
+    # Pagination
+    try:
+        page = int(request.query_params.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    try:
+        per_page = int(request.query_params.get('per_page', 10))
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(orders_qs, per_page)
+    page_obj = paginator.get_page(page)
+
+    orders_data = []
+    for order in page_obj.object_list:
+        customer_name = ""
+        if order.customer:
+            customer_name = order.customer.get_full_name() or order.customer.email
+        
+        retailer_name = ""
+        if order.retailer:
+            retailer_name = order.retailer.get_full_name() or order.retailer.email
+
+        delivered_date = order.delivered_at if hasattr(order, 'delivered_at') and order.delivered_at else None
+
+        items_data = []
+        for item in order.items.all():
+            product_images = []
+            if item.product:
+                primary_image = item.product.images.filter(is_primary=True).first()
+                if primary_image and primary_image.image:
+                    product_images.append(primary_image.image.url)
+                else:
+                    for img in item.product.images.all()[:3]:
+                        if img.image:
+                            product_images.append(img.image.url)
+
+            items_data.append({
+                'id': item.id,
+                'product_name': item.product_name,
+                'product_sku': item.product_sku,
+                'quantity': item.quantity,
+                'price': float(item.price),
+                'total': float(item.total),
+                'product_images': product_images
+            })
+
+        orders_data.append({
+            'id': order.id,
+            'order_number': order.order_number,
+            'customer_name': customer_name,
+            'customer_email': order.customer.email if order.customer else None,
+            'retailer_name': retailer_name,
+            'total_amount': float(order.grand_total),
+            'status': order.status,
+            'payment_status': order.payment_status,
+            'payment_method': order.payment_method,
+            'delivery_type': order.delivery_type,
+            'created_at': order.created_at,
+            'delivered_date': delivered_date,
+            'expected_delivery_date': order.expected_delivery_date,
+            'tracking_number': order.tracking_number,
+            'items_count': order.items.count(),
+            'items': items_data
+        })
+
+    return Response({
+        'status': 'success',
+        'data': {
+            'orders': orders_data,
+            'pagination': {
+                'total': paginator.count,
+                'total_pages': paginator.num_pages,
+                'page': page,
+                'per_page': per_page,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+            },
+            'stats': stats_data,
+            'withdrawal_stats': withdrawal_data,
+            'categories': categories_data
+        }
+    })
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_order(request, order_id):
@@ -1207,6 +1443,10 @@ def update_order_status(request, order_id):
     # ✅ Invalidate cache
     cache.delete(f"order:{order.id}")
     cache.delete(f"order:{order.order_number}")
+    wholesaler_id = order.wholesaler_id or user.id
+    cache.delete(f"wholesaler_orders_stats:{wholesaler_id}")
+    cache.delete(f"wholesaler_withdrawal_stats:{wholesaler_id}")
+    cache.delete(f"wholesaler_dashboard:{wholesaler_id}")
 
     # ✅ Log status change
     logger.info(f"Order {order.order_number} status updated from {current_status} to {new_status} by {user.email}")
@@ -1292,6 +1532,14 @@ def update_payment_status(request, order_id):
         order.paid_at = timezone.now()
     
     order.save()
+    
+    # ✅ Invalidate cache
+    cache.delete(f"order:{order.id}")
+    cache.delete(f"order:{order.order_number}")
+    wholesaler_id = order.wholesaler_id or user.id
+    cache.delete(f"wholesaler_orders_stats:{wholesaler_id}")
+    cache.delete(f"wholesaler_withdrawal_stats:{wholesaler_id}")
+    cache.delete(f"wholesaler_dashboard:{wholesaler_id}")
     
     # ✅ Log payment status change
     logger.info(f"Order {order.order_number} payment status updated from {old_payment_status} to {new_payment_status} by {user.email}")

@@ -7,7 +7,7 @@ import {
 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/OrdersManagment/OrdersFilters.scss';
 
-export default function OrdersFilters({ onFilterChange, totalOrders = 0 }) {
+export default function OrdersFilters({ onFilterChange, totalOrders = 0, categories = [] }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [dateRange, setDateRange] = useState('30');
   const [status, setStatus] = useState('all');

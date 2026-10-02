@@ -14,6 +14,7 @@ urlpatterns = [
     path('cart/merge/', views.merge_cart, name='merge-cart'),
 
     path('orders/create/', views.create_order, name='create-order'),
+    path('orders/wholesaler/overview/', views.wholesaler_orders_overview, name='wholesaler-orders-overview'),
     path('orders/', views.get_orders, name='get-orders'),
     path('orders/<str:order_id>/', views.get_order, name='get-order'),
     path('orders/<str:order_id>/cancel/', views.cancel_order, name='cancel-order'),

@@ -43,20 +43,33 @@ export const ordersApi = createApi({
         invalidatesTags: ['Orders']
     }),
         
+        // Consolidated Wholesaler Orders Overview
+        getWholesalerOrdersOverview: builder.query({
+            async queryFn(params) {
+                try {
+                    const response = await ordersAPI.getWholesalerOrdersOverview(params || {});
+                    return { data: response.data };
+                } catch (error) {
+                    return { error };
+                }
+            },
+            providesTags: ['Orders']
+        }),
+
         getOrders: builder.query({
-    async queryFn(params) {
-        try {
-            console.log('📤 ordersSlice.getOrders called with params:', params);
-            // ✅ Make sure we pass the params to the API
-            const response = await ordersAPI.getOrders(params || {});
-            return { data: response.data };
-        } catch (error) {
-            console.error('❌ Error:', error);
-            return { error };
-        }
-    },
-    providesTags: ['Orders']
-}),
+            async queryFn(params) {
+                try {
+                    console.log('📤 ordersSlice.getOrders called with params:', params);
+                    // ✅ Make sure we pass the params to the API
+                    const response = await ordersAPI.getOrders(params || {});
+                    return { data: response.data };
+                } catch (error) {
+                    console.error('❌ Error:', error);
+                    return { error };
+                }
+            },
+            providesTags: ['Orders']
+        }),
         
         // Get single order
         getOrder: builder.query({
@@ -135,6 +148,7 @@ export const {
     useCreateOrderMutation,
     useUpdateOrderStatusMutation,
     useUpdatePaymentStatusMutation,
+    useGetWholesalerOrdersOverviewQuery,
     useGetOrdersQuery,
     useGetOrderQuery,
     useCancelOrderMutation,

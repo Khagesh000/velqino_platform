@@ -234,11 +234,14 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=0,
+            conn_max_age=60,
             engine='django.db.backends.mysql',
         )
     }
-    DATABASES['default']['OPTIONS'] = {'ssl': {'ssl_mode': 'REQUIRED'}}
+    DATABASES['default']['OPTIONS'] = {
+        'ssl': {'ssl_mode': 'REQUIRED'},
+        'connect_timeout': 10,
+    }
 else:
     DATABASES = {
         'default': {
@@ -248,10 +251,11 @@ else:
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST', default='127.0.0.1'),
             'PORT': config('DB_PORT', default='3306'),
-            'CONN_MAX_AGE': 0,
+            'CONN_MAX_AGE': 60,
             'CONN_HEALTH_CHECKS': True,
             'OPTIONS': {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'connect_timeout': 10,
             }
         }
     }
