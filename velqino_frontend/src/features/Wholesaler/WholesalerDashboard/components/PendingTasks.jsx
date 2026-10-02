@@ -1,260 +1,267 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ClipboardList, Package, Clock, Wallet, AlertCircle, CheckCircle, ArrowRight, Timer, Loader2 } from '../../../../utils/icons';
+import { useRouter } from 'next/navigation';
+import { 
+  ClipboardList, 
+  Package, 
+  Clock, 
+  Wallet, 
+  AlertCircle, 
+  CheckCircle, 
+  ArrowRight, 
+  ChevronRight,
+  Timer, 
+  Loader2 
+} from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/PendingTasks.scss';
 
-export default function PendingTasks({ tasks, isLoading, activeTab, page, onTabChange, onPageChange }) {
+export default function PendingTasks({ tasks, isLoading, activeTab = 'all', page, onTabChange, onPageChange }) {
+  const router = useRouter();
   const [hoveredTask, setHoveredTask] = useState(null);
-  const perPage = 8;
-  
-  const hasMore = tasks?.has_next || false;
-  const totalCount = tasks?.count || 0;
-  const currentPage = tasks?.page || 1;
-  const totalPages = tasks?.total_pages || 1;
-  const stats = tasks?.stats || {};
+  const taskList = Array.isArray(tasks) ? tasks : (tasks?.items || tasks?.data || []);
+
+  const totalCount = taskList.length;
+  const orderCount = taskList.filter(t => t.type === 'order').length;
+  const productCount = taskList.filter(t => t.type === 'product').length;
+  const payoutCount = taskList.filter(t => t.type === 'payout').length;
+  const highCount = taskList.filter(t => t.priority === 'high').length;
+  const mediumCount = taskList.filter(t => t.priority === 'medium').length;
+  const lowCount = taskList.filter(t => t.priority === 'low').length;
+
+  const filteredTasks = taskList.filter(task => {
+    if (activeTab === 'orders') return task.type === 'order';
+    if (activeTab === 'products') return task.type === 'product';
+    if (activeTab === 'payouts') return task.type === 'payout';
+    return true;
+  });
 
   const getPriorityIcon = (priority) => {
-    switch(priority) {
-      case 'high': return <AlertCircle size={14} />;
-      case 'medium': return <Timer size={14} />;
-      case 'low': return <Clock size={14} />;
-      default: return <Clock size={14} />;
+    switch(priority?.toLowerCase()) {
+      case 'high': return <AlertCircle size={13} />;
+      case 'medium': return <Timer size={13} />;
+      case 'low': return <Clock size={13} />;
+      default: return <Clock size={13} />;
+    }
+  };
+
+  const getPriorityClass = (priority) => {
+    switch(priority?.toLowerCase()) {
+      case 'high': return 'bg-rose-50 text-rose-600 border border-rose-200/80';
+      case 'medium': return 'bg-amber-50 text-amber-700 border border-amber-200/80';
+      default: return 'bg-primary-50 text-primary-700 border border-primary-200/80';
     }
   };
 
   const getTypeIcon = (type) => {
-    switch(type) {
-      case 'order': return <Package size={16} />;
-      case 'product': return <ClipboardList size={16} />;
-      case 'payout': return <Wallet size={16} />;
-      default: return <Clock size={16} />;
+    switch(type?.toLowerCase()) {
+      case 'order': return <Package size={15} />;
+      case 'product': return <ClipboardList size={15} />;
+      case 'payout': return <Wallet size={15} />;
+      default: return <Clock size={15} />;
     }
   };
 
   const getTypeColor = (type) => {
-    switch(type) {
+    switch(type?.toLowerCase()) {
       case 'order': return 'bg-primary-100 text-primary-600';
-      case 'product': return 'bg-accent-100 text-accent-600';
-      case 'payout': return 'bg-success-100 text-success-600';
-      default: return 'bg-surface-2 text-secondary';
+      case 'product': return 'bg-indigo-100 text-indigo-600';
+      case 'payout': return 'bg-emerald-100 text-emerald-600';
+      default: return 'bg-slate-100 text-slate-600';
     }
   };
 
-  const getTimeColor = (time) => {
-    if (time && time.includes('min')) return 'text-error-600';
-    if (time && time.includes('hour')) return 'text-warning-600';
-    return 'text-tertiary';
+  const handleTaskAction = (task) => {
+    if (task?.type === 'product') {
+      router.push('/wholesaler/productcatalog');
+    } else if (task?.type === 'payout') {
+      router.push('/wholesaler/paymentsandpayouts');
+    } else {
+      router.push('/wholesaler/ordermanagment');
+    }
   };
 
   const tabs = [
-    { id: 'all', label: 'All', count: stats.total },
-    { id: 'orders', label: 'Orders', count: 0, icon: <Package size={14} /> },
-    { id: 'products', label: 'Products', count: 0, icon: <ClipboardList size={14} /> },
-    { id: 'payouts', label: 'Payouts', count: 0, icon: <Wallet size={14} /> }
+    { id: 'all', label: 'All', count: totalCount },
+    { id: 'orders', label: 'Orders', count: orderCount, icon: <Package size={13} /> },
+    { id: 'products', label: 'Products', count: productCount, icon: <ClipboardList size={13} /> },
+    { id: 'payouts', label: 'Payouts', count: payoutCount, icon: <Wallet size={13} /> }
   ];
-
-  const loadMore = () => {
-    if (hasMore) {
-      onPageChange(prev => prev + 1);
-    }
-  };
-
-  const loadPrevious = () => {
-    if (currentPage > 1) {
-      onPageChange(prev => prev - 1);
-    }
-  };
 
   if (isLoading && page === 1) {
     return (
-      <div className="bg-white rounded-2xl border border-light p-6 text-center">
-        <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
-        <p className="text-sm text-tertiary">Loading tasks...</p>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+        <div className="flex items-center justify-center py-10">
+          <Loader2 size={28} className="animate-spin text-primary-600 mb-2" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-light p-4 lg:p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-warning-100 flex items-center justify-center text-warning-600">
-            <ClipboardList size={18} className="lg:w-5 lg:h-5" />
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 lg:p-6 shadow-xs flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 lg:mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+              <ClipboardList size={20} />
+            </div>
+            <div>
+              <h3 className="text-base lg:text-lg font-bold text-slate-900">Pending Tasks</h3>
+              <p className="text-xs text-slate-500">{totalCount} operational items require attention</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base lg:text-lg xl:text-xl font-semibold text-primary">Pending Tasks</h3>
-            <p className="text-xs lg:text-sm text-tertiary">{stats.total} items need attention</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 bg-surface-1 p-1 rounded-lg">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-white text-primary-600 shadow-sm' 
-                  : 'text-tertiary hover:text-secondary'
-              }`}
-              onClick={() => {
-                onTabChange(tab.id);
-                onPageChange(1);
-              }}
-            >
-              {tab.icon}
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                activeTab === tab.id ? 'bg-primary-100 text-primary-600' : 'bg-surface-2 text-tertiary'
-              }`}>
-                {activeTab === tab.id ? totalCount : '0'}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Empty State */}
-      {tasks.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={32} className="text-green-500" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h4>
-          <p className="text-sm text-gray-500">No pending tasks at the moment</p>
-        </div>
-      )}
-
-      {/* Tasks Timeline */}
-      {tasks.length > 0 && (
-        <>
-          <div className="relative">
-            <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-gradient-to-b from-primary-200 via-accent-200 to-success-200 rounded-full" />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 relative">
-              {tasks.map((task) => (
-                <div
-                  key={task.id}
-                  className={`group relative flex items-start gap-3 pl-8 ${
-                    hoveredTask === task.id ? 'translate-x-1' : ''
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl overflow-x-auto max-w-full">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    activeTab === tab.id 
+                      ? 'bg-white text-primary-700 shadow-2xs' 
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
-                  onMouseEnter={() => setHoveredTask(task.id)}
-                  onMouseLeave={() => setHoveredTask(null)}
+                  onClick={() => {
+                    onTabChange?.(tab.id);
+                    onPageChange?.(1);
+                  }}
                 >
-                  {/* Timeline Dot */}
-                  <div className={`absolute left-0 top-3 w-6 h-6 rounded-full border-4 border-white ${
-                    task.priority === 'high' ? 'bg-error-500' :
-                    task.priority === 'medium' ? 'bg-warning-500' : 'bg-accent-500'
-                  } shadow-md z-10 transition-all group-hover:scale-125`} />
-
-                  {/* Task Card */}
-                  <div className="flex-1 bg-surface-1 rounded-xl p-3 lg:p-4 border border-light transition-all hover:shadow-md">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-lg ${getTypeColor(task.type)} flex items-center justify-center flex-shrink-0`}>
-                        {getTypeIcon(task.type)}
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-semibold text-primary">{task.title}</h4>
-                        <p className="text-xs text-secondary mt-0.5">{task.description}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                        task.priority === 'high' ? 'bg-error-100 text-error-600' :
-                        task.priority === 'medium' ? 'bg-warning-100 text-warning-600' :
-                        'bg-primary-100 text-primary-600'
-                      }`}>
-                        {getPriorityIcon(task.priority)}
-                        <span className="capitalize">{task.priority}</span>
-                      </span>
-
-                      {task.due_date && (
-                        <span className="flex items-center gap-1 text-xs text-tertiary">
-                          <Clock size={12} />
-                          Due: {task.due_date}
-                        </span>
-                      )}
-                    </div>
-
-                    <button className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
-                      <span>Handle</span>
-                      <ArrowRight size={12} />
-                    </button>
-                  </div>
-
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-
-                  {hoveredTask === task.id && (
-                    <div className={`absolute inset-0 rounded-xl opacity-5 blur-lg pointer-events-none ${
-                      task.priority === 'high' ? 'bg-error-500' :
-                      task.priority === 'medium' ? 'bg-warning-500' : 'bg-accent-500'
-                    }`} />
-                  )}
-                </div>
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    activeTab === tab.id ? 'bg-primary-100 text-primary-700' : 'bg-slate-200/80 text-slate-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
               ))}
             </div>
-          </div>
 
-          {/* Pagination */}
-          {totalCount > perPage && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-light">
-              <div className="text-xs text-tertiary">
-                Showing {tasks.length} of {totalCount} tasks
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={loadPrevious}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-light hover:bg-surface-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  Previous
-                </button>
-                <span className="text-xs text-tertiary">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={loadMore}
-                  disabled={!hasMore}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-light hover:bg-surface-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Summary Footer */}
-          <div className="grid grid-cols-3 gap-2 mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-light">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-error-600 mb-1">
-                <AlertCircle size={14} />
-                <span className="text-sm font-semibold">{stats.high}</span>
-              </div>
-              <p className="text-xs text-tertiary">High priority</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-warning-600 mb-1">
-                <Timer size={14} />
-                <span className="text-sm font-semibold">{stats.medium}</span>
-              </div>
-              <p className="text-xs text-tertiary">Medium</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-accent-600 mb-1">
-                <Clock size={14} />
-                <span className="text-sm font-semibold">{stats.low}</span>
-              </div>
-              <p className="text-xs text-tertiary">Low priority</p>
-            </div>
+            {/* View All Tasks CTA */}
+            <button
+              type="button"
+              onClick={() => router.push('/wholesaler/ordermanagment')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-200/80 rounded-xl text-xs font-semibold text-primary-700 hover:bg-primary-100 transition-all shadow-2xs group"
+            >
+              <span>Manage Tasks</span>
+              <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+            </button>
           </div>
-        </>
-      )}
+        </div>
+
+        {/* Empty State */}
+        {filteredTasks.length === 0 && (
+          <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <div className="w-12 h-12 bg-white rounded-2xl shadow-xs flex items-center justify-center mx-auto mb-3 text-emerald-600">
+              <CheckCircle size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-slate-900 mb-1">All caught up!</h4>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4">No pending operational tasks matching this filter right now</p>
+            <button
+              type="button"
+              onClick={() => router.push('/wholesaler/ordermanagment')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary-50 text-primary-700 border border-primary-200/80 rounded-xl text-xs font-semibold hover:bg-primary-100 transition-all shadow-2xs"
+            >
+              <span>Go to Order Operations</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Tasks Grid */}
+        {filteredTasks.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {filteredTasks.map((task) => (
+              <div
+                key={task.id}
+                className={`group relative bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between ${
+                  hoveredTask === task.id ? 'translate-y-[-2px] border-primary-200' : ''
+                }`}
+                onMouseEnter={() => setHoveredTask(task.id)}
+                onMouseLeave={() => setHoveredTask(null)}
+              >
+                <div>
+                  <div className="flex items-start gap-3 mb-2.5">
+                    <div className={`w-8 h-8 rounded-lg ${getTypeColor(task.type)} flex items-center justify-center flex-shrink-0 shadow-2xs`}>
+                      {getTypeIcon(task.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-primary-600 transition-colors truncate">
+                        {task.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{task.description}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 mt-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${getPriorityClass(task.priority)}`}>
+                      {getPriorityIcon(task.priority)}
+                      <span className="capitalize">{task.priority || 'Normal'}</span>
+                    </span>
+
+                    {task.due_date && (
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        Due: {task.due_date}
+                      </span>
+                    )}
+                  </div>
+
+                  <button 
+                    type="button"
+                    onClick={() => handleTaskAction(task)}
+                    className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-all hover:gap-1.5 flex-shrink-0"
+                  >
+                    <span>Handle</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Summary Footer */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5 pt-3.5 border-t border-slate-100">
+        <div className="grid grid-cols-3 gap-2 flex-1">
+          <div className="text-center p-1.5 rounded-xl bg-rose-50/50">
+            <div className="flex items-center justify-center gap-1 text-rose-600 mb-0.5">
+              <AlertCircle size={13} />
+              <span className="text-xs sm:text-sm font-bold">{highCount}</span>
+            </div>
+            <p className="text-[11px] text-slate-500 font-medium">High priority</p>
+          </div>
+          <div className="text-center p-1.5 rounded-xl bg-amber-50/50">
+            <div className="flex items-center justify-center gap-1 text-amber-600 mb-0.5">
+              <Timer size={13} />
+              <span className="text-xs sm:text-sm font-bold">{mediumCount}</span>
+            </div>
+            <p className="text-[11px] text-slate-500 font-medium">Medium</p>
+          </div>
+          <div className="text-center p-1.5 rounded-xl bg-primary-50/50">
+            <div className="flex items-center justify-center gap-1 text-primary-600 mb-0.5">
+              <Clock size={13} />
+              <span className="text-xs sm:text-sm font-bold">{lowCount}</span>
+            </div>
+            <p className="text-[11px] text-slate-500 font-medium">Low priority</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => router.push('/wholesaler/ordermanagment')}
+          className="flex items-center gap-1 font-semibold text-primary-600 hover:text-primary-700 transition-all hover:gap-1.5 text-xs sm:ml-4 self-end sm:self-center flex-shrink-0"
+        >
+          <span>Fulfill Orders & Tasks</span>
+          <ChevronRight size={14} />
+        </button>
+      </div>
     </div>
   );
 }

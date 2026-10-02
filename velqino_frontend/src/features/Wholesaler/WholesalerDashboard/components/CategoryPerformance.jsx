@@ -1,31 +1,43 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
-import { PieChart, Grid, TrendingUp, ArrowUpRight } from '../../../../utils/icons';
-import '../../../../styles/Wholesaler/WholesalerDashboard/CategoryPerformance.scss'
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { PieChart, TrendingUp, ChevronRight } from '../../../../utils/icons';
+import '../../../../styles/Wholesaler/WholesalerDashboard/CategoryPerformance.scss';
+
+// Curated brand theme palette using Tailwind design tokens
+const categoryPalette = [
+  { stroke: '#c27847', bg: 'bg-primary-500', lightBg: 'bg-primary-50', text: 'text-primary-700', border: 'border-primary-200' },
+  { stroke: '#10b981', bg: 'bg-emerald-500', lightBg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  { stroke: '#f59e0b', bg: 'bg-amber-500', lightBg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  { stroke: '#6366f1', bg: 'bg-indigo-500', lightBg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+  { stroke: '#06b6d4', bg: 'bg-cyan-500', lightBg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+  { stroke: '#ec4899', bg: 'bg-pink-500', lightBg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
+];
 
 export default function CategoryPerformance({ data, isLoading }) {
+  const router = useRouter();
   const [hoveredCategory, setHoveredCategory] = useState(null);
   
-  // ✅ Extract data from API response
-  const categories = data || [];
-  const totalRevenue = categories.reduce((sum, cat) => sum + (cat.total_revenue || 0), 0);
+  const categories = Array.isArray(data) ? data : (data?.data || []);
+  const totalRevenue = categories.reduce((sum, cat) => sum + (Number(cat.total_revenue) || 0), 0);
   
-  // ✅ Calculate percentages
-  const categoriesWithPercentage = categories.map(cat => ({
+  const categoriesWithPercentage = categories.map((cat, idx) => ({
     ...cat,
-    percentage: totalRevenue > 0 ? (cat.total_revenue / totalRevenue) * 100 : 0
+    percentage: totalRevenue > 0 ? ((Number(cat.total_revenue) || 0) / totalRevenue) * 100 : 0,
+    colorTheme: categoryPalette[idx % categoryPalette.length]
   }));
 
-  // Colors for categories
-  const colors = ['primary', 'success', 'accent', 'warning', 'info', 'error'];
-  
-  if (isLoading) {
+  if (isLoading && categories.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-light p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-32 mb-4"></div>
-          <div className="h-64 bg-gray-100 rounded"></div>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-slate-200 rounded w-1/3" />
+          <div className="w-36 h-36 rounded-full bg-slate-100 mx-auto" />
+          <div className="space-y-2">
+            <div className="h-10 bg-slate-100 rounded-xl" />
+            <div className="h-10 bg-slate-100 rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -33,114 +45,170 @@ export default function CategoryPerformance({ data, isLoading }) {
 
   if (!categories || categories.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-light p-6 shadow-sm">
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <PieChart size={32} className="text-gray-400" />
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col justify-between h-full">
+        <div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+              <PieChart size={20} />
+            </div>
+            <div>
+              <h3 className="text-base lg:text-lg font-bold text-slate-900">Category Performance</h3>
+              <p className="text-xs text-slate-500">Distribution by sales revenue</p>
+            </div>
           </div>
-          <h4 className="text-lg font-semibold text-gray-700 mb-2">No category data yet</h4>
-          <p className="text-sm text-gray-500 text-center max-w-md">
-            Complete orders to see category performance here.
-          </p>
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-3 text-slate-400">
+              <PieChart size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-slate-900 mb-1">No category data yet</h4>
+            <p className="text-xs text-slate-500 max-w-xs mb-4">
+              Complete and dispatch orders to see category performance analytics.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push('/wholesaler/analyticsreports')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-50 text-primary-700 border border-primary-200/80 rounded-xl text-xs font-semibold hover:bg-primary-100 transition-all shadow-2xs"
+            >
+              <span>Full Analytics</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Prepare donut chart data (top 5 categories)
-  const topCategories = categoriesWithPercentage.slice(0, 5);
+  // Pre-calculate SVG donut segments reliably inside render scope
   const circumference = 2 * Math.PI * 40; // r=40
   let cumulativePercent = 0;
+  const segments = categoriesWithPercentage.slice(0, 6).map((category, index) => {
+    const percentage = category.percentage;
+    const dashArray = (percentage / 100) * circumference;
+    const offset = circumference - (cumulativePercent / 100) * circumference;
+    cumulativePercent += percentage;
+    return {
+      category,
+      index,
+      percentage,
+      dashArray,
+      offset,
+      colorTheme: category.colorTheme
+    };
+  });
 
   return (
-    <div className="bg-white rounded-2xl border border-light p-4 lg:p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent-100 flex items-center justify-center text-accent-600">
-            <PieChart size={20} />
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 lg:p-6 shadow-xs flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+              <PieChart size={20} />
+            </div>
+            <div>
+              <h3 className="text-base lg:text-lg font-bold text-slate-900">Category Performance</h3>
+              <p className="text-xs text-slate-500">Revenue contribution by category</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg sm:text-xl font-semibold text-primary">Category Performance</h3>
-            <p className="text-xs sm:text-sm text-tertiary">Top categories by sales</p>
-          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/wholesaler/analyticsreports')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-200/80 rounded-xl text-xs font-semibold text-primary-700 hover:bg-primary-100 transition-all shadow-2xs group"
+          >
+            <span>Full Analytics</span>
+            <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+          </button>
         </div>
-        <button className="text-xs text-tertiary hover:text-primary-600 transition-fast flex items-center gap-1">
-          <Grid size={14} />
-          View all
-        </button>
-      </div>
 
-      {/* Chart and Categories */}
-      <div className="flex flex-col lg:flex-row items-center gap-8">
-        {/* Donut Chart */}
-        <div className="relative w-48 h-48 lg:w-56 lg:h-56 flex-shrink-0">
-          <svg className="donut-chart-svg" viewBox="0 0 100 100">
-            {topCategories.map((category, index) => {
-              const percentage = category.percentage;
-              const dashArray = (percentage / 100) * circumference;
-              const offset = circumference - cumulativePercent * circumference / 100;
-              cumulativePercent += percentage;
-              
-              return (
+        {/* Content: Clean vertical stack for 4-col laptop view */}
+        <div className="flex flex-col items-center gap-5">
+          {/* Donut Chart */}
+          <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex-shrink-0 my-1">
+            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+              {/* Background ring */}
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="#f1f5f9"
+                strokeWidth="15"
+              />
+              {segments.map((seg) => (
                 <circle
-                  key={index}
+                  key={seg.index}
                   cx="50"
                   cy="50"
                   r="40"
                   fill="none"
-                  stroke={getColor(index)}
-                  strokeWidth="16"
-                  strokeDasharray={`${dashArray} ${circumference - dashArray}`}
-                  strokeDashoffset={offset}
-                  transform={`rotate(-90 50 50)`}
-                  className="transition-all duration-500"
+                  stroke={seg.colorTheme.stroke}
+                  strokeWidth={hoveredCategory === seg.index ? "17" : "15"}
+                  strokeDasharray={`${seg.dashArray} ${circumference - seg.dashArray}`}
+                  strokeDashoffset={seg.offset}
+                  className="transition-all duration-300 cursor-pointer"
+                  onMouseEnter={() => setHoveredCategory(seg.index)}
+                  onMouseLeave={() => setHoveredCategory(null)}
                 />
-              );
-            })}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-primary">₹{totalRevenue.toLocaleString()}</span>
-            <span className="text-xs text-tertiary">total revenue</span>
+              ))}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+              <span className="text-lg sm:text-xl font-bold text-slate-900">
+                ₹{totalRevenue.toLocaleString()}
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">total revenue</span>
+            </div>
           </div>
-        </div>
 
-        {/* Categories List */}
-        <div className="flex-1 w-full">
-          <div className="space-y-3">
+          {/* Categories List: Full width, spacious breakdown without any text truncation */}
+          <div className="w-full space-y-2">
             {categoriesWithPercentage.map((category, index) => {
-              const color = colors[index % colors.length];
+              const theme = category.colorTheme;
+              const isHovered = hoveredCategory === index;
+
               return (
                 <div
                   key={category.category || index}
-                  className="category-item"
+                  className={`p-2.5 rounded-xl border transition-all duration-200 ${
+                    isHovered 
+                      ? 'bg-slate-50 border-primary-200 shadow-2xs' 
+                      : 'bg-white border-slate-100 hover:border-slate-200'
+                  }`}
                   onMouseEnter={() => setHoveredCategory(index)}
                   onMouseLeave={() => setHoveredCategory(null)}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2 h-2 rounded-full bg-${color}-500`} />
-                    <span className="flex-1 text-sm font-medium text-primary">{category.category}</span>
-                    <span className="text-sm font-semibold text-primary">{category.percentage.toFixed(1)}%</span>
-                    <span className="text-xs text-success-600 bg-success-100 px-2 py-1 rounded-full flex items-center gap-0.5">
-                      <ArrowUpRight size={10} />
-                      {category.product_count} products
-                    </span>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${theme.bg}`} />
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                        {category.category}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs sm:text-sm font-bold text-slate-900">
+                        {category.percentage.toFixed(1)}%
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${theme.lightBg} ${theme.text} ${theme.border}`}>
+                        ₹{Number(category.total_revenue || 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                   
                   {/* Progress Bar */}
-                  <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full bg-${color}-500 transition-all duration-300`}
-                      style={{ width: `${Math.max(category.percentage, 5)}%` }}
+                      className={`h-full rounded-full transition-all duration-500 ${theme.bg}`}
+                      style={{ width: `${Math.max(category.percentage, 4)}%` }}
                     />
                   </div>
                   
-                  {/* Amount on hover */}
-                  {hoveredCategory === index && (
-                    <div className="mt-1 text-xs text-tertiary">
-                      Revenue: ₹{category.total_revenue.toLocaleString()} | Sold: {category.total_sold} units
-                    </div>
-                  )}
+                  {/* Units Sold Info */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                    <span>{category.product_count || 1} product active</span>
+                    <span className="font-medium text-slate-600">
+                      {category.total_sold} units sold
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -149,24 +217,22 @@ export default function CategoryPerformance({ data, isLoading }) {
       </div>
 
       {/* Footer Stats */}
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-light">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={14} className="text-primary-500" />
-          <span className="text-xs text-secondary">
-            Best seller: {categoriesWithPercentage[0]?.category || 'N/A'} 
-            ({categoriesWithPercentage[0]?.percentage.toFixed(1) || 0}%)
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
+        <div className="flex items-center gap-1.5 text-primary-600 font-semibold truncate">
+          <TrendingUp size={14} className="flex-shrink-0" />
+          <span className="truncate">
+            Top: {categoriesWithPercentage[0]?.category || 'N/A'} ({categoriesWithPercentage[0]?.percentage.toFixed(1) || 0}%)
           </span>
         </div>
-        <div className="text-xs text-tertiary">
-          {categories.length} categories
-        </div>
+        <button
+          type="button"
+          onClick={() => router.push('/wholesaler/analyticsreports')}
+          className="flex items-center gap-1 font-semibold text-primary-600 hover:text-primary-700 transition-all hover:gap-1.5 flex-shrink-0"
+        >
+          <span>Category Reports</span>
+          <ChevronRight size={14} />
+        </button>
       </div>
     </div>
-  )
-}
-
-// Helper function to get color
-function getColor(index) {
-  const colors = ['#CE8E6A', '#2D9B4E', '#F5A623', '#6C5CE7', '#00B5D8', '#E53E3E'];
-  return colors[index % colors.length];
-}
+  );
+}

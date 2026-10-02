@@ -1,13 +1,13 @@
 @import '../../reusables/variables.scss';
 
 /* ================================
-   Recent Orders Table - Only Animations
+   Recent Orders Table - Transitions
 ================================ */
 
 @keyframes fadeInRow {
   from {
-    opacity: 0;
-    transform: translateY(5px);
+    opacity: 0.7;
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -15,55 +15,28 @@
   }
 }
 
-@keyframes pulseBadge {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* Table row animations */
+/* Table row safe transitions - never default to opacity: 0 */
 tbody tr {
-  animation: fadeInRow 0.3s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
+  transition: background-color 0.15s ease;
 }
 
-@for $i from 1 through 10 {
-  tbody tr:nth-child(#{$i}) {
-    animation-delay: $i * 0.03s;
-  }
-}
-
-/* Mobile card animations */
-.lg\:hidden .space-y-3 > div {
-  animation: fadeInRow 0.3s ease-out forwards;
-  opacity: 0;
-}
-
-@for $i from 1 through 10 {
-  .lg\:hidden .space-y-3 > div:nth-child(#{$i}) {
-    animation-delay: $i * 0.03s;
-  }
-}
-
-/* Status badge pulse for pending orders */
-.bg-warning-100 {
-  animation: pulseBadge 2s infinite;
+/* Mobile card safe transitions */
+.orders-card-item {
+  opacity: 1;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 /* Hover transitions */
-tr, button, .bg-surface-1 {
-  transition: all 0.2s ease;
+tr, button {
+  transition: all 0.15s ease;
 }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   tbody tr,
-  .lg\:hidden .space-y-3 > div,
-  .bg-warning-100 {
+  .orders-card-item {
     animation: none !important;
     transition: none !important;
   }
-}
+}

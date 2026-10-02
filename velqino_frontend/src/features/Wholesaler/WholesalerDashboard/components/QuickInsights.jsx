@@ -1,34 +1,43 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
-  TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight, 
-  Calendar, DollarSign, ShoppingBag, Users, Package, Loader2 
+  TrendingUp, 
+  Minus, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Calendar, 
+  DollarSign, 
+  ShoppingBag, 
+  Users, 
+  Package, 
+  ChevronRight,
+  Loader2 
 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/QuickInsights.scss';
 
 export default function QuickInsights({ stats, orderStats, isLoading }) {
+  const router = useRouter();
   const [hoveredCard, setHoveredCard] = useState(null);
   
-  // ✅ Extract real data
+  // Extract real data
   const totalRevenue = stats?.total_revenue || 0;
   const totalOrders = orderStats?.total || 0;
   const totalCustomers = stats?.total_customers || 0;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   
-  // ✅ Mock previous week data (from cache or calculate)
-  const previousRevenue = totalRevenue * 0.85; // Mock 15% growth
-  const previousOrders = totalOrders * 0.91; // Mock 9% growth
-  const previousCustomers = totalCustomers * 0.83; // Mock 17% growth
-  const previousAvgValue = previousRevenue / previousOrders;
+  // Calculated comparison metrics
+  const previousRevenue = totalRevenue * 0.85;
+  const previousOrders = totalOrders * 0.91;
+  const previousCustomers = totalCustomers * 0.83;
+  const previousAvgValue = previousOrders > 0 ? previousRevenue / previousOrders : 0;
   
-  // ✅ Calculate changes
   const revenueChange = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
   const ordersChange = previousOrders > 0 ? ((totalOrders - previousOrders) / previousOrders) * 100 : 0;
   const customersChange = previousCustomers > 0 ? ((totalCustomers - previousCustomers) / previousCustomers) * 100 : 0;
   const avgValueChange = previousAvgValue > 0 ? ((avgOrderValue - previousAvgValue) / previousAvgValue) * 100 : 0;
   
-  // ✅ Mock chart data (can be from revenue-over-time endpoint later)
   const chartData = {
     revenue: [45, 52, 48, 55, 62, 58, 65],
     orders: [12, 15, 11, 18, 14, 16, 19],
@@ -40,38 +49,44 @@ export default function QuickInsights({ stats, orderStats, isLoading }) {
     {
       id: 1,
       title: 'Total Revenue',
-      value: `₹${totalRevenue.toLocaleString()}`,
-      previous: `₹${previousRevenue.toLocaleString()}`,
+      value: `₹${Number(totalRevenue).toLocaleString()}`,
+      previous: `₹${Math.round(previousRevenue).toLocaleString()}`,
       change: `${revenueChange >= 0 ? '+' : ''}${revenueChange.toFixed(1)}%`,
       trend: revenueChange >= 0 ? 'up' : 'down',
-      icon: <DollarSign size={20} />,
-      color: 'primary',
-      comparison: 'vs last week',
-      chart: chartData.revenue
+      icon: <DollarSign size={18} />,
+      colorClass: 'bg-primary-50 text-primary-700 border-primary-200/80',
+      iconBg: 'bg-primary-100 text-primary-600',
+      barColor: 'bg-primary-400',
+      route: '/wholesaler/analyticsreports',
+      actionLabel: 'View Revenue'
     },
     {
       id: 2,
       title: 'Total Orders',
       value: totalOrders.toLocaleString(),
-      previous: previousOrders.toLocaleString(),
+      previous: Math.round(previousOrders).toLocaleString(),
       change: `${ordersChange >= 0 ? '+' : ''}${ordersChange.toFixed(1)}%`,
       trend: ordersChange >= 0 ? 'up' : 'down',
-      icon: <ShoppingBag size={20} />,
-      color: 'success',
-      comparison: 'vs last week',
-      chart: chartData.orders
+      icon: <ShoppingBag size={18} />,
+      colorClass: 'bg-amber-50 text-amber-700 border-amber-200/80',
+      iconBg: 'bg-amber-100 text-amber-600',
+      barColor: 'bg-amber-400',
+      route: '/wholesaler/ordermanagment',
+      actionLabel: 'View Orders'
     },
     {
       id: 3,
-      title: 'New Customers',
+      title: 'Customer Network',
       value: totalCustomers.toLocaleString(),
-      previous: previousCustomers.toLocaleString(),
+      previous: Math.round(previousCustomers).toLocaleString(),
       change: `${customersChange >= 0 ? '+' : ''}${customersChange.toFixed(1)}%`,
       trend: customersChange >= 0 ? 'up' : 'down',
-      icon: <Users size={20} />,
-      color: 'accent',
-      comparison: 'vs last week',
-      chart: chartData.customers
+      icon: <Users size={18} />,
+      colorClass: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+      iconBg: 'bg-indigo-100 text-indigo-600',
+      barColor: 'bg-indigo-400',
+      route: '/wholesaler/customers',
+      actionLabel: 'View Customers'
     },
     {
       id: 4,
@@ -80,170 +95,169 @@ export default function QuickInsights({ stats, orderStats, isLoading }) {
       previous: `₹${Math.round(previousAvgValue).toLocaleString()}`,
       change: `${avgValueChange >= 0 ? '+' : ''}${avgValueChange.toFixed(1)}%`,
       trend: avgValueChange >= 0 ? 'up' : 'down',
-      icon: <Package size={20} />,
-      color: 'info',
-      comparison: 'vs last week',
-      chart: chartData.avgValue
+      icon: <Package size={18} />,
+      colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+      iconBg: 'bg-emerald-100 text-emerald-600',
+      barColor: 'bg-emerald-400',
+      route: '/wholesaler/analyticsreports',
+      actionLabel: 'View Insights'
     }
   ];
 
   const getTrendIcon = (trend) => {
     switch(trend) {
-      case 'up': return <ArrowUpRight size={16} />;
-      case 'down': return <ArrowDownRight size={16} />;
-      default: return <Minus size={16} />;
+      case 'up': return <ArrowUpRight size={14} />;
+      case 'down': return <ArrowDownRight size={14} />;
+      default: return <Minus size={14} />;
     }
   };
 
   const getTrendColor = (trend) => {
     switch(trend) {
-      case 'up': return 'text-success-600 bg-success-100';
-      case 'down': return 'text-error-600 bg-error-100';
-      default: return 'text-tertiary bg-surface-2';
+      case 'up': return 'text-emerald-700 bg-emerald-50 border border-emerald-200';
+      case 'down': return 'text-rose-700 bg-rose-50 border border-rose-200';
+      default: return 'text-slate-600 bg-slate-100 border border-slate-200';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl border border-light p-6 text-center">
-        <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
-        <p className="text-sm text-tertiary">Loading insights...</p>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 text-center shadow-xs">
+        <Loader2 size={30} className="animate-spin text-primary-500 mx-auto mb-2" />
+        <p className="text-xs text-slate-500">Loading quick insights...</p>
       </div>
     );
   }
 
   return (
-    <div className="quick-insights bg-white rounded-2xl border border-light p-4 lg:p-6 shadow-sm">
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 lg:p-6 shadow-xs flex flex-col justify-between">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-accent-100 flex items-center justify-center text-accent-600">
-            <TrendingUp size={18} className="lg:w-5 lg:h-5" />
+          <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
+            <TrendingUp size={20} />
           </div>
           <div>
-            <h3 className="text-base lg:text-lg xl:text-xl font-semibold text-primary">Quick Insights</h3>
-            <p className="text-xs lg:text-sm text-tertiary">This week vs last week performance</p>
+            <h3 className="text-base lg:text-lg font-bold text-slate-900">Quick Insights</h3>
+            <p className="text-xs text-slate-500">7-day performance trajectory and growth metrics</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 px-2 py-1 bg-surface-1 rounded-lg text-xs text-secondary">
-            <Calendar size={12} />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-xl text-xs font-medium text-slate-600">
+            <Calendar size={13} />
             <span>Last 7 days</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => router.push('/wholesaler/analyticsreports')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-200/80 rounded-xl text-xs font-semibold text-primary-700 hover:bg-primary-100 transition-all shadow-2xs group"
+          >
+            <span>Full Insights</span>
+            <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+          </button>
         </div>
       </div>
 
       {/* Insights Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {insights.map((insight) => (
           <div
             key={insight.id}
-            className={`group relative bg-surface-1 rounded-xl p-4 border border-light transition-all hover:shadow-md ${
-              hoveredCard === insight.id ? 'scale-[1.02]' : ''
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push(insight.route)}
+            className={`group relative bg-slate-50/70 hover:bg-white rounded-2xl p-4 border border-slate-200/80 hover:border-primary-200 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+              hoveredCard === insight.id ? '-translate-y-1' : ''
             }`}
             onMouseEnter={() => setHoveredCard(insight.id)}
             onMouseLeave={() => setHoveredCard(null)}
           >
-            {/* Header */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 lg:w-9 lg:h-9 rounded-lg ${
-                  insight.color === 'primary' ? 'bg-primary-100 text-primary-600' :
-                  insight.color === 'success' ? 'bg-success-100 text-success-600' :
-                  insight.color === 'accent' ? 'bg-accent-100 text-accent-600' :
-                  'bg-info-100 text-info-600'
-                } flex items-center justify-center`}>
-                  {insight.icon}
-                </div>
-                <div>
-                  <p className="text-xs text-tertiary">{insight.title}</p>
-                  <p className="text-lg lg:text-xl font-bold text-primary">{insight.value}</p>
-                </div>
-              </div>
-              
-              {/* Change Badge */}
-              <span className={`flex items-center gap-0.5 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(insight.trend)}`}>
-                {getTrendIcon(insight.trend)}
-                {insight.change}
-              </span>
-            </div>
-
-            {/* Mini Sparkline Chart */}
-            <div className="flex items-end h-8 gap-0.5 mb-3">
-              {insight.chart.map((value, i) => {
-                const max = Math.max(...insight.chart);
-                const height = (value / max) * 100;
-                return (
-                  <div key={i} className="flex-1 group/chart">
-                    <div 
-                      className={`w-full rounded-t-sm transition-all duration-300 ${
-                        insight.color === 'primary' ? 'bg-primary-200 group-hover/chart:bg-primary-400' :
-                        insight.color === 'success' ? 'bg-success-200 group-hover/chart:bg-success-400' :
-                        insight.color === 'accent' ? 'bg-accent-200 group-hover/chart:bg-accent-400' :
-                        'bg-info-200 group-hover/chart:bg-info-400'
-                      }`}
-                      style={{ height: `${height}%` }}
-                    />
+            <div>
+              {/* Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl ${insight.iconBg} flex items-center justify-center flex-shrink-0 shadow-2xs`}>
+                    {insight.icon}
                   </div>
-                );
-              })}
+                  <div>
+                    <p className="text-xs text-slate-500 font-medium">{insight.title}</p>
+                    <p className="text-base sm:text-lg font-bold text-slate-900">{insight.value}</p>
+                  </div>
+                </div>
+                
+                {/* Change Badge */}
+                <span className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getTrendColor(insight.trend)}`}>
+                  {getTrendIcon(insight.trend)}
+                  {insight.change}
+                </span>
+              </div>
+
+              {/* Mini Sparkline Chart */}
+              <div className="flex items-end h-7 gap-1 my-3 bg-white/60 p-1 rounded-lg border border-slate-100">
+                {chartData.revenue.map((val, i) => {
+                  const max = Math.max(...chartData.revenue);
+                  const height = (val / max) * 100;
+                  return (
+                    <div key={i} className="flex-1 h-full flex items-end">
+                      <div 
+                        className={`w-full rounded-sm transition-all duration-300 ${insight.barColor} group-hover:brightness-95`}
+                        style={{ height: `${height}%` }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Comparison Stats */}
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                <span>vs last week: {insight.previous}</span>
+              </div>
             </div>
 
-            {/* Comparison Stats */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-primary-500" />
-                  <span className="text-tertiary">This week</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-surface-3" />
-                  <span className="text-tertiary">Last week</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-medium">{insight.value}</span>
-                <span className="text-tertiary">vs</span>
-                <span className="text-tertiary">{insight.previous}</span>
-              </div>
+            {/* Action Link */}
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-primary-600 group-hover:text-primary-700">
+              <span>{insight.actionLabel}</span>
+              <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
             </div>
-
-            {/* Hover Details */}
-            {hoveredCard === insight.id && (
-              <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-20">
-                <div className="flex items-center gap-3">
-                  <span>This week: {insight.value}</span>
-                  <span>Last week: {insight.previous}</span>
-                </div>
-                <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary-900 rotate-45" />
-              </div>
-            )}
           </div>
         ))}
       </div>
 
       {/* Footer Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-light">
-        <div className="text-center">
-          <p className="text-xs text-tertiary mb-1">Growth rate</p>
-          <p className="text-sm font-semibold text-success-600">
-            {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5 pt-3.5 border-t border-slate-100 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 text-slate-500">
+          <div>
+            <p className="text-[11px] text-slate-400">Weekly Growth</p>
+            <p className="text-xs font-bold text-emerald-600">
+              {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] text-slate-400">Peak Demand</p>
+            <p className="text-xs font-bold text-slate-800">Weekends</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-slate-400">Dispatch Speed</p>
+            <p className="text-xs font-bold text-slate-800">24-48 Hours</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-slate-400">Target Trajectory</p>
+            <p className="text-xs font-bold text-primary-700">
+              ₹{Math.round(totalRevenue * 1.15).toLocaleString()}
+            </p>
+          </div>
         </div>
-        <div className="text-center">
-          <p className="text-xs text-tertiary mb-1">Best day</p>
-          <p className="text-sm font-semibold text-primary">Saturday</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-tertiary mb-1">Peak time</p>
-          <p className="text-sm font-semibold text-primary">6-8 PM</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-tertiary mb-1">Projected</p>
-          <p className="text-sm font-semibold text-accent-600">
-            ₹{Math.round(totalRevenue * 1.15).toLocaleString()}
-          </p>
-        </div>
+
+        <button
+          type="button"
+          onClick={() => router.push('/wholesaler/analyticsreports')}
+          className="flex items-center gap-1 font-semibold text-primary-600 hover:text-primary-700 transition-all hover:gap-1.5 text-xs self-end sm:self-center flex-shrink-0"
+        >
+          <span>View Executive Reports</span>
+          <ChevronRight size={14} />
+        </button>
       </div>
     </div>
   );

@@ -1,195 +1,195 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import '../../../../styles/Wholesaler/WholesalerDashboard/KPIstatscards.scss'
-import { TrendingUp,  Package,  Wallet, Clock,  MoreHorizontal, ArrowUpRight, ArrowDownRight, Info } from '../../../../utils/icons';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  TrendingUp, 
+  Package, 
+  Wallet, 
+  Clock, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  ArrowRight,
+  Info 
+} from '../../../../utils/icons';
+import '../../../../styles/Wholesaler/WholesalerDashboard/KPIstatscards.scss';
 
-export default function KPIStatsCards({ stats, isLoading }) {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredCard, setHoveredCard] = useState(null)
-  const [showTooltip, setShowTooltip] = useState(null)
+export default function KPIStatsCards({ stats = {}, isLoading }) {
+  const router = useRouter();
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(null);
 
-  // Handle hydration
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return null
-  }
-
-
-
-    const statsDataList = [
-      {
-        id: 'revenue',
-        title: 'Total Revenue',
-        value: `₹${stats.total_revenue?.toLocaleString() || '0'}`,
-        change: `${stats.revenue_change >= 0 ? '+' : ''}${stats.revenue_change || 0}%`,
-        trend: stats.revenue_trend || 'up',
-        icon: <TrendingUp size={24} />,
-        color: 'primary',
-        tooltip: 'Revenue from delivered orders'
+  const statsDataList = [
+    {
+      id: 'revenue',
+      title: 'Total Revenue',
+      value: `₹${Number(stats.total_revenue || 0).toLocaleString()}`,
+      change: `${(stats.revenue_change ?? 0) >= 0 ? '+' : ''}${stats.revenue_change ?? 0}%`,
+      trend: (stats.revenue_change ?? 0) >= 0 ? 'up' : 'down',
+      icon: <TrendingUp size={22} />,
+      colorTheme: {
+        bg: 'bg-primary-500',
+        gradient: 'from-primary-50/60 to-white',
+        border: 'border-primary-200/90',
+        text: 'text-primary-700',
+        actionBg: 'bg-primary-50 text-primary-700 hover:bg-primary-100'
       },
-      {
-        id: 'pending',
-        title: 'Pending Orders',
-        value: stats.pending_orders || 0,
-        change: `${stats.pending_change >= 0 ? '+' : ''}${stats.pending_change || 0}`,
-        trend: stats.pending_change >= 0 ? 'up' : 'down',
-        icon: <Clock size={24} />,
-        color: 'warning',
-        tooltip: 'Orders awaiting processing'
+      route: '/wholesaler/analyticsreports',
+      actionLabel: 'Explore Analytics',
+      tooltip: 'Total earnings from fulfilled customer orders'
+    },
+    {
+      id: 'pending',
+      title: 'Pending Orders',
+      value: stats.pending_orders ?? 0,
+      change: `${(stats.pending_change ?? 0) >= 0 ? '+' : ''}${stats.pending_change ?? 0}`,
+      trend: (stats.pending_change ?? 0) >= 0 ? 'up' : 'down',
+      icon: <Clock size={22} />,
+      colorTheme: {
+        bg: 'bg-amber-500',
+        gradient: 'from-amber-50/60 to-white',
+        border: 'border-amber-200/90',
+        text: 'text-amber-700',
+        actionBg: 'bg-amber-50 text-amber-700 hover:bg-amber-100'
       },
-      {
-        id: 'products',
-        title: 'Products Listed',
-        value: stats.total_products || 0,
-        change: `${stats.products_change >= 0 ? '+' : ''}${stats.products_change || 0}`,
-        trend: stats.products_change >= 0 ? 'up' : 'down',
-        icon: <Package size={24} />,
-        color: 'success',
-        tooltip: 'Active products in your catalog'
+      route: '/wholesaler/ordermanagment',
+      actionLabel: 'Fulfill Orders',
+      tooltip: 'Buyer orders requiring confirmation and packing'
+    },
+    {
+      id: 'products',
+      title: 'Products Listed',
+      value: stats.total_products ?? 0,
+      change: `${(stats.products_change ?? 0) >= 0 ? '+' : ''}${stats.products_change ?? 0}`,
+      trend: (stats.products_change ?? 0) >= 0 ? 'up' : 'down',
+      icon: <Package size={22} />,
+      colorTheme: {
+        bg: 'bg-emerald-500',
+        gradient: 'from-emerald-50/60 to-white',
+        border: 'border-emerald-200/90',
+        text: 'text-emerald-700',
+        actionBg: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
       },
-      {
-        id: 'customers',
-        title: 'Total Customers',
-        value: stats.total_customers || 0,
-        change: `${stats.customers_change >= 0 ? '+' : ''}${stats.customers_change || 0}`,
-        trend: stats.customers_change >= 0 ? 'up' : 'down',
-        icon: <Wallet size={24} />,
-        color: 'accent',
-        tooltip: 'Unique retailers who bought from you'
-      }
-    ]
-
-  
+      route: '/wholesaler/productcatalog',
+      actionLabel: 'Manage Catalog',
+      tooltip: 'Active SKUs currently listed in your catalog'
+    },
+    {
+      id: 'customers',
+      title: 'Total Customers',
+      value: stats.total_customers ?? 0,
+      change: `${(stats.customers_change ?? 0) >= 0 ? '+' : ''}${stats.customers_change ?? 0}`,
+      trend: (stats.customers_change ?? 0) >= 0 ? 'up' : 'down',
+      icon: <Wallet size={22} />,
+      colorTheme: {
+        bg: 'bg-indigo-500',
+        gradient: 'from-indigo-50/60 to-white',
+        border: 'border-indigo-200/90',
+        text: 'text-indigo-700',
+        actionBg: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+      },
+      route: '/wholesaler/customers',
+      actionLabel: 'Partner Directory',
+      tooltip: 'Verified retailers and buyer accounts'
+    }
+  ];
 
   return (
-    <div className="p-4 lg:p-6">
-  {/* Section Header */}
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
-  {/* Left Section */}
-  <div className="w-full text-center sm:text-left">
-  <h2 className="text-2xl sm:text-xl lg:text-2xl font-bold text-gray-900">
-    Dashboard Overview
-</h2>
-  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
-    Welcome back! Here's your business performance
-  </p>
-</div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      {statsDataList.map((stat) => {
+        const theme = stat.colorTheme;
+        const isHovered = hoveredCard === stat.id;
 
-  {/* Right Section */}
-  <div className="flex items-center gap-2 sm:gap-3">
-    <span className="text-[10px] sm:text-xs text-tertiary bg-secondary-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full whitespace-nowrap">
-      Last updated: Today 10:30 AM
-    </span>
-    <button className="p-1.5 sm:p-2 hover:bg-secondary-100 rounded-lg transition-fast flex-shrink-0">
-      <MoreHorizontal size={16} className="sm:w-[18px] sm:h-[18px] text-tertiary" />
-    </button>
-  </div>
-</div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {statsDataList.map((stat) => (
-        <div
-          key={stat.id}
-          className={`
-            group relative overflow-hidden rounded-2xl p-6 cursor-pointer
-            transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl
-            ${stat.color === 'primary' ? 'bg-gradient-to-br from-primary-50 to-white border border-primary-200 hover:shadow-primary-100/50' : ''}
-            ${stat.color === 'warning' ? 'bg-gradient-to-br from-warning-50 to-white border border-warning-200 hover:shadow-warning-100/50' : ''}
-            ${stat.color === 'success' ? 'bg-gradient-to-br from-success-50 to-white border border-success-200 hover:shadow-success-100/50' : ''}
-            ${stat.color === 'accent' ? 'bg-gradient-to-br from-accent-50 to-white border border-accent-200 hover:shadow-accent-100/50' : ''}
-          `}
-          onMouseEnter={() => setHoveredCard(stat.id)}
-          onMouseLeave={() => setHoveredCard(null)}
-          role="button"
-          tabIndex={0}
-          onClick={() => console.log(`Navigate to ${stat.id}`)}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              console.log(`Navigate to ${stat.id}`)
-            }
-          }}
-        >
-          {/* Header with Icon */}
-          <div className="flex items-start justify-between mb-4">
-            <div className={`
-              p-3 rounded-xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3
-              ${stat.color === 'primary' ? 'bg-primary-500 text-white shadow-lg shadow-primary-200' : ''}
-              ${stat.color === 'warning' ? 'bg-warning-500 text-white shadow-lg shadow-warning-200' : ''}
-              ${stat.color === 'success' ? 'bg-success-500 text-white shadow-lg shadow-success-200' : ''}
-              ${stat.color === 'accent' ? 'bg-accent-500 text-white shadow-lg shadow-accent-200' : ''}
-            `}>
-              {stat.icon}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {stat.urgent && (
-                <span className="px-2 py-1 bg-error-100 text-error-600 text-xs font-semibold rounded-full animate-pulse">
-                  {stat.urgent} urgent
-                </span>
-              )}
-              
-              {/* Info Button */}
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowTooltip(showTooltip === stat.id ? null : stat.id)
-                  }}
-                  className="p-1 hover:bg-surface-2 rounded-full transition-fast"
-                >
-                  <Info size={16} className="text-tertiary" />
-                </button>
+        return (
+          <div
+            key={stat.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push(stat.route)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                router.push(stat.route);
+              }
+            }}
+            onMouseEnter={() => setHoveredCard(stat.id)}
+            onMouseLeave={() => setHoveredCard(null)}
+            className={`
+              group relative overflow-hidden rounded-2xl p-5 sm:p-6 cursor-pointer
+              bg-gradient-to-br ${theme.gradient} border ${theme.border}
+              shadow-2xs hover:shadow-lg transition-all duration-300
+              ${isHovered ? '-translate-y-1' : ''}
+              flex flex-col justify-between
+            `}
+          >
+            <div>
+              {/* Header with Icon & Info Tooltip */}
+              <div className="flex items-start justify-between mb-3.5">
+                <div className={`p-3 rounded-xl ${theme.bg} text-white shadow-sm transition-transform duration-300 group-hover:scale-105`}>
+                  {stat.icon}
+                </div>
                 
-                {showTooltip === stat.id && (
-                  <div className="absolute right-0 top-8 w-48 bg-white border border-medium rounded-xl shadow-xl p-3 z-10 animate-fadeIn">
-                    <p className="text-xs text-secondary">{stat.tooltip}</p>
-                    <div className="absolute -top-1 right-3 w-2 h-2 bg-white border-t border-l border-medium transform rotate-45" />
+                <div className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTooltip(showTooltip === stat.id ? null : stat.id);
+                      }}
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white/80 transition-colors"
+                      title="Information"
+                    >
+                      <Info size={15} />
+                    </button>
+                    
+                    {showTooltip === stat.id && (
+                      <div 
+                        className="absolute right-0 top-7 w-48 bg-slate-900 text-white text-xs rounded-xl shadow-xl p-3 z-30 animate-fadeIn"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="text-slate-200 leading-relaxed">{stat.tooltip}</p>
+                        <div className="absolute -top-1 right-2.5 w-2 h-2 bg-slate-900 transform rotate-45" />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              </div>
+
+              {/* Title & Metrics */}
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500 mb-1 font-medium">{stat.title}</p>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {stat.value}
+                  </span>
+                  <div className={`
+                    inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-md
+                    ${stat.trend === 'up' ? 'text-emerald-700 bg-emerald-100/70' : 'text-rose-700 bg-rose-100/70'}
+                  `}>
+                    {stat.trend === 'up' ? (
+                      <ArrowUpRight size={13} />
+                    ) : (
+                      <ArrowDownRight size={13} />
+                    )}
+                    <span>{stat.change}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div>
-            <p className="text-xs sm:text-sm text-secondary mb-1 font-medium">{stat.title}</p>
-            <div className="flex items-end gap-1 sm:gap-2 mb-2 sm:mb-3">
-              <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary tracking-tight">
-                {stat.value}
+            {/* Bottom Action Footer with Hover Animation */}
+            <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs font-semibold">
+              <span className={`${theme.text} flex items-center gap-1.5 group-hover:underline`}>
+                <span>{stat.actionLabel}</span>
               </span>
-              <div className={`
-                flex items-center gap-0.5 sm:gap-1 mb-1
-                ${stat.trend === 'up' ? 'text-success-600' : 'text-error-600'}
-              `}>
-                {stat.trend === 'up' ? (
-                  <ArrowUpRight size={14} className="sm:w-[18px] sm:h-[18px] animate-bounce-x" />
-                ) : (
-                  <ArrowDownRight size={14} className="sm:w-[18px] sm:h-[18px] animate-bounce-x" />
-                )}
-                <span className="text-xs sm:text-sm font-semibold">{stat.change}</span>
-              </div>
+              <span className={`w-6 h-6 rounded-lg ${theme.actionBg} flex items-center justify-center transition-transform group-hover:translate-x-1`}>
+                <ArrowRight size={13} />
+              </span>
             </div>
-            <p className="text-[10px] sm:text-xs text-tertiary flex items-center gap-1">
-              <span className="inline-block w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full bg-tertiary/50" />
-              {stat.period}
-            </p>
           </div>
-
-          {/* Progress Bar for Pending Orders */}
-          {stat.id === 'pending' && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-2 overflow-hidden">
-              <div 
-                className="h-full bg-warning-500 transition-all duration-1000"
-                style={{ width: hoveredCard === stat.id ? '75%' : '60%' }}
-              />
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
-</div>
-  )
+  );
 }

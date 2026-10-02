@@ -1,98 +1,16 @@
 @import '../../reusables/variables.scss';
 
 /* ================================
-   Recent Activity Feed - Only Animations
+   Recent Activity Feed - Transitions
 ================================ */
 
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes pulseDot {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.7;
-  }
-}
-
-/* Activity Item Entrance Animation */
-.space-y-3 > div {
-  animation: slideInRight 0.3s ease-out forwards;
-  opacity: 0;
-}
-
-@for $i from 1 through 20 {
-  .space-y-3 > div:nth-child(#{$i}) {
-    animation-delay: $i * 0.05s;
-  }
-}
-
-/* Pulse Animation for Live Indicator */
-.animate-pulse {
-  animation: pulseDot 1.5s infinite;
-}
-
-/* Hover Effects */
-.group {
-  transition: all 0.2s ease;
+/* Activity Item Transitions - Never default to opacity: 0 */
+.activity-card-item {
+  opacity: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   
   &:hover {
-    transform: translateX(4px);
-    
-    .opacity-0 {
-      animation: fadeIn 0.2s ease-out forwards;
-    }
-  }
-}
-
-/* Status Line Animation */
-.absolute.left-0 {
-  transition: height 0.2s ease;
-  
-  .group:hover & {
-    height: 40px;
-  }
-}
-
-/* Icon Animation */
-.w-8.h-8 {
-  transition: all 0.2s ease;
-  
-  .group:hover & {
-    transform: scale(1.05);
-  }
-}
-
-/* Action Button Animation */
-button.opacity-0 {
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: translateX(4px);
-    
-    svg {
-      transform: translateX(2px);
-    }
+    transform: translateY(-2px);
   }
 }
 
@@ -103,78 +21,25 @@ button.opacity-0 {
   }
   
   &::-webkit-scrollbar-track {
-    background: $surface-2;
-    border-radius: 20px;
+    background: transparent;
   }
   
   &::-webkit-scrollbar-thumb {
-    background: $primary-300;
+    background: #cbd5e1;
     border-radius: 20px;
-    transition: background 0.2s ease;
     
     &:hover {
-      background: $primary-500;
+      background: #94a3b8;
     }
-  }
-}
-
-/* Status Dot Animation */
-.absolute.-top-0\.5 {
-  animation: fadeIn 0.3s ease-out;
-  
-  &.bg-warning-500,
-  &.bg-error-500 {
-    animation: pulseDot 1.5s infinite;
-  }
-}
-
-/* View All Link Animation */
-.mt-4 button {
-  transition: all 0.2s ease;
-  
-  &:hover {
-    gap: 0.75rem;
-    
-    svg {
-      transform: translateX(4px);
-    }
-  }
-}
-
-/* Legend Dots Animation */
-.flex.items-center.gap-3 span:first-child span {
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: scale(1.2);
   }
 }
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  .space-y-3 > div,
-  .group,
-  .animate-pulse,
+  .activity-card-item,
   button,
-  svg,
-  .custom-scrollbar::-webkit-scrollbar-thumb {
+  svg {
     animation: none !important;
     transition: none !important;
-  }
-  
-  .group:hover {
-    transform: none;
-    
-    .opacity-0 {
-      opacity: 1;
-    }
-  }
-  
-  .mt-4 button:hover {
-    gap: 0.5rem;
-    
-    svg {
-      transform: none;
-    }
   }
 }

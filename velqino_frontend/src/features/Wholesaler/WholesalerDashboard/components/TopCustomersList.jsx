@@ -1,205 +1,207 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, Mail, Phone, ChevronRight, Award, TrendingUp, Loader2 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/WholesalerDashboard/TopCustomersList.scss';
 
 export default function TopCustomersList({ customers, isLoading, currentPage, totalPages, totalCount, totalSpent, growth, onPageChange }) {
+  const router = useRouter();
   const [hoveredCustomer, setHoveredCustomer] = useState(null);
+  const customersList = Array.isArray(customers) ? customers : (customers?.items || customers?.data || []);
   const perPage = 6;
-
   const hasMore = currentPage < totalPages;
+
+  // Support both preformatted and raw API total_spent values
+  const rawTotalSpent = customersList.reduce((sum, c) => sum + (Number(c.total_spent) || 0), 0);
+  const displayTotalSpent = totalSpent && totalSpent !== '₹0' 
+    ? totalSpent 
+    : (rawTotalSpent > 0 ? `₹${rawTotalSpent.toLocaleString()}` : '₹0');
 
   const getAvatarBg = (color) => {
     switch(color) {
-      case 'primary': return 'bg-primary-100 text-primary-600';
-      case 'success': return 'bg-success-100 text-success-600';
-      case 'accent': return 'bg-accent-100 text-accent-600';
-      case 'warning': return 'bg-warning-100 text-warning-600';
-      case 'info': return 'bg-info-100 text-info-600';
-      default: return 'bg-surface-2 text-secondary';
+      case 'primary': return 'bg-primary-100 text-primary-700';
+      case 'success': return 'bg-emerald-100 text-emerald-700';
+      case 'accent': return 'bg-amber-100 text-amber-700';
+      case 'warning': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-primary-100 text-primary-700';
     }
   };
 
   const getTypeBadge = (type) => {
-    switch(type) {
-      case 'wholesaler': return 'bg-primary-100 text-primary-600';
-      case 'retailer': return 'bg-success-100 text-success-600';
-      default: return 'bg-surface-2 text-secondary';
-    }
-  };
-
-  const loadMore = () => {
-    if (hasMore) {
-      setPage(prev => prev + 1);
-    }
-  };
-
-  const loadPrevious = () => {
-    if (currentPage > 1) {
-      setPage(prev => prev - 1);
+    switch(type?.toLowerCase()) {
+      case 'wholesaler': return 'bg-primary-50 text-primary-700 border-primary-100';
+      case 'retailer': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
   if (isLoading && currentPage === 1) {
     return (
-      <div className="bg-white rounded-2xl border border-light p-6 text-center">
-        <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
-        <p className="text-sm text-tertiary">Loading customers...</p>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+        <div className="flex items-center justify-center py-10">
+          <Loader2 size={28} className="animate-spin text-primary-600 mb-2" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-light p-4 lg:p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-primary-100 flex items-center justify-center text-primary-600">
-            <Users size={18} className="lg:w-5 lg:h-5" />
-          </div>
-          <div>
-            <h3 className="text-base lg:text-lg xl:text-xl font-semibold text-primary">Top Customers</h3>
-            <p className="text-xs lg:text-sm text-tertiary">Highest purchase value</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 px-2 py-1 bg-accent-100 text-accent-600 rounded-full text-xs">
-            <Award size={12} />
-            <span>Total: {totalSpent}</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Empty State */}
-      {customers.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users size={32} className="text-gray-400" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">No customers yet</h4>
-          <p className="text-sm text-gray-500">When retailers place orders, they'll appear here</p>
-        </div>
-      )}
-
-      {/* Customers Grid */}
-      {customers.length > 0 && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {customers.map((customer) => (
-              <div
-                key={customer.id}
-                className={`group relative bg-surface-1 rounded-xl p-3 lg:p-4 border border-light transition-all hover:shadow-md ${
-                  hoveredCustomer === customer.id ? 'scale-[1.01]' : ''
-                }`}
-                onMouseEnter={() => setHoveredCustomer(customer.id)}
-                onMouseLeave={() => setHoveredCustomer(null)}
-              >
-                {/* Rank Badge */}
-                <div className="absolute -top-1 -left-1 w-5 h-5 lg:w-6 lg:h-6 bg-primary-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                  {customer.rank}
-                </div>
-
-                {/* Customer Info */}
-                <div className="flex items-start gap-3">
-                  {/* Avatar */}
-                  <div className={`relative w-10 h-10 lg:w-12 lg:h-12 rounded-xl ${getAvatarBg(customer.color)} flex items-center justify-center font-semibold text-sm lg:text-base flex-shrink-0`}>
-                    {customer.avatar}
-                    <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                      customer.type === 'wholesaler' ? 'bg-primary-500' : 'bg-success-500'
-                    }`} />
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm lg:text-base font-semibold text-primary truncate">{customer.name}</h4>
-                        <p className="text-xs text-secondary truncate">{customer.email}</p>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getTypeBadge(customer.type)}`}>
-                        {customer.type}
-                      </span>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
-                        <p className="text-xs text-tertiary">Total spent</p>
-                        <p className="text-sm font-semibold text-primary">{customer.spent_formatted}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-tertiary">Orders</p>
-                        <p className="text-sm font-medium text-primary">{customer.orders}</p>
-                      </div>
-                    </div>
-
-                    {/* Contact Info */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <a href={`mailto:${customer.email}`} className="p-1.5 bg-white rounded-lg border border-light hover:bg-primary-50 transition-all">
-                        <Mail size={14} className="text-tertiary hover:text-primary-600" />
-                      </a>
-                      <a href={`tel:${customer.phone}`} className="p-1.5 bg-white rounded-lg border border-light hover:bg-primary-50 transition-all">
-                        <Phone size={14} className="text-tertiary hover:text-primary-600" />
-                      </a>
-                      <span className="text-xs text-tertiary ml-auto">Since {customer.since}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hover Glow */}
-                {hoveredCustomer === customer.id && (
-                  <div className={`absolute inset-0 rounded-xl opacity-5 blur-lg pointer-events-none ${
-                    customer.color === 'primary' ? 'bg-primary-500' :
-                    customer.color === 'success' ? 'bg-success-500' :
-                    customer.color === 'accent' ? 'bg-accent-500' : 'bg-warning-500'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalCount > perPage && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-light">
-              <div className="text-xs text-tertiary">
-                Showing {customers.length} of {totalCount} customers
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={loadPrevious}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-light hover:bg-surface-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  Previous
-                </button>
-                <span className="text-xs text-tertiary">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={loadMore}
-                  disabled={!hasMore}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-light hover:bg-surface-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  Next
-                </button>
-              </div>
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 lg:p-6 shadow-xs flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 lg:mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
+              <Users size={20} />
             </div>
-          )}
-
-          {/* Footer */}
-          <div className="flex items-center justify-between mt-4 lg:mt-6 pt-3 lg:pt-4 border-t border-light">
-            <div className="flex items-center gap-2 text-xs text-tertiary">
-              <TrendingUp size={14} className="text-success-500" />
-              <span>↑ {growth} vs last month</span>
+            <div>
+              <h3 className="text-base lg:text-lg font-bold text-slate-900">Top Customers</h3>
+              <p className="text-xs text-slate-500">Highest purchase value partners</p>
             </div>
-            <button className="flex items-center gap-1 text-xs lg:text-sm text-primary-600 hover:text-primary-700 transition-all hover:gap-2">
-              <span>View all customers</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 px-3 py-1 bg-primary-50 text-primary-700 border border-primary-200/60 rounded-full text-xs font-semibold shadow-2xs">
+              <Award size={13} />
+              <span>{displayTotalSpent}</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => router.push('/wholesaler/customers')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-200/80 rounded-xl text-xs font-semibold text-primary-700 hover:bg-primary-100 transition-all shadow-2xs group"
+            >
+              <span>All Customers</span>
+              <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Empty State */}
+        {customersList.length === 0 && (
+          <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center">
+            <div className="w-12 h-12 bg-white rounded-2xl shadow-xs flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <Users size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-slate-900 mb-1">No customers yet</h4>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4">When retailers place orders, top spenders will appear here</p>
+            <button
+              type="button"
+              onClick={() => router.push('/wholesaler/customers')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-50 text-primary-700 border border-primary-200/80 rounded-xl text-xs font-semibold hover:bg-primary-100 transition-all shadow-2xs"
+            >
+              <span>Partner Directory</span>
               <ChevronRight size={14} />
             </button>
           </div>
-        </>
-      )}
+        )}
+
+        {/* Customers List */}
+        {customersList.length > 0 && (
+          <div className="space-y-3">
+            {customersList.map((customer, index) => {
+              const rank = customer.rank || index + 1;
+              const formattedSpent = customer.spent_formatted || (customer.total_spent !== undefined ? `₹${Number(customer.total_spent).toLocaleString()}` : '₹0');
+              const orderCount = customer.orders ?? customer.order_count ?? 0;
+              const initial = customer.avatar || (customer.name ? customer.name[0].toUpperCase() : 'C');
+              const customerType = customer.type || 'Retailer';
+
+              return (
+                <div
+                  key={customer.id || index}
+                  className={`group relative bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 ${
+                    hoveredCustomer === (customer.id || index) ? 'translate-y-[-2px] border-primary-200' : ''
+                  }`}
+                  onMouseEnter={() => setHoveredCustomer(customer.id || index)}
+                  onMouseLeave={() => setHoveredCustomer(null)}
+                >
+                  {/* Rank Badge */}
+                  <div className="absolute -top-1.5 -left-1.5 w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
+                    {rank}
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="flex items-start gap-3.5">
+                    {/* Avatar */}
+                    <div className={`relative w-11 h-11 rounded-xl ${getAvatarBg(customer.color)} flex items-center justify-center font-bold text-base flex-shrink-0 shadow-2xs`}>
+                      {initial}
+                      <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white bg-emerald-500" />
+                    </div>
+
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-slate-900 group-hover:text-primary-600 transition-colors truncate">
+                            {customer.name}
+                          </h4>
+                          <p className="text-xs text-slate-500 truncate">{customer.email}</p>
+                        </div>
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border capitalize ${getTypeBadge(customerType)} flex-shrink-0`}>
+                          {customerType}
+                        </span>
+                      </div>
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-100 bg-slate-50/60 rounded-xl p-2">
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-400">Total Spent</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900">{formattedSpent}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-400">Orders</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900">{orderCount} orders</p>
+                        </div>
+                      </div>
+
+                      {/* Contact Actions */}
+                      <div className="flex items-center gap-2 mt-2.5">
+                        {customer.email && (
+                          <a 
+                            href={`mailto:${customer.email}`} 
+                            className="p-1.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:bg-primary-50 hover:text-primary-600 transition-all text-slate-500"
+                            title={`Email ${customer.name}`}
+                          >
+                            <Mail size={13} />
+                          </a>
+                        )}
+                        {customer.phone && (
+                          <a 
+                            href={`tel:${customer.phone}`} 
+                            className="p-1.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:bg-primary-50 hover:text-primary-600 transition-all text-slate-500"
+                            title={`Call ${customer.name}`}
+                          >
+                            <Phone size={13} />
+                          </a>
+                        )}
+                        {customer.since && (
+                          <span className="text-[11px] text-slate-400 ml-auto">
+                            Since {customer.since}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs">
+        <span className="text-slate-400 font-medium">{customersList.length} partners listed</span>
+        <button
+          type="button"
+          onClick={() => router.push('/wholesaler/customers')}
+          className="flex items-center gap-1 font-semibold text-primary-600 hover:text-primary-700 transition-all hover:gap-1.5"
+        >
+          <span>View Partner Directory</span>
+          <ChevronRight size={14} />
+        </button>
+      </div>
     </div>
   );
 }
+
