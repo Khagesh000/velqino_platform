@@ -2,110 +2,165 @@
 
 import React, { useState, lazy, Suspense } from 'react'
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
+import {
+  BookOpen,
+  MessageCircle,
+  Ticket,
+  Activity,
+  Shield,
+  Clock,
+  Sparkles,
+  Headphones
+} from '@/utils/icons'
 
 // Lazy load all non-critical components
 const HelpCenter = lazy(() => import('./components/HelpCenter'))
 const ContactSupport = lazy(() => import('./components/ContactSupport'))
 const TicketHistory = lazy(() => import('./components/TicketHistory'))
-const SystemStatus = lazy(() => import('./components/SystemStatus')) 
+const SystemStatus = lazy(() => import('./components/SystemStatus'))
 
-// Loading placeholders
-const HelpCenterPlaceholder = () => <div className="w-full h-[500px] bg-gray-50 rounded-xl animate-pulse" />
-const ContactPlaceholder = () => <div className="w-full h-[450px] bg-gray-50 rounded-xl animate-pulse" />
-const TicketPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const StatusPlaceholder = () => <div className="w-full h-[350px] bg-gray-50 rounded-xl animate-pulse" /> 
+// Executive loading placeholders
+const SupportPlaceholder = () => (
+  <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xs animate-pulse space-y-6">
+    <div className="flex items-center gap-4">
+      <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+      <div className="space-y-2 flex-1">
+        <div className="h-5 bg-slate-200 rounded w-1/4"></div>
+        <div className="h-3 bg-slate-200 rounded w-1/3"></div>
+      </div>
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="h-28 bg-slate-100 rounded-xl"></div>
+      <div className="h-28 bg-slate-100 rounded-xl"></div>
+      <div className="h-28 bg-slate-100 rounded-xl"></div>
+    </div>
+    <div className="h-64 bg-slate-50 rounded-xl"></div>
+  </div>
+)
 
 export default function Support() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [activeTab, setActiveTab] = useState('helpcenter')
 
   const tabs = [
-    { id: 'helpcenter', label: 'Help Center', icon: '📚' },
-    { id: 'contact', label: 'Contact Support', icon: '💬' },
-    { id: 'tickets', label: 'Ticket History', icon: '🎫' },
-    { id: 'status', label: 'System Status', icon: '📊' }
+    { id: 'helpcenter', label: 'Help Center & Guides', icon: BookOpen, description: 'Articles, FAQs & video walkthroughs' },
+    { id: 'contact', label: 'Contact Support & Desk', icon: MessageCircle, description: 'Live agent chat & ticket submission' },
+    { id: 'tickets', label: 'Ticket History', icon: Ticket, description: 'Track open & resolved support inquiries' },
+    { id: 'status', label: 'Infrastructure Status', icon: Activity, description: 'Real-time API & gateway uptime' }
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <div className="min-h-screen bg-slate-50/50 pb-20 lg:pb-12">
       <WholesaleNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
       
       <main className={`
-        transition-all duration-300 p-3 sm:p-4  lg:p-6
+        transition-all duration-300 p-3.5 sm:p-5 lg:p-7
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
       `}>
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
+        <div className="w-full px-1 sm:px-2 md:px-4 lg:max-w-7xl lg:mx-auto space-y-6">
           
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-primary-100 flex items-center justify-center text-primary-600">
-                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636L16.95 7.05m2.828 2.828l-1.414 1.414M12 4.5v2m0 0H9m3 0h3m-6 0H6m12 0h-3M6 12H4.5M12 12h9m-9 0v6m0-6h-3m3 0h3m-6 0h-3m12 0h3M6 21h12a2 2 0 002-2V9a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+          {/* Executive Header Banner */}
+          <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600 text-white rounded-2xl p-6 sm:p-7 shadow-sm relative overflow-hidden">
+            {/* Subtle background ornamentation */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+            <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-black/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-semibold text-white">
+                  <Shield size={13} className="text-emerald-300" />
+                  <span>24/7 Enterprise Merchant Care • Priority SLA</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                  Support & Resolution Center
+                </h1>
+                <p className="text-xs sm:text-sm text-primary-100 max-w-2xl font-medium leading-relaxed">
+                  Access direct merchant assistance, real-time ticket escalation, B2B knowledge base guides, and platform health telemetry.
+                </p>
               </div>
-              <div>
-                <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Support Center</h1>
-                <p className="text-sm text-gray-500">Get help, browse resources, and track your support requests</p>
+
+              {/* Live Support Metric Pills */}
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
+                <div className="flex-1 sm:flex-initial bg-white/10 backdrop-blur-md border border-white/15 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                  <div className="flex items-center justify-center gap-1.5 text-emerald-300 text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Desk Live</span>
+                  </div>
+                  <p className="text-2xs text-primary-150 uppercase tracking-wider font-semibold mt-0.5">Agent Status</p>
+                </div>
+
+                <div className="flex-1 sm:flex-initial bg-white/10 backdrop-blur-md border border-white/15 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                  <p className="text-sm font-bold text-white">&lt; 2 Mins</p>
+                  <p className="text-2xs text-primary-150 uppercase tracking-wider font-semibold mt-0.5">Avg Response</p>
+                </div>
+
+                <div className="flex-1 sm:flex-initial bg-white/10 backdrop-blur-md border border-white/15 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                  <p className="text-sm font-bold text-white">99.98%</p>
+                  <p className="text-2xs text-primary-150 uppercase tracking-wider font-semibold mt-0.5">System SLA</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="overflow-x-auto scrollbar-hide  mb-6">
-            <div className="flex items-center gap-1 border-b border-gray-200 min-w-max pb-px">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium capitalize border-b-2 transition-all whitespace-nowrap flex items-center gap-1 sm:gap-2 ${
-                    activeTab === tab.id
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <span className="text-sm sm:text-base">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
+          {/* Navigation Pill Tabs */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-xs overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1.5 min-w-max">
+              {tabs.map(tab => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700 shadow-2xs border border-primary-200/60'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      <Icon size={14} />
+                    </div>
+                    <div className="text-left">
+                      <p className="leading-tight">{tab.label}</p>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          {/* Tab Content */}
-          {activeTab === 'helpcenter' && (
-            <div style={{ minHeight: '500px' }}>
-              <Suspense fallback={<HelpCenterPlaceholder />}>
-                <HelpCenter isActive={activeTab === 'helpcenter'}/>
+          {/* Dynamic Tab Content Panels */}
+          <div className="transition-all">
+            {activeTab === 'helpcenter' && (
+              <Suspense fallback={<SupportPlaceholder />}>
+                <HelpCenter isActive={activeTab === 'helpcenter'} />
               </Suspense>
-            </div>
-          )}
+            )}
 
-           {activeTab === 'contact' && (
-            <div style={{ minHeight: '450px' }}>
-              <Suspense fallback={<ContactPlaceholder />}>
-                <ContactSupport isActive={activeTab === 'contact'}/>
+            {activeTab === 'contact' && (
+              <Suspense fallback={<SupportPlaceholder />}>
+                <ContactSupport isActive={activeTab === 'contact'} />
               </Suspense>
-            </div>
-          )} 
+            )}
 
-           {activeTab === 'tickets' && (
-            <div style={{ minHeight: '400px' }}>
-              <Suspense fallback={<TicketPlaceholder />}>
-                <TicketHistory isActive={activeTab === 'tickets'}/>
+            {activeTab === 'tickets' && (
+              <Suspense fallback={<SupportPlaceholder />}>
+                <TicketHistory isActive={activeTab === 'tickets'} />
               </Suspense>
-            </div>
-          )} 
+            )}
 
-         {activeTab === 'status' && (
-            <div style={{ minHeight: '350px' }}>
-              <Suspense fallback={<StatusPlaceholder />}>
+            {activeTab === 'status' && (
+              <Suspense fallback={<SupportPlaceholder />}>
                 <SystemStatus isActive={activeTab === 'status'} />
               </Suspense>
-            </div>
-          )}
+            )}
+          </div>
 
         </div>
       </main>
