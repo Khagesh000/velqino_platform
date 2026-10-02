@@ -32,7 +32,7 @@
 /* Table Row Animation */
 tbody tr {
   animation: rowFade 0.2s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
   
   @for $i from 1 through 10 {
     &:nth-child(#{$i}) {
@@ -56,7 +56,7 @@ tbody tr:hover {
 .flex.items-center.justify-between.p-3 {
   transition: all 0.2s ease;
   animation: slideIn 0.2s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
   
   @for $i from 1 through 5 {
     &:nth-child(#{$i}) {

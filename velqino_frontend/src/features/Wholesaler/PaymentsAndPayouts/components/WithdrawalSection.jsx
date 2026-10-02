@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
   Wallet,
   ArrowUp,
@@ -15,84 +15,86 @@ import {
   History,
   Plus,
   Trash2,
-  Edit
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/PaymentsPayouts/WithdrawalSection.scss'
+  Edit,
+  Shield,
+  Sparkles
+} from '@/utils/icons';
+import '../../../../styles/Wholesaler/PaymentsPayouts/WithdrawalSection.scss';
 
 export default function WithdrawalSection({ onWithdraw }) {
-  const [withdrawAmount, setWithdrawAmount] = useState('')
-  const [selectedMethod, setSelectedMethod] = useState('bank')
-  const [showHistory, setShowHistory] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const [withdrawSuccess, setWithdrawSuccess] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [selectedMethod, setSelectedMethod] = useState('bank');
+  const [showHistory, setShowHistory] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [withdrawSuccess, setWithdrawSuccess] = useState(false);
 
-  const availableBalance = 1245750
+  const availableBalance = 1245750;
 
   const paymentMethods = [
     {
       id: 'bank',
-      name: 'Bank Account',
+      name: 'Direct Bank NEFT/RTGS',
       icon: Banknote,
-      details: 'HDFC Bank - XXXXXX1234',
-      processingTime: '1-3 business days',
+      details: 'HDFC Bank · A/C Ending in 1234',
+      processingTime: '1-2 business days',
       minAmount: 1000,
       maxAmount: 500000
     },
     {
       id: 'upi',
-      name: 'UPI',
+      name: 'Instant UPI VPA',
       icon: CreditCard,
       details: 'rajesh@okhdfcbank',
-      processingTime: 'Instant - 24 hours',
+      processingTime: 'Realtime (Under 10 mins)',
       minAmount: 100,
       maxAmount: 100000
     },
     {
       id: 'wallet',
-      name: 'Wallet',
+      name: 'Corporate Wallet',
       icon: Wallet,
-      details: 'Paytm Wallet - +91 98765 43210',
-      processingTime: 'Instant',
+      details: 'Paytm Verified · +91 98765 43210',
+      processingTime: 'Instant Transfer',
       minAmount: 100,
       maxAmount: 50000
     }
-  ]
+  ];
 
   const withdrawalHistory = [
-    { id: 'WDR-001', date: '2024-03-15', amount: 50000, method: 'Bank Account', status: 'Completed', reference: 'PAYOUT-001' },
-    { id: 'WDR-002', date: '2024-03-01', amount: 25000, method: 'UPI', status: 'Completed', reference: 'PAYOUT-002' },
-    { id: 'WDR-003', date: '2024-02-15', amount: 100000, method: 'Bank Account', status: 'Completed', reference: 'PAYOUT-003' },
-    { id: 'WDR-004', date: '2024-02-01', amount: 15000, method: 'Wallet', status: 'Processing', reference: 'PAYOUT-004' }
-  ]
+    { id: 'WDR-001', date: '2024-03-15', amount: 50000, method: 'Bank Transfer (HDFC)', status: 'Completed', reference: 'UTR-9872164' },
+    { id: 'WDR-002', date: '2024-03-01', amount: 25000, method: 'UPI VPA', status: 'Completed', reference: 'UPI-4312890' },
+    { id: 'WDR-003', date: '2024-02-15', amount: 100000, method: 'Bank Transfer (HDFC)', status: 'Completed', reference: 'UTR-8234190' },
+    { id: 'WDR-004', date: '2024-02-01', amount: 15000, method: 'Corporate Wallet', status: 'Processing', reference: 'WLT-1102948' }
+  ];
 
-  const currentMethod = paymentMethods.find(m => m.id === selectedMethod)
+  const currentMethod = paymentMethods.find(m => m.id === selectedMethod) || paymentMethods[0];
 
   const handleWithdraw = () => {
-    const amount = parseFloat(withdrawAmount)
+    const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount < currentMethod.minAmount) {
-      alert(`Minimum withdrawal amount is ₹${currentMethod.minAmount}`)
-      return
+      alert(`Minimum withdrawal amount for ${currentMethod.name} is ₹${currentMethod.minAmount.toLocaleString('en-IN')}`);
+      return;
     }
     if (amount > availableBalance) {
-      alert('Insufficient balance')
-      return
+      alert('Insufficient available balance in your treasury account');
+      return;
     }
     if (amount > currentMethod.maxAmount) {
-      alert(`Maximum withdrawal amount is ₹${currentMethod.maxAmount}`)
-      return
+      alert(`Maximum withdrawal per single transfer is ₹${currentMethod.maxAmount.toLocaleString('en-IN')}`);
+      return;
     }
 
-    setProcessing(true)
+    setProcessing(true);
     setTimeout(() => {
-      setProcessing(false)
-      setWithdrawSuccess(true)
+      setProcessing(false);
+      setWithdrawSuccess(true);
       setTimeout(() => {
-        setWithdrawSuccess(false)
-        setWithdrawAmount('')
-        onWithdraw?.()
-      }, 2000)
-    }, 2000)
-  }
+        setWithdrawSuccess(false);
+        setWithdrawAmount('');
+        onWithdraw?.();
+      }, 2000);
+    }, 1500);
+  };
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-IN', {
@@ -100,196 +102,229 @@ export default function WithdrawalSection({ onWithdraw }) {
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(value)
-  }
+    }).format(value);
+  };
 
   return (
-    <div className="withdrawal-section bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="withdrawal-section bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
       {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-              <ArrowUp size={20} />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Request Withdrawal</h3>
-              <p className="text-xs sm:text-sm text-gray-500">Withdraw your earnings to your preferred payment method</p>
-            </div>
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200/80 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-2xs">
+            <ArrowUp size={19} />
           </div>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-all"
-          >
-            <History size={14} />
-            <span className="hidden sm:inline">Withdrawal History</span>
-            <ChevronDown size={14} className={`transition-transform ${showHistory ? 'rotate-180' : ''}`} />
-          </button>
+          <div>
+            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+              Treasury Disbursement Request
+            </h3>
+            <p className="text-xs text-slate-500">
+              Withdraw available merchant liquidity to verified bank accounts or instant UPI
+            </p>
+          </div>
         </div>
+
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          type="button"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 rounded-xl border border-slate-200/80 shadow-2xs transition-all self-start sm:self-auto cursor-pointer"
+        >
+          <History size={14} className="text-primary-600" />
+          <span>Disbursement Logs</span>
+          <ChevronDown size={14} className={`transition-transform duration-200 text-slate-400 ${showHistory ? 'rotate-180' : ''}`} />
+        </button>
       </div>
 
-      {/* Withdrawal Form */}
-      <div className="p-4 sm:p-6">
-        {/* Available Balance */}
-        <div className="mb-6 p-4 bg-primary-50 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Wallet size={24} className="text-primary-600" />
+      <div className="p-4 sm:p-6 space-y-6">
+        {/* Available Liquidity Banner */}
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-primary-500/10 via-primary-50 to-slate-50 rounded-2xl border border-primary-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-primary-600 text-white flex items-center justify-center shadow-xs flex-shrink-0">
+              <Wallet size={22} />
+            </div>
             <div>
-              <p className="text-xs text-primary-600">Available Balance</p>
-              <p className="text-2xl font-bold text-primary-700">{formatCurrency(availableBalance)}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-primary-700">Available Liquid Reserve</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                {formatCurrency(availableBalance)}
+              </p>
             </div>
           </div>
-          <button className="text-xs text-primary-600 hover:text-primary-700">
-            View Details
-          </button>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <CheckCircle size={13} className="text-emerald-600" />
+              Instant Transfer Ready
+            </span>
+          </div>
         </div>
 
-        {/* Withdrawal Amount Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Withdrawal Amount <span className="text-error-500">*</span>
+        {/* Amount Input */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Withdrawal Amount (INR) <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₹</span>
             <input
               type="number"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              placeholder="Enter amount"
-              className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              placeholder="Enter transfer amount (e.g. 50000)"
+              className="w-full pl-8 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary-500 focus:ring-3 focus:ring-primary-100 transition-all placeholder:text-slate-400"
             />
           </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {[1000, 5000, 10000, 25000, 50000].map(amount => (
+
+          {/* Quick Amount Chips */}
+          <div className="flex flex-wrap items-center gap-2 mt-2.5">
+            <span className="text-[11px] font-semibold text-slate-400 mr-1">Quick Select:</span>
+            {[5000, 10000, 25000, 50000, 100000].map(amount => (
               <button
                 key={amount}
+                type="button"
                 onClick={() => setWithdrawAmount(amount.toString())}
-                className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-primary-100 hover:text-primary-700 transition-all"
+                className="px-2.5 py-1 text-xs font-bold bg-slate-100 text-slate-700 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 border border-slate-200/80 rounded-lg transition-all cursor-pointer shadow-2xs"
               >
-                ₹{amount}
+                ₹{amount.toLocaleString('en-IN')}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setWithdrawAmount(availableBalance.toString())}
+              className="px-2.5 py-1 text-xs font-bold bg-primary-100 text-primary-800 border border-primary-200 rounded-lg hover:bg-primary-200 transition-all cursor-pointer shadow-2xs"
+            >
+              Full Balance
+            </button>
           </div>
         </div>
 
-        {/* Payment Method Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Payment Method
+        {/* Payment Method Selector */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Disbursement Destination
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {paymentMethods.map(method => {
-              const Icon = method.icon
-              const isSelected = selectedMethod === method.id
+              const Icon = method.icon;
+              const isSelected = selectedMethod === method.id;
               return (
                 <button
                   key={method.id}
-                  className={`p-3 rounded-xl border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-primary-300'
-                  }`}
+                  type="button"
                   onClick={() => setSelectedMethod(method.id)}
+                  className={`p-3.5 rounded-2xl border-2 transition-all text-left flex flex-col justify-between cursor-pointer ${
+                    isSelected
+                      ? 'border-primary-600 bg-primary-50/50 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon size={18} className={isSelected ? 'text-primary-600' : 'text-gray-500'} />
-                    <span className={`text-sm font-medium ${isSelected ? 'text-primary-700' : 'text-gray-700'}`}>
-                      {method.name}
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                      isSelected ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      <Icon size={16} />
+                    </div>
+                    {isSelected && (
+                      <span className="w-2 h-2 rounded-full bg-primary-600" />
+                    )}
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{method.details}</p>
+                  <div>
+                    <p className={`text-xs font-bold ${isSelected ? 'text-primary-900' : 'text-slate-800'}`}>
+                      {method.name}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">{method.details}</p>
+                  </div>
                 </button>
-              )
+              );
             })}
           </div>
         </div>
 
-        {/* Processing Time Info */}
-        <div className="mb-6 p-3 bg-gray-50 rounded-lg flex items-center gap-2">
-          <Clock size={16} className="text-gray-500" />
-          <p className="text-xs text-gray-600">
-            Processing Time: <span className="font-medium">{currentMethod?.processingTime}</span>
-          </p>
+        {/* Transfer Metadata Pill */}
+        <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-slate-600">
+            <Clock size={15} className="text-slate-400" />
+            <span>Processing Schedule: <strong className="text-slate-800 font-bold">{currentMethod.processingTime}</strong></span>
+          </div>
+          <div className="flex items-center gap-3 text-slate-500 text-[11px]">
+            <span>Min: <strong>₹{currentMethod.minAmount.toLocaleString('en-IN')}</strong></span>
+            <span>·</span>
+            <span>Max per Txn: <strong>₹{currentMethod.maxAmount.toLocaleString('en-IN')}</strong></span>
+          </div>
         </div>
 
-        {/* Min/Max Amount Info */}
-        <div className="mb-6 text-xs text-gray-500 flex items-center gap-4">
-          <span>Min: ₹{currentMethod?.minAmount}</span>
-          <span>Max: ₹{currentMethod?.maxAmount}</span>
-        </div>
-
-        {/* Withdraw Button */}
+        {/* Submit Button */}
         <button
           onClick={handleWithdraw}
           disabled={!withdrawAmount || processing}
-          className="w-full py-3 bg-primary-500 text-white text-sm font-semibold rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          type="button"
+          className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
         >
           {processing ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Processing...
+              <span>Verifying & Dispatching NEFT Batch...</span>
             </>
           ) : withdrawSuccess ? (
             <>
               <CheckCircle size={18} />
-              Withdrawal Requested!
+              <span>Disbursement Request Dispatched!</span>
             </>
           ) : (
             <>
               <ArrowUp size={18} />
-              Request Withdrawal
+              <span>Authorize & Execute Transfer</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Withdrawal History */}
+      {/* Expandable History Table */}
       {showHistory && (
-        <div className="border-t border-gray-200">
-          <div className="p-4 sm:p-6">
-            <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <History size={16} />
-              Withdrawal History
+        <div className="border-t border-slate-200/80 bg-slate-50/30 p-4 sm:p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <History size={15} className="text-primary-600" />
+              Recent Disbursement History
             </h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr className="border-b border-gray-200">
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Date</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Amount</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Method</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Reference</th>
+            <span className="text-[11px] text-slate-500">Showing last 4 transfers</span>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Disbursed Amount</th>
+                  <th className="px-4 py-2.5">Transfer Channel</th>
+                  <th className="px-4 py-2.5">Bank Status</th>
+                  <th className="px-4 py-2.5 text-right">Reference / UTR</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {withdrawalHistory.map(history => (
+                  <tr key={history.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-700">{history.date}</td>
+                    <td className="px-4 py-3 font-extrabold text-slate-900">{formatCurrency(history.amount)}</td>
+                    <td className="px-4 py-3 text-slate-600">{history.method}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        history.status === 'Completed'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          history.status === 'Completed' ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`} />
+                        {history.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-[11px] text-slate-500">{history.reference}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {withdrawalHistory.map(history => (
-                    <tr key={history.id} className="hover:bg-gray-50 transition-all">
-                      <td className="px-3 py-2 text-xs text-gray-600">{history.date}</td>
-                      <td className="px-3 py-2 text-xs font-medium text-gray-900">{formatCurrency(history.amount)}</td>
-                      <td className="px-3 py-2 text-xs text-gray-600">{history.method}</td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${
-                          history.status === 'Completed' 
-                            ? 'bg-success-100 text-success-700' 
-                            : 'bg-warning-100 text-warning-700'
-                        }`}>
-                          {history.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-gray-500">{history.reference}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button className="mt-3 text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              View All
-              <ChevronRight size={12} />
-            </button>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

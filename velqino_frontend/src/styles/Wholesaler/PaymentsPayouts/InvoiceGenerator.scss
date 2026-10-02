@@ -24,8 +24,8 @@
 .w-full.p-3 {
   transition: all 0.2s ease;
   animation: cardSlide 0.2s ease-out forwards;
-  opacity: 0;
-  transform: translateX(-10px);
+  opacity: 1;
+  transform: translateX(0);
 }
 
 @for $i from 1 through 10 {

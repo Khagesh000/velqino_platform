@@ -1,32 +1,94 @@
-"use client"
+"use client";
 
-import React, { useState, lazy, Suspense } from 'react'
-import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
+import React, { useState, lazy, Suspense } from 'react';
+import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar';
+import {
+  Wallet,
+  ArrowUp,
+  RefreshCw,
+  Sparkles,
+  CreditCard,
+  Building,
+  CheckCircle,
+  FileText
+} from '@/utils/icons';
 
 // Lazy load all non-critical components
-const BalanceCards = lazy(() => import('./components/BalanceCard'))
-const TransactionsTable = lazy(() => import('./components/TransactionsTable'))
-const WithdrawalSection = lazy(() => import('./components/WithdrawalSection'))
-const PaymentMethods = lazy(() => import('./components/PaymentMethods'))
-const TaxInformation = lazy(() => import('./components/TaxInformation'))
-const InvoiceGenerator = lazy(() => import('./components/InvoiceGenerator'))
-const WithdrawModal = lazy(() => import('./components/WithdrawModal'))
+const BalanceCards = lazy(() => import('./components/BalanceCard'));
+const TransactionsTable = lazy(() => import('./components/TransactionsTable'));
+const WithdrawalSection = lazy(() => import('./components/WithdrawalSection'));
+const PaymentMethods = lazy(() => import('./components/PaymentMethods'));
+const TaxInformation = lazy(() => import('./components/TaxInformation'));
+const InvoiceGenerator = lazy(() => import('./components/InvoiceGenerator'));
+const WithdrawModal = lazy(() => import('./components/WithdrawModal'));
 
-// Loading placeholders
-const BalancePlaceholder = () => <div className="w-full h-[180px] bg-gray-50 rounded-xl animate-pulse" />
-const TablePlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const WithdrawalPlaceholder = () => <div className="w-full h-[280px] bg-gray-50 rounded-xl animate-pulse" />
-const MethodsPlaceholder = () => <div className="w-full h-[220px] bg-gray-50 rounded-xl animate-pulse" />
-const TaxPlaceholder = () => <div className="w-full h-[280px] bg-gray-50 rounded-xl animate-pulse" />
-const InvoicePlaceholder = () => <div className="w-full h-[300px] bg-gray-50 rounded-xl animate-pulse" />
-const ModalPlaceholder = () => <div className="w-full h-full bg-gray-50 animate-pulse" />
+// Structured executive skeleton placeholders
+const BalancePlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs space-y-4">
+    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="w-48 h-5 rounded bg-slate-200" />
+      <div className="w-24 h-7 rounded-lg bg-slate-100" />
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="h-32 bg-slate-100 rounded-xl" />
+      ))}
+    </div>
+  </div>
+);
+
+const WithdrawalPlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs h-72" />
+);
+
+const TablePlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs space-y-4">
+    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="w-40 h-5 rounded bg-slate-200" />
+      <div className="w-28 h-8 rounded-lg bg-slate-100" />
+    </div>
+    <div className="space-y-2">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="h-11 bg-slate-100 rounded-lg" />
+      ))}
+    </div>
+  </div>
+);
+
+const MethodsPlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs h-64" />
+);
+
+const TaxPlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs h-64" />
+);
+
+const InvoicePlaceholder = () => (
+  <div className="bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs h-80" />
+);
+
+const ModalPlaceholder = () => (
+  <div className="w-full h-full bg-white animate-pulse p-6 space-y-4">
+    <div className="w-48 h-6 rounded bg-slate-200" />
+    <div className="w-full h-24 rounded-xl bg-slate-100" />
+    <div className="w-full h-32 rounded-xl bg-slate-100" />
+  </div>
+);
 
 export default function PaymentsAndPayouts() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 800);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-slate-50/70 pb-20">
       <WholesaleNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -36,60 +98,89 @@ export default function PaymentsAndPayouts() {
         transition-all duration-300 p-3 sm:p-4 lg:p-6
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
       `}>
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
+        <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-primary-100 flex items-center justify-center text-primary-600">
-                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          {/* Executive Header Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 shadow-xs">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                <Wallet size={24} />
               </div>
               <div>
-                <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Payments & Payouts</h1>
-                <p className="text-sm text-gray-500">Manage your earnings and withdrawals</p>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Payments & Merchant Payouts
+                  </h1>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Settled Daily
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Real-time liquidity, merchant settlement ledger, tax compliance, and automated disbursement
+                </p>
               </div>
+            </div>
+
+            {/* Header Right Actions */}
+            <div className="flex items-center gap-2.5 self-end sm:self-auto">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                title="Refresh treasury ledger"
+                className="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw size={17} className={isRefreshing ? 'animate-spin text-primary-600' : ''} />
+              </button>
+
+              <button
+                onClick={() => setShowWithdrawModal(true)}
+                type="button"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <ArrowUp size={15} />
+                <span>Request Withdrawal</span>
+              </button>
             </div>
           </div>
 
-          {/* Balance Cards */}
+          {/* Balance Liquidity Cards */}
           <div style={{ minHeight: '180px' }}>
             <Suspense fallback={<BalancePlaceholder />}>
               <BalanceCards />
             </Suspense>
           </div>
 
-          {/* Withdrawal Section */}
-          <div className="mt-6" style={{ minHeight: '280px' }}>
+          {/* Withdrawal Request Hub */}
+          <div style={{ minHeight: '280px' }}>
             <Suspense fallback={<WithdrawalPlaceholder />}>
               <WithdrawalSection onWithdraw={() => setShowWithdrawModal(true)} />
             </Suspense>
           </div>
 
-          {/* Transaction History */}
-          <div className="mt-6" style={{ minHeight: '400px' }}>
+          {/* Transaction History Ledger */}
+          <div style={{ minHeight: '400px' }}>
             <Suspense fallback={<TablePlaceholder />}>
               <TransactionsTable />
             </Suspense>
           </div>
 
           {/* Payment Methods & Tax Information Grid */}
-          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div style={{ minHeight: '220px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div style={{ minHeight: '240px' }} className="h-full">
               <Suspense fallback={<MethodsPlaceholder />}>
                 <PaymentMethods />
               </Suspense>
             </div>
-            <div style={{ minHeight: '280px' }}>
+            <div style={{ minHeight: '280px' }} className="h-full">
               <Suspense fallback={<TaxPlaceholder />}>
                 <TaxInformation />
               </Suspense>
             </div>
           </div>
 
-          {/* Invoice Generator */}
-          <div className="mt-6" style={{ minHeight: '300px' }}>
+          {/* Tax Invoice Generator */}
+          <div style={{ minHeight: '300px' }}>
             <Suspense fallback={<InvoicePlaceholder />}>
               <InvoiceGenerator />
             </Suspense>
@@ -98,23 +189,22 @@ export default function PaymentsAndPayouts() {
         </div>
       </main>
 
-      {/* Withdraw Modal */}
+      {/* Withdraw Modal Drawer */}
       {showWithdrawModal && (
-  <div className="fixed inset-0 z-50 overflow-hidden">
-    {/* Backdrop */}
-    <div 
-      className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-      onClick={() => setShowWithdrawModal(false)}
-    />
-    
-    {/* Panel - Mobile optimized with padding */}
-    <div className="absolute inset-y-0 right-0 w-full sm:w-[480px] md:w-[560px] pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-      <Suspense fallback={<ModalPlaceholder />}>
-        <WithdrawModal onClose={() => setShowWithdrawModal(false)} />
-      </Suspense>
+        <div className="fixed inset-0 z-[100000] overflow-hidden flex justify-end">
+          {/* Backdrop with click to close */}
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => setShowWithdrawModal(false)}
+          />
+          {/* Panel Container: full height, clean, responsive on all screens */}
+          <div className="relative w-full sm:w-[480px] md:w-[540px] h-full bg-white shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-right duration-300">
+            <Suspense fallback={<ModalPlaceholder />}>
+              <WithdrawModal onClose={() => setShowWithdrawModal(false)} />
+            </Suspense>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-)}
-    </div>
-  )
+  );
 }
