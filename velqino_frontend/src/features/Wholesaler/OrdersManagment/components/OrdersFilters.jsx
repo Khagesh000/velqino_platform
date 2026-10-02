@@ -5,7 +5,6 @@ import {
   Calendar, ChevronDown, Search, Package, X, SlidersHorizontal,
   Wallet, Users, Tag, Clock, Loader2
 } from '../../../../utils/icons';
-import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import '../../../../styles/Wholesaler/OrdersManagment/OrdersFilters.scss';
 
 export default function OrdersFilters({ onFilterChange, totalOrders = 0 }) {
@@ -18,10 +17,7 @@ export default function OrdersFilters({ onFilterChange, totalOrders = 0 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
-  // Fetch orders for stats
-  const { data: ordersData, isLoading } = useGetOrdersQuery();
-  const orders = ordersData?.data || [];
-  const totalOrdersCount = totalOrders || orders.length;
+  const totalOrdersCount = totalOrders;
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
@@ -101,34 +97,9 @@ export default function OrdersFilters({ onFilterChange, totalOrders = 0 }) {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 size={24} className="animate-spin text-primary-500" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-      {/* Page Heading */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-            <Package size={20} />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Orders Management</h1>
-            <p className="text-sm text-gray-500">Manage and track all your orders in one place</p>
-          </div>
-        </div>
-        <div className="text-sm text-gray-500">
-          Total Orders: <span className="font-semibold text-primary-600">{totalOrdersCount}</span>
-        </div>
-      </div>
-
       {/* Search Bar - Always Visible */}
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
