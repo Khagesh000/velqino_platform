@@ -8,7 +8,7 @@
 .chart-tab {
   transition: all 0.2s ease;
   animation: slideIn 0.3s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
   
   @for $i from 1 through 7 {
     &:nth-child(#{$i}) {
@@ -160,7 +160,7 @@
 .chart-preview {
   transition: all 0.2s ease;
   animation: previewSlide 0.3s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
   
   @for $i from 1 through 6 {
     &:nth-child(#{$i}) {

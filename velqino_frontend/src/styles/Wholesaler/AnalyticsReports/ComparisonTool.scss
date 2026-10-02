@@ -23,8 +23,8 @@
 /* Card Entrance Animation */
 .comparison-card {
   animation: cardFade 0.4s ease-out forwards;
-  opacity: 0;
-  transform: translateY(10px);
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @for $i from 1 through 6 {

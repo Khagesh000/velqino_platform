@@ -10,7 +10,7 @@ import {
   X,
   Clock,
   RefreshCw
-} from '../../../../utils/icons'
+} from '@/utils/icons';
 import '../../../../styles/Wholesaler/AnalyticsReports/DateRangeSelector.scss'
 
 export default function DateRangeSelector({ 

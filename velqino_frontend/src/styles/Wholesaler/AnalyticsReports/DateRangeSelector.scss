@@ -41,8 +41,8 @@
 /* Preset Items Animation */
 .preset-item {
   animation: slideIn 0.2s ease-out forwards;
-  opacity: 0;
-  transform: translateX(-10px);
+  opacity: 1;
+  transform: translateX(0);
 }
 
 @for $i from 1 through 10 {
