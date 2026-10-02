@@ -8,21 +8,13 @@ import ImportImagesModal from './Modals/ImportImagesModal'
 import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice'
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
 
-// Lazy load all non-critical components
-const ProductsCatalog = lazy(() => import('./components/ProductsCatalog'))
-const QuickActionsBar = lazy(() => import('./components/QuickActionsBar'))
-const ProductsTable = lazy(() => import('./components/ProductTables'))
-const ProductEditModal = lazy(() => import('./components/ProductEditModal'))
-const CategoriesManager = lazy(() => import('./components/CategoriesManager'))
-const BulkEditTool = lazy(() => import('./components/BulkEditTool')) 
-
-// Loading placeholders with EXACT heights to prevent layout shift
-const CatalogPlaceholder = () => <div className="w-full h-[600px] bg-gray-50 rounded-xl animate-pulse" />
-const QuickActionsPlaceholder = () => <div className="w-full h-[120px] bg-gray-50 rounded-xl animate-pulse" />
-const TablePlaceholder = () => <div className="w-full h-[500px] bg-gray-50 rounded-xl animate-pulse" />
-const ModalPlaceholder = () => <div className="w-full h-full bg-gray-50 animate-pulse" />
-const CategoriesPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const BulkEditPlaceholder = () => <div className="w-full h-[300px] bg-gray-50 rounded-xl animate-pulse" /> 
+import ProductEditModal from './components/ProductEditModal'
+import CategoriesManager from './components/CategoriesManager'
+import BulkEditTool from './components/BulkEditTool'
+import ProductsCatalog from './components/ProductsCatalog'
+import QuickActionsBar from './components/QuickActionsBar'
+import ProductsTable from './components/ProductTables'
+import '../../../styles/Wholesaler/ProductsCatalog/CatalogModals.scss' 
 
 export default function Catalog() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -74,8 +66,7 @@ export default function Catalog() {
         <div className="max-w-7xl mx-auto">
           
           {/* Products Catalog - Main Component */}
-          <div style={{ minHeight: '600px' }}>
-          <Suspense fallback={<CatalogPlaceholder />}>
+          <div>
             <ProductsCatalog 
               // ✅ Existing props
               onEditProduct={(product) => {
@@ -94,7 +85,7 @@ export default function Catalog() {
               onManageCategories={() => setShowCategoriesManager(true)}
               onProductsSelect={setSelectedProducts}
               
-              // ✅ ADD THESE MISSING PROPS
+              // ✅ Props
               productsData={productsData}
               isLoading={isLoading}
               searchQuery={searchQuery}
@@ -111,50 +102,46 @@ export default function Catalog() {
               setCurrentPage={setCurrentPage}
               categories={categories}
             />
-          </Suspense>
-        </div>
+          </div>
 
           {/* Quick Actions Bar */}
-          <div className="mt-6" style={{ minHeight: '120px' }}>
-            <Suspense fallback={<QuickActionsPlaceholder />}>
-              <QuickActionsBar 
-                onAddNew={() => {
-                  setSelectedProduct(null)
-                  setShowEditModal(true)
-                }}
-                onImport={() => setShowImportModal(true)}
-                onImportImages={() => setShowImportImagesModal(true)}
-                onExport={() => setShowExportModal(true)}
-                onBulkEdit={() => setShowBulkEdit(true)}
-                onManageCategories={() => setShowCategoriesManager(true)}
-                onManageAttributes={() => console.log('Manage attributes')}
-              />
-            </Suspense>
+          <div className="mt-6">
+            <QuickActionsBar 
+              onAddNew={() => {
+                setSelectedProduct(null)
+                setShowEditModal(true)
+              }}
+              onImport={() => setShowImportModal(true)}
+              onImportImages={() => setShowImportImagesModal(true)}
+              onExport={() => setShowExportModal(true)}
+              onBulkEdit={() => setShowBulkEdit(true)}
+              onManageCategories={() => setShowCategoriesManager(true)}
+              onManageAttributes={() => setShowCategoriesManager(true)}
+              selectedCount={selectedProducts.length}
+            />
           </div> 
 
           {/* Products Table */}
-          <div className="mt-6" style={{ minHeight: '500px' }}>
-            <Suspense fallback={<TablePlaceholder />}>
-              <ProductsTable 
-                onViewProduct={(product) => {
-                  console.log('View product called:', product)
-                }}
-                onEditProduct={(product) => {
-                  console.log('Edit product called:', product)
-                  setSelectedProduct(product)
-                  setShowEditModal(true)
-                }}
-                onProductsSelect={setSelectedProducts}
-                
-                // ✅ ADD THESE MISSING PROPS
-                productsData={productsData}
-                isLoading={isLoading}
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                refetch={refetch}
-              />
-            </Suspense>
+          <div className="mt-6">
+            <ProductsTable 
+              onViewProduct={(product) => {
+                console.log('View product called:', product)
+              }}
+              onEditProduct={(product) => {
+                console.log('Edit product called:', product)
+                setSelectedProduct(product)
+                setShowEditModal(true)
+              }}
+              onProductsSelect={setSelectedProducts}
+              
+              // ✅ Props
+              productsData={productsData}
+              isLoading={isLoading}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              refetch={refetch}
+            />
           </div> 
 
         </div>
@@ -162,66 +149,69 @@ export default function Catalog() {
 
       {/* Product Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div 
+          className="velqino-modal-overlay fixed inset-0 z-[1050] flex justify-end bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+          onClick={() => setShowEditModal(false)}
+        >
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowEditModal(false)}
-          />
-          <div className="absolute inset-y-0 right-0 w-full max-w-4xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-            <Suspense fallback={<ModalPlaceholder />}>
-              <ProductEditModal 
-                product={selectedProduct}
-                onClose={() => setShowEditModal(false)}
-                onSave={() => {
-                  console.log('Product saved')
-                  setShowEditModal(false)
-                }}
-                categories={categories}
-              />
-            </Suspense>
+            className="velqino-modal-drawer relative w-full sm:max-w-2xl lg:max-w-3xl h-full bg-white shadow-2xl flex flex-col overflow-hidden sm:rounded-l-2xl animate-in slide-in-from-right duration-200"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <ProductEditModal 
+              product={selectedProduct}
+              onClose={() => setShowEditModal(false)}
+              onSave={() => {
+                refetch()
+                setShowEditModal(false)
+              }}
+              categories={categories}
+            />
           </div>
         </div>
       )}
 
       {/* Categories Manager Modal */}
       {showCategoriesManager && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div 
+          className="velqino-modal-overlay fixed inset-0 z-[1050] flex justify-end bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+          onClick={() => setShowCategoriesManager(false)}
+        >
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowCategoriesManager(false)}
-          />
-          <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-            <Suspense fallback={<CategoriesPlaceholder />}>
-              <CategoriesManager 
-                onClose={() => setShowCategoriesManager(false)}
-                onSave={() => {
-                  console.log('Categories updated')
-                  setShowCategoriesManager(false)
-                }}
-              />
-            </Suspense>
+            className="velqino-modal-drawer relative w-full sm:max-w-xl h-full bg-white shadow-2xl flex flex-col overflow-hidden sm:rounded-l-2xl animate-in slide-in-from-right duration-200"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <CategoriesManager 
+              onClose={() => setShowCategoriesManager(false)}
+              onSave={() => {
+                refetch()
+                setShowCategoriesManager(false)
+              }}
+            />
           </div>
         </div>
       )}
 
       {/* Bulk Edit Tool Modal */}
       {showBulkEdit && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div 
+          className="velqino-modal-overlay fixed inset-0 z-[1050] flex justify-end bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+          onClick={() => setShowBulkEdit(false)}
+        >
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowBulkEdit(false)}
-          />
-          <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-            <Suspense fallback={<BulkEditPlaceholder />}>
-              <BulkEditTool 
-                selectedProducts={selectedProducts}
-                onClose={() => setShowBulkEdit(false)}
-                onApply={(updates) => {
-                  console.log('Bulk updates applied:', updates)
-                  setShowBulkEdit(false)
-                }}
-              />
-            </Suspense>
+            className="velqino-modal-drawer relative w-full sm:max-w-2xl h-full bg-white shadow-2xl flex flex-col overflow-hidden sm:rounded-l-2xl animate-in slide-in-from-right duration-200"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <BulkEditTool 
+              selectedProducts={selectedProducts}
+              onClose={() => setShowBulkEdit(false)}
+              onApply={() => {
+                refetch()
+                setShowBulkEdit(false)
+              }}
+            />
           </div>
         </div>
       )}

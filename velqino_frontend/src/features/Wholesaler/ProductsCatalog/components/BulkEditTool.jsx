@@ -306,9 +306,9 @@ const applyFiltersAndNext = async () => {
   const EditIcon = editOptions.find(opt => opt.id === editType)?.icon || Edit3
 
   return (
-    <div className="bulk-edit-tool bg-white h-full flex flex-col pt-[56px] pb-[70px] sm:pt-0 sm:pb-0">
-  {/* Header */}
-  <div className="modal-header px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+    <div className="bulk-edit-tool bg-white h-full flex flex-col rounded-l-2xl shadow-xl overflow-hidden">
+      {/* Header */}
+      <div className="modal-header px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
     <div className="flex items-center gap-2 sm:gap-3">
       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
         <Edit3 size={16} className="sm:w-5 sm:h-5" />

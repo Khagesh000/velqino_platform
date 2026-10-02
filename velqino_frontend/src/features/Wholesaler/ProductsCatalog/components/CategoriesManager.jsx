@@ -25,6 +25,7 @@ import {
   useReorderCategoriesMutation
 } from '@/redux/wholesaler/slices/categoriesSlice'
 import { toast } from 'react-toastify'
+import DeleteConfirmModal from '../Modals/DeleteConfirmModal'
 
 export default function CategoriesManager({ onClose, onSave }) {
   const dispatch = useDispatch()
@@ -36,6 +37,14 @@ export default function CategoriesManager({ onClose, onSave }) {
   const [expandedNodes, setExpandedNodes] = useState([])
   const [draggedItem, setDraggedItem] = useState(null)
   const [dragOverItem, setDragOverItem] = useState(null)
+
+  // Custom Delete Modal State
+  const [deleteConfirmState, setDeleteConfirmState] = useState({
+    isOpen: false,
+    categoryId: null,
+    categoryName: ''
+  })
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // RTK Query hooks
   const { data: categoriesData, isLoading, refetch } = useGetCategoriesQuery()
@@ -128,17 +137,27 @@ export default function CategoriesManager({ onClose, onSave }) {
     }
   }
 
-  const handleDeleteCategory = async (categoryId) => {
-    if (confirm('Are you sure you want to delete this category? Products in this category will be uncategorized.')) {
-      try {
-        await deleteCategory(categoryId).unwrap()
-        toast.success('Category deleted successfully')
-        refetch()
-      } catch (error) {
-        toast.error(error?.data?.message || 'Failed to delete category')
-      }
+  const handleDeleteCategory = (categoryId, categoryName) => {
+    setDeleteConfirmState({
+      isOpen: true,
+      categoryId,
+      categoryName: categoryName || 'this category'
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteCategory(deleteConfirmState.categoryId).unwrap();
+      toast.success('Category deleted successfully');
+      refetch();
+      setDeleteConfirmState({ isOpen: false, categoryId: null, categoryName: '' });
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to delete category');
+    } finally {
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleEditCategory = (category) => {
     setEditingCategory(category)
@@ -226,7 +245,7 @@ export default function CategoriesManager({ onClose, onSave }) {
                 </button>
                 <button
                   className="action-btn delete"
-                  onClick={() => handleDeleteCategory(category.id)}
+                  onClick={() => handleDeleteCategory(category.id, category.name)}
                   title="Delete category"
                 >
                   <Trash2 size={14} />
@@ -246,9 +265,9 @@ export default function CategoriesManager({ onClose, onSave }) {
   }
 
   return (
-    <div className="categories-manager bg-white h-full flex flex-col pt-[56px] pb-[70px] sm:pt-0 sm:pb-0">
+    <div className="categories-manager bg-white h-full flex flex-col rounded-l-2xl shadow-xl overflow-hidden">
       {/* Header */}
-      <div className="modal-header px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="modal-header px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
             <FolderTree size={16} className="sm:w-5 sm:h-5" />
@@ -373,6 +392,16 @@ export default function CategoriesManager({ onClose, onSave }) {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteConfirmState.isOpen}
+        onClose={() => setDeleteConfirmState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        title="Delete Category"
+        message={`Are you sure you want to delete category "${deleteConfirmState.categoryName}"? Any products assigned to this category will be uncategorized.`}
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

@@ -3,13 +3,14 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense, lazy } from 'react';
 import { 
   Grid, List, Package, Search, Filter, Star, Eye, Edit, Trash2, Copy, 
-  MoreVertical, Plus, Download, Upload, X
+  MoreVertical, Plus, Download, Upload, X, ImageIcon
 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/ProductsCatalog/ProductsCatalog.scss';
 import { useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice';
 import { BASE_IMAGE_URL } from '../../../../utils/apiConfig';
 import { toast } from 'react-toastify';
 import BulkEditTool from './BulkEditTool';
+import DeleteConfirmModal from '../Modals/DeleteConfirmModal';
 
 export default function ProductsCatalog({ 
   onEditProduct, 
@@ -43,10 +44,18 @@ export default function ProductsCatalog({
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showImportDropdown, setShowImportDropdown] = useState(false);
   
+  // Custom Delete Modal State
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    productId: null,
+    productName: '',
+    isBulk: false,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const itemsPerPage = 12;
   const [deleteProduct] = useDeleteProductMutation();
   const imageScrollRefs = useRef({});
-
 
   // Use props data
   const products = productsData?.data?.products || [];
@@ -99,33 +108,47 @@ export default function ProductsCatalog({
     return 'In Stock';
   };
 
-  const handleDeleteProduct = async (productId, productName) => {
-    if (confirm(`Are you sure you want to delete "${productName}"?`)) {
-      try {
-        await deleteProduct(productId).unwrap();
-        toast.success(`${productName} deleted successfully`);
-        setSelectedProducts(prev => prev.filter(id => id !== productId));
-      } catch (error) {
-        toast.error('Failed to delete product');
-      }
-    }
+  const handleDeleteProduct = (productId, productName) => {
+    setDeleteModalState({
+      isOpen: true,
+      productId,
+      productName: productName || 'this product',
+      isBulk: false,
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedProducts.length === 0) {
       toast.error('Please select products to delete');
       return;
     }
-    if (confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) {
-      try {
+    setDeleteModalState({
+      isOpen: true,
+      productId: null,
+      productName: `${selectedProducts.length} selected product${selectedProducts.length > 1 ? 's' : ''}`,
+      isBulk: true,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      if (deleteModalState.isBulk) {
         for (const productId of selectedProducts) {
           await deleteProduct(productId).unwrap();
         }
-        toast.success(`${selectedProducts.length} product(s) deleted successfully`);
+        toast.success(`${selectedProducts.length} products deleted successfully`);
         setSelectedProducts([]);
-      } catch (error) {
-        toast.error('Failed to delete some products');
+      } else {
+        await deleteProduct(deleteModalState.productId).unwrap();
+        toast.success(`"${deleteModalState.productName}" deleted successfully`);
+        setSelectedProducts(prev => prev.filter(id => id !== deleteModalState.productId));
       }
+      setDeleteModalState({ isOpen: false, productId: null, productName: '', isBulk: false });
+    } catch (error) {
+      toast.error('Failed to delete product');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -226,31 +249,37 @@ console.log('selectedCategory:', selectedCategory); */
           <div className="relative">
             <button 
               onClick={() => setShowImportDropdown(!showImportDropdown)}
-              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2"
+              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2"
             >
               <Upload size={16} />
               <span className="hidden sm:inline">Import</span>
             </button>
             
             {showImportDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+              <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1.5 animate-in fade-in zoom-in-95 duration-150">
                 <button 
                   onClick={() => {
                     onImportImages?.();
                     setShowImportDropdown(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg"
+                  className="w-full px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg flex items-center gap-2.5 transition-colors"
                 >
-                  📷 Bulk Images
+                  <div className="w-7 h-7 rounded-md bg-primary-100 flex items-center justify-center text-primary-600">
+                    <ImageIcon size={15} />
+                  </div>
+                  <span>Bulk Images</span>
                 </button>
                 <button 
                   onClick={() => {
                     onImport?.();
                     setShowImportDropdown(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg"
+                  className="w-full px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg flex items-center gap-2.5 transition-colors"
                 >
-                  🎥 Bulk Video
+                  <div className="w-7 h-7 rounded-md bg-primary-100 flex items-center justify-center text-primary-600">
+                    <Upload size={15} />
+                  </div>
+                  <span>Bulk Video</span>
                 </button>
               </div>
             )}
@@ -749,15 +778,40 @@ console.log('selectedCategory:', selectedCategory); */
 
       {/* Bulk Edit Modal */}
       {showBulkEditModal && (
-        <BulkEditTool 
-          selectedProducts={selectedProducts}
-          onClose={() => setShowBulkEditModal(false)}
-          onApply={() => {
-            setShowBulkEditModal(false);
-            setSelectedProducts([]);
-          }}
-        />
+        <div 
+          className="velqino-modal-overlay fixed inset-0 z-[1050] flex justify-end bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+          onClick={() => setShowBulkEditModal(false)}
+        >
+          <div 
+            className="velqino-modal-drawer relative w-full sm:max-w-2xl h-full bg-white shadow-2xl flex flex-col overflow-hidden sm:rounded-l-2xl animate-in slide-in-from-right duration-200"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+          >
+            <BulkEditTool 
+              selectedProducts={selectedProducts}
+              onClose={() => setShowBulkEditModal(false)}
+              onApply={() => {
+                setShowBulkEditModal(false);
+                setSelectedProducts([]);
+              }}
+            />
+          </div>
+        </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        title={deleteModalState.isBulk ? "Delete Multiple Products" : "Delete Product"}
+        message={
+          deleteModalState.isBulk
+            ? `Are you sure you want to permanently delete ${deleteModalState.productName}? This action cannot be undone.`
+            : `Are you sure you want to delete "${deleteModalState.productName}"? This action cannot be undone.`
+        }
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

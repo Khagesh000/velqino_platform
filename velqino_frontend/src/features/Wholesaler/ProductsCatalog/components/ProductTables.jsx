@@ -16,6 +16,7 @@ import '../../../../styles/Wholesaler/ProductsCatalog/ProductsTable.scss';
 import { useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice';
 import { toast } from 'react-toastify';
 import { BASE_IMAGE_URL } from '../../../../utils/apiConfig';
+import DeleteConfirmModal from '../Modals/DeleteConfirmModal';
 
 export default function ProductsTables({ 
   productsData,        
@@ -26,10 +27,20 @@ export default function ProductsTables({
   currentPage,
   setCurrentPage,
   itemsPerPage = 10,
+  refetch,
 }) {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+
+  // Custom Delete Modal State
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    productId: null,
+    productName: '',
+    isBulk: false,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // ✅ Use props, not local state
   const products = productsData?.data?.products || [];
@@ -87,41 +98,51 @@ export default function ProductsTables({
     return a[sortConfig.key] < b[sortConfig.key] ? 1 : -1
   })
 
-  const handleDeleteProduct = async (productId) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      try {
-        await deleteProduct(productId).unwrap()
-        toast.success('Product deleted successfully')
-        refetch()
-        setSelectedProducts(prev => prev.filter(id => id !== productId))
-      } catch (error) {
-        toast.error('Failed to delete product')
-      }
-    }
-  }
+  const handleDeleteProduct = (productId, productName) => {
+    setDeleteModalState({
+      isOpen: true,
+      productId,
+      productName: productName || 'this product',
+      isBulk: false,
+    });
+  };
 
-  // Add this function before return (around line 70)
-const handleBulkDelete = async () => {
-  if (selectedProducts.length === 0) {
-    toast.error('Please select products to delete')
-    return
-  }
-  
-  if (confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
-    try {
-      // Delete each selected product
-      for (const productId of selectedProducts) {
-        await deleteProduct(productId).unwrap()
-      }
-      toast.success(`${selectedProducts.length} products deleted successfully`)
-      refetch()
-      setSelectedProducts([]) // Clear selection after delete
-      if (onProductsSelect) onProductsSelect([])
-    } catch (error) {
-      toast.error('Failed to delete some products')
+  const handleBulkDelete = () => {
+    if (selectedProducts.length === 0) {
+      toast.error('Please select products to delete');
+      return;
     }
-  }
-}
+    setDeleteModalState({
+      isOpen: true,
+      productId: null,
+      productName: `${selectedProducts.length} products`,
+      isBulk: true,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      if (deleteModalState.isBulk) {
+        for (const productId of selectedProducts) {
+          await deleteProduct(productId).unwrap();
+        }
+        toast.success(`${selectedProducts.length} products deleted successfully`);
+        setSelectedProducts([]);
+        if (onProductsSelect) onProductsSelect([]);
+      } else {
+        await deleteProduct(deleteModalState.productId).unwrap();
+        toast.success(`"${deleteModalState.productName}" deleted successfully`);
+        setSelectedProducts(prev => prev.filter(id => id !== deleteModalState.productId));
+      }
+      refetch();
+      setDeleteModalState({ isOpen: false, productId: null, productName: '', isBulk: false });
+    } catch (error) {
+      toast.error('Failed to delete product');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
@@ -312,7 +333,7 @@ const handleBulkDelete = async () => {
                       {/* DELETE BUTTON */}
                       <button 
                         className="p-1.5 text-gray-400 hover:text-error-600 hover:bg-error-50 rounded-lg transition-all"
-                        onClick={() => handleDeleteProduct(product.id)}
+                        onClick={() => handleDeleteProduct(product.id, product.name)}
                         title="Delete Product"
                       >
                         <Trash2 size={16} />
@@ -375,6 +396,20 @@ const handleBulkDelete = async () => {
           </div>
         </div>
       )}
+
+      {/* Custom Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        title={deleteModalState.isBulk ? "Delete Multiple Products" : "Delete Product"}
+        message={
+          deleteModalState.isBulk
+            ? `Are you sure you want to permanently delete ${deleteModalState.productName}? This action cannot be undone.`
+            : `Are you sure you want to delete "${deleteModalState.productName}"? This action cannot be undone.`
+        }
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

@@ -7,9 +7,11 @@ import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, Package, Gr
 import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
 import ImportImagesModal from '../../ProductsCatalog/Modals/ImportImagesModal';
 import ImportModal from '../../ProductsCatalog/Modals/ImportModal';
-
+import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
 
 export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollapsed }) {
+  const { data: categoriesData } = useGetCategoriesQuery();
+  const categories = categoriesData?.data || categoriesData || [];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
@@ -127,7 +129,7 @@ const handleImportVideo = () => {
 
               {/* Logo - Navigates to Home */}
               <Link href="/" className="flex items-center gap-2">
-                <span className="text-2xl font-bold bg-primary bg-clip-text text-primary-50">
+                <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary-700 via-primary-600 to-primary-500 bg-clip-text text-transparent">
                   VELTRIX
                 </span>
               </Link>
@@ -531,20 +533,20 @@ const handleImportVideo = () => {
       </div>
 
       {/* Import Images Modal */}
-{showImportImagesModal && (
-  <ImportImagesModal 
-    onClose={() => setShowImportImagesModal(false)} 
-    categories={[]}
-  />
-)}
+      {showImportImagesModal && (
+        <ImportImagesModal 
+          onClose={() => setShowImportImagesModal(false)} 
+          categories={categories}
+        />
+      )}
 
-{/* Import Video Modal */}
-{showImportVideoModal && (
-  <ImportModal 
-    onClose={() => setShowImportVideoModal(false)} 
-    categories={[]}
-  />
-)}
+      {/* Import Video Modal */}
+      {showImportVideoModal && (
+        <ImportModal 
+          onClose={() => setShowImportVideoModal(false)} 
+          categories={categories}
+        />
+      )}
     </>
   )
 }

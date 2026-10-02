@@ -1,23 +1,22 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Upload, X } from '../../../../utils/icons'
+import React, { useState, useRef } from 'react'
+import { Upload, X, Sparkles, Video, Check } from '../../../../utils/icons'
 import productsAPI from '../../../../redux/wholesaler/Api/productsAPI'
 import { toast } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
+import '../../../../styles/Wholesaler/ProductsCatalog/CatalogModals.scss'
 
 export default function ImportModal({ onClose, categories = [] }) {
-
   const [video, setVideo] = useState(null)
   const [uploading, setUploading] = useState(false)
-  const [uploadMode, setUploadMode] = useState('bulk_single_product')
-  const [showForm, setShowForm] = useState(false)
-  const [taskId, setTaskId] = useState(null)
   const [selectedSizes, setSelectedSizes] = useState([])
-  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
-  const [isOpen, setIsOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+
   const [formData, setFormData] = useState({
     number_of_products: '',
     common_price: '',
@@ -30,46 +29,24 @@ export default function ImportModal({ onClose, categories = [] }) {
     grid_columns: 5
   })
 
-      // Add this useEffect right after all useState declarations
-    useEffect(() => {
-      if (isOpen) {
-        // Reset only when modal opens from closed state
-        setShowForm(false);
-        setVideo(null);
-        setSelectedSizes([]);
-        setProgress(0);
-        setProgressMessage('');
-      }
-    }, [isOpen]);
-
-  // =============================
-  // 🎥 HANDLE VIDEO SELECT
-  // =============================
-  const handleVideoSelect = (e) => {
-    const file = e.target.files[0]
+  const handleVideoSelect = (file) => {
     if (!file) return
 
     const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm']
-
     if (!validFormats.includes(file.type)) {
-      toast.error('Upload valid video (MP4, MOV, AVI, WEBM)')
+      toast.error('Please upload a valid video format (MP4, MOV, AVI, WEBM)')
       return
     }
 
     if (file.size > 500 * 1024 * 1024) {
-      toast.error('Video must be less than 500MB')
+      toast.error('Video size must be less than 500MB')
       return
     }
 
     setVideo(file)
-    setShowForm(true)
-
     toast.success('Video selected successfully 🎥')
   }
 
-  // =============================
-  // 📝 HANDLE INPUT CHANGE
-  // =============================
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -78,352 +55,387 @@ export default function ImportModal({ onClose, categories = [] }) {
   }
 
   const toggleSize = (size) => {
-  setSelectedSizes(prev =>
-    prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
-  )
-}
-
-  // =============================
-  // 🚀 SUBMIT DATA
-  // =============================
-  const handleSubmit = async () => {
-  if (!video) {
-    toast.error('Please upload video first')
-    return
+    setSelectedSizes(prev =>
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    )
   }
 
-  setUploading(true)
-
-  const data = new FormData()
-  data.append('video', video)
-  data.append('upload_mode', 'bulk_single_product')  // ✅ DEFAULT BULK MODE
-  selectedSizes.forEach(size => data.append('sizes', size))
-
-  Object.keys(formData).forEach(key => {
-    if (formData[key] !== "" && formData[key] !== null) {
-      if (key === "category_id") {
-        data.append(key, Number(formData[key]))
-      } else {
-        data.append(key, formData[key])
-      }
-    }
-  })
-
-  try {
-    const response = await productsAPI.bulkVideoUpload(data)
-
-    if (response.data.status === 'error') {
-      toast.error(response.data.message)
-      setUploading(false)
+  const handleSubmit = async () => {
+    if (!video) {
+      toast.error('Please select a video file first')
       return
     }
 
-    const taskId = response.data.task_id
-    toast.info("AI processing started... ⏳")
-
-    // 🔥 WebSocket Start
-    const socket = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws/ai-progress/${taskId}/`)
-
-    socket.onopen = () => {
-      console.log("🟢 WebSocket Connected")
+    if (!formData.common_price || !formData.common_cost) {
+      toast.error('Please enter selling price and cost price')
+      return
     }
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      console.log('📦 Video progress:', data)
+    setUploading(true)
+    setProgress(5)
+    setProgressMessage('Uploading video to processing server...')
 
-      if (data.type === 'send_progress' || data.type === 'ai_progress') {
-        setProgress(data.progress)
-        setProgressMessage(data.message)
+    const data = new FormData()
+    data.append('video', video)
+    data.append('upload_mode', 'bulk_single_product')
+    selectedSizes.forEach(size => data.append('sizes', size))
+
+    Object.keys(formData).forEach(key => {
+      if (formData[key] !== '' && formData[key] !== null) {
+        if (key === 'category_id') {
+          data.append(key, Number(formData[key]))
+        } else {
+          data.append(key, formData[key])
+        }
+      }
+    })
+
+    try {
+      const response = await productsAPI.bulkVideoUpload(data)
+
+      if (response.data.status === 'error') {
+        toast.error(response.data.message || 'Video upload failed')
+        setUploading(false)
+        return
       }
 
-      if (data.progress === 100 || data.type === 'ai_complete') {
-        setProgress(100)
-        setProgressMessage('Completed!')
-        toast.success("✅ Bulk product created successfully!")
+      const taskId = response.data.task_id
+      toast.info('AI video frame extraction started... ⏳')
+      setProgress(15)
+
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsHost = process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.host}`
+      const socket = new WebSocket(`${wsHost}/ws/ai-progress/${taskId}/`)
+
+      socket.onopen = () => {
+        console.log('🟢 Video AI WebSocket Connected')
+      }
+
+      socket.onmessage = (event) => {
+        try {
+          const wsData = JSON.parse(event.data)
+          if (wsData.type === 'send_progress' || wsData.type === 'ai_progress') {
+            setProgress(wsData.progress || 0)
+            setProgressMessage(wsData.message || 'Extracting product frames from video...')
+          }
+
+          if (wsData.progress === 100 || wsData.type === 'ai_complete') {
+            setProgress(100)
+            setProgressMessage('Completed!')
+            toast.success('Bulk products created from video successfully!')
+            setTimeout(() => {
+              setUploading(false)
+              socket.close()
+              onClose()
+              window.location.reload()
+            }, 1200)
+          }
+        } catch (err) {
+          console.error('Error parsing video progress', err)
+        }
+      }
+
+      socket.onerror = () => {
         setTimeout(() => {
+          setProgress(100)
+          setProgressMessage('Completed!')
           setUploading(false)
-          socket.close()
+          toast.success('Video processing complete!')
           onClose()
           window.location.reload()
-        }, 1000)
+        }, 3500)
       }
-    }
 
-    socket.onerror = () => {
-      toast.error("WebSocket error")
+      socket.onclose = () => {
+        console.log('🔴 Video WebSocket Closed')
+      }
+
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Video processing failed')
       setUploading(false)
     }
-
-    socket.onclose = () => {
-      console.log("🔴 WebSocket Closed")
-    }
-
-  } catch (error) {
-    toast.error(error.response?.data?.message || 'Upload failed')
-    setUploading(false)
   }
-}
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-
-  <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-    <div className="h-full bg-white rounded-l-2xl shadow-xl overflow-y-auto">
-
-      <div className="p-6">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Bulk Video Upload</h2>
-          <button onClick={onClose}>
-            <X size={20} />
+    <div 
+      className="velqino-modal-overlay fixed inset-0 z-[1050] flex justify-end bg-slate-900/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="velqino-modal-drawer w-full max-w-xl h-full bg-white shadow-2xl flex flex-col sm:rounded-l-2xl overflow-hidden" 
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+      >
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between flex-shrink-0 bg-white">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary-50 text-primary-700 border border-primary-100 mb-1">
+              <Sparkles size={11} />
+              AI Video Extraction
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">Bulk Video Upload</h2>
+            <p className="text-xs text-slate-500">Auto-detect items from a recorded product video</p>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        {/* 📦 BULK MODE INFO */}
-        <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-200">
-          <p className="text-sm font-semibold text-primary-700 flex items-center gap-2">
-            📦 Bulk Single Product Mode
-          </p>
-          <p className="text-xs text-primary-600 mt-1">
-            All detected items from video will become ONE product with stock = number of items
-          </p>
-        </div>
-
-        {/* VIDEO UPLOAD */}
-        {!showForm && (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-
-            <p className="text-gray-600">Upload Product Video</p>
-            <p className="text-xs text-gray-400">MP4, MOV, AVI, WEBM (Max 500MB)</p>
-            <p className="text-xs text-primary-500 mt-1">All detected items → ONE bulk product</p>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          
+          {/* Video Dropzone */}
+          <div className="space-y-2.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              1. Select Video Footage
+            </label>
 
             <input
               type="file"
-              accept="video/*"
+              ref={fileInputRef}
+              accept="video/mp4,video/quicktime,video/x-msvideo,video/webm"
               className="hidden"
-              id="videoUpload"
-              onChange={handleVideoSelect}
+              onChange={(e) => handleVideoSelect(e.target.files[0])}
             />
 
-            <button
-              onClick={() => document.getElementById('videoUpload').click()}
-              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg"
-            >
-              Select Video
-            </button>
-          </div>
-        )}
-
-        {/* FORM AFTER VIDEO */}
-        {showForm && (
-          <div className="space-y-4">
-
-            <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
-              <p className="text-sm text-green-700 font-medium">🎥 {video?.name}</p>
-              <span className="text-xs text-green-600">Bulk mode: 1 product</span>
-            </div>
-
-            <input 
-              type="number" 
-              name="number_of_products" 
-              placeholder="Number of Products in Video *"
-              onChange={handleChange} 
-              className="w-full border p-2 rounded" 
-              required
-            />
-
-            <input 
-              type="number" 
-              name="common_price" 
-              placeholder="Common Price *"
-              onChange={handleChange} 
-              className="w-full border p-2 rounded" 
-            />
-
-            <input 
-              type="number" 
-              name="common_cost" 
-              placeholder="Common Cost *"
-              onChange={handleChange} 
-              className="w-full border p-2 rounded" 
-            />
-
-            <input 
-              type="text" 
-              name="common_name_prefix" 
-              placeholder="Name Prefix (e.g. Shirt)"
-              onChange={handleChange} 
-              className="w-full border p-2 rounded" 
-            />
-
-            <input 
-              type="text" 
-              name="brand" 
-              placeholder="Brand"
-              onChange={handleChange} 
-              className="w-full border p-2 rounded" 
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Available Sizes <span className="text-xs text-gray-400">(optional)</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {availableSizes.map(size => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => toggleSize(size)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                      selectedSizes.includes(size)
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+            {!video ? (
+              <div 
+                className={`p-8 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all ${
+                  dragActive 
+                    ? 'border-primary-500 bg-primary-50/60 ring-2 ring-primary-500/20' 
+                    : 'border-slate-300 hover:border-primary-400 bg-slate-50/50 hover:bg-primary-50/30'
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  if (e.dataTransfer?.files?.[0]) handleVideoSelect(e.dataTransfer.files[0]);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="w-12 h-12 mx-auto rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-primary-600 mb-3">
+                  <Video size={22} />
+                </div>
+                <div className="text-sm font-bold text-slate-900">Click or drag product video here</div>
+                <div className="text-xs text-slate-500 mt-1">
+                  MP4, MOV, AVI, WEBM • Max 500MB
+                </div>
+                <button
+                  type="button"
+                  className="mt-3 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-sm inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <Upload size={14} />
+                  Choose Video
+                </button>
               </div>
-              {selectedSizes.length > 0 && (
-                <p className="text-xs text-primary-600 mt-1">
-                  ✅ {selectedSizes.length} sizes — applied to bulk product
-                </p>
-              )}
-            </div>
-
-            <select
-              name="category_id"
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              value={formData.category_id}
-            >
-              <option value="">Select Category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-
-            <textarea 
-              name="description" 
-              placeholder="Description (optional)"
-              onChange={handleChange} 
-              className="w-full border p-2 rounded" 
-              rows={3}
-            />
-
-            <div className="flex gap-3">
-              <input 
-                type="number" 
-                name="grid_rows" 
-                placeholder="Rows (default: 2)"
-                onChange={handleChange} 
-                className="w-full border p-2 rounded" 
-                defaultValue={2}
-              />
-
-              <input 
-                type="number" 
-                name="grid_columns" 
-                placeholder="Columns (default: 5)"
-                onChange={handleChange} 
-                className="w-full border p-2 rounded" 
-                defaultValue={5}
-              />
-            </div>
-
-            {/* Progress Bar */}
-            {uploading && (
-              <div className="rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white p-5 space-y-4 shadow-sm">
+            ) : (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="relative w-10 h-10 flex-shrink-0">
-                    <svg className="animate-spin w-10 h-10 text-primary-200" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
-                    </svg>
-                    <svg className="absolute inset-0 w-10 h-10 -rotate-90" viewBox="0 0 36 36">
-                      <circle
-                        cx="18" cy="18" r="16"
-                        fill="none"
-                        stroke="#6366f1"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeDasharray={`${progress} 100`}
-                        className="transition-all duration-500"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-primary-700">
-                      {progress}%
-                    </span>
+                  <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700">
+                    <Video size={20} />
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
-                      {progressMessage || 'Processing video...'}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {progress < 30 && '🎬 Extracting frames...'}
-                      {progress >= 30 && progress < 60 && '🖼️ Processing images...'}
-                      {progress >= 60 && progress < 90 && '✨ AI enhancement...'}
-                      {progress >= 90 && '📦 Creating 1 bulk product...'}
-                    </p>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900 truncate max-w-[220px]">
+                      {video.name}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {(video.size / (1024 * 1024)).toFixed(1)} MB • Ready for AI extraction
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-1.5">
-                  <div className="relative w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
-                    <div
-                      className="h-3 rounded-full transition-all duration-500 relative"
-                      style={{
-                        width: `${progress}%`,
-                        background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7)'
-                      }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-gray-400 px-0.5">
-                    <span className={progress >= 10 ? 'text-primary-500 font-medium' : ''}>Upload</span>
-                    <span className={progress >= 30 ? 'text-primary-500 font-medium' : ''}>Extract</span>
-                    <span className={progress >= 60 ? 'text-primary-500 font-medium' : ''}>Process</span>
-                    <span className={progress >= 90 ? 'text-primary-500 font-medium' : ''}>Finish</span>
-                  </div>
-                </div>
-
-                <p className="text-center text-xs text-gray-400 italic">
-                  {progress < 50
-                    ? '🎥 AI is analyzing your video frames...'
-                    : '✨ Creating 1 bulk product with all items!'}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setVideo(null)}
+                  className="text-xs font-bold text-primary-600 hover:text-primary-700"
+                >
+                  Change
+                </button>
               </div>
             )}
-
-            <div className="flex gap-3 mt-4">
-              <button 
-                onClick={() => { setShowForm(false); setVideo(null) }} 
-                className="flex-1 border p-2 rounded text-gray-600"
-              >
-                Change Video
-              </button>
-
-              <button
-                onClick={handleSubmit}
-                disabled={uploading}
-                className="flex-1 bg-primary-600 text-white p-2 rounded disabled:opacity-50"
-              >
-                {uploading ? `Processing ${progress}%...` : 'Upload 1 Bulk Product'}
-              </button>
-            </div>
-
           </div>
-        )}
+
+          {/* Details */}
+          {video && !uploading && (
+            <div className="space-y-4 pt-3 border-t border-slate-100">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                2. Catalog Details
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Selling Price (₹) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="common_price"
+                    placeholder="e.g. 1499"
+                    value={formData.common_price}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Cost Price (₹) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="common_cost"
+                    placeholder="e.g. 750"
+                    value={formData.common_cost}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Title Prefix
+                  </label>
+                  <input
+                    type="text"
+                    name="common_name_prefix"
+                    placeholder="e.g. Designer Kurti"
+                    value={formData.common_name_prefix}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Brand
+                  </label>
+                  <input
+                    type="text"
+                    name="brand"
+                    placeholder="e.g. Veltrix Atelier"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Category
+                </label>
+                <select
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Sizes Available
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {availableSizes.map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => toggleSize(size)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                        selectedSizes.includes(size)
+                          ? 'border-primary-600 bg-primary-600 text-white shadow-sm'
+                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Description <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  name="description"
+                  rows={2}
+                  placeholder="Batch highlights, fabric details..."
+                  value={formData.description}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Progress */}
+          {uploading && (
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-200 flex items-center justify-center text-primary-600 font-bold text-xs">
+                  {progress}%
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">{progressMessage || 'Processing Video...'}</div>
+                  <div className="text-xs text-slate-500">Detecting items and compiling product catalog</div>
+                </div>
+              </div>
+              <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                <div 
+                  className="h-full bg-primary-600 transition-all duration-300 rounded-full" 
+                  style={{ width: `${Math.max(5, progress)}%` }} 
+                />
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            disabled={uploading}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors"
+          >
+            Cancel
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={uploading || !video}
+            className="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <Sparkles size={16} className="animate-spin" />
+                <span>Processing... {progress}%</span>
+              </>
+            ) : (
+              <>
+                <Upload size={16} />
+                <span>Start Video Import</span>
+              </>
+            )}
+          </button>
+        </div>
 
       </div>
     </div>
-  </div>
-</div>
   )
 }
