@@ -16,22 +16,23 @@ import {
   AlertCircle,
   User,
   Globe,
-  Calendar
-} from '../../../../utils/icons'
+  Calendar,
+  RefreshCw,
+  Shield,
+  Sparkles
+} from '@/utils/icons'
 import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
 import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/ProfileSettings.scss'
 
 export default function ProfileSettings({ wholesaler, isLoading: parentLoading }) {
-  console.log('ProfileSettings received wholesaler:', wholesaler)
-  
   const [isEditing, setIsEditing] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [logoPreview, setLogoPreview] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
 
-  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation()
 
   // Initialize profile from backend data
   const [profile, setProfile] = useState({
@@ -68,9 +69,7 @@ export default function ProfileSettings({ wholesaler, isLoading: parentLoading }
   // Load data from backend when available
   useEffect(() => {
     if (wholesaler) {
-      console.log('Loading wholesaler data into profile:', wholesaler)
-      
-      setProfile({
+      const initialData = {
         businessLogo: wholesaler.logo || null,
         businessName: wholesaler.business_name || '',
         businessEmail: wholesaler.user?.email || '',
@@ -89,28 +88,9 @@ export default function ProfileSettings({ wholesaler, isLoading: parentLoading }
           country: wholesaler.country || 'India'
         },
         timings: wholesaler.timings || profile.timings
-      })
-      
-      setEditedProfile({
-        businessLogo: wholesaler.logo || null,
-        businessName: wholesaler.business_name || '',
-        businessEmail: wholesaler.user?.email || '',
-        businessPhone: wholesaler.user?.mobile || '',
-        businessWebsite: wholesaler.website || '',
-        establishedYear: wholesaler.established_year || '',
-        gstNumber: wholesaler.gst_number || '',
-        panNumber: wholesaler.pan_number || '',
-        aboutUs: wholesaler.business_description || '',
-        address: {
-          line1: wholesaler.shop_address || '',
-          line2: wholesaler.landmark || '',
-          city: wholesaler.city || '',
-          state: wholesaler.state || '',
-          pincode: wholesaler.pincode || '',
-          country: wholesaler.country || 'India'
-        },
-        timings: wholesaler.timings || profile.timings
-      })
+      }
+      setProfile(initialData)
+      setEditedProfile(initialData)
     }
   }, [wholesaler])
 
@@ -159,18 +139,14 @@ export default function ProfileSettings({ wholesaler, isLoading: parentLoading }
       }
 
       const userId = wholesaler?.user_id || wholesaler?.id
-      console.log('Updating profile for userId:', userId)
-      
-      const result = await updateProfile({ userId: userId, data: formData }).unwrap()
-      console.log('Update result:', result)
+      await updateProfile({ userId: userId, data: formData }).unwrap()
       
       setProfile(editedProfile)
       setSaveSuccess(true)
-      toast.success('Profile updated successfully!')
+      toast.success('Business profile updated successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (error) {
-      console.error('Update error:', error)
       toast.error(error?.data?.message || 'Failed to update profile')
     } finally {
       setIsUploading(false)
@@ -184,377 +160,543 @@ export default function ProfileSettings({ wholesaler, isLoading: parentLoading }
   }
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-  const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const dayLabels = {
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday'
+  }
 
   if (parentLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-        <div className="animate-pulse">
-          <div className="w-24 h-24 mx-auto bg-gray-200 rounded-full mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-2"></div>
-          <div className="h-3 bg-gray-200 rounded w-1/3 mx-auto"></div>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xs animate-pulse">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-20 h-20 bg-slate-200 rounded-2xl"></div>
+          <div className="space-y-2 flex-1">
+            <div className="h-5 bg-slate-200 rounded w-1/3"></div>
+            <div className="h-3 bg-slate-200 rounded w-1/4"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="h-16 bg-slate-100 rounded-xl"></div>
+          <div className="h-16 bg-slate-100 rounded-xl"></div>
+          <div className="h-16 bg-slate-100 rounded-xl"></div>
+          <div className="h-16 bg-slate-100 rounded-xl"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="profile-settings bg-white rounded-xl border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-            <Building size={20} />
+    <div className="profile-settings space-y-6">
+      {/* Executive Card Header */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100/60 shadow-2xs">
+            <Building size={22} />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Profile Settings</h3>
-            <p className="text-xs sm:text-sm text-gray-500">Manage your business profile and information</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Business Profile & Identity</h3>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <CheckCircle size={11} /> Verified Merchant
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
+              Manage your commercial credentials, contact points, registered address, and operating hours
+            </p>
           </div>
         </div>
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-all"
-          >
-            <Edit size={14} />
-            Edit Profile
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {!isEditing ? (
             <button
-              onClick={handleCancel}
-              disabled={isUploading}
-              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => setIsEditing(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all active:scale-95"
             >
-              Cancel
+              <Edit size={15} />
+              <span>Edit Profile</span>
             </button>
-            <button
-              onClick={handleSave}
-              disabled={isUploading}
-              className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1 disabled:opacity-50"
-            >
-              <Save size={14} />
-              {isUploading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={handleCancel}
+                disabled={isUploading || isUpdating}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200/80 hover:bg-slate-50 rounded-xl shadow-xs transition-all disabled:opacity-50 active:scale-95"
+              >
+                <X size={14} />
+                <span>Cancel</span>
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isUploading || isUpdating}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all disabled:opacity-50 active:scale-95"
+              >
+                {isUploading || isUpdating ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4 sm:p-6 space-y-6">
-        {/* Business Logo */}
-        <div className="flex flex-col items-center">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-gray-200 overflow-hidden flex items-center justify-center">
+      {/* Main Profile Info & Avatar Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-slate-100">
+          {/* Logo Showcase */}
+          <div className="relative group shrink-0">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-50 border-2 border-slate-200/80 shadow-2xs overflow-hidden flex items-center justify-center transition-all group-hover:border-primary-400">
               {logoPreview || profile.businessLogo ? (
-                <img src={logoPreview || profile.businessLogo} alt="Logo" className="w-full h-full object-cover" />
+                <img
+                  src={logoPreview || profile.businessLogo}
+                  alt="Business Logo"
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <Building size={48} className="text-gray-400" />
+                <Building size={40} className="text-slate-300" />
               )}
             </div>
             {isEditing && (
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-1.5 bg-primary-500 rounded-full text-white hover:bg-primary-600 transition-all"
+                className="absolute -bottom-2 -right-2 p-2.5 bg-primary-600 text-white rounded-xl shadow-md hover:bg-primary-700 transition-all active:scale-90"
+                title="Upload Business Logo"
               >
-                <Camera size={14} />
+                <Camera size={15} />
               </button>
             )}
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
           </div>
-          {isEditing && <p className="text-xs text-gray-500 mt-2">Click camera to upload logo (PNG, JPG, max 2MB)</p>}
-        </div>
 
-        {/* Business Information */}
-        <div className="border-b border-gray-200 pb-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Building size={16} className="text-gray-500" />
-            Business Information
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.businessName}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, businessName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.businessName || '-'}</p>
+          {/* Business Summary Meta */}
+          <div className="flex-1 text-center sm:text-left space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {editedProfile.businessName || 'Business Name'}
+              </h2>
+              {profile.gstNumber && (
+                <span className="self-center sm:self-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-200/60">
+                  GST Verified
+                </span>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.gstNumber}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, gstNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.gstNumber || '-'}</p>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 max-w-2xl">
+              {editedProfile.aboutUs || 'No business description provided yet. Add an informative description so partners understand your enterprise catalog.'}
+            </p>
+
+            <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200/70 rounded-lg text-xs font-semibold text-slate-600">
+                <MapPin size={13} className="text-primary-600" />
+                <span>{editedProfile.address.city ? `${editedProfile.address.city}, ${editedProfile.address.state || 'India'}` : 'Location Unset'}</span>
+              </div>
+              {editedProfile.establishedYear && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200/70 rounded-lg text-xs font-semibold text-slate-600">
+                  <Calendar size={13} className="text-primary-600" />
+                  <span>Est. {editedProfile.establishedYear}</span>
+                </div>
+              )}
+              {editedProfile.businessWebsite && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200/70 rounded-lg text-xs font-semibold text-slate-600">
+                  <Globe size={13} className="text-primary-600" />
+                  <span className="truncate max-w-[200px]">{editedProfile.businessWebsite.replace(/^https?:\/\//, '')}</span>
+                </div>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.panNumber}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, panNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.panNumber || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Established Year</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  placeholder="e.g., 2020"
-                  value={editedProfile.establishedYear}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, establishedYear: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.establishedYear || '-'}</p>
-              )}
-            </div>
+
+            {isEditing && (
+              <p className="text-2xs font-medium text-slate-400 mt-2">
+                Click camera badge to upload a high-resolution logo (PNG, JPG up to 2MB).
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Contact Details */}
-        <div className="border-b border-gray-200 pb-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Mail size={16} className="text-gray-500" />
-            Contact Details
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  value={editedProfile.businessEmail}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, businessEmail: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.businessEmail || '-'}</p>
-              )}
+        {/* Form Sections Grid */}
+        <div className="mt-6 space-y-6">
+          {/* 1. Official Business Information */}
+          <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+            <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2">
+              <Building size={16} className="text-primary-600" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Official Business Credentials
+              </h4>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  value={editedProfile.businessPhone}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, businessPhone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.businessPhone || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  placeholder="https://yourwebsite.com"
-                  value={editedProfile.businessWebsite}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, businessWebsite: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-primary-600">{profile.businessWebsite || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">About Us</label>
-              {isEditing ? (
-                <textarea
-                  rows="2"
-                  placeholder="Tell us about your business..."
-                  value={editedProfile.aboutUs}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, aboutUs: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-600 line-clamp-2">{profile.aboutUs || '-'}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Address Management */}
-        <div className="border-b border-gray-200 pb-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <MapPin size={16} className="text-gray-500" />
-            Address Management
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.address.line1}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, line1: e.target.value } })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.address.line1 || '-'}</p>
-              )}
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2 (Landmark)</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.address.line2}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, line2: e.target.value } })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.address.line2 || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.address.city}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, city: e.target.value } })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.address.city || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.address.state}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, state: e.target.value } })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.address.state || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.address.pincode}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, pincode: e.target.value } })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.address.pincode || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.address.country}
-                  onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, country: e.target.value } })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{profile.address.country || '-'}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Store Timings */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Clock size={16} className="text-gray-500" />
-            Store Timings
-          </h4>
-          <div className="space-y-2">
-            {days.map((day, index) => (
-              <div key={day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                <span className="text-sm font-medium text-gray-700 w-24">{dayLabels[index]}</span>
+            <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Business / Trading Name
+                </label>
                 {isEditing ? (
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1 text-sm text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={!editedProfile.timings[day].closed}
-                        onChange={(e) => setEditedProfile({
-                          ...editedProfile,
-                          timings: {
-                            ...editedProfile.timings,
-                            [day]: { ...editedProfile.timings[day], closed: !e.target.checked }
-                          }
-                        })}
-                        className="rounded border-gray-300 text-primary-600"
-                      />
-                      <span className="text-xs">Open</span>
-                    </label>
-                    {!editedProfile.timings[day].closed && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          value={editedProfile.timings[day].open}
-                          onChange={(e) => setEditedProfile({
-                            ...editedProfile,
-                            timings: {
-                              ...editedProfile.timings,
-                              [day]: { ...editedProfile.timings[day], open: e.target.value }
-                            }
-                          })}
-                          className="px-2 py-1 border border-gray-200 rounded text-sm"
-                        />
-                        <span>-</span>
-                        <input
-                          type="time"
-                          value={editedProfile.timings[day].close}
-                          onChange={(e) => setEditedProfile({
-                            ...editedProfile,
-                            timings: {
-                              ...editedProfile.timings,
-                              [day]: { ...editedProfile.timings[day], close: e.target.value }
-                            }
-                          })}
-                          className="px-2 py-1 border border-gray-200 rounded text-sm"
-                        />
-                      </div>
-                    )}
-                    {editedProfile.timings[day].closed && (
-                      <span className="text-sm text-gray-500 ml-2">Closed</span>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    value={editedProfile.businessName}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, businessName: e.target.value })}
+                    placeholder="Enter registered business name"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
                 ) : (
-                  <span className="text-sm text-gray-600">
-                    {profile.timings[day]?.closed ? 'Closed' : `${profile.timings[day]?.open || '09:00'} - ${profile.timings[day]?.close || '18:00'}`}
-                  </span>
+                  <p className="text-sm font-semibold text-slate-900">{profile.businessName || '-'}</p>
                 )}
               </div>
-            ))}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  GST Identification Number (GSTIN)
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.gstNumber}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, gstNumber: e.target.value.toUpperCase() })}
+                    placeholder="22AAAAA0000A1Z5"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono font-medium text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-mono font-semibold text-slate-900">{profile.gstNumber || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Permanent Account Number (PAN)
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.panNumber}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, panNumber: e.target.value.toUpperCase() })}
+                    placeholder="ABCDE1234F"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono font-medium text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-mono font-semibold text-slate-900">{profile.panNumber || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Established Year
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    placeholder="e.g. 2018"
+                    value={editedProfile.establishedYear}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, establishedYear: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.establishedYear || '-'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Contact Points & Online Presence */}
+          <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+            <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2">
+              <Mail size={16} className="text-primary-600" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Contact Points & Online Presence
+              </h4>
+            </div>
+            <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Business Email Address
+                </label>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={editedProfile.businessEmail}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, businessEmail: e.target.value })}
+                    placeholder="contact@company.com"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.businessEmail || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Commercial Phone Number
+                </label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={editedProfile.businessPhone}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, businessPhone: e.target.value })}
+                    placeholder="+91 98765 43210"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.businessPhone || '-'}</p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Official Website
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    placeholder="https://company.com"
+                    value={editedProfile.businessWebsite}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, businessWebsite: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-primary-600 truncate">{profile.businessWebsite || '-'}</p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  About Business / Company Bio
+                </label>
+                {isEditing ? (
+                  <textarea
+                    rows="3"
+                    placeholder="Share brief information regarding your supply chain, product ranges, and wholesale terms..."
+                    value={editedProfile.aboutUs}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, aboutUs: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-y"
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-slate-600 whitespace-pre-line">{profile.aboutUs || '-'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Address Management */}
+          <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+            <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2">
+              <MapPin size={16} className="text-primary-600" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Registered Commercial Address
+              </h4>
+            </div>
+            <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Address Line 1 (Shop / Unit / Building)
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address.line1}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, line1: e.target.value } })}
+                    placeholder="Shop / Unit No, Building, Street"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.address.line1 || '-'}</p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Address Line 2 (Area / Landmark)
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address.line2}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, line2: e.target.value } })}
+                    placeholder="Nearby landmark or commercial hub"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.address.line2 || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">City</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address.city}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, city: e.target.value } })}
+                    placeholder="City"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.address.city || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">State</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address.state}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, state: e.target.value } })}
+                    placeholder="State"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.address.state || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Pincode</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address.pincode}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, pincode: e.target.value } })}
+                    placeholder="6-digit pincode"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.address.pincode || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Country</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedProfile.address.country}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, address: { ...editedProfile.address, country: e.target.value } })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{profile.address.country || 'India'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Operating Hours / Store Timings */}
+          <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+            <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-primary-600" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  Store Operating Hours
+                </h4>
+              </div>
+              <span className="text-xs font-medium text-slate-500">Local Indian Standard Time (IST)</span>
+            </div>
+
+            <div className="p-4 sm:p-5 divide-y divide-slate-100">
+              {days.map((day) => {
+                const dayConfig = isEditing ? editedProfile.timings[day] : profile.timings[day]
+                const isClosed = dayConfig?.closed
+
+                return (
+                  <div key={day} className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 w-28">
+                        {dayLabels[day]}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold uppercase tracking-wider ${
+                        isClosed 
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                      }`}>
+                        {isClosed ? 'Closed' : 'Open'}
+                      </span>
+                    </div>
+
+                    {isEditing ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={!editedProfile.timings[day]?.closed}
+                            onChange={(e) => setEditedProfile({
+                              ...editedProfile,
+                              timings: {
+                                ...editedProfile.timings,
+                                [day]: { ...editedProfile.timings[day], closed: !e.target.checked }
+                              }
+                            })}
+                            className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span>Operating Today</span>
+                        </label>
+
+                        {!editedProfile.timings[day]?.closed && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={editedProfile.timings[day]?.open || '09:00'}
+                              onChange={(e) => setEditedProfile({
+                                ...editedProfile,
+                                timings: {
+                                  ...editedProfile.timings,
+                                  [day]: { ...editedProfile.timings[day], open: e.target.value }
+                                }
+                              })}
+                              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            />
+                            <span className="text-xs text-slate-400 font-medium">to</span>
+                            <input
+                              type="time"
+                              value={editedProfile.timings[day]?.close || '18:00'}
+                              onChange={(e) => setEditedProfile({
+                                ...editedProfile,
+                                timings: {
+                                  ...editedProfile.timings,
+                                  [day]: { ...editedProfile.timings[day], close: e.target.value }
+                                }
+                              })}
+                              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs sm:text-sm font-semibold text-slate-600">
+                        {isClosed ? (
+                          <span className="text-slate-400 font-medium">Not operating / Closed</span>
+                        ) : (
+                          <span>{dayConfig?.open || '09:00'} - {dayConfig?.close || '18:00'}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Success Message */}
+        {/* Success Alert Banner */}
         {saveSuccess && (
-          <div className="mt-4 p-3 bg-success-50 rounded-lg flex items-center gap-2">
-            <CheckCircle size={16} className="text-success-600" />
-            <p className="text-sm text-success-600">Profile updated successfully!</p>
+          <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center gap-3">
+            <CheckCircle size={18} className="text-emerald-600 shrink-0" />
+            <p className="text-xs sm:text-sm font-semibold text-emerald-800">
+              Profile details updated successfully across Velqino systems.
+            </p>
           </div>
         )}
       </div>

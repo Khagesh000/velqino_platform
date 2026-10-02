@@ -363,9 +363,9 @@ export default function TeamManagement({ wholesaler, isLoading: parentLoading })
 
       {/* Invite Member Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowInviteModal(false)} />
-          <div className="relative bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setShowInviteModal(false)} />
+          <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl z-10 border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Invite Team Member</h3>
               <button onClick={() => setShowInviteModal(false)} className="p-1 text-gray-400 hover:text-gray-600">

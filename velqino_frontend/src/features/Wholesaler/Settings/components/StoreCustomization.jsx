@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
   Palette,
-  Image,
+  Image as ImageIcon,
   FileText,
   Upload,
   Camera,
@@ -16,8 +16,9 @@ import {
   Globe,
   Layout,
   Type,
-  Sparkles
-} from '../../../../utils/icons'
+  Sparkles,
+  ShoppingBag
+} from '@/utils/icons'
 import { useUpdateProfileMutation } from '@/redux/wholesaler/slices/wholesalerSlice'
 import { toast } from 'react-toastify'
 import '../../../../styles/Wholesaler/Settings/StoreCustomization.scss'
@@ -53,20 +54,20 @@ export default function StoreCustomization({ wholesaler, isLoading: parentLoadin
   const [editedSettings, setEditedSettings] = useState(storeSettings)
 
   const themes = [
-    { id: 'light', name: 'Light', color: '#FFFFFF', textColor: '#1F2937', bgColor: '#F9FAFB' },
-    { id: 'dark', name: 'Dark', color: '#1F2937', textColor: '#F9FAFB', bgColor: '#111827' },
-    { id: 'colorful', name: 'Colorful', color: '#CE8E6A', textColor: '#FFFFFF', bgColor: '#A25690' }
+    { id: 'light', name: 'Clean Light', color: '#FFFFFF', border: '#E2E8F0', textColor: '#0F172A', description: 'Optimal clarity with high contrast' },
+    { id: 'dark', name: 'Executive Dark', color: '#0F172A', border: '#334155', textColor: '#F8FAFC', description: 'Sleek luxury enterprise presentation' },
+    { id: 'colorful', name: 'Brand Accent', color: '#CE8E6A', border: '#A25690', textColor: '#FFFFFF', description: 'Vibrant highlight on brand colors' }
   ]
 
   // Load store settings from backend
   useEffect(() => {
-    if (wholesaler?.store_settings) {
-      const storeData = wholesaler.store_settings
-      setStoreSettings({
+    if (wholesaler) {
+      const storeData = wholesaler.store_settings || {}
+      const initial = {
         storeName: storeData.store_name || wholesaler.business_name || '',
         storeTagline: storeData.store_tagline || '',
         storeDescription: storeData.store_description || wholesaler.business_description || '',
-        storeLogo: storeData.store_logo || null,
+        storeLogo: storeData.store_logo || wholesaler.logo || null,
         bannerImages: storeData.banner_images || [],
         theme: storeData.theme || 'light',
         primaryColor: storeData.primary_color || '#CE8E6A',
@@ -76,24 +77,10 @@ export default function StoreCustomization({ wholesaler, isLoading: parentLoadin
         showFeaturedProducts: storeData.show_featured_products !== false,
         showCategories: storeData.show_categories !== false,
         showTestimonials: storeData.show_testimonials !== false,
-        footerText: storeData.footer_text || `© ${new Date().getFullYear()} ${wholesaler.business_name || 'Store'}. All rights reserved.`
-      })
-      setEditedSettings({
-        storeName: storeData.store_name || wholesaler.business_name || '',
-        storeTagline: storeData.store_tagline || '',
-        storeDescription: storeData.store_description || wholesaler.business_description || '',
-        storeLogo: storeData.store_logo || null,
-        bannerImages: storeData.banner_images || [],
-        theme: storeData.theme || 'light',
-        primaryColor: storeData.primary_color || '#CE8E6A',
-        secondaryColor: storeData.secondary_color || '#A25690',
-        accentColor: storeData.accent_color || '#E3B751',
-        layout: storeData.layout || 'grid',
-        showFeaturedProducts: storeData.show_featured_products !== false,
-        showCategories: storeData.show_categories !== false,
-        showTestimonials: storeData.show_testimonials !== false,
-        footerText: storeData.footer_text || `© ${new Date().getFullYear()} ${wholesaler.business_name || 'Store'}. All rights reserved.`
-      })
+        footerText: storeData.footer_text || `© ${new Date().getFullYear()} ${wholesaler.business_name || 'Wholesale Store'}. All rights reserved.`
+      }
+      setStoreSettings(initial)
+      setEditedSettings(initial)
     }
   }, [wholesaler])
 
@@ -123,7 +110,10 @@ export default function StoreCustomization({ wholesaler, isLoading: parentLoadin
       const reader = new FileReader()
       reader.onloadend = () => {
         setBannerPreview(reader.result)
-        setEditedSettings({ ...editedSettings, bannerImages: [...editedSettings.bannerImages, reader.result] })
+        setEditedSettings(prev => ({
+          ...prev,
+          bannerImages: [...prev.bannerImages, reader.result]
+        }))
       }
       reader.readAsDataURL(file)
     })
@@ -150,7 +140,7 @@ export default function StoreCustomization({ wholesaler, isLoading: parentLoadin
         layout: editedSettings.layout,
         show_featured_products: editedSettings.showFeaturedProducts,
         show_categories: editedSettings.showCategories,
-        show_testimonials: editedSettings.showTestimonials,
+        showTestimonials: editedSettings.showTestimonials,
         footer_text: editedSettings.footerText,
         banner_images: editedSettings.bannerImages.filter(img => typeof img === 'string')
       }))
@@ -171,7 +161,7 @@ export default function StoreCustomization({ wholesaler, isLoading: parentLoadin
       
       setStoreSettings(editedSettings)
       setSaveSuccess(true)
-      toast.success('Store customization saved successfully!')
+      toast.success('Storefront customization saved successfully!')
       setIsEditing(false)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (error) {
@@ -190,378 +180,486 @@ export default function StoreCustomization({ wholesaler, isLoading: parentLoadin
 
   if (parentLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
-          <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xs animate-pulse">
+        <div className="h-6 bg-slate-200 rounded w-1/3 mb-4"></div>
+        <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="h-32 bg-slate-100 rounded-xl"></div>
+          <div className="h-32 bg-slate-100 rounded-xl"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="store-customization bg-white rounded-xl border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-            <Palette size={20} />
+    <div className="store-customization space-y-6">
+      {/* Executive Card Header */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100/60 shadow-2xs">
+            <Palette size={22} />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Store Customization</h3>
-            <p className="text-xs sm:text-sm text-gray-500">Customize your store appearance and branding</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                Storefront Customization
+              </h3>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <CheckCircle size={11} /> Live Storefront
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
+              Personalize B2B storefront themes, hero marketing banners, brand colors, and catalog presentation
+            </p>
           </div>
         </div>
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-all"
-          >
-            <Edit size={14} />
-            Customize Store
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button onClick={handleCancel} className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
-              Cancel
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {!isEditing ? (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all active:scale-95"
+            >
+              <Edit size={15} />
+              <span>Customize Storefront</span>
             </button>
-            <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 flex items-center gap-1 disabled:opacity-50">
-              <Save size={14} />
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={handleCancel}
+                disabled={isSaving || isUpdating}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200/80 hover:bg-slate-50 rounded-xl shadow-xs transition-all disabled:opacity-50 active:scale-95"
+              >
+                <X size={14} />
+                <span>Cancel</span>
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isUpdating}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all disabled:opacity-50 active:scale-95"
+              >
+                {isSaving || isUpdating ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-6">
-        {/* Store Logo */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Image size={16} className="text-gray-500" />
-              Store Logo
-            </h4>
-          </div>
-          <div className="p-4 flex items-center gap-4">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-lg bg-gray-100 border-2 border-gray-200 overflow-hidden flex items-center justify-center">
-                {logoPreview || storeSettings.storeLogo ? (
-                  <img src={logoPreview || storeSettings.storeLogo} alt="Store Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <Globe size={32} className="text-gray-400" />
-                )}
-              </div>
-              {isEditing && (
-                <button
-                  onClick={() => logoInputRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 p-1.5 bg-primary-500 rounded-full text-white hover:bg-primary-600 transition-all"
-                >
-                  <Camera size={12} />
-                </button>
-              )}
-              <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+      {/* Main Customization Sections */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-6">
+        {/* Section 1: Store Logo & Media */}
+        <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ImageIcon size={16} className="text-primary-600" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Storefront Visual Assets
+              </h4>
             </div>
-            {isEditing && <p className="text-xs text-gray-500">Recommended size: 200x200px (PNG, JPG, max 2MB)</p>}
+            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">Logo & Hero Banners</span>
           </div>
-        </div>
 
-        {/* Banner Images */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Image size={16} className="text-gray-500" />
-              Banner Images
-            </h4>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
-              {editedSettings.bannerImages.map((banner, index) => (
-                <div key={index} className="relative group">
-                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                    <img src={banner} alt={`Banner ${index + 1}`} className="w-full h-full object-cover" />
+          <div className="p-4 sm:p-5 space-y-5">
+            {/* Store Logo */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                Storefront Logo
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="relative group">
+                  <div className="w-20 h-20 rounded-2xl bg-slate-50 border-2 border-slate-200/80 overflow-hidden flex items-center justify-center shadow-2xs">
+                    {logoPreview || editedSettings.storeLogo ? (
+                      <img
+                        src={logoPreview || editedSettings.storeLogo}
+                        alt="Storefront Logo"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Globe size={32} className="text-slate-300" />
+                    )}
                   </div>
                   {isEditing && (
                     <button
-                      onClick={() => removeBanner(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all"
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="absolute -bottom-1.5 -right-1.5 p-2 bg-primary-600 text-white rounded-xl shadow-md hover:bg-primary-700 transition-all active:scale-90"
                     >
-                      <X size={12} />
+                      <Camera size={13} />
                     </button>
                   )}
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
                 </div>
-              ))}
-              {isEditing && (
-                <button
-                  onClick={() => bannerInputRef.current?.click()}
-                  className="aspect-video border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center hover:border-primary-300 transition-all"
-                >
-                  <Upload size={24} className="text-gray-400 mb-1" />
-                  <span className="text-xs text-gray-500">Upload Banner</span>
-                </button>
-              )}
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-slate-800">High-Resolution Store Badge</p>
+                  <p className="text-2xs text-slate-400 font-medium">Recommended: 200x200px (PNG, JPG, max 2MB)</p>
+                </div>
+              </div>
             </div>
-            <input ref={bannerInputRef} type="file" accept="image/*" multiple onChange={handleBannerUpload} className="hidden" />
-            {isEditing && <p className="text-xs text-gray-500 mt-2">Recommended size: 1200x400px. Supports JPG, PNG, WebP (max 5MB each)</p>}
+
+            {/* Banner Images */}
+            <div className="pt-4 border-t border-slate-100">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                Promotional Hero Banners
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {editedSettings.bannerImages.map((banner, index) => (
+                  <div key={index} className="relative group aspect-video rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 shadow-2xs">
+                    <img src={banner} alt={`Banner ${index + 1}`} className="w-full h-full object-cover" />
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => removeBanner(index)}
+                        className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md hover:bg-rose-700"
+                        title="Remove Banner"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => bannerInputRef.current?.click()}
+                    className="aspect-video border-2 border-dashed border-slate-300 hover:border-primary-400 hover:bg-primary-50/20 rounded-xl flex flex-col items-center justify-center p-4 transition-all group cursor-pointer"
+                  >
+                    <Upload size={22} className="text-slate-400 group-hover:text-primary-600 mb-1 transition-colors" />
+                    <span className="text-xs font-semibold text-slate-600 group-hover:text-primary-700">Upload Banner</span>
+                    <span className="text-2xs text-slate-400 mt-0.5">1200x400px (Max 5MB)</span>
+                  </button>
+                )}
+              </div>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleBannerUpload}
+                className="hidden"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Store Information */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <FileText size={16} className="text-gray-500" />
-              Store Information
+        {/* Section 2: Store Information */}
+        <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2">
+            <FileText size={16} className="text-primary-600" />
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+              Storefront Information & Copy
             </h4>
           </div>
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedSettings.storeName}
-                  onChange={(e) => setEditedSettings({ ...editedSettings, storeName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-900">{storeSettings.storeName || '-'}</p>
-              )}
+          <div className="p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Public Store Name
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedSettings.storeName}
+                    onChange={(e) => setEditedSettings({ ...editedSettings, storeName: e.target.value })}
+                    placeholder="Enter storefront brand name"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">{storeSettings.storeName || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Brand Tagline
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedSettings.storeTagline}
+                    onChange={(e) => setEditedSettings({ ...editedSettings, storeTagline: e.target.value })}
+                    placeholder="e.g. India's Leading Fast-Moving Wholesale Hub"
+                    className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-slate-700">{storeSettings.storeTagline || '-'}</p>
+                )}
+              </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Store Tagline</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedSettings.storeTagline}
-                  onChange={(e) => setEditedSettings({ ...editedSettings, storeTagline: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-600">{storeSettings.storeTagline || '-'}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Store Description</label>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Storefront Description
+              </label>
               {isEditing ? (
                 <textarea
-                  rows="4"
+                  rows="3"
                   value={editedSettings.storeDescription}
                   onChange={(e) => setEditedSettings({ ...editedSettings, storeDescription: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                  placeholder="Describe your enterprise product catalog and wholesale commitments..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                 />
               ) : (
-                <p className="text-sm text-gray-600">{storeSettings.storeDescription || '-'}</p>
+                <p className="text-sm font-medium text-slate-600 whitespace-pre-line">{storeSettings.storeDescription || '-'}</p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Theme Settings */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Palette size={16} className="text-gray-500" />
-              Theme Settings
-            </h4>
+        {/* Section 3: Theme & Palette Settings */}
+        <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Palette size={16} className="text-primary-600" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Theme & Color Palette
+              </h4>
+            </div>
+            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">Visual Styling</span>
           </div>
-          <div className="p-4">
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {themes.map(theme => (
-                <button
-                  key={theme.id}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    editedSettings.theme === theme.id
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-primary-300'
-                  }`}
-                  onClick={() => setEditedSettings({ ...editedSettings, theme: theme.id })}
-                  disabled={!isEditing}
-                >
-                  <div className="flex items-center justify-center mb-2">
-                    <div className="w-8 h-8 rounded-full" style={{ backgroundColor: theme.color }}></div>
-                  </div>
-                  <p className="text-sm font-medium text-gray-900">{theme.name}</p>
-                </button>
-              ))}
+
+          <div className="p-4 sm:p-5 space-y-5">
+            {/* Theme options */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {themes.map(t => {
+                const isSelected = editedSettings.theme === t.id
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => isEditing && setEditedSettings({ ...editedSettings, theme: t.id })}
+                    disabled={!isEditing}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${
+                      isSelected
+                        ? 'border-primary-600 bg-primary-50/40 shadow-xs'
+                        : 'border-slate-200/80 hover:border-slate-300 bg-slate-50/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className="w-6 h-6 rounded-full border border-slate-300 shadow-2xs"
+                        style={{ backgroundColor: t.color }}
+                      />
+                      <span className="text-xs font-bold text-slate-900">{t.name}</span>
+                    </div>
+                    <p className="text-2xs text-slate-500 font-medium">{t.description}</p>
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Colors picker */}
+            <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Primary Color</label>
-                {isEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={editedSettings.primaryColor}
-                      onChange={(e) => setEditedSettings({ ...editedSettings, primaryColor: e.target.value })}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
-                    />
-                    <span className="text-xs text-gray-500">{editedSettings.primaryColor}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full" style={{ backgroundColor: storeSettings.primaryColor }}></div>
-                    <span className="text-xs text-gray-600">{storeSettings.primaryColor}</span>
-                  </div>
-                )}
+                <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Primary Brand Tone
+                </label>
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="color"
+                    value={editedSettings.primaryColor}
+                    disabled={!isEditing}
+                    onChange={(e) => setEditedSettings({ ...editedSettings, primaryColor: e.target.value })}
+                    className="w-9 h-9 rounded-lg border border-slate-300 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className="font-mono text-xs font-semibold text-slate-700">{editedSettings.primaryColor}</span>
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Secondary Color</label>
-                {isEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={editedSettings.secondaryColor}
-                      onChange={(e) => setEditedSettings({ ...editedSettings, secondaryColor: e.target.value })}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
-                    />
-                    <span className="text-xs text-gray-500">{editedSettings.secondaryColor}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full" style={{ backgroundColor: storeSettings.secondaryColor }}></div>
-                    <span className="text-xs text-gray-600">{storeSettings.secondaryColor}</span>
-                  </div>
-                )}
+                <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Secondary Complement
+                </label>
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="color"
+                    value={editedSettings.secondaryColor}
+                    disabled={!isEditing}
+                    onChange={(e) => setEditedSettings({ ...editedSettings, secondaryColor: e.target.value })}
+                    className="w-9 h-9 rounded-lg border border-slate-300 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className="font-mono text-xs font-semibold text-slate-700">{editedSettings.secondaryColor}</span>
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Accent Color</label>
-                {isEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={editedSettings.accentColor}
-                      onChange={(e) => setEditedSettings({ ...editedSettings, accentColor: e.target.value })}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
-                    />
-                    <span className="text-xs text-gray-500">{editedSettings.accentColor}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full" style={{ backgroundColor: storeSettings.accentColor }}></div>
-                    <span className="text-xs text-gray-600">{storeSettings.accentColor}</span>
-                  </div>
-                )}
+                <label className="block text-2xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Accent Highlight
+                </label>
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="color"
+                    value={editedSettings.accentColor}
+                    disabled={!isEditing}
+                    onChange={(e) => setEditedSettings({ ...editedSettings, accentColor: e.target.value })}
+                    className="w-9 h-9 rounded-lg border border-slate-300 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className="font-mono text-xs font-semibold text-slate-700">{editedSettings.accentColor}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Layout Settings */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Layout size={16} className="text-gray-500" />
-              Layout Settings
-            </h4>
+        {/* Section 4: Layout & Sections */}
+        <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layout size={16} className="text-primary-600" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Catalog Layout & Homepage Sections
+              </h4>
+            </div>
+            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">Display Options</span>
           </div>
-          <div className="p-4 space-y-3">
+
+          <div className="p-4 sm:p-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Default Layout</label>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Default Catalog Display Layout
+              </label>
               {isEditing ? (
                 <select
                   value={editedSettings.layout}
                   onChange={(e) => setEditedSettings({ ...editedSettings, layout: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                  className="w-full sm:w-64 px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                 >
-                  <option value="grid">Grid Layout</option>
-                  <option value="list">List Layout</option>
+                  <option value="grid">Grid Layout (Multi-card view)</option>
+                  <option value="list">List Layout (Compact table view)</option>
                 </select>
               ) : (
-                <p className="text-sm text-gray-900 capitalize">{storeSettings.layout} Layout</p>
+                <p className="text-sm font-semibold text-slate-900 capitalize">{storeSettings.layout} Layout</p>
               )}
             </div>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
+
+            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={editedSettings.showFeaturedProducts}
                   onChange={(e) => setEditedSettings({ ...editedSettings, showFeaturedProducts: e.target.checked })}
                   disabled={!isEditing}
-                  className="rounded border-gray-300 text-primary-600"
+                  className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700">Show Featured Products on Homepage</span>
+                <span className="text-xs sm:text-sm font-medium text-slate-700">
+                  Feature Top-Velocity Products on Storefront Homepage
+                </span>
               </label>
-              <label className="flex items-center gap-2">
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={editedSettings.showCategories}
                   onChange={(e) => setEditedSettings({ ...editedSettings, showCategories: e.target.checked })}
                   disabled={!isEditing}
-                  className="rounded border-gray-300 text-primary-600"
+                  className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700">Show Categories on Homepage</span>
+                <span className="text-xs sm:text-sm font-medium text-slate-700">
+                  Display Category Carousel on Storefront
+                </span>
               </label>
-              <label className="flex items-center gap-2">
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={editedSettings.showTestimonials}
                   onChange={(e) => setEditedSettings({ ...editedSettings, showTestimonials: e.target.checked })}
                   disabled={!isEditing}
-                  className="rounded border-gray-300 text-primary-600"
+                  className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700">Show Testimonials Section</span>
+                <span className="text-xs sm:text-sm font-medium text-slate-700">
+                  Show Verified Retailer Feedback & Testimonial Section
+                </span>
               </label>
             </div>
           </div>
         </div>
 
-        {/* Footer Settings */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Type size={16} className="text-gray-500" />
-              Footer Settings
+        {/* Section 5: Footer Notice */}
+        <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2">
+            <Type size={16} className="text-primary-600" />
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+              Footer & Legal Copyright
             </h4>
           </div>
-          <div className="p-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Footer Text</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedSettings.footerText}
-                  onChange={(e) => setEditedSettings({ ...editedSettings, footerText: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                />
-              ) : (
-                <p className="text-sm text-gray-600">{storeSettings.footerText || '-'}</p>
-              )}
-            </div>
+          <div className="p-4 sm:p-5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Footer Text Notice
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editedSettings.footerText}
+                onChange={(e) => setEditedSettings({ ...editedSettings, footerText: e.target.value })}
+                placeholder="© 2026 Your Enterprise. All rights reserved."
+                className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              />
+            ) : (
+              <p className="text-sm font-medium text-slate-600">{storeSettings.footerText || '-'}</p>
+            )}
           </div>
         </div>
 
-        {/* Success Message */}
-        {saveSuccess && (
-          <div className="p-3 bg-success-50 rounded-lg flex items-center gap-2">
-            <CheckCircle size={16} className="text-success-600" />
-            <p className="text-sm text-success-600">Store customization saved successfully!</p>
-          </div>
-        )}
-
-        {/* Preview Card */}
-        <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-4">
+        {/* Live Storefront Preview */}
+        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-r from-primary-50/50 via-slate-50 to-primary-50/30 p-5 shadow-2xs">
           <div className="flex items-center gap-2 mb-3">
             <Eye size={18} className="text-primary-600" />
-            <h4 className="text-sm font-semibold text-primary-700">Live Preview</h4>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+              Live Storefront Preview
+            </h4>
           </div>
-          <div className="bg-white rounded-lg p-3 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-                {logoPreview || storeSettings.storeLogo ? (
-                  <img src={logoPreview || storeSettings.storeLogo} alt="Logo" className="w-6 h-6 object-cover rounded" />
-                ) : (
-                  <Globe size={16} />
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{editedSettings.storeName || 'Store Name'}</p>
-                <p className="text-xs text-gray-500">{editedSettings.storeTagline || 'Store Tagline'}</p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 overflow-hidden">
+              {logoPreview || editedSettings.storeLogo ? (
+                <img
+                  src={logoPreview || editedSettings.storeLogo}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ShoppingBag size={20} className="text-slate-400" />
+              )}
             </div>
-            <p className="text-xs text-gray-600 line-clamp-2">{editedSettings.storeDescription || 'Store description will appear here...'}</p>
+            <div className="space-y-1">
+              <h5 className="text-base font-bold text-slate-900 tracking-tight">
+                {editedSettings.storeName || 'Wholesale Store Name'}
+              </h5>
+              <p className="text-xs font-semibold text-primary-600">
+                {editedSettings.storeTagline || 'Enterprise Distributor'}
+              </p>
+              <p className="text-xs text-slate-500 line-clamp-2">
+                {editedSettings.storeDescription || 'Storefront description appears here for verified retail buyers.'}
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* Success Alert */}
+        {saveSuccess && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center gap-3">
+            <CheckCircle size={18} className="text-emerald-600 shrink-0" />
+            <p className="text-xs sm:text-sm font-semibold text-emerald-800">
+              Storefront branding configuration saved and propagated to buyer catalogs.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

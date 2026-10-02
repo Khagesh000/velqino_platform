@@ -1,95 +1,97 @@
-"use client"
+"use client";
 
-import React, { useState, lazy, Suspense, useEffect } from 'react'
-import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar'
-import { useFetchProfileQuery } from '@/redux/wholesaler/slices/wholesalerSlice'
+import React, { useState, lazy, Suspense, useEffect } from 'react';
+import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar';
+import { useFetchProfileQuery } from '@/redux/wholesaler/slices/wholesalerSlice';
+import { 
+  Settings as SettingsIcon,
+  Building,
+  Shield,
+  Banknote,
+  FileText,
+  Bell,
+  Users,
+  Key,
+  Truck,
+  CreditCard,
+  Store,
+  CheckCircle,
+  Sparkles,
+  HelpCircle
+} from '@/utils/icons';
 
 // Lazy load all non-critical components
-const ProfileSettings = lazy(() => import('./components/ProfileSettings'))
-const AccountSecurity = lazy(() => import('./components/AccountSecurity'))
-const BankDetails = lazy(() => import('./components/BankDetails'))
-const TaxInformation = lazy(() => import('./components/TaxInformation'))
-const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'))
-const TeamManagement = lazy(() => import('./components/TeamManagement'))
-const APIAccess = lazy(() => import('./components/APIAccess'))
-const ShippingSettings = lazy(() => import('./components/ShippingSettings'))
-const BillingSubscription = lazy(() => import('./components/BillingSubscription'))
-const StoreCustomization = lazy(() => import('./components/StoreCustomization'))
+const ProfileSettings = lazy(() => import('./components/ProfileSettings'));
+const AccountSecurity = lazy(() => import('./components/AccountSecurity'));
+const BankDetails = lazy(() => import('./components/BankDetails'));
+const TaxInformation = lazy(() => import('./components/TaxInformation'));
+const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'));
+const TeamManagement = lazy(() => import('./components/TeamManagement'));
+const APIAccess = lazy(() => import('./components/APIAccess'));
+const ShippingSettings = lazy(() => import('./components/ShippingSettings'));
+const BillingSubscription = lazy(() => import('./components/BillingSubscription'));
+const StoreCustomization = lazy(() => import('./components/StoreCustomization'));
 
-// Loading placeholders
-const ProfilePlaceholder = () => <div className="w-full h-[500px] bg-gray-50 rounded-xl animate-pulse" />
-const SecurityPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const BankPlaceholder = () => <div className="w-full h-[350px] bg-gray-50 rounded-xl animate-pulse" />
-const TaxPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const NotificationPlaceholder = () => <div className="w-full h-[380px] bg-gray-50 rounded-xl animate-pulse" />
-const TeamPlaceholder = () => <div className="w-full h-[420px] bg-gray-50 rounded-xl animate-pulse" />
-const APIPlaceholder = () => <div className="w-full h-[380px] bg-gray-50 rounded-xl animate-pulse" />
-const ShippingPlaceholder = () => <div className="w-full h-[350px] bg-gray-50 rounded-xl animate-pulse" />
-const BillingPlaceholder = () => <div className="w-full h-[400px] bg-gray-50 rounded-xl animate-pulse" />
-const StorePlaceholder = () => <div className="w-full h-[380px] bg-gray-50 rounded-xl animate-pulse" />
+// Structured executive skeleton placeholder
+const SettingsPlaceholder = ({ height = "h-[480px]" }) => (
+  <div className={`w-full ${height} bg-white rounded-2xl border border-slate-200/80 p-6 animate-pulse shadow-xs space-y-5`}>
+    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="space-y-2">
+        <div className="w-48 h-5 rounded bg-slate-200" />
+        <div className="w-64 h-3.5 rounded bg-slate-100" />
+      </div>
+      <div className="w-24 h-8 rounded-lg bg-slate-100" />
+    </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="h-12 bg-slate-100 rounded-xl" />
+        <div className="h-12 bg-slate-100 rounded-xl" />
+      </div>
+      <div className="h-28 bg-slate-100 rounded-xl" />
+      <div className="h-14 bg-slate-100 rounded-xl" />
+    </div>
+  </div>
+);
 
 export default function Settings() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [activeTab, setActiveTab] = useState('profile')
-  const [userId, setUserId] = useState(null)  // ✅ Add this line
-
-  console.log('🔵 [Settings] Component mounted')
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-  console.log('🔵 [Settings] useEffect running - getting userId from token')
-  
-  // ✅ Use 'access' instead of 'access_token'
-  const token = localStorage.getItem('access')
-  console.log('🔵 [Settings] Token exists?', token ? 'Yes' : 'No')
-  
-  if (token) {
-    try {
-      const base64Payload = token.split('.')[1]
-      const payload = JSON.parse(atob(base64Payload))
-      console.log('🔵 [Settings] user_id from token:', payload.user_id)
-      setUserId(payload.user_id)
-    } catch (error) {
-      console.error('🔴 [Settings] Error decoding token:', error)
+    const token = localStorage.getItem('access');
+    if (token) {
+      try {
+        const base64Payload = token.split('.')[1];
+        const payload = JSON.parse(atob(base64Payload));
+        setUserId(payload.user_id);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
     }
-  }
-}, [])
+  }, []);
 
-  console.log('🔵 [Settings] Current userId state:', userId)
-
-  const { data: wholesalerData, isLoading: wholesalerLoading, error: wholesalerError } = useFetchProfileQuery(userId, {
+  const { data: wholesalerData, isLoading: wholesalerLoading } = useFetchProfileQuery(userId, {
     skip: !userId
-  })
+  });
 
-  console.log('🔵 [Settings] Query state:', {
-    userId,
-    skip: !userId,
-    isLoading: wholesalerLoading,
-    hasData: !!wholesalerData,
-    error: wholesalerError
-  })
-
-  if (wholesalerData) {
-    console.log('🔵 [Settings] wholesalerData received:', wholesalerData)
-  }
-
-  const wholesaler = wholesalerData?.data || null
-  console.log('🔵 [Settings] Final wholesaler object:', wholesaler)
+  const wholesaler = wholesalerData?.data || null;
 
   const tabs = [
-    { id: 'profile', label: 'Profile Settings' },
-    { id: 'security', label: 'Account Security' },
-    { id: 'bank', label: 'Bank Details' },
-    { id: 'tax', label: 'Tax Information' },
-    { id: 'notifications', label: 'Notification Preferences' },
-    { id: 'team', label: 'Team Management' },
-    { id: 'api', label: 'API Access' },
-    { id: 'shipping', label: 'Shipping Settings' },
-    { id: 'billing', label: 'Billing & Subscription' },
-    { id: 'store', label: 'Store Customization' }
-  ]
+    { id: 'profile', label: 'Profile Settings', icon: Building },
+    { id: 'security', label: 'Account Security', icon: Shield },
+    { id: 'bank', label: 'Bank Details', icon: Banknote },
+    { id: 'tax', label: 'Tax Information', icon: FileText },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'team', label: 'Team Members', icon: Users },
+    { id: 'api', label: 'API & Developer', icon: Key },
+    { id: 'shipping', label: 'Shipping Rules', icon: Truck },
+    { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
+    { id: 'store', label: 'Store Theme', icon: Store }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-slate-50/70 pb-20">
       <WholesaleNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -99,126 +101,153 @@ export default function Settings() {
         transition-all duration-300 p-3 sm:p-4 lg:p-6
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
       `}>
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
+        <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-primary-100 flex items-center justify-center text-primary-600">
-                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+          {/* Executive Header Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 shadow-xs">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                <SettingsIcon size={24} />
               </div>
               <div>
-                <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Settings</h1>
-                <p className="text-sm text-gray-500">Manage your account and business preferences</p>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Enterprise Settings & Configuration
+                  </h1>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Verified Partner
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  {wholesaler?.business_name 
+                    ? `Configuring profile & operating preferences for ${wholesaler.business_name}` 
+                    : "Manage your merchant profile, credentials, banking rails, and store customization"}
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Tabs */}
-          <div className="overflow-x-auto scrollbar-hide mb-6">
-            <div className="flex items-center gap-1 border-b border-gray-200 min-w-max pb-px">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium capitalize border-b-2 transition-all whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <a
+                href="/wholesaler/support"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl border border-slate-200 transition-all shadow-2xs"
+              >
+                <HelpCircle size={14} className="text-primary-600" />
+                <span>Documentation & Support</span>
+              </a>
             </div>
           </div>
 
-          {/* Tab Content - Pass wholesaler data as props */}
-          {activeTab === 'profile' && (
-            <div style={{ minHeight: '500px' }}>
-              <Suspense fallback={<ProfilePlaceholder />}>
-                <ProfileSettings wholesaler={wholesaler} isLoading={wholesalerLoading} />
-              </Suspense>
+          {/* Executive Modern Tab Navigation */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-2xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 px-1">
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    type="button"
+                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-95 ${
+                      isActive
+                        ? 'bg-primary-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon size={15} className={isActive ? 'text-white' : 'text-slate-400'} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
 
-          {activeTab === 'security' && (
-            <div style={{ minHeight: '400px' }}>
-              <Suspense fallback={<SecurityPlaceholder />}>
-                <AccountSecurity user={wholesaler?.user} />
-              </Suspense>
-            </div>
-          )}
+          {/* Active Tab Content */}
+          <div>
+            {activeTab === 'profile' && (
+              <div style={{ minHeight: '500px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[520px]" />}>
+                  <ProfileSettings wholesaler={wholesaler} isLoading={wholesalerLoading} />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'bank' && (
-            <div style={{ minHeight: '350px' }}>
-              <Suspense fallback={<BankPlaceholder />}>
-                <BankDetails wholesaler={wholesaler} />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'security' && (
+              <div style={{ minHeight: '400px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[420px]" />}>
+                  <AccountSecurity user={wholesaler?.user} />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'tax' && (
-            <div style={{ minHeight: '400px' }}>
-              <Suspense fallback={<TaxPlaceholder />}>
-                <TaxInformation wholesaler={wholesaler} />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'bank' && (
+              <div style={{ minHeight: '350px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[380px]" />}>
+                  <BankDetails wholesaler={wholesaler} />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'notifications' && (
-            <div style={{ minHeight: '380px' }}>
-              <Suspense fallback={<NotificationPlaceholder />}>
-                <NotificationPreferences />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'tax' && (
+              <div style={{ minHeight: '400px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[420px]" />}>
+                  <TaxInformation wholesaler={wholesaler} />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'team' && (
-            <div style={{ minHeight: '420px' }}>
-              <Suspense fallback={<TeamPlaceholder />}>
-                <TeamManagement />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'notifications' && (
+              <div style={{ minHeight: '380px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[400px]" />}>
+                  <NotificationPreferences />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'api' && (
-            <div style={{ minHeight: '380px' }}>
-              <Suspense fallback={<APIPlaceholder />}>
-                <APIAccess />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'team' && (
+              <div style={{ minHeight: '420px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[440px]" />}>
+                  <TeamManagement />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'shipping' && (
-            <div style={{ minHeight: '350px' }}>
-              <Suspense fallback={<ShippingPlaceholder />}>
-                <ShippingSettings />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'api' && (
+              <div style={{ minHeight: '380px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[400px]" />}>
+                  <APIAccess />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'billing' && (
-            <div style={{ minHeight: '400px' }}>
-              <Suspense fallback={<BillingPlaceholder />}>
-                <BillingSubscription />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'shipping' && (
+              <div style={{ minHeight: '350px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[380px]" />}>
+                  <ShippingSettings />
+                </Suspense>
+              </div>
+            )}
 
-          {activeTab === 'store' && (
-            <div style={{ minHeight: '380px' }}>
-              <Suspense fallback={<StorePlaceholder />}>
-                <StoreCustomization />
-              </Suspense>
-            </div>
-          )}
+            {activeTab === 'billing' && (
+              <div style={{ minHeight: '400px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[420px]" />}>
+                  <BillingSubscription />
+                </Suspense>
+              </div>
+            )}
+
+            {activeTab === 'store' && (
+              <div style={{ minHeight: '380px' }}>
+                <Suspense fallback={<SettingsPlaceholder height="h-[400px]" />}>
+                  <StoreCustomization />
+                </Suspense>
+              </div>
+            )}
+          </div>
 
         </div>
       </main>
     </div>
-  )
+  );
 }

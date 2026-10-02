@@ -334,9 +334,9 @@ export default function AccountSecurity({ user, isLoading: parentLoading }) {
 
       {/* 2FA Setup Modal */}
       {show2FAModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShow2FAModal(false)} />
-          <div className="relative bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setShow2FAModal(false)} />
+          <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl z-10 border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Set Up Two-Factor Authentication</h3>
               <button onClick={() => setShow2FAModal(false)} className="p-1 text-gray-400 hover:text-gray-600">

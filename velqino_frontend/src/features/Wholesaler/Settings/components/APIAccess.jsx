@@ -365,9 +365,9 @@ export default function APIAccess({ wholesaler, isLoading: parentLoading }) {
 
       {/* Create API Key Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
-          <div className="relative bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setShowCreateModal(false)} />
+          <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl z-10 border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Create API Key</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
@@ -419,9 +419,9 @@ export default function APIAccess({ wholesaler, isLoading: parentLoading }) {
 
       {/* Add Webhook Modal */}
       {showWebhookModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowWebhookModal(false)} />
-          <div className="relative bg-white rounded-xl max-w-md w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setShowWebhookModal(false)} />
+          <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl z-10 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add Webhook</h3>
               <button onClick={() => setShowWebhookModal(false)} className="p-1 text-gray-400 hover:text-gray-600">

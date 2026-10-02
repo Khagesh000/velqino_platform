@@ -1,77 +1,17 @@
 @import '../../reusables/variables.scss';
 
-/* ================================
-   Bank Details - Only Animations
-================================ */
+/* =========================================================
+   Bank Details - Scoped Executive Animations
+========================================================= */
 
 .bank-details {
-  animation: fadeInUp 0.3s ease-out;
+  animation: bankDetailsFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes fadeInUp {
+@keyframes bankDetailsFadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-input, select {
-  transition: all 0.2s ease;
-  
-  &:focus {
-    transform: translateY(-1px);
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100);
-  }
-}
-
-button {
-  transition: all 0.2s ease;
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    
-    svg {
-      transform: scale(1.05);
-    }
-  }
-  
-  &:active:not(:disabled) {
-    transform: translateY(1px);
-  }
-  
-  svg {
-    transition: transform 0.2s ease;
-  }
-}
-
-.bg-success-50, .bg-error-50 {
-  animation: slideIn 0.2s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.2s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -80,20 +20,7 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bank-details,
-  input, select,
-  button,
-  .bg-success-50, .bg-error-50,
-  .animate-slide-up {
+  .bank-details {
     animation: none !important;
-    transition: none !important;
-  }
-  
-  button:hover {
-    transform: none;
-    
-    svg {
-      transform: none;
-    }
   }
 }
