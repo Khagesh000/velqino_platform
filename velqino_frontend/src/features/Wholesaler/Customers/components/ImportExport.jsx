@@ -9,10 +9,10 @@ import {
   Check,
   X,
   AlertCircle,
-  RefreshCw,
-  FileJson,
+  FileBarChart,
   Loader2
-} from '../../../../utils/icons';
+} from '@/utils/icons';
+import '../../../../styles/Wholesaler/Customers/ImportExport.scss';
 
 export default function ImportExport({ selectedCount = 0, onImport, onExport }) {
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -27,27 +27,25 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
   const fileInputRef = useRef(null);
 
   const importFormats = [
-    { id: 'csv', label: 'CSV', icon: FileSpreadsheet, description: 'Comma separated values' },
-    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'XLSX, XLS format' },
-    { id: 'json', label: 'JSON', icon: FileJson, description: 'JavaScript Object Notation' }
+    { id: 'csv', label: 'CSV', icon: FileBarChart, description: 'Comma separated values' },
+    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'XLSX, XLS sheet' }
   ];
 
   const exportFormats = [
-    { id: 'csv', label: 'CSV', icon: FileSpreadsheet, description: 'Comma separated values' },
-    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'XLSX format' },
-    { id: 'pdf', label: 'PDF', icon: FileText, description: 'PDF document' }
+    { id: 'csv', label: 'CSV', icon: FileBarChart, description: 'Spreadsheet import' },
+    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Microsoft Excel format' },
+    { id: 'pdf', label: 'PDF', icon: FileText, description: 'Printable statement' }
   ];
 
   const columns = [
     { id: 'name', label: 'Business Name' },
-    { id: 'email', label: 'Email' },
-    { id: 'phone', label: 'Phone' },
+    { id: 'email', label: 'Email Address' },
+    { id: 'phone', label: 'Phone Number' },
     { id: 'city', label: 'City' },
     { id: 'state', label: 'State' },
     { id: 'orders', label: 'Total Orders' },
-    { id: 'spent', label: 'Total Spent' },
-    { id: 'last_order', label: 'Last Order Date' },
-    { id: 'status', label: 'Status' }
+    { id: 'spent', label: 'Gross Spent' },
+    { id: 'status', label: 'Account Status' }
   ];
 
   const handleDrag = (e) => {
@@ -82,68 +80,43 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
     setSelectedFile(file);
     setUploadError(null);
     
-    const validTypes = ['.csv', '.xlsx', '.xls', '.json'];
+    const validTypes = ['.csv', '.xlsx', '.xls'];
     const fileExt = '.' + file.name.split('.').pop().toLowerCase();
     
     if (!validTypes.includes(fileExt)) {
-      setUploadError('Invalid file format. Please upload CSV, Excel, or JSON file.');
+      setUploadError('Invalid file format. Please upload CSV or Excel (.xlsx/.xls) file.');
       setSelectedFile(null);
       return;
     }
   };
 
-  // Replace handleImport function (around line 80)
-    const handleImport = async () => {
-      if (!selectedFile) return;
-      
-      setUploading(true);
-      setUploadError(null);
-      
-      try {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        
-        // ✅ Replace with your actual API call
-        const response = await fetch('/api/catalog/products/bulk-upload-images/', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          },
-          body: formData
-        });
-        
-        if (!response.ok) throw new Error('Import failed');
-        
-        setUploadSuccess(true);
-        onImport?.(selectedFile);
-        
-        setTimeout(() => {
-          setUploadSuccess(false);
-          setIsImportOpen(false);
-          setSelectedFile(null);
-        }, 2000);
-      } catch (error) {
-        setUploadError(error?.message || 'Import failed. Please try again.');
-      } finally {
-        setUploading(false);
-      }
-    };
+  const handleImport = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    setUploadError(null);
+    
+    try {
+      setUploadSuccess(true);
+      onImport?.(selectedFile);
+      setTimeout(() => {
+        setUploadSuccess(false);
+        setIsImportOpen(false);
+        setSelectedFile(null);
+      }, 1500);
+    } catch (error) {
+      setUploadError(error?.message || 'Import failed. Please verify format.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
-    // Replace handleExport function (around line 110)
-    const handleExport = () => {
-      const columnsToExport = exportColumns.includes('all') 
-        ? columns.map(c => c.id) 
-        : exportColumns;
-      
-      // ✅ Build export URL with params
-      const exportUrl = `/api/analytics/wholesaler/export-report/?format=${exportFormat}&columns=${columnsToExport.join(',')}`;
-      
-      // Open in new tab or download
-      window.open(exportUrl, '_blank');
-      
-      onExport?.({ format: exportFormat, columns: columnsToExport });
-      setIsExportOpen(false);
-    };
+  const handleExport = () => {
+    const columnsToExport = exportColumns.includes('all') 
+      ? columns.map(c => c.id) 
+      : exportColumns;
+    onExport?.({ format: exportFormat, columns: columnsToExport });
+    setIsExportOpen(false);
+  };
 
   const toggleColumn = (columnId) => {
     if (columnId === 'all') {
@@ -160,25 +133,25 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
   };
 
   return (
-    <div className="import-export flex items-center gap-2 sm:gap-3">
+    <div className="import-export flex items-center gap-2">
       {/* Import Button */}
       <button
-        className="import-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+        className="import-btn flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-2xs"
         onClick={() => setIsImportOpen(true)}
       >
-        <Upload size={14} className="sm:w-4 sm:h-4" />
+        <Upload size={14} className="text-slate-500" />
         <span>Import</span>
       </button>
 
       {/* Export Button */}
       <button
-        className="export-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-primary-600 transition-all"
+        className="export-btn flex items-center gap-1.5 px-3.5 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
         onClick={() => setIsExportOpen(true)}
       >
-        <Download size={14} className="sm:w-4 sm:h-4" />
+        <Download size={14} />
         <span>Export</span>
         {selectedCount > 0 && (
-          <span className="ml-0.5 sm:ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xxs">
+          <span className="ml-0.5 px-1.5 py-0.2 bg-white/20 rounded-full text-[10px]">
             {selectedCount}
           </span>
         )}
@@ -188,32 +161,32 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
       {isImportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
             onClick={() => setIsImportOpen(false)}
           />
-          <div className="import-modal relative bg-white rounded-xl max-w-lg w-full p-4 sm:p-6 shadow-xl">
+          <div className="import-modal relative bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
+                <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 shadow-2xs">
                   <Upload size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Import Customers</h3>
-                  <p className="text-xs text-gray-500">Upload customer data from file</p>
+                  <h3 className="text-base font-bold text-slate-900">Import Retailers</h3>
+                  <p className="text-xs text-slate-500">Upload bulk customer accounts from CSV / Excel</p>
                 </div>
               </div>
               <button 
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all"
                 onClick={() => setIsImportOpen(false)}
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
             {/* File Upload Area */}
             <div
-              className={`upload-area border-2 border-dashed rounded-xl p-4 sm:p-8 text-center transition-all ${
-                dragActive ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-primary-400'
+              className={`upload-area border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-all ${
+                dragActive ? 'border-primary-500 bg-primary-50' : 'border-slate-300 hover:border-primary-400 bg-slate-50/50'
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -223,39 +196,39 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls,.json"
+                accept=".csv,.xlsx,.xls"
                 onChange={handleFileSelect}
                 className="hidden"
               />
               
               {!selectedFile ? (
                 <>
-                  <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600 mb-1">Drag & drop file here</p>
-                  <p className="text-xs text-gray-500 mb-3">or</p>
+                  <Upload size={32} className="mx-auto text-slate-400 mb-2" />
+                  <p className="text-xs sm:text-sm font-semibold text-slate-700 mb-1">Drag and drop file here</p>
+                  <p className="text-[11px] text-slate-400 mb-3">or click browse</p>
                   <button
-                    className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg hover:bg-primary-600 transition-all"
+                    className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     Browse Files
                   </button>
-                  <p className="text-xxs text-gray-400 mt-3">Supports CSV, Excel, JSON (Max 10MB)</p>
+                  <p className="text-[10px] text-slate-400 mt-3">Supports CSV, Excel (.xlsx/.xls) up to 10MB</p>
                 </>
               ) : (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
                   <div className="flex items-center gap-3">
-                    <FileSpreadsheet size={24} className="text-primary-500" />
+                    <FileSpreadsheet size={24} className="text-primary-600" />
                     <div className="text-left">
-                      <p className="text-sm font-medium text-gray-900 truncate max-w-[150px] sm:max-w-[200px]">
+                      <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[240px]">
                         {selectedFile.name}
                       </p>
-                      <p className="text-xxs text-gray-500">
+                      <p className="text-[10px] text-slate-400">
                         {(selectedFile.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
                   </div>
                   <button
-                    className="p-1 text-gray-400 hover:text-error-500"
+                    className="p-1 text-slate-400 hover:text-rose-600"
                     onClick={() => setSelectedFile(null)}
                   >
                     <X size={16} />
@@ -264,60 +237,41 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
               )}
             </div>
 
-            {/* Format Info */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs font-medium text-gray-700 mb-2">Supported formats:</p>
-              <div className="flex flex-wrap gap-2">
-                {importFormats.map(format => {
-                  const Icon = format.icon;
-                  return (
-                    <div key={format.id} className="flex items-center gap-1 text-xxs text-gray-500">
-                      <Icon size={12} />
-                      <span>{format.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Error Message */}
             {uploadError && (
-              <div className="mt-3 p-2 bg-error-50 rounded-lg flex items-center gap-2">
-                <AlertCircle size={14} className="text-error-500" />
-                <p className="text-xs text-error-600">{uploadError}</p>
+              <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2">
+                <AlertCircle size={14} className="text-rose-600 flex-shrink-0" />
+                <p className="text-xs font-semibold text-rose-700">{uploadError}</p>
               </div>
             )}
 
-            {/* Success Message */}
             {uploadSuccess && (
-              <div className="mt-3 p-2 bg-success-50 rounded-lg flex items-center gap-2">
-                <Check size={14} className="text-success-500" />
-                <p className="text-xs text-success-600">File uploaded successfully!</p>
+              <div className="mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2">
+                <Check size={14} className="text-emerald-600 flex-shrink-0" />
+                <p className="text-xs font-semibold text-emerald-700">File uploaded and queued for processing!</p>
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 mt-4">
+            <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
               <button
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-2xs"
                 onClick={() => setIsImportOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 text-xs font-bold text-white bg-primary-500 hover:bg-primary-600 rounded-xl transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
                 onClick={handleImport}
                 disabled={!selectedFile || uploading}
               >
                 {uploading ? (
                   <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Importing...
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Processing...</span>
                   </>
                 ) : (
                   <>
-                    <Upload size={14} />
-                    Import
+                    <Upload size={13} />
+                    <span>Import File</span>
                   </>
                 )}
               </button>
@@ -330,33 +284,33 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
       {isExportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
             onClick={() => setIsExportOpen(false)}
           />
-          <div className="export-modal relative bg-white rounded-xl max-w-lg w-full p-4 sm:p-6 shadow-xl">
+          <div className="export-modal relative bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
+                <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 shadow-2xs">
                   <Download size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Export Customers</h3>
-                  <p className="text-xs text-gray-500">
-                    {selectedCount > 0 ? `${selectedCount} customers selected` : 'Export all customers'}
+                  <h3 className="text-base font-bold text-slate-900">Export Retailers Directory</h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedCount > 0 ? `${selectedCount} retailers selected` : 'Export all filtered customers'}
                   </p>
                 </div>
               </div>
               <button 
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all"
                 onClick={() => setIsExportOpen(false)}
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Format Selection */}
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-700 mb-2">Export Format</label>
+              <label className="block text-xs font-bold text-slate-700 mb-2">Export Document Format</label>
               <div className="grid grid-cols-3 gap-2">
                 {exportFormats.map(format => {
                   const Icon = format.icon;
@@ -364,16 +318,16 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
                   return (
                     <button
                       key={format.id}
-                      className={`p-2 sm:p-3 rounded-lg border-2 transition-all ${
+                      className={`p-2.5 rounded-xl border text-center transition-all ${
                         isActive
-                          ? 'border-primary-500 bg-primary-50 text-primary-700'
-                          : 'border-gray-200 hover:border-primary-300 text-gray-600'
+                          ? 'border-primary-500 bg-primary-50 text-primary-800 ring-2 ring-primary-100 font-bold'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
                       }`}
                       onClick={() => setExportFormat(format.id)}
                     >
-                      <Icon size={20} className="mx-auto mb-1" />
-                      <p className="text-xs font-medium">{format.label}</p>
-                      <p className="text-xxs text-gray-500">{format.description}</p>
+                      <Icon size={18} className="mx-auto mb-1 text-current" />
+                      <p className="text-xs font-bold">{format.label}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{format.description}</p>
                     </button>
                   );
                 })}
@@ -382,13 +336,13 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
 
             {/* Column Selection */}
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-700 mb-2">Select Columns</label>
-              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">Include Columns</label>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-100 rounded-xl bg-slate-50/50">
                 <button
-                  className={`px-2 py-1 text-xxs rounded-full transition-all ${
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                     exportColumns.includes('all')
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-primary-500 text-white shadow-2xs'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                   }`}
                   onClick={() => toggleColumn('all')}
                 >
@@ -397,10 +351,10 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
                 {columns.map(col => (
                   <button
                     key={col.id}
-                    className={`px-2 py-1 text-xxs rounded-full transition-all ${
+                    className={`px-2 py-1 text-xs font-medium rounded-lg transition-all ${
                       exportColumns.includes('all') || exportColumns.includes(col.id)
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-primary-50 text-primary-800 border border-primary-200 font-bold'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                     }`}
                     onClick={() => toggleColumn(col.id)}
                   >
@@ -410,20 +364,19 @@ export default function ImportExport({ selectedCount = 0, onImport, onExport }) 
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <button
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-2xs"
                 onClick={() => setIsExportOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center gap-2"
+                className="px-4 py-2 text-xs font-bold text-white bg-primary-500 hover:bg-primary-600 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
                 onClick={handleExport}
               >
-                <Download size={14} />
-                Export {selectedCount > 0 ? `(${selectedCount})` : 'All'}
+                <Download size={13} />
+                <span>Export {selectedCount > 0 ? `(${selectedCount})` : 'All'}</span>
               </button>
             </div>
           </div>

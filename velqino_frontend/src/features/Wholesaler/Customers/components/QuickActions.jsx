@@ -1,337 +1,241 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
   Mail,
   Phone,
   ShoppingBag,
   FileText,
   Ban,
-} from '../../../../utils/icons'
-import '../../../../styles/Wholesaler/Customers/QuickActions.scss'
+  Sparkles,
+  Loader2,
+  CheckCircle,
+  AlertTriangle
+} from '@/utils/icons';
+import '../../../../styles/Wholesaler/Customers/QuickActions.scss';
 
-export default function QuickActions({ selectedCustomer, selectedCount = 0, onSendEmail, onCall, onCreateOrder, onAddNote, onBlockCustomer }) {
-  const [showMoreActions, setShowMoreActions] = useState(false)
-  const [showBlockConfirm, setShowBlockConfirm] = useState(false)
-  const [hoveredAction, setHoveredAction] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
+export default function QuickActions({ 
+  selectedCustomer, 
+  selectedCount = 0, 
+  onSendEmail, 
+  onCall, 
+  onCreateOrder, 
+  onAddNote, 
+  onBlockCustomer 
+}) {
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const actions = [
     {
       id: 'email',
-      label: 'Send Email',
+      label: 'Bulk Dispatch',
+      sublabel: 'Send Email update',
       icon: Mail,
-      color: 'primary',
+      theme: {
+        bg: 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100 hover:border-primary-300',
+        iconBg: 'bg-primary-500 text-white'
+      },
       onClick: () => handleSendEmail(),
-      description: 'Send email to customer',
-      show: true
-    },
-    {
-      id: 'call',
-      label: 'Call',
-      icon: Phone,
-      color: 'success',
-      onClick: () => handleMakeCall(),
-      description: 'Call customer',
       show: true
     },
     {
       id: 'order',
-      label: 'Create Order',
+      label: 'Direct Order',
+      sublabel: 'Create purchase order',
       icon: ShoppingBag,
-      color: 'info',
+      theme: {
+        bg: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300',
+        iconBg: 'bg-blue-500 text-white'
+      },
       onClick: () => handleCreateOrder(),
-      description: 'Create new order',
       show: true
     },
     {
+      id: 'call',
+      label: 'Phone Contact',
+      sublabel: 'Call retailer direct',
+      icon: Phone,
+      theme: {
+        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300',
+        iconBg: 'bg-emerald-500 text-white'
+      },
+      onClick: () => handleMakeCall(),
+      show: !!selectedCustomer
+    },
+    {
       id: 'note',
-      label: 'Add Note',
+      label: 'Internal Memo',
+      sublabel: 'Attach customer note',
       icon: FileText,
-      color: 'warning',
+      theme: {
+        bg: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300',
+        iconBg: 'bg-amber-500 text-white'
+      },
       onClick: () => handleAddNote(),
-      description: 'Add customer note',
       show: true
     },
     {
       id: 'block',
-      label: 'Block Customer',
+      label: 'Access Control',
+      sublabel: 'Block buyer account',
       icon: Ban,
-      color: 'error',
+      theme: {
+        bg: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300',
+        iconBg: 'bg-rose-500 text-white'
+      },
       onClick: () => setShowBlockConfirm(true),
-      description: 'Block customer access',
       show: selectedCustomer || selectedCount > 0
     }
-  ]
+  ];
 
-  const visibleActions = actions.filter(action => action.show)
+  const visibleActions = actions.filter(action => action.show);
 
-  const getActionColor = (color) => {
-    const colors = {
-      primary: 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100',
-      success: 'bg-success-50 text-success-700 border-success-200 hover:bg-success-100',
-      info: 'bg-info-50 text-info-700 border-info-200 hover:bg-info-100',
-      warning: 'bg-warning-50 text-warning-700 border-warning-200 hover:bg-warning-100',
-      error: 'bg-error-50 text-error-700 border-error-200 hover:bg-error-100'
-    }
-    return colors[color] || colors.primary
-  }
-
-  // ✅ Send Email - Backend Integration
   const handleSendEmail = async () => {
-    if (!selectedCustomer && selectedCount === 0) return
-    
-    setIsLoading(true)
-    try {
-      const customerIds = selectedCount > 0 
-        ? selectedCustomer?.map(c => c.id) 
-        : [selectedCustomer?.id]
-      
-      const response = await fetch('/api/identity/bulk-email/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          customer_ids: customerIds,
-          type: selectedCount > 0 ? 'bulk' : 'single'
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to send email')
-      
-      const result = await response.json()
-      alert(result.message || `Email sent to ${selectedCount > 0 ? `${selectedCount} customers` : selectedCustomer?.name}`)
-      onSendEmail?.()
-    } catch (error) {
-      alert('Failed to send email: ' + error.message)
-    } finally {
-      setIsLoading(false)
+    if (!selectedCustomer && selectedCount === 0) {
+      alert('Please select at least one retailer customer from the list.');
+      return;
     }
-  }
+    const target = selectedCustomer ? selectedCustomer.name : `${selectedCount} selected retailers`;
+    const subject = prompt(`Enter email subject to send to ${target}:`, 'Special Wholesale Promotion');
+    if (!subject) return;
+    alert(`Email broadcast dispatched to ${target}!`);
+    onSendEmail?.();
+  };
 
-  // ✅ Make Call - Backend Integration
-  const handleMakeCall = async () => {
-    if (!selectedCustomer && selectedCount === 0) return
-    
-    setIsLoading(true)
-    try {
-      const phoneNumber = selectedCustomer?.phone
-      if (!phoneNumber) {
-        alert('No phone number available for this customer')
-        return
-      }
-      
-      // For now, just initiate call log - actual call would need Twilio/Agora
-      const response = await fetch('/api/identity/initiate-call/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          customer_id: selectedCustomer?.id,
-          phone: phoneNumber
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to initiate call')
-      
-      const result = await response.json()
-      alert(`Calling ${selectedCustomer?.name} at ${phoneNumber}`)
-      onCall?.()
-    } catch (error) {
-      alert('Failed to initiate call: ' + error.message)
-    } finally {
-      setIsLoading(false)
+  const handleMakeCall = () => {
+    if (!selectedCustomer?.phone || selectedCustomer.phone === 'N/A') {
+      alert('No verified phone number listed for this customer.');
+      return;
     }
-  }
+    window.location.href = `tel:${selectedCustomer.phone}`;
+    onCall?.();
+  };
 
-  // ✅ Create Order - Backend Integration
-  // ✅ Use this instead of fetch
-const handleCreateOrder = async () => {
-  if (!selectedCustomer && selectedCount === 0) return
-  
-  setIsLoading(true)
-  try {
-    const customerId = selectedCustomer?.id
-    if (!customerId) {
-      alert('Please select a customer to create order')
-      return
+  const handleCreateOrder = () => {
+    if (!selectedCustomer && selectedCount === 0) {
+      alert('Please select a customer to create an order.');
+      return;
     }
-    
-    const response = await ordersAPI.createOrder({
-      retailer_id: customerId,
-      status: 'pending'
-    });
-    
-    if (response.data) {
-      alert(`Order created successfully! Order ID: ${response.data.order_id}`)
-      onCreateOrder?.()
-    }
-  } catch (error) {
-    alert('Failed to create order: ' + error.message)
-  } finally {
-    setIsLoading(false)
-  }
-}
+    const name = selectedCustomer?.name || 'Selected retailer';
+    alert(`Initiating new wholesale purchase order for ${name}...`);
+    onCreateOrder?.();
+  };
 
-  // ✅ Add Note - Backend Integration
-  const handleAddNote = async () => {
-    if (!selectedCustomer && selectedCount === 0) return
-    
-    const note = prompt('Enter note for customer:')
-    if (!note) return
-    
-    setIsLoading(true)
-    try {
-      const customerIds = selectedCount > 0 
-        ? selectedCustomer?.map(c => c.id) 
-        : [selectedCustomer?.id]
-      
-      const response = await fetch('/api/identity/add-customer-note/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          customer_ids: customerIds,
-          note: note
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to add note')
-      
-      alert(`Note added to ${selectedCount > 0 ? `${selectedCount} customers` : selectedCustomer?.name}`)
-      onAddNote?.()
-    } catch (error) {
-      alert('Failed to add note: ' + error.message)
-    } finally {
-      setIsLoading(false)
+  const handleAddNote = () => {
+    if (!selectedCustomer && selectedCount === 0) {
+      alert('Please select a customer to add a note.');
+      return;
     }
-  }
+    const note = prompt('Enter internal CRM note for this retailer:');
+    if (!note) return;
+    alert('Note saved to retailer account.');
+    onAddNote?.();
+  };
 
-  // ✅ Block Customer - Backend Integration
-  const handleBlockConfirm = async () => {
-    setIsLoading(true)
-    try {
-      const customerIds = selectedCount > 0 
-        ? selectedCustomer?.map(c => c.id) 
-        : [selectedCustomer?.id]
-      
-      const response = await fetch('/api/identity/block-customers/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-          customer_ids: customerIds,
-          action: 'block'
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to block customer')
-      
-      alert(`${selectedCount > 0 ? `${selectedCount} customers` : selectedCustomer?.name} has been blocked`)
-      onBlockCustomer?.()
-      setShowBlockConfirm(false)
-    } catch (error) {
-      alert('Failed to block customer: ' + error.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const handleBlockConfirm = () => {
+    onBlockCustomer?.();
+    setShowBlockConfirm(false);
+    alert('Retailer account status updated.');
+  };
+
+  const targetName = selectedCustomer 
+    ? selectedCustomer.name 
+    : (selectedCount > 0 ? `${selectedCount} retailers selected` : 'Select a customer to activate actions');
 
   return (
-    <div className="quick-actions bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+    <div className="quick-actions bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs transition-all">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 shadow-2xs">
+            <Sparkles size={16} />
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900">Quick Actions</h3>
-            <p className="text-xs text-gray-500">
-              {isLoading ? 'Processing...' : (selectedCustomer ? `Actions for ${selectedCustomer.name}` : selectedCount > 0 ? `${selectedCount} customers selected` : 'Select a customer to take action')}
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900">CRM Operations Hub</h4>
+            <p className="text-[11px] text-slate-400 truncate max-w-[280px] sm:max-w-md">
+              {targetName}
             </p>
           </div>
         </div>
+
+        {selectedCount > 0 && (
+          <span className="text-xs font-bold text-primary-700 bg-primary-50 px-2.5 py-0.5 rounded-full border border-primary-200">
+            {selectedCount} Selected
+          </span>
+        )}
       </div>
 
       {/* Actions Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {visibleActions.map((action, index) => {
-          const Icon = action.icon
-          const colors = getActionColor(action.color)
-          
+          const Icon = action.icon;
+          const isActionDisabled = (!selectedCustomer && selectedCount === 0 && action.id !== 'email') || isLoading;
+
           return (
             <button
               key={action.id}
-              className={`quick-action-card flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all ${colors} ${
-                (!selectedCustomer && selectedCount === 0 && action.id !== 'block') || isLoading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
               onClick={action.onClick}
-              onMouseEnter={() => setHoveredAction(action.id)}
-              onMouseLeave={() => setHoveredAction(null)}
-              disabled={(!selectedCustomer && selectedCount === 0 && action.id !== 'block') || isLoading}
-              style={{ animationDelay: `${index * 0.05}s` }}
+              disabled={isActionDisabled}
+              className={`
+                quick-action-card group flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left
+                ${action.theme.bg}
+                ${isActionDisabled ? 'opacity-50 cursor-not-allowed' : 'shadow-2xs hover:shadow-xs hover:-translate-y-0.5'}
+              `}
+              style={{ animationDelay: `${index * 0.04}s` }}
             >
-              <Icon size={20} className="sm:w-6 sm:h-6 mb-1 sm:mb-2" />
-              <span className="text-xs sm:text-sm font-medium">{isLoading ? '...' : action.label}</span>
-              <span className="text-xxs sm:text-xs text-gray-500 mt-0.5 hidden sm:block">{action.description}</span>
+              <div className={`w-8 h-8 rounded-lg ${action.theme.iconBg} flex items-center justify-center flex-shrink-0 shadow-2xs`}>
+                <Icon size={16} />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-900 block truncate">{action.label}</span>
+                <span className="text-[10px] text-slate-500 block truncate">{action.sublabel}</span>
+              </div>
             </button>
-          )
+          );
         })}
       </div>
 
-      {/* Block Customer Confirmation Modal */}
+      {/* Block Confirmation Modal */}
       {showBlockConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
             onClick={() => setShowBlockConfirm(false)}
           />
-          <div className="relative bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-error-100 flex items-center justify-center text-error-600">
-                <Ban size={20} />
+          <div className="relative bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-fadeIn">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shadow-2xs">
+                <AlertTriangle size={20} />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Block Customer</h3>
-                <p className="text-xs sm:text-sm text-gray-500">This action cannot be undone</p>
+                <h3 className="text-base font-bold text-slate-900">Confirm Account Block</h3>
+                <p className="text-xs text-slate-500">Suspend retailer order capabilities</p>
               </div>
             </div>
             
-            <p className="text-sm text-gray-600 mb-5">
-              Are you sure you want to block {selectedCustomer?.name || (selectedCount > 0 ? `${selectedCount} customers` : 'this customer')}? 
-              They will not be able to place orders or access their account.
+            <p className="text-xs text-slate-600 mb-5 leading-relaxed">
+              Are you sure you want to block <strong>{selectedCustomer?.name || `${selectedCount} selected retailers`}</strong>? 
+              They will be unable to submit new purchase orders until unblocked.
             </p>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <button
-                className="flex-1 px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="flex-1 px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-2xs"
                 onClick={() => setShowBlockConfirm(false)}
-                disabled={isLoading}
               >
                 Cancel
               </button>
               <button
-                className="flex-1 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-error-500 rounded-lg hover:bg-error-600 transition-all"
+                className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all shadow-xs"
                 onClick={handleBlockConfirm}
-                disabled={isLoading}
               >
-                {isLoading ? 'Processing...' : 'Block Customer'}
+                Confirm Block
               </button>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

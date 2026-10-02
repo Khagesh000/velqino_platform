@@ -24,7 +24,7 @@
 /* Filter Group Stagger Animation */
 .filter-group {
   animation: fadeIn 0.2s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
 }
 
 @for $i from 1 through 6 {
@@ -58,8 +58,8 @@ input, select {
 /* Filter Chip Enter Animation */
 .flex.flex-wrap .inline-flex {
   animation: chipEnter 0.2s ease-out forwards;
-  transform: scale(0.9);
-  opacity: 0;
+  transform: scale(1);
+  opacity: 1;
 }
 
 @keyframes chipEnter {

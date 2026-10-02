@@ -7,8 +7,8 @@
 
 .quick-action-card {
   animation: cardSlideUp 0.3s ease-out forwards;
-  opacity: 0;
-  transform: translateY(10px);
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @for $i from 1 through 5 {

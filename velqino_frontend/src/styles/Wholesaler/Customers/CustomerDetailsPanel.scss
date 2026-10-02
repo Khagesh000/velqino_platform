@@ -73,8 +73,8 @@
 /* Stats Card Animation */
 .grid-cols-3 .bg-gray-50 {
   animation: cardPop 0.3s ease-out forwards;
-  opacity: 0;
-  transform: scale(0.9);
+  opacity: 1;
+  transform: scale(1);
   
   @for $i from 1 through 3 {
     &:nth-child(#{$i}) {
@@ -93,8 +93,8 @@
 /* Order Item Animation */
 .order-item {
   animation: slideIn 0.2s ease-out forwards;
-  opacity: 0;
-  transform: translateX(-10px);
+  opacity: 1;
+  transform: translateX(0);
   
   @for $i from 1 through 4 {
     &:nth-child(#{$i}) {
@@ -147,8 +147,8 @@
 /* Note Item */
 .note-item {
   animation: fadeInUp 0.2s ease-out forwards;
-  opacity: 0;
-  transform: translateY(10px);
+  opacity: 1;
+  transform: translateY(0);
   
   @for $i from 1 through 3 {
     &:nth-child(#{$i}) {
@@ -176,7 +176,7 @@
 /* Timeline Animation */
 .timeline-item {
   animation: timelineFade 0.3s ease-out forwards;
-  opacity: 0;
+  opacity: 1;
   
   @for $i from 1 through 5 {
     &:nth-child(#{$i}) {
