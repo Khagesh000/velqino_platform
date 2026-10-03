@@ -1,137 +1,112 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Clock, Printer, Eye, CheckCircle, Package, User, CreditCard, TrendingUp } from '../../../../utils/icons'
-import '../../../../styles/Retailer/PosSales/RecentSale.scss'
+import React, { useState } from 'react';
+import { 
+  Clock, 
+  Printer, 
+  CheckCircle, 
+  CreditCard, 
+  Banknote, 
+  Smartphone, 
+  User, 
+  Package
+} from '../../../../utils/icons';
 
-export default function RecentSale() {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredSale, setHoveredSale] = useState(null)
+export default function RecentSale({ lastSale = null, onReprint }) {
+  const [isHovered, setIsHovered] = useState(false);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
-  // Mock recent sale data
-  const recentSale = {
-    id: 'TXN20260414001',
-    time: '10:30 AM',
-    date: 'Today',
-    customer: 'Rajesh Kumar',
-    items: 3,
-    total: 2450,
-    payment: 'UPI',
-    status: 'completed',
-    itemsList: [
-      { name: 'Premium Cotton T-Shirt', quantity: 2, price: 499 },
-      { name: 'Leather Wallet', quantity: 1, price: 1499 }
-    ]
-  }
-
-  const handleReprint = () => {
-    console.log('Reprinting receipt...')
-    alert('Receipt reprinted successfully!')
-  }
-
-  const handleViewDetails = () => {
-    console.log('Viewing sale details...')
-  }
+  const getPaymentIcon = (method = '') => {
+    const m = (method || '').toLowerCase();
+    if (m === 'cash') return <Banknote size={13} className="text-emerald-600" />;
+    if (m === 'upi') return <Smartphone size={13} className="text-primary-600" />;
+    return <CreditCard size={13} className="text-indigo-600" />;
+  };
 
   return (
-    <div className="recent-sale bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs">
       {/* Header */}
-      <div className="p-3 border-b border-gray-100">
+      <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
         <div className="flex items-center gap-2">
-          <Clock size={16} className="text-primary-500" />
-          <h3 className="text-sm font-semibold text-gray-900">Last Transaction</h3>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div 
-        className="p-3 hover:bg-gray-50 transition-all cursor-pointer"
-        onMouseEnter={() => setHoveredSale(true)}
-        onMouseLeave={() => setHoveredSale(null)}
-      >
-        {/* Transaction Header */}
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold text-gray-700">{recentSale.id}</span>
-              <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] rounded-full flex items-center gap-0.5">
-                <CheckCircle size={8} />
-                <span>Completed</span>
-              </span>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">{recentSale.time} • {recentSale.date}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-bold text-gray-900">₹{recentSale.total.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-500">{recentSale.items} items</p>
-          </div>
+          <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+            <Clock size={16} />
+          </span>
+          <h3 className="text-sm font-bold text-gray-900">
+            Last Transaction
+          </h3>
         </div>
 
-        {/* Customer & Payment */}
-        <div className="flex items-center gap-3 mb-2 text-[10px] text-gray-500">
-          <div className="flex items-center gap-1">
-            <User size={10} />
-            <span>{recentSale.customer}</span>
-          </div>
-          <div className="w-1 h-1 bg-gray-300 rounded-full" />
-          <div className="flex items-center gap-1">
-            <CreditCard size={10} />
-            <span>{recentSale.payment}</span>
-          </div>
-        </div>
-
-        {/* Items Preview */}
-        <div className="bg-gray-50 rounded-lg p-2 mb-2">
-          <div className="flex items-center gap-2">
-            <Package size={10} className="text-gray-400" />
-            <span className="text-[10px] text-gray-600">Items:</span>
-          </div>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {recentSale.itemsList.map((item, idx) => (
-              <span key={idx} className="text-[10px] text-gray-500 bg-white px-1.5 py-0.5 rounded">
-                {item.quantity}x {item.name.split(' ').slice(0, 2).join(' ')}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={handleReprint}
-            className="flex-1 py-1.5 text-[11px] font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-primary-100 hover:text-primary-700 transition-all flex items-center justify-center gap-1"
-          >
-            <Printer size={12} />
-            <span>Reprint</span>
-          </button>
-          <button
-            onClick={handleViewDetails}
-            className="flex-1 py-1.5 text-[11px] font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-primary-100 hover:text-primary-700 transition-all flex items-center justify-center gap-1"
-          >
-            <Eye size={12} />
-            <span>Details</span>
-          </button>
-        </div>
-
-        {/* Hover Animation Effect */}
-        {hoveredSale && (
-          <div className="absolute inset-0 rounded-xl bg-primary-500/5 pointer-events-none animate-pulse-overlay" />
+        {lastSale && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 flex items-center gap-1">
+            <CheckCircle size={10} />
+            <span>Settled</span>
+          </span>
         )}
       </div>
 
-      {/* Footer */}
-      <div className="p-2 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center justify-center gap-1">
-          <TrendingUp size={10} className="text-green-500" />
-          <span className="text-[9px] text-gray-500">+12% vs last transaction</span>
+      {/* Transaction Details or Proper Empty Message */}
+      {!lastSale ? (
+        <div className="p-4 rounded-2xl bg-gray-50/80 border border-dashed border-gray-200 text-center">
+          <Clock size={20} className="text-gray-300 mx-auto mb-1.5" />
+          <p className="text-xs font-bold text-gray-700">No Sales in Current Session</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            Completed checkouts will appear here for instant tax invoice reprinting.
+          </p>
         </div>
-      </div>
+      ) : (
+        <div 
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="p-3 rounded-2xl bg-gray-50/80 border border-gray-100 hover:border-primary-200 transition-all space-y-2.5"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-mono font-bold text-xs text-primary-700 block">
+                {lastSale.id}
+              </span>
+              <span className="text-[10px] text-gray-400">
+                {lastSale.time} • {lastSale.date}
+              </span>
+            </div>
+
+            <div className="text-right">
+              <span className="text-sm sm:text-base font-black text-gray-900 block">
+                ₹{Number(lastSale.total || 0).toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] text-gray-500 font-medium">
+                {lastSale.items || 1} items
+              </span>
+            </div>
+          </div>
+
+          {/* Customer & Tender Strip */}
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-200/70 text-gray-600">
+            <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+              <User size={13} className="text-gray-400" />
+              <span className="font-semibold text-gray-800 text-[11px] truncate">
+                {lastSale.customer || 'Walk-in'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-gray-200 text-[11px] font-bold">
+              {getPaymentIcon(lastSale.payment)}
+              <span>{lastSale.payment || 'CASH'}</span>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onReprint) onReprint(lastSale);
+              else window.print();
+            }}
+            className="w-full py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+          >
+            <Printer size={13} />
+            <span>Reprint Tax Invoice</span>
+          </button>
+        </div>
+      )}
     </div>
-  )
+  );
 }

@@ -9,7 +9,7 @@ import {
   Clock, 
   Sparkles, 
   Store,
-  CheckCircle2,
+  CheckCircle,
   TrendingUp,
   Package
 } from '../../../utils/icons';

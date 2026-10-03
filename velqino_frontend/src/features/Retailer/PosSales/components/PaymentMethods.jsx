@@ -1,172 +1,215 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { CreditCard, Wallet, Smartphone, Banknote, PieChart, Calendar, Check, Shield, Lock } from '../../../../utils/icons'
-import '../../../../styles/Retailer/PosSales/PaymentMethods.scss'
+import React, { useState } from 'react';
+import { 
+  Banknote, 
+  CreditCard, 
+  Smartphone, 
+  Wallet, 
+  PieChart, 
+  Check, 
+  Lock, 
+  QrCode,
+  ShieldCheck
+} from '../../../../utils/icons';
 
-export default function PaymentMethods({ selectedPayment, setSelectedPayment, totalAmount = 0 }) {
-  const [mounted, setMounted] = useState(false)
-  const [splitAmounts, setSplitAmounts] = useState({})
-  const [showSplit, setShowSplit] = useState(false)
-  const [selectedSplitMethod, setSelectedSplitMethod] = useState(null)
+export default function PaymentMethods({ 
+  selectedPayment = 'cash', 
+  setSelectedPayment, 
+  totalAmount = 0 
+}) {
+  const [splitCash, setSplitCash] = useState(0);
+  const [splitCard, setSplitCard] = useState(0);
+  const [splitUPI, setSplitUPI] = useState(0);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
-  const paymentMethods = [
-    { id: 'cash', name: 'Cash', icon: <Banknote size={20} />, color: 'green', description: 'Pay with cash' },
-    { id: 'card', name: 'Card', icon: <CreditCard size={20} />, color: 'blue', description: 'Credit/Debit Card' },
-    { id: 'upi', name: 'UPI', icon: <Smartphone size={20} />, color: 'purple', description: 'Google Pay, PhonePe, Paytm' },
-    { id: 'wallet', name: 'Wallet', icon: <Wallet size={20} />, color: 'orange', description: 'Store credit / Gift card' },
-    { id: 'split', name: 'Split Payment', icon: <PieChart size={20} />, color: 'pink', description: 'Split between methods' },
-    { id: 'credit', name: 'Credit', icon: <Calendar size={20} />, color: 'indigo', description: 'Buy now, pay later' },
-  ]
-
-  const getColorClasses = (color, isSelected) => {
-    const colors = {
-      green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', selected: 'ring-green-500' },
-      blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600', selected: 'ring-blue-500' },
-      purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600', selected: 'ring-purple-500' },
-      orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-600', selected: 'ring-orange-500' },
-      pink: { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-600', selected: 'ring-pink-500' },
-      indigo: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', selected: 'ring-indigo-500' },
+  const methods = [
+    { 
+      id: 'cash', 
+      name: 'Cash', 
+      icon: <Banknote size={18} />, 
+      theme: {
+        active: 'border-emerald-500 bg-emerald-50/70 text-emerald-800 ring-2 ring-emerald-400',
+        badge: 'text-emerald-700 bg-emerald-100',
+        iconBg: 'bg-emerald-100 text-emerald-700'
+      },
+      desc: 'Physical currency tendering' 
+    },
+    { 
+      id: 'upi', 
+      name: 'UPI / QR', 
+      icon: <Smartphone size={18} />, 
+      theme: {
+        active: 'border-primary-500 bg-primary-50/70 text-primary-900 ring-2 ring-primary-400',
+        badge: 'text-primary-700 bg-primary-100',
+        iconBg: 'bg-primary-100 text-primary-700'
+      },
+      desc: 'GPay, PhonePe, Paytm' 
+    },
+    { 
+      id: 'card', 
+      name: 'Card POS', 
+      icon: <CreditCard size={18} />, 
+      theme: {
+        active: 'border-indigo-500 bg-indigo-50/70 text-indigo-900 ring-2 ring-indigo-400',
+        badge: 'text-indigo-700 bg-indigo-100',
+        iconBg: 'bg-indigo-100 text-indigo-700'
+      },
+      desc: 'Visa, Mastercard, RuPay' 
+    },
+    { 
+      id: 'wallet', 
+      name: 'Store Credit', 
+      icon: <Wallet size={18} />, 
+      theme: {
+        active: 'border-amber-500 bg-amber-50/70 text-amber-900 ring-2 ring-amber-400',
+        badge: 'text-amber-700 bg-amber-100',
+        iconBg: 'bg-amber-100 text-amber-700'
+      },
+      desc: 'Deposit / advance credit' 
+    },
+    { 
+      id: 'split', 
+      name: 'Split Pay', 
+      icon: <PieChart size={18} />, 
+      theme: {
+        active: 'border-rose-500 bg-rose-50/70 text-rose-900 ring-2 ring-rose-400',
+        badge: 'text-rose-700 bg-rose-100',
+        iconBg: 'bg-rose-100 text-rose-700'
+      },
+      desc: 'Multi-tender split' 
     }
-    return colors[color] || colors.blue
-  }
-
-  const handlePaymentSelect = (methodId) => {
-    if (methodId === 'split') {
-      setShowSplit(!showSplit)
-      setSelectedPayment('split')
-    } else {
-      setSelectedPayment(methodId)
-      setShowSplit(false)
-    }
-  }
-
-  const updateSplitAmount = (methodId, amount) => {
-    setSplitAmounts({ ...splitAmounts, [methodId]: parseFloat(amount) || 0 })
-  }
-
-  const totalSplitAmount = Object.values(splitAmounts).reduce((sum, amt) => sum + amt, 0)
-  const remainingAmount = totalAmount - totalSplitAmount
-  const isSplitComplete = Math.abs(remainingAmount) < 0.01
+  ];
 
   return (
-    <div className="payment-methods bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Payment Methods</h3>
-          </div>
-          <div className="flex items-center gap-1 text-[10px] text-gray-400">
-            <Lock size={10} />
-            <span>Secure Payment</span>
+      <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+            <CreditCard size={17} />
+          </span>
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-gray-900">
+              Payment Method
+            </h3>
+            <p className="text-[11px] text-gray-400">Select register settlement tender</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Select payment method for this transaction</p>
+
+        <div className="flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+          <ShieldCheck size={12} />
+          <span>Encrypted POS</span>
+        </div>
       </div>
 
-      {/* Payment Methods Grid */}
-      <div className="p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {paymentMethods.map((method) => {
-            const colors = getColorClasses(method.color, selectedPayment === method.id)
-            return (
-              <button
-                key={method.id}
-                onClick={() => handlePaymentSelect(method.id)}
-                className={`payment-method-card p-3 rounded-xl border-2 transition-all text-left ${
-                  selectedPayment === method.id 
-                    ? `${colors.bg} ${colors.border} ring-2 ${colors.selected} ring-offset-0` 
-                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg ${colors.bg} flex items-center justify-center mb-2`}>
-                  <span className={colors.text}>{method.icon}</span>
+      {/* Payment Modes Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {methods.map((method) => {
+          const isSelected = selectedPayment === method.id;
+
+          return (
+            <button
+              key={method.id}
+              type="button"
+              onClick={() => setSelectedPayment(method.id)}
+              className={`
+                p-2.5 sm:p-3 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between
+                ${isSelected 
+                  ? `${method.theme.active} shadow-xs` 
+                  : 'bg-white border-gray-200/90 hover:border-gray-300 hover:bg-gray-50/60'
+                }
+              `}
+            >
+              <div className="flex items-start justify-between mb-1.5">
+                <div className={`p-1.5 rounded-xl ${method.theme.iconBg}`}>
+                  {method.icon}
                 </div>
-                <p className={`text-sm font-semibold ${selectedPayment === method.id ? colors.text : 'text-gray-900'}`}>
+                {isSelected && (
+                  <span className="w-5 h-5 rounded-full bg-primary-600 text-white flex items-center justify-center">
+                    <Check size={11} strokeWidth={3} />
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-gray-900">
                   {method.name}
                 </p>
-                <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{method.description}</p>
-                {selectedPayment === method.id && (
-                  <div className="mt-2 flex items-center gap-1">
-                    <Check size={12} className={colors.text} />
-                    <span className={`text-[10px] ${colors.text}`}>Selected</span>
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
+                <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">
+                  {method.desc}
+                </p>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Split Payment Section */}
-      {showSplit && (
-        <div className="split-payment border-t border-gray-100 p-4 animate-fadeIn">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <PieChart size={16} className="text-pink-500" />
-              <span className="text-sm font-semibold text-gray-900">Split Payment</span>
+      {/* Dynamic Drawer for UPI / QR Code preview */}
+      {selectedPayment === 'upi' && (
+        <div className="mt-3.5 p-3.5 rounded-2xl bg-primary-50/50 border border-primary-200 animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-12 h-12 bg-white rounded-xl border border-primary-200 flex items-center justify-center text-primary-700 shadow-2xs font-mono font-bold text-xs">
+                QR
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">UPI Instant Dynamic QR</p>
+                <p className="text-[11px] text-gray-500">Scan via BHIM, GPay, PhonePe or Paytm</p>
+                <p className="text-[10px] font-mono text-primary-700 font-bold mt-0.5">UPI ID: store@velqino</p>
+              </div>
             </div>
-            <span className="text-xs text-gray-500">Total: ₹{totalAmount.toLocaleString()}</span>
-          </div>
-
-          <div className="space-y-3">
-            {['cash', 'card', 'upi', 'wallet'].map((method) => {
-              const methodNames = { cash: 'Cash', card: 'Card', upi: 'UPI', wallet: 'Wallet' }
-              return (
-                <div key={method} className="flex items-center gap-3">
-                  <div className="w-20">
-                    <span className="text-xs font-medium text-gray-700">{methodNames[method]}</span>
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      placeholder="Amount"
-                      value={splitAmounts[method] || ''}
-                      onChange={(e) => updateSplitAmount(method, e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-pink-500"
-                    />
-                  </div>
-                  <div className="w-16 text-right">
-                    <span className="text-xs text-gray-500">₹</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="mt-4 p-3 bg-pink-50 rounded-lg">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Total Allocated</span>
-              <span className="font-medium">₹{totalSplitAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Remaining</span>
-              <span className={`font-medium ${remainingAmount > 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                ₹{remainingAmount.toLocaleString()}
-              </span>
-            </div>
-            {!isSplitComplete && remainingAmount > 0 && (
-              <p className="text-[10px] text-orange-500 mt-2">Please allocate remaining amount</p>
-            )}
+            <span className="text-xs font-extrabold text-primary-800 bg-white px-2.5 py-1 rounded-xl border border-primary-100 shadow-2xs">
+              ₹{totalAmount.toLocaleString('en-IN')}
+            </span>
           </div>
         </div>
       )}
 
-      {/* Security Note */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500">
-          <Lock size={12} />
-          <span>Your payment information is secure and encrypted</span>
+      {/* Dynamic Drawer for Split Payment */}
+      {selectedPayment === 'split' && (
+        <div className="mt-3.5 p-3.5 rounded-2xl bg-rose-50/50 border border-rose-200 space-y-2.5 animate-fadeIn">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-gray-900">Split Bill Allocation</span>
+            <span className="text-gray-500">Total: ₹{totalAmount.toLocaleString('en-IN')}</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">💵 Cash (₹)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="0"
+                value={splitCash || ''}
+                onChange={(e) => setSplitCash(Number(e.target.value) || 0)}
+                className="w-full px-2 py-1.5 text-xs bg-white border border-gray-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">💳 Card (₹)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="0"
+                value={splitCard || ''}
+                onChange={(e) => setSplitCard(Number(e.target.value) || 0)}
+                className="w-full px-2 py-1.5 text-xs bg-white border border-gray-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">📱 UPI (₹)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="0"
+                value={splitUPI || ''}
+                onChange={(e) => setSplitUPI(Number(e.target.value) || 0)}
+                className="w-full px-2 py-1.5 text-xs bg-white border border-gray-200 rounded-xl"
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  )
+  );
 }

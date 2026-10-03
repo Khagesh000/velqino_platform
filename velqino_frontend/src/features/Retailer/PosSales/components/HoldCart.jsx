@@ -1,271 +1,271 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Archive, Plus, Clock, ShoppingBag, Trash2, Eye, RefreshCw, X } from '../../../../utils/icons'
-import '../../../../styles/Retailer/PosSales/HoldCart.scss'
+import React, { useState, useEffect } from 'react';
+import { 
+  Archive, 
+  Plus, 
+  Clock, 
+  Trash2, 
+  Eye, 
+  X, 
+  Check, 
+  ArrowRight,
+  ShoppingBag
+} from '../../../../utils/icons';
 
-export default function HoldCart({ currentCart, onLoadCart, onClearCurrentCart }) {
-  const [mounted, setMounted] = useState(false)
-  const [heldCarts, setHeldCarts] = useState([])
-  const [showHoldModal, setShowHoldModal] = useState(false)
-  const [cartName, setCartName] = useState('')
-  const [showHeldCartsList, setShowHeldCartsList] = useState(false)
-  const [selectedHold, setSelectedHold] = useState(null)
+const STORAGE_KEY = 'velqino_pos_held_carts';
 
+export default function HoldCart({ 
+  currentCart = [], 
+  onLoadCart, 
+  onClearCurrentCart,
+  isOpen = false,
+  onClose
+}) {
+  const [heldCarts, setHeldCarts] = useState([]);
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [showListModal, setShowListModal] = useState(isOpen);
+  const [cartReferenceName, setCartReferenceName] = useState('');
+
+  // Sync with prop isOpen
   useEffect(() => {
-    setMounted(true)
-    // Load held carts from localStorage
-    const saved = localStorage.getItem('heldCarts')
-    if (saved) {
-      setHeldCarts(JSON.parse(saved))
+    if (isOpen !== undefined) {
+      setShowListModal(isOpen);
     }
-  }, [])
+  }, [isOpen]);
 
-  if (!mounted) return null
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setHeldCarts(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Held carts load error:', e);
+    }
+  }, []);
 
-  // Save held carts to localStorage
-  const saveToLocalStorage = (carts) => {
-    localStorage.setItem('heldCarts', JSON.stringify(carts))
-    setHeldCarts(carts)
-  }
+  const saveToStorage = (updated) => {
+    setHeldCarts(updated);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
 
-  // Hold current cart
-  const handleHoldCart = () => {
+  const handleHoldCurrentCart = (e) => {
+    e.preventDefault();
     if (!currentCart || currentCart.length === 0) {
-      alert('Cart is empty. Add items before holding.')
-      return
+      alert('Cart is empty. Add products before holding.');
+      return;
     }
 
-    if (!cartName.trim()) {
-      alert('Please enter a name for this cart')
-      return
-    }
+    const title = cartReferenceName.trim() || `Held Cart #${heldCarts.length + 1}`;
+    const subtotal = currentCart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
 
-    const newHeldCart = {
+    const newHold = {
       id: Date.now(),
-      name: cartName,
+      name: title,
       items: [...currentCart],
-      subtotal: currentCart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      itemCount: currentCart.length,
-      createdAt: new Date().toISOString(),
-      time: new Date().toLocaleTimeString(),
-      date: new Date().toLocaleDateString()
+      itemCount: currentCart.reduce((sum, item) => sum + (item.quantity || 1), 0),
+      subtotal,
+      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      createdAt: new Date().toISOString()
+    };
+
+    const updated = [newHold, ...heldCarts];
+    saveToStorage(updated);
+
+    if (onClearCurrentCart) {
+      onClearCurrentCart();
     }
 
-    const updatedCarts = [...heldCarts, newHeldCart]
-    saveToLocalStorage(updatedCarts)
-    
-    // Clear current cart
-    if (onClearCurrentCart) onClearCurrentCart()
-    
-    setCartName('')
-    setShowHoldModal(false)
-    alert('Cart saved successfully!')
-  }
+    setCartReferenceName('');
+    setShowHoldModal(false);
+  };
 
-  // Load held cart
-  const handleLoadCart = (cart) => {
+  const handleRestoreCart = (held) => {
+    if (currentCart && currentCart.length > 0) {
+      if (!window.confirm('Active cart contains items. Replace with this held cart?')) {
+        return;
+      }
+    }
+
     if (onLoadCart) {
-      onLoadCart(cart.items)
+      onLoadCart(held.items);
     }
-    setShowHeldCartsList(false)
-    alert(`Loaded cart: ${cart.name}`)
-  }
 
-  // Delete held cart
-  const handleDeleteCart = (cartId, e) => {
-    e.stopPropagation()
-    const updatedCarts = heldCarts.filter(c => c.id !== cartId)
-    saveToLocalStorage(updatedCarts)
-    if (selectedHold === cartId) setSelectedHold(null)
-  }
+    // Remove from held carts
+    const updated = heldCarts.filter(c => c.id !== held.id);
+    saveToStorage(updated);
 
-  // Clear all held carts
+    setShowListModal(false);
+    if (onClose) onClose();
+  };
+
+  const handleDeleteHeld = (id) => {
+    const updated = heldCarts.filter(c => c.id !== id);
+    saveToStorage(updated);
+  };
+
   const handleClearAll = () => {
-    if (confirm('Delete all held carts?')) {
-      saveToLocalStorage([])
-      setShowHeldCartsList(false)
+    if (window.confirm('Delete all held carts?')) {
+      saveToStorage([]);
     }
-  }
-
-  const getTimeAgo = (dateStr) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now - date
-    const diffMins = Math.floor(diffMs / 60000)
-    
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`
-    return `${Math.floor(diffMins / 1440)} days ago`
-  }
+  };
 
   return (
-    <div className="hold-cart bg-white rounded-xl shadow-sm border border-gray-100">
-      {/* Header */}
-      <div className="p-3 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3.5">
           <div className="flex items-center gap-2">
-            <Archive size={16} className="text-primary-500" />
-            <h3 className="text-sm font-semibold text-gray-900">Hold Cart</h3>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Archive size={17} />
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                Hold Register Cart
+              </h3>
+              <p className="text-[11px] text-gray-400">Park pending sales temporarily</p>
+            </div>
           </div>
+
           {heldCarts.length > 0 && (
-            <button 
-              onClick={() => setShowHeldCartsList(!showHeldCartsList)}
-              className="text-[10px] text-primary-600 hover:text-primary-700"
+            <button
+              type="button"
+              onClick={() => setShowListModal(true)}
+              className="text-xs font-bold text-primary-600 hover:text-primary-700 bg-primary-50 px-2 py-0.5 rounded-full"
             >
-              View All ({heldCarts.length})
+              {heldCarts.length} Saved
             </button>
           )}
         </div>
-      </div>
 
-      {/* Main Actions */}
-      <div className="p-3">
-        <button
-          onClick={() => setShowHoldModal(true)}
-          className="w-full py-2.5 text-sm font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus size={16} />
-          <span>Hold Current Cart</span>
-        </button>
-
-        {heldCarts.length > 0 && (
+        {/* Action Controls */}
+        <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => setShowHeldCartsList(true)}
-            className="w-full mt-2 py-2 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+            type="button"
+            onClick={() => setShowHoldModal(true)}
+            disabled={!currentCart || currentCart.length === 0}
+            className={`
+              py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all
+              ${!currentCart || currentCart.length === 0 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
+                : 'bg-primary-600 hover:bg-primary-700 text-white shadow-2xs'
+              }
+            `}
+          >
+            <Plus size={14} />
+            <span>Hold Current</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowListModal(true)}
+            disabled={heldCarts.length === 0}
+            className={`
+              py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all border
+              ${heldCarts.length === 0 
+                ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' 
+                : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300 shadow-2xs'
+              }
+            `}
           >
             <Clock size={14} />
-            <span>Retrieve Held Cart</span>
+            <span>Retrieve ({heldCarts.length})</span>
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Recent Held Cart Preview */}
-      {heldCarts.length > 0 && !showHeldCartsList && (
-        <div className="border-t border-gray-100 p-3">
-          <p className="text-[10px] text-gray-500 mb-2">Recently saved</p>
-          <div className="space-y-2">
-            {heldCarts.slice(-2).reverse().map(cart => (
-              <div 
-                key={cart.id}
-                className="bg-gray-50 rounded-lg p-2 cursor-pointer hover:bg-primary-50 transition-all"
-                onClick={() => handleLoadCart(cart)}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-gray-700 truncate max-w-[100px]">
-                    {cart.name}
-                  </span>
-                  <span className="text-[10px] text-gray-400">{getTimeAgo(cart.createdAt)}</span>
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-gray-500">
-                  <span>{cart.itemCount} items</span>
-                  <span className="font-medium text-gray-700">₹{cart.subtotal.toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Held Carts List Modal */}
-      {showHeldCartsList && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+      {/* Held Carts Full Modal Drawer */}
+      {showListModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 flex flex-col max-h-[85vh] animate-scale">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
               <div className="flex items-center gap-2">
-                <Archive size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Held Carts</h3>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {heldCarts.length}
+                <span className="p-1.5 rounded-xl bg-primary-50 text-primary-600">
+                  <Archive size={18} />
                 </span>
+                <h3 className="text-base font-bold text-gray-900">
+                  Saved Held Carts ({heldCarts.length})
+                </h3>
               </div>
               <button 
-                onClick={() => setShowHeldCartsList(false)}
-                className="p-1 text-gray-400 hover:text-gray-600"
+                type="button"
+                onClick={() => {
+                  setShowListModal(false);
+                  if (onClose) onClose();
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scroll">
               {heldCarts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Archive size={48} className="mx-auto text-gray-200 mb-3" />
-                  <p className="text-sm text-gray-500">No held carts</p>
-                  <p className="text-xs text-gray-400 mt-1">Save carts to retrieve later</p>
+                <div className="text-center py-12 px-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <Archive size={28} className="text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-gray-700">No Held Carts</p>
+                  <p className="text-xs text-gray-400 mt-1">Pending customer checkouts saved during register sessions will appear here.</p>
                 </div>
               ) : (
-                heldCarts.map(cart => (
-                  <div 
+                heldCarts.map((cart) => (
+                  <div
                     key={cart.id}
-                    className={`border rounded-xl p-3 transition-all cursor-pointer ${
-                      selectedHold === cart.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-primary-200'
-                    }`}
-                    onMouseEnter={() => setSelectedHold(cart.id)}
-                    onMouseLeave={() => setSelectedHold(null)}
+                    className="p-3.5 rounded-2xl border border-gray-200 bg-white hover:border-primary-300 hover:shadow-xs transition-all flex items-center justify-between gap-3"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="text-sm font-semibold text-gray-900">{cart.name}</h4>
-                          <span className="text-[10px] text-gray-400">{getTimeAgo(cart.createdAt)}</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-2">
-                          {cart.itemCount} items • ₹{cart.subtotal.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          Saved: {cart.date} at {cart.time}
-                        </p>
-                      </div>
-                      <div className="flex gap-1">
-                        <button 
-                          onClick={() => handleLoadCart(cart)}
-                          className="p-1.5 text-primary-600 hover:bg-primary-100 rounded-lg transition-all"
-                          title="Load Cart"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button 
-                          onClick={(e) => handleDeleteCart(cart.id, e)}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-gray-900">{cart.name}</h4>
+                      <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5">
+                        <span>{cart.itemCount} items</span>
+                        <span>•</span>
+                        <span className="font-bold text-gray-700">₹{cart.subtotal.toLocaleString('en-IN')}</span>
+                        <span>•</span>
+                        <span>{cart.time}</span>
                       </div>
                     </div>
-                    
-                    {/* Items Preview */}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {cart.items.slice(0, 3).map((item, idx) => (
-                        <span key={idx} className="text-[9px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {item.quantity}x {item.name.split(' ').slice(0, 2).join(' ')}
-                        </span>
-                      ))}
-                      {cart.items.length > 3 && (
-                        <span className="text-[9px] text-gray-400">+{cart.items.length - 3} more</span>
-                      )}
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreCart(cart)}
+                        className="px-3 py-1.5 rounded-xl bg-primary-600 text-white font-bold text-xs hover:bg-primary-700 transition-colors shadow-2xs"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteHeld(cart.id)}
+                        className="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Modal Footer */}
             {heldCarts.length > 0 && (
-              <div className="p-4 border-t border-gray-100 flex gap-2">
+              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                 <button
+                  type="button"
                   onClick={handleClearAll}
-                  className="flex-1 py-2 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700"
                 >
                   Clear All
                 </button>
                 <button
-                  onClick={() => setShowHeldCartsList(false)}
-                  className="flex-1 py-2 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
+                  type="button"
+                  onClick={() => {
+                    setShowListModal(false);
+                    if (onClose) onClose();
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200"
                 >
                   Close
                 </button>
@@ -275,66 +275,67 @@ export default function HoldCart({ currentCart, onLoadCart, onClearCurrentCart }
         </div>
       )}
 
-      {/* Hold Cart Modal */}
+      {/* Hold Current Cart Input Modal */}
       {showHoldModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 animate-scale">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
               <div className="flex items-center gap-2">
-                <Archive size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Hold Current Cart</h3>
+                <span className="p-1.5 rounded-xl bg-primary-50 text-primary-600">
+                  <Archive size={18} />
+                </span>
+                <h3 className="text-base font-bold text-gray-900">
+                  Park Cart in Hold
+                </h3>
               </div>
-              <button onClick={() => setShowHoldModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cart Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Walk-in Customer, Order #123"
-                value={cartName}
-                onChange={(e) => setCartName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                autoFocus
-              />
-              <p className="text-[10px] text-gray-500 mt-1">
-                Give a name to easily identify this cart later
-              </p>
-            </div>
-
-            {currentCart && currentCart.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                <p className="text-xs font-medium text-gray-700 mb-1">Cart Summary</p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{currentCart.length} items</span>
-                  <span className="font-semibold text-gray-900">
-                    ₹{currentCart.reduce((sum, i) => sum + (i.price * i.quantity), 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <button
+              <button 
+                type="button"
                 onClick={() => setShowHoldModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleHoldCart}
-                className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-              >
-                Save Cart
+                <X size={18} />
               </button>
             </div>
+
+            <form onSubmit={handleHoldCurrentCart} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Cart Identifier / Buyer Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Counter Guest, Ramesh Fitting"
+                  value={cartReferenceName}
+                  onChange={(e) => setCartReferenceName(e.target.value)}
+                  autoFocus
+                  className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+                />
+              </div>
+
+              <div className="p-2.5 bg-gray-50 rounded-xl text-xs text-gray-600 flex justify-between">
+                <span>Items in Cart:</span>
+                <span className="font-bold text-gray-900">{currentCart.length} products</span>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowHoldModal(false)}
+                  className="flex-1 py-2 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-colors shadow-2xs"
+                >
+                  Save & Clear
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

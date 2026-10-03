@@ -9,7 +9,7 @@ import {
   Check, 
   ArrowRight,
   Sparkles,
-  CheckCircle2
+  CheckCircle
 } from '../../../../utils/icons';
 
 export default function QuickReorder({ data = [], isLoading }) {
