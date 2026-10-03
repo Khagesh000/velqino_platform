@@ -1,188 +1,142 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Clock, Package, Users, CreditCard, Wallet, Calendar, ArrowUpRight, ArrowDownRight } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerDashboard/TodaysSummary.scss'
+import React, { useMemo } from 'react';
+import { 
+  Calendar, 
+  TrendingUp, 
+  ArrowUpRight, 
+  CreditCard, 
+  Wallet, 
+  DollarSign, 
+  Clock, 
+  CheckCircle,
+  Zap
+} from '../../../../utils/icons';
 
-export default function TodaysSummary({ data, isLoading }) {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredCard, setHoveredCard] = useState(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-  if (isLoading) return <div className="w-full h-[200px] bg-gray-100 rounded-xl animate-pulse" />
-
-  const summaryData = data || {
-    totalTransactions: 0,
-    averageBill: 0,
-    busiestHour: 'N/A',
-    busiestHourSales: 0,
-    totalItems: 0,
-    uniqueCustomers: 0,
-    peakHourCustomers: 0,
-    revenue: 0,
-    target: 0,
-    paymentMethods: { upi: 0, card: 0, cash: 0, wallet: 0 },
-    hourlyBreakdown: []
+export default function TodaysSummary({ data = {}, isLoading }) {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/3" />
+          <div className="h-44 bg-gray-100 rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
-  const revenuePercent = (summaryData.revenue / summaryData.target) * 100
-  const peakHourIndex = summaryData.hourlyBreakdown.reduce((max, h, i) => h.amount > summaryData.hourlyBreakdown[max].amount ? i : max, 0)
-  const peakHour = summaryData.hourlyBreakdown[peakHourIndex]
+  const revenue = Number(data?.revenue || 0);
+  const target = Number(data?.target || 3571.43);
+  const totalTransactions = Number(data?.totalTransactions || 0);
+  const averageBill = Number(data?.averageBill || 0);
+  const totalItems = Number(data?.totalItems || 0);
+  const busiestHour = data?.busiestHour || '10 AM';
+  const busiestHourSales = Number(data?.busiestHourSales || 0);
+
+  const percentAchieved = target > 0 
+    ? Math.min(100, Math.round((revenue / target) * 100)) 
+    : 0;
+
+  const paymentMethods = data?.paymentMethods || { upi: 0, card: 0, cash: 0, wallet: 0 };
+  const paymentTotal = (paymentMethods.upi || 0) + (paymentMethods.card || 0) + (paymentMethods.cash || 0) + (paymentMethods.wallet || 0);
 
   return (
-    <div className="todays-summary bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary-50 rounded-lg">
-            <Calendar size={18} className="text-primary-500" />
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Calendar size={18} />
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Today's Register</h3>
+              <p className="text-xs text-gray-500">POS summary & counter performance</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-semibold text-gray-600">Today's Summary</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Daily performance overview</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-            Updated: {new Date().toLocaleTimeString()}
+
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Active Register
           </span>
         </div>
-      </div>
 
-      {/* Main Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <div 
-          className="stat-card bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl p-3 text-white transition-all hover:shadow-lg"
-          onMouseEnter={() => setHoveredCard('revenue')}
-          onMouseLeave={() => setHoveredCard(null)}
-        >
-          <p className="text-[11px] text-primary-100 mb-1">Total Revenue</p>
-          <p className="text-xl font-bold">₹{summaryData.revenue.toLocaleString()}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <ArrowUpRight size={12} className="text-primary-200" />
-            <span className="text-[10px] text-primary-200">+8.2% vs yesterday</span>
+        {/* Target vs Revenue Hero Card */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-xs mb-4">
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-xs font-medium text-primary-100">Revenue Achieved</span>
+            <span className="text-xs font-bold text-accent-300">{percentAchieved}% of Target</span>
           </div>
-          <div className="mt-2 h-1 bg-primary-400 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full" style={{ width: `${revenuePercent}%` }} />
+
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-2xl font-black tracking-tight">₹{revenue.toLocaleString('en-IN')}</span>
+            <span className="text-xs text-primary-200">/ ₹{Math.round(target).toLocaleString('en-IN')}</span>
           </div>
-          <p className="text-[10px] text-primary-200 mt-1">Target: ₹{summaryData.target.toLocaleString()}</p>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-primary-950/30 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-white rounded-full h-full transition-all duration-500"
+              style={{ width: `${percentAchieved}%` }}
+            />
+          </div>
         </div>
 
-        <div 
-          className="bg-green-50 rounded-xl p-3 transition-all hover:shadow-md hover:-translate-y-0.5"
-          onMouseEnter={() => setHoveredCard('transactions')}
-          onMouseLeave={() => setHoveredCard(null)}
-        >
-          <p className="text-[11px] text-green-600 font-medium mb-1">Transactions</p>
-          <p className="text-xl font-bold text-green-700">{summaryData.totalTransactions}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <TrendingUp size={12} className="text-green-500" />
-            <span className="text-[10px] text-green-600">+3 vs yesterday</span>
+        {/* 3 Core POS Numbers */}
+        <div className="grid grid-cols-3 gap-2.5 mb-4">
+          <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Transactions</p>
+            <p className="text-base font-extrabold text-gray-900 mt-0.5">{totalTransactions}</p>
           </div>
-          <p className="text-[10px] text-gray-500 mt-2">Peak: {peakHour.hour}</p>
+
+          <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Avg. Bill</p>
+            <p className="text-base font-extrabold text-gray-900 mt-0.5">₹{Math.round(averageBill)}</p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Items Sold</p>
+            <p className="text-base font-extrabold text-gray-900 mt-0.5">{totalItems}</p>
+          </div>
         </div>
 
-        <div 
-          className="bg-blue-50 rounded-xl p-3 transition-all hover:shadow-md hover:-translate-y-0.5"
-          onMouseEnter={() => setHoveredCard('average')}
-          onMouseLeave={() => setHoveredCard(null)}
-        >
-          <p className="text-[11px] text-blue-600 font-medium mb-1">Avg. Bill Value</p>
-          <p className="text-xl font-bold text-blue-700">₹{summaryData.averageBill.toLocaleString()}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <TrendingUp size={12} className="text-blue-500" />
-            <span className="text-[10px] text-blue-600">+5.2% increase</span>
-          </div>
-          <p className="text-[10px] text-gray-500 mt-2">Higher than avg</p>
-        </div>
+        {/* Payment Methods Breakdown */}
+        <div className="mb-4">
+          <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+            Payment Mode Mix
+          </p>
 
-        <div 
-          className="bg-purple-50 rounded-xl p-3 transition-all hover:shadow-md hover:-translate-y-0.5"
-          onMouseEnter={() => setHoveredCard('customers')}
-          onMouseLeave={() => setHoveredCard(null)}
-        >
-          <p className="text-[11px] text-purple-600 font-medium mb-1">Unique Customers</p>
-          <p className="text-xl font-bold text-purple-700">{summaryData.uniqueCustomers}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <Users size={12} className="text-purple-500" />
-            <span className="text-[10px] text-purple-600">{summaryData.peakHourCustomers} at peak hour</span>
-          </div>
-          <p className="text-[10px] text-gray-500 mt-2">Total items: {summaryData.totalItems}</p>
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-white">
+              <span className="text-gray-600 font-medium">📱 UPI</span>
+              <span className="font-bold text-gray-900">₹{(paymentMethods.upi || 0).toLocaleString('en-IN')}</span>
+            </div>
 
-      {/* Payment Methods Breakdown */}
-      <div className="mb-5">
-        <p className="text-xs font-medium text-gray-700 mb-2">Payment Methods</p>
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center p-2 bg-gray-50 rounded-lg transition-all hover:bg-primary-50">
-            <CreditCard size={16} className="mx-auto text-gray-500 mb-1" />
-            <p className="text-sm font-bold text-gray-700">{summaryData.paymentMethods.upi}</p>
-            <p className="text-[10px] text-gray-500">UPI</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg transition-all hover:bg-primary-50">
-            <CreditCard size={16} className="mx-auto text-gray-500 mb-1" />
-            <p className="text-sm font-bold text-gray-700">{summaryData.paymentMethods.card}</p>
-            <p className="text-[10px] text-gray-500">Card</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg transition-all hover:bg-primary-50">
-            <Wallet size={16} className="mx-auto text-gray-500 mb-1" />
-            <p className="text-sm font-bold text-gray-700">{summaryData.paymentMethods.cash}</p>
-            <p className="text-[10px] text-gray-500">Cash</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg transition-all hover:bg-primary-50">
-            <CreditCard size={16} className="mx-auto text-gray-500 mb-1" />
-            <p className="text-sm font-bold text-gray-700">{summaryData.paymentMethods.wallet}</p>
-            <p className="text-[10px] text-gray-500">Wallet</p>
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-white">
+              <span className="text-gray-600 font-medium">💳 Card</span>
+              <span className="font-bold text-gray-900">₹{(paymentMethods.card || 0).toLocaleString('en-IN')}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-white">
+              <span className="text-gray-600 font-medium">💵 Cash</span>
+              <span className="font-bold text-gray-900">₹{(paymentMethods.cash || 0).toLocaleString('en-IN')}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-white">
+              <span className="text-gray-600 font-medium">👛 Wallet</span>
+              <span className="font-bold text-gray-900">₹{(paymentMethods.wallet || 0).toLocaleString('en-IN')}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Hourly Peak Indicator */}
-      <div className="bg-amber-50 rounded-xl p-3 mb-5 border border-amber-100">
-        <div className="flex items-center gap-2 mb-2">
-          <Clock size={14} className="text-amber-600" />
-          <span className="text-xs font-semibold text-amber-700">Busiest Hour</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold text-amber-800">{summaryData.busiestHour}</p>
-            <p className="text-[10px] text-amber-600 mt-0.5">Peak sales period</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-bold text-amber-800">₹{summaryData.busiestHourSales.toLocaleString()}</p>
-            <p className="text-[10px] text-amber-600">Revenue in peak hour</p>
-          </div>
-        </div>
-        <div className="mt-2 flex items-center gap-1">
-          <div className="w-full h-1.5 bg-amber-200 rounded-full overflow-hidden">
-            <div className="h-full bg-amber-500 rounded-full" style={{ width: '65%' }} />
-          </div>
-          <span className="text-[10px] text-amber-600">65% of daily target</span>
-        </div>
-      </div>
-
-      {/* Top Performing Hour */}
-      <div className="bg-green-50 rounded-xl p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <TrendingUp size={14} className="text-green-600" />
-          <span className="text-xs font-semibold text-green-700">Top Performing Hour</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold text-green-800">{peakHour.hour}</p>
-            <p className="text-[10px] text-green-600 mt-0.5">{peakHour.transactions} transactions</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-bold text-green-800">₹{peakHour.amount.toLocaleString()}</p>
-            <p className="text-[10px] text-green-600">Highest revenue</p>
-          </div>
-        </div>
+      {/* Peak Hour Banner */}
+      <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+        <span className="flex items-center gap-1.5 font-medium">
+          <Clock size={14} className="text-primary-600" />
+          <span>Busiest Hour: <strong>{busiestHour}</strong></span>
+        </span>
+        <span className="font-bold text-primary-700">₹{busiestHourSales.toLocaleString('en-IN')}</span>
       </div>
     </div>
-  )
+  );
 }

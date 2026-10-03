@@ -1,81 +1,118 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Plus, ShoppingCart, Eye, Scan, TrendingUp, Users, Package, Calendar } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerDashboard/RetailerQuickActionsRow.scss'
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { 
+  ShoppingCart, 
+  ShoppingBag, 
+  Package, 
+  Truck, 
+  BarChart3, 
+  Users, 
+  ArrowRight,
+  Sparkles
+} from '../../../../utils/icons';
 
 export default function RetailerQuickActionsRow() {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredAction, setHoveredAction] = useState(null)
+  const [hoveredAction, setHoveredAction] = useState(null);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
-  const quickActions = [
+  const actions = [
     {
-      id: 'newSale',
-      title: 'New Sale',
-      description: 'Start a new transaction',
-      icon: <Plus size={20} />,
-      color: 'primary',
-      href: '/retailer/pos'
+      id: 'pos',
+      title: 'POS Terminal',
+      description: 'Quick counter checkout',
+      icon: <ShoppingCart size={18} />,
+      href: '/retailer/possales',
+      badge: 'Fast',
+      badgeColor: 'bg-primary-100 text-primary-700'
     },
     {
-      id: 'checkout',
-      title: 'Checkout',
-      description: 'Complete current sale',
-      icon: <ShoppingCart size={20} />,
-      color: 'success',
-      href: '/retailer/pos/checkout'
+      id: 'orders',
+      title: 'Store Orders',
+      description: 'Track orders & packing',
+      icon: <ShoppingBag size={18} />,
+      href: '/retailer/retailerorders',
+      badge: null
     },
     {
-      id: 'viewProducts',
-      title: 'View Products',
-      description: 'Browse inventory',
-      icon: <Eye size={20} />,
-      color: 'info',
-      href: '/retailer/products'
+      id: 'inventory',
+      title: 'Inventory & Stock',
+      description: 'Audit SKU counts',
+      icon: <Package size={18} />,
+      href: '/retailer/retailerinventory',
+      badge: null
     },
     {
-      id: 'scanBarcode',
-      title: 'Scan Barcode',
-      description: 'Quick product lookup',
-      icon: <Scan size={20} />,
-      color: 'warning',
-      href: '/retailer/scan'
+      id: 'restock',
+      title: 'Wholesale Restock',
+      description: 'Direct factory lots',
+      icon: <Truck size={18} />,
+      href: '/product/productlistingpage',
+      badge: 'Factory Direct',
+      badgeColor: 'bg-accent-100 text-accent-800'
+    },
+    {
+      id: 'reports',
+      title: 'Sales Analytics',
+      description: 'Profit & revenue reports',
+      icon: <BarChart3 size={18} />,
+      href: '/retailer/retailerreports',
+      badge: null
+    },
+    {
+      id: 'customers',
+      title: 'Customers',
+      description: 'Buyer directory & loyalty',
+      icon: <Users size={18} />,
+      href: '/retailer/retailercustomers',
+      badge: null
     }
-  ]
+  ];
 
   return (
-    <div className="retailer-quick-actions">
-      <div className="quick-actions-grid">
-        {quickActions.map((action, index) => (
-          <button
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5">
+      {actions.map((action) => {
+        const isHovered = hoveredAction === action.id;
+
+        return (
+          <Link
             key={action.id}
-            className={`quick-action-card quick-action-card-${action.color} ${hoveredAction === action.id ? 'quick-action-card-hover' : ''}`}
+            href={action.href}
             onMouseEnter={() => setHoveredAction(action.id)}
             onMouseLeave={() => setHoveredAction(null)}
-            onClick={() => console.log(`Navigate to ${action.href}`)}
-            style={{ animationDelay: `${index * 0.05}s` }}
+            className={`
+              group relative p-3.5 rounded-2xl bg-white border border-gray-200/80
+              shadow-2xs hover:shadow-md transition-all duration-300
+              ${isHovered ? '-translate-y-0.5 border-primary-300 bg-primary-50/20' : ''}
+              flex flex-col justify-between
+            `}
           >
-            <div className={`quick-action-icon quick-action-icon-${action.color}`}>
-              {action.icon}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center transition-colors group-hover:bg-primary-600 group-hover:text-white">
+                  {action.icon}
+                </div>
+                {action.badge && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${action.badgeColor}`}>
+                    {action.badge}
+                  </span>
+                )}
+              </div>
+              <h4 className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-primary-700 transition-colors">
+                {action.title}
+              </h4>
+              <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
+                {action.description}
+              </p>
             </div>
-            <div className="quick-action-content">
-              <h3 className="quick-action-title">{action.title}</h3>
-              <p className="quick-action-description">{action.description}</p>
+
+            <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] font-bold text-primary-600 group-hover:text-primary-700">
+              <span>Open</span>
+              <ArrowRight size={12} className="transition-transform group-hover:translate-x-1" />
             </div>
-            <div className="quick-action-arrow">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </button>
-        ))}
-      </div>
+          </Link>
+        );
+      })}
     </div>
-  )
+  );
 }

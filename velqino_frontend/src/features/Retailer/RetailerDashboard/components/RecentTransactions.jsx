@@ -1,190 +1,221 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { MoreHorizontal, Eye, Receipt, CheckCircle, Clock, XCircle, TrendingUp } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerDashboard/RecentTransactions.scss'
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { 
+  ShoppingBag, 
+  CheckCircle, 
+  Clock, 
+  XCircle, 
+  ArrowRight,
+  TrendingUp,
+  CreditCard
+} from '../../../../utils/icons';
 
-export default function RecentTransactions({ data, isLoading, onFilterChange, activeFilter }) {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredRow, setHoveredRow] = useState(null)
-  const [viewMode, setViewMode] = useState(activeFilter || 'all')
+export default function RecentTransactions({ data = [], isLoading }) {
+  const [filter, setFilter] = useState('all'); // 'all' | 'completed' | 'pending'
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const transactionsList = useMemo(() => {
+    return Array.isArray(data) ? data : [];
+  }, [data]);
 
-  if (!mounted) return null
-  if (isLoading) return <div className="w-full h-[380px] bg-gray-100 rounded-xl animate-pulse" />
+  const filtered = useMemo(() => {
+    if (filter === 'all') return transactionsList;
+    return transactionsList.filter(t => (t.status || '').toLowerCase() === filter);
+  }, [transactionsList, filter]);
 
-  const transactions = data || []
+  const totalVolume = useMemo(() => {
+    return transactionsList.reduce((acc, t) => acc + Number(t.amount || 0), 0);
+  }, [transactionsList]);
 
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'completed': return <CheckCircle size={14} className="text-green-500" />
-      case 'pending': return <Clock size={14} className="text-yellow-500" />
-      case 'refunded': return <XCircle size={14} className="text-red-500" />
-      default: return null
-    }
+  const pendingCount = useMemo(() => {
+    return transactionsList.filter(t => (t.status || '').toLowerCase() === 'pending').length;
+  }, [transactionsList]);
+
+  const completedCount = useMemo(() => {
+    return transactionsList.filter(t => (t.status || '').toLowerCase() === 'completed').length;
+  }, [transactionsList]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4" />
+          <div className="h-44 bg-gray-100 rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
-  const getStatusText = (status) => {
-    switch(status) {
-      case 'completed': return 'Completed'
-      case 'pending': return 'Pending'
-      case 'refunded': return 'Refunded'
-      default: return status
+  const getStatusBadge = (status = '') => {
+    const s = status.toLowerCase();
+    if (s === 'completed' || s === 'success') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <CheckCircle size={12} />
+          <span>Completed</span>
+        </span>
+      );
     }
-  }
-
-  const getPaymentIcon = (payment) => {
-    switch(payment) {
-      case 'UPI': return '📱'
-      case 'Card': return '💳'
-      case 'Cash': return '💵'
-      case 'Wallet': return '👛'
-      default: return '💰'
+    if (s === 'pending') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+          <Clock size={12} />
+          <span>Pending</span>
+        </span>
+      );
     }
-  }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+        <XCircle size={12} />
+        <span>{status || 'Failed'}</span>
+      </span>
+    );
+  };
 
   return (
-    <div className="recent-transactions bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">Recent Transactions</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Last sales with items and payment</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'all' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setViewMode('all')}
-            >
-              All
-            </button>
-            <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'today' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setViewMode('today')}
-            >
-              Today
-            </button>
-            <button
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'week' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-              onClick={() => setViewMode('week')}
-            >
-              This Week
-            </button>
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <ShoppingBag size={18} />
+            </span>
+            <h3 className="text-base font-bold text-gray-900">Recent Transactions</h3>
           </div>
-          <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-            <MoreHorizontal size={16} className="text-gray-400" />
+          <p className="text-xs text-gray-500 mt-0.5">Live store checkouts & digital invoices</p>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl self-start sm:self-auto">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              filter === 'all' 
+                ? 'bg-white text-gray-900 shadow-2xs' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            All ({transactionsList.length})
+          </button>
+          <button
+            onClick={() => setFilter('completed')}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              filter === 'completed' 
+                ? 'bg-white text-emerald-700 shadow-2xs' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Completed ({completedCount})
+          </button>
+          <button
+            onClick={() => setFilter('pending')}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              filter === 'pending' 
+                ? 'bg-white text-amber-700 shadow-2xs' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Pending ({pendingCount})
           </button>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <div className="bg-green-50 rounded-xl p-3">
-          <p className="text-[11px] text-green-600 font-medium mb-1">Total Sales</p>
-          <p className="text-lg font-bold text-green-700">₹24,890</p>
-          <p className="text-[10px] text-green-500 mt-0.5">+12% vs yesterday</p>
+      {/* Summary KPI Strip */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+          <span className="text-[10px] font-bold uppercase text-gray-400 block">Total Volume</span>
+          <span className="text-base sm:text-lg font-black text-gray-900 mt-0.5 block">
+            ₹{totalVolume.toLocaleString('en-IN')}
+          </span>
         </div>
-        <div className="bg-blue-50 rounded-xl p-3">
-          <p className="text-[11px] text-blue-600 font-medium mb-1">Transactions</p>
-          <p className="text-lg font-bold text-blue-700">24</p>
-          <p className="text-[10px] text-blue-500 mt-0.5">+3 more than yesterday</p>
+
+        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+          <span className="text-[10px] font-bold uppercase text-gray-400 block">Orders</span>
+          <span className="text-base sm:text-lg font-black text-gray-900 mt-0.5 block">
+            {transactionsList.length}
+          </span>
         </div>
-        <div className="bg-purple-50 rounded-xl p-3">
-          <p className="text-[11px] text-purple-600 font-medium mb-1">Avg. Order Value</p>
-          <p className="text-lg font-bold text-purple-700">₹1,037</p>
-          <p className="text-[10px] text-purple-500 mt-0.5">+5% increase</p>
-        </div>
-        <div className="bg-orange-50 rounded-xl p-3">
-          <p className="text-[11px] text-orange-600 font-medium mb-1">Pending</p>
-          <p className="text-lg font-bold text-orange-700">3</p>
-          <p className="text-[10px] text-orange-500 mt-0.5">Need attention</p>
+
+        <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-100">
+          <span className="text-[10px] font-bold uppercase text-amber-600 block">Pending Clearance</span>
+          <span className="text-base sm:text-lg font-black text-amber-800 mt-0.5 block">
+            {pendingCount}
+          </span>
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px]">
-          <thead className="border-b border-gray-100">
-            <tr className="text-left">
-              <th className="pb-3 text-xs font-medium text-gray-500">Order ID</th>
-              <th className="pb-3 text-xs font-medium text-gray-500">Customer</th>
-              <th className="pb-3 text-xs font-medium text-gray-500">Items</th>
-              <th className="pb-3 text-xs font-medium text-gray-500">Amount</th>
-              <th className="pb-3 text-xs font-medium text-gray-500">Payment</th>
-              <th className="pb-3 text-xs font-medium text-gray-500">Status</th>
-              <th className="pb-3 text-xs font-medium text-gray-500">Time</th>
-              <th className="pb-3 text-xs font-medium text-gray-500"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {transactions.map((transaction, index) => (
-              <tr
-                key={transaction.id}
-                className={`transaction-row transition-all duration-200 ${hoveredRow === transaction.id ? 'bg-gray-50' : ''}`}
-                onMouseEnter={() => setHoveredRow(transaction.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                style={{ animationDelay: `${index * 0.03}s` }}
-              >
-                <td className="py-3">
-                  <span className="text-sm font-medium text-gray-900">{transaction.id}</span>
-                </td>
-                <td className="py-3">
-                  <span className="text-sm text-gray-700">{transaction.customer}</span>
-                </td>
-                <td className="py-3">
-                  <span className="text-sm text-gray-700">{transaction.items} items</span>
-                </td>
-                <td className="py-3">
-                  <span className="text-sm font-semibold text-gray-900">₹{transaction.amount.toLocaleString()}</span>
-                </td>
-                <td className="py-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">{getPaymentIcon(transaction.payment)}</span>
-                    <span className="text-xs text-gray-600">{transaction.payment}</span>
-                  </div>
-                </td>
-                <td className="py-3">
-                  <div className="flex items-center gap-1.5">
-                    {getStatusIcon(transaction.status)}
-                    <span className={`text-xs font-medium ${
-                      transaction.status === 'completed' ? 'text-green-600' :
-                      transaction.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {getStatusText(transaction.status)}
-                    </span>
-                  </div>
-                </td>
-                <td className="py-3">
-                  <span className="text-xs text-gray-500">{transaction.time}</span>
-                </td>
-                <td className="py-3">
-                  <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all">
-                    <Eye size={14} />
-                  </button>
-                </td>
+      {/* Table Content */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-10 px-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-2 text-gray-400 shadow-2xs">
+            <ShoppingBag size={20} />
+          </div>
+          <p className="text-sm font-bold text-gray-800">No Transactions Found</p>
+          <p className="text-xs text-gray-500 mt-0.5">Transactions processed through the POS register will appear here.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-gray-100 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                <th className="pb-3 pl-1">Txn ID</th>
+                <th className="pb-3">Customer</th>
+                <th className="pb-3">Amount</th>
+                <th className="pb-3">Status</th>
+                <th className="pb-3 pr-1 text-right">Time</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((item, idx) => {
+                const customerInitials = (item.customer || 'Customer')
+                  .substring(0, 2)
+                  .toUpperCase();
+
+                return (
+                  <tr key={item.id || idx} className="hover:bg-primary-50/30 transition-colors">
+                    <td className="py-3 pl-1 font-mono font-bold text-primary-700">
+                      {item.id}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 font-bold text-[10px] flex items-center justify-center">
+                          {customerInitials}
+                        </div>
+                        <span className="font-semibold text-gray-900">{item.customer}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 font-extrabold text-gray-900">
+                      ₹{Number(item.amount || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-3">
+                      {getStatusBadge(item.status)}
+                    </td>
+                    <td className="py-3 pr-1 text-right font-medium text-gray-400">
+                      {item.time || 'Today'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-        <button className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-all flex items-center gap-1">
-          View All Transactions
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <div className="flex items-center gap-2">
-          <TrendingUp size={12} className="text-green-500" />
-          <span className="text-[11px] text-gray-500">+8.2% vs last week</span>
-        </div>
+      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+        <span className="text-gray-400">
+          Showing {filtered.length} of {transactionsList.length} transactions
+        </span>
+        <Link 
+          href="/retailer/retailerorders" 
+          className="font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 group"
+        >
+          <span>All Orders</span>
+          <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+        </Link>
       </div>
     </div>
-  )
+  );
 }

@@ -1,274 +1,213 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { TrendingUp, Package, Truck, Clock, Zap, ShoppingCart, AlertCircle, CheckCircle, RefreshCw, Eye } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerDashboard/QuickReorder.scss'
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { 
+  Zap, 
+  Package, 
+  Truck, 
+  Check, 
+  ArrowRight,
+  Sparkles,
+  CheckCircle2
+} from '../../../../utils/icons';
 
-export default function QuickReorder({ data, isLoading }) {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState(null)
-  const [selectedItems, setSelectedItems] = useState([])
+export default function QuickReorder({ data = [], isLoading }) {
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const items = useMemo(() => {
+    return Array.isArray(data) ? data : [];
+  }, [data]);
 
-  if (!mounted) return null
-  if (isLoading) return <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />
-
-  const reorderSuggestions = data || []
-
-  const toggleItemSelection = (id) => {
-    if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter(i => i !== id))
+  const toggleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(i => i !== id));
     } else {
-      setSelectedItems([...selectedItems, id])
+      setSelectedIds([...selectedIds, id]);
     }
-  }
+  };
 
   const toggleSelectAll = () => {
-    if (selectedItems.length === reorderSuggestions.length) {
-      setSelectedItems([])
+    if (selectedIds.length === items.length) {
+      setSelectedIds([]);
     } else {
-      setSelectedItems(reorderSuggestions.map(i => i.id))
+      setSelectedIds(items.map(i => i.id));
     }
-  }
+  };
 
-  const getUrgencyColor = (urgency) => {
-    switch(urgency) {
-      case 'critical': return 'bg-red-500'
-      case 'high': return 'bg-orange-500'
-      case 'medium': return 'bg-yellow-500'
-      case 'low': return 'bg-green-500'
-      default: return 'bg-gray-500'
-    }
-  }
+  const selectedTotalUnits = useMemo(() => {
+    return items
+      .filter(i => selectedIds.includes(i.id))
+      .reduce((sum, i) => sum + Number(i.suggestedQty || 20), 0);
+  }, [items, selectedIds]);
 
-  const getUrgencyBg = (urgency) => {
-    switch(urgency) {
-      case 'critical': return 'bg-red-50 border-red-200'
-      case 'high': return 'bg-orange-50 border-orange-200'
-      case 'medium': return 'bg-yellow-50 border-yellow-200'
-      case 'low': return 'bg-green-50 border-green-200'
-      default: return 'bg-gray-50'
-    }
-  }
-
-  const getDaysText = (days) => {
-    if (days <= 3) return `${days} days left - CRITICAL`
-    if (days <= 7) return `${days} days left - URGENT`
-    return `${days} days left`
-  }
-
-  const totalReorderCost = reorderSuggestions
-    .filter(i => selectedItems.includes(i.id))
-    .reduce((sum, i) => sum + (i.suggestedQty * i.price), 0)
-
-  const totalItems = selectedItems.length
-
-  return (
-    <div className="quick-reorder bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
-  {/* Header */}
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-    <div className="flex items-center gap-2">
-      <div className="p-2 bg-primary-50 rounded-lg">
-        <Zap size={18} className="text-primary-500" />
-      </div>
-      <div>
-        <h3 className="text-base font-semibold text-gray-900">Quick Reorder</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Suggested based on sales velocity</p>
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-        <RefreshCw size={14} className="text-gray-400" />
-      </button>
-    </div>
-  </div>
-
-  {/* Selection Bar */}
-  {selectedItems.length > 0 && (
-    <div className="bg-primary-50 rounded-xl p-3 mb-4 flex items-center justify-between animate-fadeIn">
-      <span className="text-sm text-primary-700">
-        <span className="font-semibold">{selectedItems.length}</span> items selected
-      </span>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-primary-600">
-          Total: ₹{totalReorderCost.toLocaleString()}
-        </span>
-        <button className="px-3 py-1.5 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all">
-          Reorder Selected
-        </button>
-      </div>
-    </div>
-  )}
-
-  {/* Summary Stats */}
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-    <div className="bg-red-50 rounded-xl p-3">
-      <p className="text-[11px] text-red-600 font-medium mb-1">Critical Stock</p>
-      <p className="text-xl font-bold text-red-700">2</p>
-      <p className="text-[10px] text-red-500 mt-0.5">Need immediate action</p>
-    </div>
-    <div className="bg-orange-50 rounded-xl p-3">
-      <p className="text-[11px] text-orange-600 font-medium mb-1">High Priority</p>
-      <p className="text-xl font-bold text-orange-700">1</p>
-      <p className="text-[10px] text-orange-500 mt-0.5">Reorder soon</p>
-    </div>
-    <div className="bg-blue-50 rounded-xl p-3">
-      <p className="text-[11px] text-blue-600 font-medium mb-1">Total to Reorder</p>
-      <p className="text-xl font-bold text-blue-700">{reorderSuggestions.length}</p>
-      <p className="text-[10px] text-blue-500 mt-0.5">Suggested items</p>
-    </div>
-    <div className="bg-green-50 rounded-xl p-3">
-      <p className="text-[11px] text-green-600 font-medium mb-1">Est. Restock Cost</p>
-      <p className="text-lg font-bold text-green-700">₹2,48,500</p>
-      <p className="text-[10px] text-green-500 mt-0.5">For all items</p>
-    </div>
-  </div>
-
-  {/* Reorder List */}
-  {reorderSuggestions.length === 0 ? (
-  <div className="flex flex-col items-center justify-center py-12 text-center">
-    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-3">
-      <CheckCircle size={28} className="text-green-500" />
-    </div>
-    <h4 className="text-sm font-medium text-gray-900 mb-1">No Reorder Suggestions</h4>
-    <p className="text-xs text-gray-500">All products have sufficient stock</p>
-  </div>
-  ) : (
-  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scroll">
-    {reorderSuggestions.map((item, index) => (
-      <div
-        key={item.id}
-        className={`reorder-item p-3 rounded-xl border-2 transition-all duration-200 ${getUrgencyBg(item.urgency)} ${
-          hoveredItem === item.id ? 'shadow-lg transform -translate-y-0.5' : ''
-        } ${selectedItems.includes(item.id) ? 'ring-2 ring-primary-500' : ''}`}
-        onMouseEnter={() => setHoveredItem(item.id)}
-        onMouseLeave={() => setHoveredItem(null)}
-        style={{ animationDelay: `${index * 0.05}s` }}
-      >
-        <div className="flex flex-row gap-4">
-          {/* Checkbox */}
-          <div className="flex-shrink-0 pt-1">
-            <input
-              type="checkbox"
-              checked={selectedItems.includes(item.id)}
-              onChange={() => toggleItemSelection(item.id)}
-              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-
-          {/* Left Side - 25% Image */}
-          <div className="w-[25%] md:w-[20%] lg:w-[18%] flex-shrink-0">
-            <div className="aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-sm border border-gray-100">
-              {item.image_url ? (
-                <img 
-                  src={item.image_url} 
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-                />
-              ) : (
-                <span className="text-3xl">📦</span>
-              )}
-            </div>
-          </div>
-
-          {/* Right Side - 75% Content */}
-          <div className="w-[75%] md:w-[80%] lg:w-[82%] flex-1">
-            {/* Product Title and Status */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">{item.name}</h4>
-                <p className="text-xs text-gray-500 mt-0.5">SKU: {item.sku}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${getUrgencyColor(item.urgency)}`}>
-                  {item.urgency.toUpperCase()}
-                </span>
-                <span className="text-xs text-gray-500">{item.daysUntilOut} days left</span>
-              </div>
-            </div>
-
-            {/* Stock and Sales Velocity */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
-              <div>
-                <p className="text-gray-500">Current Stock</p>
-                <p className="font-semibold text-gray-900">{item.currentStock} units</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Reorder Level</p>
-                <p className="font-semibold text-gray-900">{item.reorderLevel} units</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Sales Velocity</p>
-                <p className="font-semibold text-green-600">{item.salesVelocity}/week</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Suggested Qty</p>
-                <p className="font-semibold text-primary-600">{item.suggestedQty} units</p>
-              </div>
-            </div>
-
-            {/* Supplier Info */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-3">
-              <div className="flex items-center gap-1">
-                <Truck size={12} className="text-gray-400" />
-                <span>{item.supplier}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Package size={12} className="text-gray-400" />
-                <span>₹{item.price}/unit</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock size={12} className="text-gray-400" />
-                <span>Est. cost: ₹{(item.suggestedQty * item.price).toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Urgency Message and Actions */}
-            <div className="flex items-center justify-between">
-              <div className={`flex items-center gap-1 text-[11px] ${item.daysUntilOut <= 3 ? 'text-red-600' : item.daysUntilOut <= 7 ? 'text-orange-600' : 'text-green-600'}`}>
-                <AlertCircle size={12} />
-                <span>{getDaysText(item.daysUntilOut)}</span>
-              </div>
-              <div className="flex gap-1">
-                <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-all" title="View Details">
-                  <Eye size={14} />
-                </button>
-                <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-all" title="Quick Reorder">
-                  <ShoppingCart size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4" />
+          <div className="h-44 bg-gray-100 rounded-xl" />
         </div>
       </div>
-    ))}
-  </div>
-  )}
+    );
+  }
 
-  {/* Footer */}
-  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-    <div className="flex items-center gap-2">
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={selectedItems.length === reorderSuggestions.length && reorderSuggestions.length > 0}
-          onChange={toggleSelectAll}
-          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-        />
-        <span className="text-xs text-gray-600">Select All</span>
-      </label>
+  const getUrgencyBadge = (urgency = '') => {
+    const u = urgency.toLowerCase();
+    if (u === 'critical') {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+          Critical
+        </span>
+      );
+    }
+    if (u === 'medium' || u === 'urgent') {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+          Urgent
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+        Suggested
+      </span>
+    );
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs flex flex-col justify-between h-full">
+      <div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
+              <Zap size={18} />
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Procurement Assistant</h3>
+              <p className="text-xs text-gray-500">Automated factory restock recommendations</p>
+            </div>
+          </div>
+
+          {items.length > 0 && (
+            <button
+              onClick={toggleSelectAll}
+              className="text-xs font-bold text-primary-600 hover:text-primary-700 self-start sm:self-auto"
+            >
+              {selectedIds.length === items.length ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
+        </div>
+
+        {/* Selected Items Action Bar */}
+        {selectedIds.length > 0 && (
+          <div className="mb-4 p-3 rounded-xl bg-primary-50 border border-primary-200/80 flex items-center justify-between text-xs animate-fadeIn">
+            <div>
+              <span className="font-bold text-primary-900">
+                {selectedIds.length} items selected
+              </span>
+              <span className="text-primary-600 ml-2 font-medium">
+                ({selectedTotalUnits} suggested units)
+              </span>
+            </div>
+
+            <Link
+              href="/product/productlistingpage"
+              className="px-3 py-1.5 rounded-lg bg-primary-600 text-white font-bold hover:bg-primary-700 transition-colors shadow-2xs"
+            >
+              Order from Mills
+            </Link>
+          </div>
+        )}
+
+        {/* Reorder Suggestions List */}
+        {items.length === 0 ? (
+          <div className="text-center py-10 px-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-2 text-gray-400 shadow-2xs">
+              <Package size={20} />
+            </div>
+            <p className="text-sm font-bold text-gray-800">No Reorder Needed</p>
+            <p className="text-xs text-gray-500 mt-0.5">Inventory levels are sufficient across active SKUs.</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+            {items.map((item) => {
+              const isSelected = selectedIds.includes(item.id);
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleSelect(item.id)}
+                  className={`
+                    p-3 rounded-xl border cursor-pointer transition-all duration-200 flex items-center gap-3
+                    ${isSelected 
+                      ? 'bg-primary-50/40 border-primary-400 shadow-xs' 
+                      : 'bg-white border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/50'
+                    }
+                  `}
+                >
+                  {/* Selection Checkbox */}
+                  <div className={`
+                    w-5 h-5 rounded-md border flex items-center justify-center transition-colors flex-shrink-0
+                    ${isSelected 
+                      ? 'bg-primary-600 border-primary-600 text-white' 
+                      : 'border-gray-300 bg-white'
+                    }
+                  `}>
+                    {isSelected && <Check size={13} strokeWidth={3} />}
+                  </div>
+
+                  {/* Thumbnail */}
+                  <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {item.image_url ? (
+                      <img 
+                        src={item.image_url} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.src = '/images/products/placeholder.jpg'; }}
+                      />
+                    ) : (
+                      <Package size={18} className="text-gray-400" />
+                    )}
+                  </div>
+
+                  {/* Information */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <h4 className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+                        {item.name}
+                      </h4>
+                      {getUrgencyBadge(item.urgency)}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span className="font-mono text-gray-400 text-[11px]">{item.sku}</span>
+                      <span className="font-bold text-primary-700">
+                        Suggested: +{item.suggestedQty || 20} pcs
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+        <span className="text-gray-400">
+          Factory lot pricing available
+        </span>
+        <Link 
+          href="/product/productlistingpage" 
+          className="font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 group"
+        >
+          <span>Source Wholesale Lots</span>
+          <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+        </Link>
+      </div>
     </div>
-    <button className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-all flex items-center gap-1">
-      View All Suggestions
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </button>
-  </div>
-</div>
-  )
+  );
 }

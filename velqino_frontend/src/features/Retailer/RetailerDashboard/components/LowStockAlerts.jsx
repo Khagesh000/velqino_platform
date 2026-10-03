@@ -1,233 +1,219 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { AlertCircle,CheckCircle, Package, Truck, ShoppingCart, MoreHorizontal, Eye, RefreshCw, Bell } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerDashboard/LowStockAlerts.scss'
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { 
+  Bell, 
+  AlertCircle, 
+  CheckCircle, 
+  Package, 
+  Truck, 
+  ArrowRight,
+  ExternalLink 
+} from '../../../../utils/icons';
 
-export default function LowStockAlerts({ data, isLoading, onFilterChange, activeFilter }) {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState(null)
-  const [filter, setFilter] = useState(activeFilter || 'all')
+export default function LowStockAlerts({ data = [], isLoading }) {
+  const [filter, setFilter] = useState('all'); // 'all' | 'critical' | 'warning'
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const items = useMemo(() => {
+    return Array.isArray(data) ? data : [];
+  }, [data]);
 
-  if (!mounted) return null
-  if (isLoading) return <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />
+  const filtered = useMemo(() => {
+    if (filter === 'all') return items;
+    return items.filter(item => (item.status || '').toLowerCase() === filter);
+  }, [items, filter]);
 
-  const lowStockItems = data || []
-  const filteredItems = filter === 'all' ? lowStockItems : lowStockItems.filter(item => item.status === filter)
+  const criticalCount = useMemo(() => {
+    return items.filter(i => (i.status || '').toLowerCase() === 'critical').length;
+  }, [items]);
 
-  const getStatusColor = (status) => {
-    return status === 'critical' ? 'text-red-600' : 'text-orange-500'
+  const warningCount = useMemo(() => {
+    return items.filter(i => (i.status || '').toLowerCase() === 'warning').length;
+  }, [items]);
+
+  const totalDeficitUnits = useMemo(() => {
+    return items.reduce((acc, i) => acc + Math.max(0, (i.reorderLevel || 10) - (i.currentStock || 0)), 0);
+  }, [items]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/4" />
+          <div className="h-44 bg-gray-100 rounded-xl" />
+        </div>
+      </div>
+    );
   }
-
-  const getStatusBg = (status) => {
-    return status === 'critical' ? 'bg-red-50' : 'bg-orange-50'
-  }
-
-  const getStatusBorder = (status) => {
-    return status === 'critical' ? 'border-red-200' : 'border-orange-200'
-  }
-
-  const getStockPercentage = (current, reorder) => {
-    const percentage = (current / reorder) * 100
-    return Math.min(percentage, 100)
-  }
-
-  const criticalCount = lowStockItems.filter(i => i.status === 'critical').length
-  const warningCount = lowStockItems.filter(i => i.status === 'warning').length
-  const totalRestockCost = lowStockItems.reduce((sum, i) => sum + ((i.reorderLevel - i.currentStock) * i.price), 0)
 
   return (
-    <div className="low-stock-alerts bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
-  {/* Header */}
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-    <div className="flex items-center gap-2">
-      <div className="p-2 bg-red-50 rounded-lg animate-pulse">
-        <Bell size={18} className="text-red-500" />
-      </div>
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs flex flex-col justify-between h-full">
       <div>
-        <h3 className="text-base font-semibold text-gray-900">Low Stock Alerts</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Products below reorder level</p>
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <div className="flex bg-gray-100 rounded-lg p-0.5">
-        <button
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'all' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-          onClick={() => setFilter('all')}
-        >
-          All ({lowStockItems.length})
-        </button>
-        <button
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'critical' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-          onClick={() => setFilter('critical')}
-        >
-          Critical ({criticalCount})
-        </button>
-        <button
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'warning' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-          onClick={() => setFilter('warning')}
-        >
-          Warning ({warningCount})
-        </button>
-      </div>
-      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-        <RefreshCw size={14} className="text-gray-400" />
-      </button>
-    </div>
-  </div>
-
-  {/* Summary Stats */}
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-    <div className="bg-red-50 rounded-xl p-3 transition-all hover:shadow-md">
-      <p className="text-[11px] text-red-600 font-medium mb-1">Critical Stock</p>
-      <p className="text-xl font-bold text-red-700">{criticalCount}</p>
-      <p className="text-[10px] text-red-500 mt-0.5">Below 10 units</p>
-    </div>
-    <div className="bg-orange-50 rounded-xl p-3 transition-all hover:shadow-md">
-      <p className="text-[11px] text-orange-600 font-medium mb-1">Warning Stock</p>
-      <p className="text-xl font-bold text-orange-700">{warningCount}</p>
-      <p className="text-[10px] text-orange-500 mt-0.5">Below reorder level</p>
-    </div>
-    <div className="bg-blue-50 rounded-xl p-3 transition-all hover:shadow-md">
-      <p className="text-[11px] text-blue-600 font-medium mb-1">Total Affected</p>
-      <p className="text-xl font-bold text-blue-700">{lowStockItems.length}</p>
-      <p className="text-[10px] text-blue-500 mt-0.5">Need attention</p>
-    </div>
-    <div className="bg-green-50 rounded-xl p-3 transition-all hover:shadow-md">
-      <p className="text-[11px] text-green-600 font-medium mb-1">Est. Restock Cost</p>
-      <p className="text-lg font-bold text-green-700">₹{totalRestockCost.toLocaleString()}</p>
-      <p className="text-[10px] text-green-500 mt-0.5">For all items</p>
-    </div>
-  </div>
-
-  {/* Alerts List */}
-  {lowStockItems.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-3">
-        <CheckCircle size={28} className="text-green-500" />
-      </div>
-      <h4 className="text-sm font-medium text-gray-900 mb-1">All Stock Levels Healthy</h4>
-      <p className="text-xs text-gray-500">No low stock items at the moment</p>
-    </div>
-  ) : (
-  <div className="space-y-3 max-h-[650px] overflow-y-auto pr-1 custom-scroll">
-    {filteredItems.map((item, index) => {
-      const stockPercent = getStockPercentage(item.currentStock, item.reorderLevel)
-      const neededQty = item.reorderLevel - item.currentStock
-      
-      return (
-        <div
-          key={item.id}
-          className={`alert-item p-4 rounded-xl border-2 transition-all duration-200 ${getStatusBg(item.status)} ${getStatusBorder(item.status)} ${
-            hoveredItem === item.id ? 'shadow-lg transform -translate-y-0.5' : ''
-          }`}
-          onMouseEnter={() => setHoveredItem(item.id)}
-          onMouseLeave={() => setHoveredItem(null)}
-          style={{ animationDelay: `${index * 0.05}s` }}
-        >
-          {/* Image and Content - 30/70 split */}
-          <div className="flex flex-row gap-4">
-            {/* Left Side - 30% Image */}
-            <div className="w-[30%] md:w-[25%] lg:w-[20%] flex-shrink-0">
-              <div className="aspect-square bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-sm border border-gray-100">
-                {item.image_url ? (
-                  <img 
-                    src={item.image_url} 
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
-                  />
-                ) : (
-                  <span className="text-4xl">📦</span>
-                )}
-              </div>
-            </div>
-
-            {/* Right Side - 70% Content */}
-            <div className="w-[70%] md:w-[75%] lg:w-[80%] flex-1">
-              {/* Product Title and Status */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">{item.name}</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">SKU: {item.sku}</p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-sm font-bold ${getStatusColor(item.status)}`}>
-                    {item.currentStock} units left
-                  </span>
-                  <span className="text-xs text-gray-400">/ {item.reorderLevel}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${item.status === 'critical' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                    Need {neededQty} more
-                  </span>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${item.status === 'critical' ? 'bg-red-500' : 'bg-orange-500'}`}
-                  style={{ width: `${stockPercent}%` }}
-                />
-              </div>
-
-              {/* Supplier Info Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Truck size={12} className="text-gray-400" />
-                  <span className="text-gray-700 font-medium truncate">{item.supplier}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Package size={12} className="text-gray-400" />
-                  <span className="text-gray-600">Lead: {item.leadTime}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-600">₹{item.price}/unit</span>
-                </div>
-              </div>
-
-              {/* Actions and Reorder */}
-              <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-200">
-                <div className="flex gap-1">
-                  <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-all" title="View Details">
-                    <Eye size={14} />
-                  </button>
-                  <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-all" title="Quick Reorder">
-                    <ShoppingCart size={14} />
-                  </button>
-                  <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-all" title="Contact Supplier">
-                    <Truck size={14} />
-                  </button>
-                </div>
-                <button className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${item.status === 'critical' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
-                  <ShoppingCart size={12} />
-                  <span>Reorder Now</span>
-                </button>
-              </div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-rose-50 text-rose-600">
+              <Bell size={18} />
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Low Stock Alerts</h3>
+              <p className="text-xs text-gray-500">Inventory items fallen below reorder threshold</p>
             </div>
           </div>
-        </div>
-      )
-    })}
-  </div>
-  )}
 
-  {/* Footer */}
-  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-    <button className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-all flex items-center gap-1">
-      View All Low Stock Items
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </button>
-    <div className="flex items-center gap-2">
-      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-      <span className="text-[10px] text-gray-500">{criticalCount} critical alerts</span>
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl self-start sm:self-auto">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                filter === 'all' 
+                  ? 'bg-white text-gray-900 shadow-2xs' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              All ({items.length})
+            </button>
+            <button
+              onClick={() => setFilter('critical')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                filter === 'critical' 
+                  ? 'bg-white text-rose-700 shadow-2xs' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              Critical ({criticalCount})
+            </button>
+            <button
+              onClick={() => setFilter('warning')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                filter === 'warning' 
+                  ? 'bg-white text-amber-700 shadow-2xs' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              Warning ({warningCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Top Mini Badges */}
+        <div className="grid grid-cols-3 gap-2.5 mb-4">
+          <div className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-100">
+            <span className="text-[10px] font-bold uppercase text-rose-600 block">Critical (0 units)</span>
+            <span className="text-base font-black text-rose-800 mt-0.5 block">{criticalCount}</span>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-100">
+            <span className="text-[10px] font-bold uppercase text-amber-600 block">Low Stock</span>
+            <span className="text-base font-black text-amber-800 mt-0.5 block">{warningCount}</span>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-primary-50/60 border border-primary-100">
+            <span className="text-[10px] font-bold uppercase text-primary-700 block">Units Deficit</span>
+            <span className="text-base font-black text-primary-900 mt-0.5 block">+{totalDeficitUnits} pcs</span>
+          </div>
+        </div>
+
+        {/* List of Items */}
+        {filtered.length === 0 ? (
+          <div className="text-center py-10 px-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-2xs">
+              <CheckCircle size={22} />
+            </div>
+            <p className="text-sm font-bold text-gray-800">Inventory Healthy</p>
+            <p className="text-xs text-gray-500 mt-0.5">All products are currently above their reorder thresholds.</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+            {filtered.map((item) => {
+              const isCritical = (item.status || '').toLowerCase() === 'critical';
+              const stock = item.currentStock || 0;
+              const reorder = item.reorderLevel || 10;
+              const stockPercent = Math.min(100, Math.round((stock / reorder) * 100));
+
+              return (
+                <div
+                  key={item.id}
+                  className={`
+                    p-3 rounded-xl border transition-all duration-200 flex items-center gap-3.5
+                    ${isCritical 
+                      ? 'bg-rose-50/30 border-rose-200/80 hover:border-rose-300' 
+                      : 'bg-amber-50/20 border-amber-200/80 hover:border-amber-300'
+                    }
+                  `}
+                >
+                  {/* Thumbnail */}
+                  <div className="w-12 h-12 rounded-xl bg-white border border-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    {item.image_url ? (
+                      <img 
+                        src={item.image_url} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.src = '/images/products/placeholder.jpg'; }}
+                      />
+                    ) : (
+                      <Package size={20} className="text-gray-400" />
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <h4 className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+                        {item.name}
+                      </h4>
+                      <span className={`
+                        text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0
+                        ${isCritical ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}
+                      `}>
+                        {isCritical ? 'Out of Stock' : `${stock} left`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-gray-500 mb-1.5">
+                      <span className="font-mono text-gray-400">{item.sku}</span>
+                      <span>•</span>
+                      <span>Target: {reorder} pcs</span>
+                    </div>
+
+                    {/* Mini Stock Bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${isCritical ? 'bg-rose-500' : 'bg-amber-500'}`}
+                        style={{ width: `${Math.max(5, stockPercent)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Action Reorder Button */}
+                  <Link
+                    href={`/product/productlistingpage?search=${encodeURIComponent(item.name)}`}
+                    className="p-2 rounded-xl bg-white border border-gray-200 text-primary-600 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-300 transition-colors flex-shrink-0 shadow-2xs"
+                    title="Source from Factory Lots"
+                  >
+                    <Truck size={16} />
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+        <span className="text-gray-400">
+          {items.length} SKUs require procurement
+        </span>
+        <Link 
+          href="/product/productlistingpage" 
+          className="font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 group"
+        >
+          <span>Wholesale Catalog</span>
+          <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+        </Link>
+      </div>
     </div>
-  </div>
-</div>
-  )
+  );
 }
