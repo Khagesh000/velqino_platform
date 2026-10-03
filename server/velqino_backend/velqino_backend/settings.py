@@ -159,6 +159,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 # MIDDLEWARE
 # ============================================================
 MIDDLEWARE = [
+    'velqino_backend.middleware.CloseDbConnectionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -234,13 +235,17 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=60,
+            conn_max_age=0,
+            conn_health_checks=True,
             engine='django.db.backends.mysql',
         )
     }
+    DATABASES['default']['CONN_MAX_AGE'] = 0
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     DATABASES['default']['OPTIONS'] = {
         'ssl': {'ssl_mode': 'REQUIRED'},
         'connect_timeout': 10,
+        'init_command': "SET SESSION wait_timeout=30, interactive_timeout=30, sql_mode='STRICT_TRANS_TABLES'",
     }
 else:
     DATABASES = {
@@ -251,10 +256,10 @@ else:
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST', default='127.0.0.1'),
             'PORT': config('DB_PORT', default='3306'),
-            'CONN_MAX_AGE': 60,
+            'CONN_MAX_AGE': 0,
             'CONN_HEALTH_CHECKS': True,
             'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'init_command': "SET SESSION wait_timeout=30, interactive_timeout=30, sql_mode='STRICT_TRANS_TABLES'",
                 'connect_timeout': 10,
             }
         }
