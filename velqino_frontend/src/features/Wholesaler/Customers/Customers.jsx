@@ -23,6 +23,7 @@ const CustomerDetailsPanel = lazy(() => import('./components/CustomerDetailsPane
 const CustomerFilters = lazy(() => import('./components/CustomerFilters'));
 const QuickActions = lazy(() => import('./components/QuickActions'));
 const ImportExport = lazy(() => import('./components/ImportExport'));
+import ErrorBoundary from '@/shared/ErrorBoundary';
 
 // Structured executive skeleton placeholders
 const KPICardsPlaceholder = () => (
@@ -548,38 +549,44 @@ export default function Customers() {
 
           {/* Quick Actions Ops Hub */}
           <div>
-            <Suspense fallback={<QuickActionsPlaceholder />}>
-              <QuickActions 
-                selectedCustomer={selectedCustomer}
-                selectedCount={selectedCustomers.length} 
-                onSendEmail={handleBulkEmail} 
-                onBulkSMS={handleBulkSMS} 
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<QuickActionsPlaceholder />}>
+                <QuickActions 
+                  selectedCustomer={selectedCustomer}
+                  selectedCount={selectedCustomers.length} 
+                  onSendEmail={handleBulkEmail} 
+                  onBulkSMS={handleBulkSMS} 
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
 
           {/* Multi-Criteria Filters Bar */}
           <div>
-            <Suspense fallback={<FiltersPlaceholder />}>
-              <CustomerFilters 
-                onFilterChange={handleFilterChange} 
-                onSearch={handleSearch} 
-                locations={uniqueLocations} 
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<FiltersPlaceholder />}>
+                <CustomerFilters 
+                  onFilterChange={handleFilterChange} 
+                  onSearch={handleSearch} 
+                  locations={uniqueLocations} 
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
 
           {/* Core Customers Directory Table */}
           <div>
-            <Suspense fallback={<TablePlaceholder />}>
-              <CustomersTable 
-                customers={filteredCustomers}
-                isLoading={isLoading}
-                onSelectCustomer={setSelectedCustomer}
-                onSelectCustomers={setSelectedCustomers}
-                onResetFilters={handleResetFilters}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TablePlaceholder />}>
+                <CustomersTable 
+                  customers={filteredCustomers}
+                  isLoading={isLoading}
+                  onSelectCustomer={setSelectedCustomer}
+                  onSelectCustomers={setSelectedCustomers}
+                  onResetFilters={handleResetFilters}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
 
         </div>
@@ -595,13 +602,15 @@ export default function Customers() {
           />
           {/* Drawer container: full height, sleek, responsive on all screen sizes */}
           <div className="relative w-full sm:w-[480px] md:w-[540px] lg:w-[580px] h-full bg-white shadow-2xl flex flex-col z-10 overflow-hidden">
-            <Suspense fallback={<DetailsPlaceholder />}>
-              <CustomerDetailsPanel 
-                customer={selectedCustomer} 
-                onClose={() => setSelectedCustomer(null)} 
-                onSendEmail={handleBulkEmail}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<DetailsPlaceholder />}>
+                <CustomerDetailsPanel 
+                  customer={selectedCustomer} 
+                  onClose={() => setSelectedCustomer(null)} 
+                  onSendEmail={handleBulkEmail}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </div>
       )}

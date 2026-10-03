@@ -159,7 +159,7 @@ def wholesaler_dashboard_summary(request):
             {
                 'id': o.id,
                 'order_number': o.order_number or f"ORD-{o.id}",
-                'customer_name': o.customer.username or o.customer.get_full_name() or 'Guest',
+                'customer_name': (o.customer.username or o.customer.get_full_name() or 'Guest') if o.customer else 'Guest',
                 'customer_email': o.customer.email if o.customer else None,
                 'items_count': o.items.count(),
                 'total_amount': float(o.total_amount),
@@ -207,7 +207,7 @@ def wholesaler_dashboard_summary(request):
             {
                 'id': o.id,
                 'type': 'order',
-                'message': f"New order #{o.order_number or o.id} from {o.customer.get_full_name() or 'Guest'}",
+                'message': f"New order #{o.order_number or o.id} from {(o.customer.get_full_name() or o.customer.username) if o.customer else 'Guest'}",
                 'amount': float(o.total_amount),
                 'status': o.status,
                 'time': o.created_at.strftime('%I:%M %p'),
@@ -231,10 +231,8 @@ def wholesaler_dashboard_summary(request):
         top_customers_data = [
             {
                 'id': c['customer'],
-                'name': customer_map.get(c['customer']).username or 
-                        customer_map.get(c['customer']).get_full_name() or 
-                        'Unknown',
-                'email': customer_map.get(c['customer']).email,
+                'name': (customer_map[c['customer']].username or customer_map[c['customer']].get_full_name() or 'Unknown') if (c['customer'] in customer_map and customer_map[c['customer']]) else 'Unknown',
+                'email': customer_map[c['customer']].email if (c['customer'] in customer_map and customer_map[c['customer']]) else None,
                 'total_spent': float(c['total_spent'] or 0),
                 'order_count': c['order_count'],
             }
@@ -252,7 +250,7 @@ def wholesaler_dashboard_summary(request):
                 'id': o.id,
                 'type': 'order',
                 'title': f"Order #{o.order_number or o.id}",
-                'description': f"Customer: {o.customer.username or o.customer.get_full_name() or o.customer.email or 'Guest'}",
+                'description': f"Customer: {(o.customer.username or o.customer.get_full_name() or o.customer.email) if o.customer else 'Guest'}",
                 'status': o.status,
                 'priority': 'high' if o.status == 'pending' else 'medium',
                 'due_date': o.created_at.strftime('%b %d'),
@@ -560,7 +558,7 @@ def wholesaler_analytics_summary(request):
             ],
             'hourlySales': [
                 {
-                    'hour': f"{int(item['hour']):02d}:00",
+                    'hour': f"{int(item['hour']):02d}:00" if item.get('hour') is not None else "00:00",
                     'total': float(item['total'] or 0),
                     'orders': item['orders']
                 }

@@ -219,8 +219,8 @@ import {
   Edit2,
   PackageIcon,
   Pause,
-
-
+  FilterX,
+  ZoomOut,
 } from 'lucide-react';
 
 // Then export them
@@ -426,7 +426,6 @@ export {
   Edit2,
   PackageIcon,
   Pause,
-
-
-
+  FilterX,
+  ZoomOut,
 };

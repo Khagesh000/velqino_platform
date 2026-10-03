@@ -14,36 +14,20 @@ import {
   ChevronRight,
   Loader2,
 } from "../../../../utils/icons";
-import { useGetWholesalerStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
-import { useGetWithdrawalStatsQuery } from '@/redux/wholesaler/slices/statsSlice';
 import "../../../../styles/Wholesaler/PaymentsPayouts/BalanceCards.scss";
 
-export default function BalanceCards({ stats: propStats, withdrawalStats: propWithdrawalStats }) {
+export default function BalanceCards({
+  stats = {},
+  withdrawalStats = {},
+  isLoading = false,
+  isSyncing = false,
+  isError = false,
+}) {
   const [showBalance, setShowBalance] = useState(true);
   const [hoveredCard, setHoveredCard] = useState(null);
-  
-  // Use passed props to avoid redundant network calls, skip query if provided
-  const hasProps = Boolean(propStats || propWithdrawalStats);
-  const { 
-    data: statsData, 
-    isLoading: statsLoading, 
-    isFetching: statsFetching, 
-    isError: statsError 
-  } = useGetWholesalerStatsQuery(undefined, { skip: hasProps });
-  
-  const { 
-    data: withdrawalData, 
-    isLoading: withdrawalLoading, 
-    isFetching: withdrawalFetching, 
-    isError: withdrawalError 
-  } = useGetWithdrawalStatsQuery(undefined, { skip: hasProps });
-  
-  const isBusy = hasProps ? false : (statsLoading || withdrawalLoading);
-  const isSyncing = hasProps ? false : (statsFetching || withdrawalFetching);
-  const isError = !hasProps && (statsError || withdrawalError);
-  
-  const effectiveStats = propStats || statsData?.data || {};
-  const effectiveWithdrawal = propWithdrawalStats || withdrawalData?.data || {};
+
+  const effectiveStats = stats || {};
+  const effectiveWithdrawal = withdrawalStats || {};
 
   const totalRevenue = Number(effectiveStats.total_revenue) || 0;
   const currentBalance = Number(effectiveWithdrawal.available_balance) || totalRevenue;

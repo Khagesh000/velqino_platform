@@ -45,6 +45,7 @@ export default function Management() {
     data: liveOrdersData, 
     isLoading: ordersLoading, 
     isFetching: ordersFetching, 
+    isError: ordersError,
     refetch: refetchOrders 
   } = useGetWholesalerOrdersOverviewQuery(queryParams);
 
@@ -179,6 +180,9 @@ export default function Management() {
               <BulkActions 
                 stats={stats}
                 withdrawalStats={withdrawalStats}
+                isLoading={isLoading}
+                isSyncing={ordersFetching}
+                isError={ordersError}
               />
             </Suspense>
           </div>
