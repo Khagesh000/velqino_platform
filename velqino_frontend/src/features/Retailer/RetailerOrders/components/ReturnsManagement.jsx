@@ -1,430 +1,383 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { RefreshCw, CheckCircle, XCircle, Clock, Package, Truck, FileText, MessageCircle, Upload, Eye, AlertCircle, DollarSign } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerOrders/ReturnsManagement.scss'
-import { useGetRetailerReturnsQuery, useCreateReturnRequestMutation, useUpdateReturnStatusMutation } from '@/redux/retailer/slices/retailerOrdersSlice'
+import React, { useState, useEffect } from 'react';
+import { 
+  RefreshCw, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  Package, 
+  Truck, 
+  FileText, 
+  MessageCircle, 
+  Upload, 
+  Eye, 
+  AlertCircle, 
+  DollarSign,
+  Plus,
+  Sparkles,
+  X
+} from '../../../../utils/icons';
+import { 
+  useGetRetailerReturnsQuery, 
+  useCreateReturnRequestMutation, 
+  useUpdateReturnStatusMutation 
+} from '@/redux/retailer/slices/retailerOrdersSlice';
+import { toast } from 'react-toastify';
+
 export default function ReturnsManagement({ selectedOrder, retailerOrders = [] }) {
-  const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState('requests')
-  const [selectedReturn, setSelectedReturn] = useState(null)
-  const [showReturnModal, setShowReturnModal] = useState(false)
-  const [returnReason, setReturnReason] = useState('')
-  const [returnComment, setReturnComment] = useState('')
-  const [returnItems, setReturnItems] = useState([])
-  const [returnType, setReturnType] = useState('return')
-  const [selectedOrderForReturn, setSelectedOrderForReturn] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState('requests');
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnComment, setReturnComment] = useState('');
+  const [returnItems, setReturnItems] = useState([]);
+  const [returnType, setReturnType] = useState('return');
+  const [selectedOrderForReturn, setSelectedOrderForReturn] = useState('');
 
-  // Fetch return requests from backend
-  const { data: returnsData, isLoading, refetch } = useGetRetailerReturnsQuery()
-  const [createReturnRequest, { isLoading: isCreating }] = useCreateReturnRequestMutation()
-  const [updateReturnStatus, { isLoading: isUpdating }] = useUpdateReturnStatusMutation()
+  const { data: returnsData, isLoading, refetch } = useGetRetailerReturnsQuery();
+  const [createReturnRequest, { isLoading: isCreating }] = useCreateReturnRequestMutation();
+  const [updateReturnStatus, { isLoading: isUpdating }] = useUpdateReturnStatusMutation();
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-  
+    setMounted(true);
+  }, []);
 
-  // USE returnsData instead of returnRequests state
-  const returnRequests = returnsData?.data || []
+  if (!mounted) return null;
 
-  if (!mounted) return null
+  const returnRequests = returnsData?.data || [];
 
   const getStatusBadge = (status) => {
-    switch(status) {
-      case 'pending': return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={12} />, label: 'Pending' }
-      case 'processing': return { bg: 'bg-blue-100', text: 'text-blue-700', icon: <RefreshCw size={12} />, label: 'Processing' }
-      case 'approved': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle size={12} />, label: 'Approved' }
-      case 'rejected': return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle size={12} />, label: 'Rejected' }
-      case 'completed': return { bg: 'bg-purple-100', text: 'text-purple-700', icon: <Package size={12} />, label: 'Completed' }
-      default: return { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Clock size={12} />, label: status }
+    const s = status?.toLowerCase() || 'pending';
+    switch(s) {
+      case 'pending':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">Pending Review</span>;
+      case 'approved':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">Approved</span>;
+      case 'processing':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">In Transit</span>;
+      case 'rejected':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">Rejected</span>;
+      case 'completed':
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-100 text-primary-900 border border-primary-200">Refunded</span>;
+      default:
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 capitalize">{s}</span>;
     }
-  }
-
-  const getTypeBadge = (type) => {
-    switch(type) {
-      case 'return': return { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Return' }
-      case 'exchange': return { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Exchange' }
-      default: return { bg: 'bg-gray-100', text: 'text-gray-700', label: type }
-    }
-  }
+  };
 
   const stats = {
     pending: returnRequests.filter(r => r.status === 'pending').length,
     approved: returnRequests.filter(r => r.status === 'approved').length,
     processing: returnRequests.filter(r => r.status === 'processing').length,
-    totalAmount: returnRequests.reduce((sum, r) => sum + parseFloat(r.refund_amount || 0), 0)
-  }
+    totalRefund: returnRequests.reduce((sum, r) => sum + parseFloat(r.refund_amount || 0), 0)
+  };
 
-  const handleSubmitReturn = async () => {
-  if (!returnReason || !selectedOrderForReturn || returnItems.length === 0) {
-    alert('Please fill all required fields')
-    return
-  }
-
-  try {
-    const result = await createReturnRequest({
-      order_id: selectedOrderForReturn,
-      return_type: returnType,
-      reason: returnReason,
-      comments: returnComment,
-      items: returnItems
-    }).unwrap()
-
-    if (result.status === 'success') {
-      alert('Return request submitted successfully!')
-      setShowReturnModal(false)
-      setReturnReason('')
-      setReturnComment('')
-      setReturnItems([])
-      setSelectedOrderForReturn('')
-      refetch() // Refresh the list
+  const handleSubmitReturn = async (e) => {
+    e?.preventDefault();
+    if (!returnReason || !selectedOrderForReturn || returnItems.length === 0) {
+      toast.error('Please select an order, items, and specify a reason');
+      return;
     }
-  } catch (error) {
-    console.error('Submit return error:', error)
-    alert(error.data?.message || 'Failed to submit return request')
-  }
-}
 
- const handleUpdateReturnStatus = async (returnId, newStatus) => {
-  try {
-    await updateReturnStatus({ returnId, status: newStatus }).unwrap()
-    refetch() // Refresh the list
-  } catch (error) {
-    console.error('Update status error:', error)
-    alert('Failed to update status')
-  }
-}
+    try {
+      await createReturnRequest({
+        order_id: selectedOrderForReturn,
+        return_type: returnType,
+        reason: returnReason,
+        comments: returnComment,
+        items: returnItems
+      }).unwrap();
 
-  // Get available orders for return (delivered orders only)
+      toast.success('Return authorization request created');
+      setShowReturnModal(false);
+      setReturnReason('');
+      setReturnComment('');
+      setReturnItems([]);
+      setSelectedOrderForReturn('');
+      refetch();
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to submit return request');
+    }
+  };
+
+  const handleUpdateStatus = async (returnId, newStatus) => {
+    try {
+      await updateReturnStatus({ returnId, status: newStatus }).unwrap();
+      toast.success(`Return status set to ${newStatus}`);
+      refetch();
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to update return status');
+    }
+  };
+
   const availableOrders = retailerOrders.filter(order => 
-  order.status === 'delivered' && 
-  !returnRequests.some(r => r.order_number === order.order_number)
-)
-
+    order.status === 'delivered' || order.status === 'shipped' || order.status === 'confirmed'
+  );
 
   return (
-    <div className="returns-management bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs h-full flex flex-col justify-between space-y-4">
+      <div>
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <RefreshCw size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Returns Management</h3>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <RefreshCw size={17} />
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                Returns & Exchanges
+              </h3>
+              <p className="text-[11px] text-gray-400">Reverse logistics & customer refunds</p>
+            </div>
           </div>
-          <button 
+
+          <button
+            type="button"
             onClick={() => setShowReturnModal(true)}
-            className="px-3 py-1.5 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
+            className="px-3.5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs self-start sm:self-auto active:scale-95"
           >
-            New Request
+            <Plus size={14} strokeWidth={2.5} />
+            <span>Create Return Request</span>
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Manage return requests and refunds</p>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="p-4 grid grid-cols-3 gap-3 border-b border-gray-100">
-        <div className="text-center p-2 bg-yellow-50 rounded-lg">
-          <p className="text-lg font-bold text-yellow-700">{stats.pending}</p>
-          <p className="text-[10px] text-yellow-600">Pending</p>
-        </div>
-        <div className="text-center p-2 bg-green-50 rounded-lg">
-          <p className="text-lg font-bold text-green-700">{stats.approved}</p>
-          <p className="text-[10px] text-green-600">Approved</p>
-        </div>
-        <div className="text-center p-2 bg-blue-50 rounded-lg">
-          <p className="text-lg font-bold text-blue-700">{stats.processing}</p>
-          <p className="text-[10px] text-blue-600">Processing</p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-100">
-        <button
-          onClick={() => setActiveTab('requests')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'requests' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Return Requests
-        </button>
-        <button
-          onClick={() => setActiveTab('refunds')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'refunds' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Refund Status
-        </button>
-        <button
-          onClick={() => setActiveTab('exchanges')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'exchanges' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Exchanges
-        </button>
-      </div>
-
-      {/* Content */}
-
-      <div className="p-4 max-h-[350px] overflow-y-auto custom-scroll">
-        {isLoading ? (
-          <div className="text-center py-8">
-            <RefreshCw size={24} className="mx-auto text-gray-400 animate-spin mb-2" />
-            <p className="text-sm text-gray-500">Loading...</p>
+        {/* Stats Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+          <div className="p-3 bg-gray-50/70 border border-gray-100 rounded-2xl">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Pending</p>
+            <p className="text-lg font-black text-amber-700 mt-0.5">{stats.pending}</p>
           </div>
-        ) : (
-          <>
-            {activeTab === 'requests' && (
-              <div className="space-y-3">
-                {returnRequests.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Package size={32} className="mx-auto text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-500">No return requests</p>
-                  </div>
-                ) : (
-                  returnRequests.map((request) => {
-                    const status = getStatusBadge(request.status)
-                    const type = getTypeBadge(request.return_type)
-                    return (
-                      <div
-                        key={request.return_number}
-                        className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all cursor-pointer"
-                        onClick={() => setSelectedReturn(request)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-900">{request.return_number}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${type.bg} ${type.text}`}>
-                                {type.label}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-0.5">Order: {request.order?.order_number || request.order_id}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${status.bg} ${status.text}`}>
-                              {status.icon}
-                              <span>{status.label}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                          <Package size={10} />
-                          <span>{request.items?.map(i => i.product_name).join(', ') || 'Items'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-500">{request.reason}</p>
-                          <p className="text-sm font-bold text-gray-900">₹{parseFloat(request.refund_amount).toLocaleString()}</p>
-                        </div>
-                        {request.status === 'pending' && (
-                          <div className="flex gap-2 mt-3 pt-2 border-t border-gray-100">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleUpdateReturnStatus(request.return_number, 'approved') }}
-                              className="flex-1 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                            >
-                              Approve
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleUpdateReturnStatus(request.return_number, 'rejected') }}
-                              className="flex-1 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            )}
+          <div className="p-3 bg-gray-50/70 border border-gray-100 rounded-2xl">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Approved</p>
+            <p className="text-lg font-black text-emerald-700 mt-0.5">{stats.approved}</p>
+          </div>
+          <div className="p-3 bg-gray-50/70 border border-gray-100 rounded-2xl">
+            <p className="text-[10px] font-bold uppercase text-gray-400">In Transit</p>
+            <p className="text-lg font-black text-indigo-700 mt-0.5">{stats.processing}</p>
+          </div>
+          <div className="p-3 bg-gray-50/70 border border-gray-100 rounded-2xl">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Total Refunded</p>
+            <p className="text-lg font-black text-gray-900 mt-0.5">₹{stats.totalRefund.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
 
-            {activeTab === 'refunds' && (
-              <div className="space-y-3">
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <DollarSign size={16} className="text-green-600" />
-                      <span className="text-sm font-semibold text-green-800">Total Refunds Processed</span>
-                    </div>
-                    <span className="text-xl font-bold text-green-700">₹{stats.totalAmount.toLocaleString()}</span>
-                  </div>
-                  <p className="text-xs text-green-600">All time</p>
-                </div>
-                <div className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Refund Method</span>
-                    <span className="font-medium text-gray-900">Original Payment Method</span>
-                  </div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Processing Time</span>
-                    <span className="font-medium text-gray-900">5-7 Business Days</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'exchanges' && (
-              <div className="space-y-3">
-                {returnRequests.filter(r => r.return_type === 'exchange').length === 0 ? (
-                  <div className="text-center py-8">
-                    <RefreshCw size={32} className="mx-auto text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-500">No exchange requests</p>
-                  </div>
-                ) : (
-                  returnRequests.filter(r => r.return_type === 'exchange').map((request) => (
-                    <div key={request.return_number} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{request.return_number}</p>
-                          <p className="text-xs text-gray-500">Exchange for: {request.items?.map(i => i.product_name).join(', ')}</p>
+        {/* Requests List Table */}
+        <div className="mt-4 overflow-x-auto">
+          {isLoading ? (
+            <div className="p-6 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : returnRequests.length === 0 ? (
+            <div className="text-center py-12 px-4 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+              <RefreshCw size={28} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-xs font-bold text-gray-700">No active return authorizations</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">When customers request product returns or size swaps, authorizations log here.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50/80 border-b border-gray-200 text-gray-400 font-bold uppercase text-[10px]">
+                <tr>
+                  <th className="py-2.5 px-3">Return ID</th>
+                  <th className="py-2.5 px-3">Order Number</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-3">Reason</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {returnRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-gray-50/70 transition-colors">
+                    <td className="py-3 px-3 font-mono font-bold text-gray-900">
+                      #RET-{req.id}
+                    </td>
+                    <td className="py-3 px-3 font-medium text-gray-700">
+                      {req.order_number || req.order_id}
+                    </td>
+                    <td className="py-3 px-3 uppercase text-[10px] font-extrabold text-gray-700">
+                      {req.return_type || 'RETURN'}
+                    </td>
+                    <td className="py-3 px-3 text-gray-600 max-w-xs truncate">
+                      {req.reason}
+                    </td>
+                    <td className="py-3 px-3">
+                      {getStatusBadge(req.status)}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      {req.status === 'pending' && (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(req.id, 'approved')}
+                            className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-lg text-[10px] font-bold transition-colors"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                            className="px-2 py-1 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white rounded-lg text-[10px] font-bold transition-colors"
+                          >
+                            Reject
+                          </button>
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                          <CheckCircle size={10} />
-                          <span>{request.status}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">Reason: {request.reason}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </>
-        )}
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
-      {/* Return Request Modal */}
+      {/* New Return Request Modal */}
       {showReturnModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <RefreshCw size={20} className="text-primary-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">New Return Request</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+                  <RefreshCw size={16} />
+                </span>
+                <h3 className="text-sm font-bold text-gray-900">New Return Authorization</h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowReturnModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitReturn} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Select Order <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedOrderForReturn}
+                  onChange={(e) => setSelectedOrderForReturn(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+                  required
+                >
+                  <option value="">Choose order...</option>
+                  {availableOrders.map(o => (
+                    <option key={o.order_number || o.id} value={o.order_number || o.id}>
+                      {o.order_number || `#ORD-${o.id}`} &bull; ₹{Number(o.grand_total || o.total_amount || 0).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedOrderForReturn && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Select Line Items to Return
+                  </label>
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                    {retailerOrders
+                      .find(o => (o.order_number || o.id) === selectedOrderForReturn)?.items?.map((item, idx) => (
+                        <label key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-200/80 text-xs cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setReturnItems(prev => [...prev, {
+                                  product_name: item.product_name,
+                                  product_sku: item.product_sku,
+                                  quantity: item.quantity,
+                                  price: item.price
+                                }]);
+                              } else {
+                                setReturnItems(prev => prev.filter(i => i.product_sku !== item.product_sku));
+                              }
+                            }}
+                          />
+                          <span className="font-bold text-gray-800 truncate">{item.product_name} &bull; Qty: {item.quantity}</span>
+                        </label>
+                      ))}
+                  </div>
                 </div>
-                <button onClick={() => setShowReturnModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                  <XCircle size={20} />
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Request Type</label>
+                <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setReturnType('return')}
+                    className={`py-1.5 font-bold rounded-xl transition-all ${
+                      returnType === 'return' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500'
+                    }`}
+                  >
+                    Refund Return
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReturnType('exchange')}
+                    className={`py-1.5 font-bold rounded-xl transition-all ${
+                      returnType === 'exchange' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500'
+                    }`}
+                  >
+                    Size / Variant Exchange
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Reason <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+                  required
+                >
+                  <option value="">Select reason...</option>
+                  <option>Defective or damaged fabric</option>
+                  <option>Wrong size or color dispatched</option>
+                  <option>Customer changed mind</option>
+                  <option>Missing packaging or accessories</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Comments</label>
+                <textarea
+                  rows={2}
+                  value={returnComment}
+                  onChange={(e) => setReturnComment(e.target.value)}
+                  placeholder="Additional context or customer request notes..."
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReturnModal(false)}
+                  className="flex-1 py-2 text-xs font-bold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex-1 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-2xs disabled:opacity-50"
+                >
+                  {isCreating ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
-
-              <div className="space-y-4">
-                {/* Order Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Order</label>
-                  <select 
-                    value={selectedOrderForReturn}
-                    onChange={(e) => setSelectedOrderForReturn(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                  >
-                    <option value="">Select order...</option>
-                    {availableOrders.map(order => (
-                      <option key={order.order_number} value={order.order_number}>
-                        {order.order_number} - ₹{parseFloat(order.grand_total).toLocaleString()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Items to Return */}
-                {selectedOrderForReturn && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Items to Return</label>
-                    <div className="space-y-2">
-                      {retailerOrders
-                        .find(o => o.order_number === selectedOrderForReturn)?.items?.map((item, idx) => (
-                          <label key={idx} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg">
-                            <input 
-                              type="checkbox" 
-                              className="rounded border-gray-300"
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setReturnItems([...returnItems, {
-                                    product_name: item.product_name,
-                                    product_sku: item.product_sku,
-                                    quantity: item.quantity,
-                                    price: item.price,
-                                    total: item.total
-                                  }])
-                                } else {
-                                  setReturnItems(returnItems.filter(i => i.product_sku !== item.product_sku))
-                                }
-                              }}
-                            />
-                            <span className="text-sm">{item.product_name} - ₹{parseFloat(item.price).toLocaleString()} x {item.quantity}</span>
-                          </label>
-                        ))
-                      }
-                    </div>
-                  </div>
-                )}
-
-                {/* Return Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Return Type</label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setReturnType('return')}
-                      className={`flex-1 py-2 text-sm rounded-lg border transition-all ${returnType === 'return' ? 'bg-primary-500 text-white border-primary-500' : 'border-gray-200 text-gray-600'}`}
-                    >
-                      Return
-                    </button>
-                    <button
-                      onClick={() => setReturnType('exchange')}
-                      className={`flex-1 py-2 text-sm rounded-lg border transition-all ${returnType === 'exchange' ? 'bg-primary-500 text-white border-primary-500' : 'border-gray-200 text-gray-600'}`}
-                    >
-                      Exchange
-                    </button>
-                  </div>
-                </div>
-
-                {/* Reason */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Return</label>
-                  <select
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                  >
-                    <option value="">Select reason...</option>
-                    <option>Damaged product</option>
-                    <option>Wrong item sent</option>
-                    <option>Size/color mismatch</option>
-                    <option>Defective product</option>
-                    <option>Changed mind</option>
-                  </select>
-                </div>
-
-                {/* Comments */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Additional Comments</label>
-                  <textarea
-                    rows={3}
-                    value={returnComment}
-                    onChange={(e) => setReturnComment(e.target.value)}
-                    placeholder="Describe the issue..."
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 resize-none"
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => setShowReturnModal(false)}
-                    className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitReturn}
-                    className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-                  >
-                    Submit Request
-                  </button>
-                </div>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

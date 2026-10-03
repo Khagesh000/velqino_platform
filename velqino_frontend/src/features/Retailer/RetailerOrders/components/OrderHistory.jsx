@@ -1,291 +1,356 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Clock, Package, Eye, TrendingUp, Calendar, Search, Filter, ChevronLeft, ChevronRight } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerOrders/OrderHistory.scss'
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Clock, 
+  Package, 
+  Eye, 
+  TrendingUp, 
+  Calendar, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight,
+  User,
+  Phone,
+  Mail,
+  Sparkles,
+  CheckCircle,
+  Truck,
+  CreditCard,
+  DollarSign
+} from '../../../../utils/icons';
 
 export default function OrderHistory({ selectedOrder, orders = [] }) {
-  const [mounted, setMounted] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [selectedCustomer, setSelectedCustomer] = useState(null)
-  const itemsPerPage = 5
+  const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeCustomerKey, setActiveCustomerKey] = useState(null);
+  const itemsPerPage = 4;
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
-
-  // Calculate customer data from real orders
-  const getCustomerDataFromOrders = (customerName, customerEmail) => {
-    // Filter orders for this customer
-    const customerOrdersList = orders.filter(order => 
-      order.customer_name === customerName || order.customer_email === customerEmail
-    )
-    
-    if (customerOrdersList.length === 0) return null
-    
-    const totalSpent = customerOrdersList.reduce((sum, order) => sum + parseFloat(order.grand_total || 0), 0)
-    const firstOrder = customerOrdersList[customerOrdersList.length - 1]
-    
-    return {
-      customer: {
-        name: customerOrdersList[0]?.customer_name || customerName,
-        phone: customerOrdersList[0]?.customer_phone || 'N/A',
-        email: customerOrdersList[0]?.customer_email || customerEmail,
-        since: firstOrder?.created_at ? new Date(firstOrder.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A',
-        totalSpent: totalSpent,
-        totalOrders: customerOrdersList.length
-      },
-      orders: customerOrdersList.map(order => ({
-        id: order.order_number,
-        date: order.created_at,
-        amount: parseFloat(order.grand_total),
-        items: order.items?.length || 0,
-        status: order.status,
-        payment: order.payment_method?.toUpperCase() || 'N/A'
-      }))
+  // Update active customer when selectedOrder changes
+  useEffect(() => {
+    if (selectedOrder) {
+      setActiveCustomerKey(selectedOrder.customer_email || selectedOrder.customer_name);
+      setCurrentPage(1);
     }
-  }
+  }, [selectedOrder]);
 
-  // Determine which customer to show
-  let currentCustomerData = null
-  
-  if (selectedOrder) {
-    // Show history for selected order's customer
-    currentCustomerData = getCustomerDataFromOrders(selectedOrder.customer_name, selectedOrder.customer_email)
-  } else if (selectedCustomer) {
-    // Show history for selected customer from top customers list
-    currentCustomerData = getCustomerDataFromOrders(selectedCustomer.name, selectedCustomer.email)
-  } else if (orders.length > 0) {
-    // Default to first customer in orders list
-    const firstOrder = orders[0]
-    if (firstOrder) {
-      currentCustomerData = getCustomerDataFromOrders(firstOrder.customer_name, firstOrder.customer_email)
-    }
-  }
+  // Aggregate all unique customers from orders data
+  const customerMap = useMemo(() => {
+    const map = new Map();
+    if (!orders || orders.length === 0) return map;
 
-  // If no orders at all
-  if (!currentCustomerData && orders.length === 0) {
-    return (
-      <div className="order-history bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <Clock size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Order History</h3>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Customer purchase history & insights</p>
-        </div>
-        <div className="p-8 text-center">
-          <Package size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-sm text-gray-500">No orders found</p>
-        </div>
-      </div>
-    )
-  }
-
-  const customerData = currentCustomerData
-  const customer = customerData.customer
-  const customerOrdersList = customerData.orders
-
-  const filteredOrders = customerOrdersList.filter(order =>
-    order.id.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-
-  const getStatusClass = (status) => {
-    switch(status) {
-      case 'delivered': return 'bg-green-100 text-green-700'
-      case 'shipped': return 'bg-purple-100 text-purple-700'
-      case 'processing': return 'bg-yellow-100 text-yellow-700'
-      case 'confirmed': return 'bg-blue-100 text-blue-700'
-      case 'pending': return 'bg-yellow-100 text-yellow-700'
-      case 'cancelled': return 'bg-red-100 text-red-700'
-      default: return 'bg-gray-100 text-gray-700'
-    }
-  }
-
-  const formatDate = (date) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-  }
-
-  // Calculate top customers from real orders
-  const getTopCustomersFromOrders = () => {
-    const customerMap = new Map()
-    
     orders.forEach(order => {
-      const customerKey = order.customer_email
-      if (!customerMap.has(customerKey)) {
-        customerMap.set(customerKey, {
-          name: order.customer_name,
-          phone: order.customer_phone,
-          email: order.customer_email,
-          totalSpent: 0,
-          totalOrders: 0
-        })
+      const key = order.customer_email || order.customer_name || `cust_${order.id}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          name: order.customer_name || 'Guest Buyer',
+          phone: order.customer_phone || 'N/A',
+          email: order.customer_email || 'N/A',
+          firstDate: order.created_at,
+          orders: []
+        });
       }
-      const customerData = customerMap.get(customerKey)
-      customerData.totalSpent += parseFloat(order.grand_total || 0)
-      customerData.totalOrders += 1
-    })
-    
+      const data = map.get(key);
+      data.orders.push(order);
+      // Track earliest date
+      if (order.created_at && (!data.firstDate || new Date(order.created_at) < new Date(data.firstDate))) {
+        data.firstDate = order.created_at;
+      }
+    });
+
+    return map;
+  }, [orders]);
+
+  // Sorted top customers by total spending
+  const topCustomers = useMemo(() => {
     return Array.from(customerMap.values())
+      .map(cust => {
+        const totalSpent = cust.orders.reduce((sum, o) => sum + parseFloat(o.grand_total || 0), 0);
+        return {
+          ...cust,
+          totalSpent,
+          orderCount: cust.orders.length
+        };
+      })
       .sort((a, b) => b.totalSpent - a.totalSpent)
-      .slice(0, 3)
+      .slice(0, 5);
+  }, [customerMap]);
+
+  // Determine current customer
+  const currentCustomer = useMemo(() => {
+    if (activeCustomerKey && customerMap.has(activeCustomerKey)) {
+      const cust = customerMap.get(activeCustomerKey);
+      const totalSpent = cust.orders.reduce((sum, o) => sum + parseFloat(o.grand_total || 0), 0);
+      const avgOrderValue = cust.orders.length > 0 ? (totalSpent / cust.orders.length) : 0;
+      return {
+        ...cust,
+        totalSpent,
+        avgOrderValue,
+        orderCount: cust.orders.length,
+        since: cust.firstDate ? new Date(cust.firstDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Recent'
+      };
+    }
+
+    if (topCustomers.length > 0) {
+      const top = topCustomers[0];
+      const avgOrderValue = top.orderCount > 0 ? (top.totalSpent / top.orderCount) : 0;
+      return {
+        ...top,
+        avgOrderValue,
+        since: top.firstDate ? new Date(top.firstDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Recent'
+      };
+    }
+
+    return null;
+  }, [activeCustomerKey, customerMap, topCustomers]);
+
+  if (!mounted) return null;
+
+  if (!currentCustomer) {
+    return (
+      <div className="bg-white rounded-3xl border border-gray-200/80 p-8 shadow-2xs h-full flex flex-col items-center justify-center text-center">
+        <div className="w-14 h-14 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-3 shadow-2xs">
+          <Clock size={26} />
+        </div>
+        <h4 className="text-sm sm:text-base font-bold text-gray-900">Customer Purchase History</h4>
+        <p className="text-xs text-gray-400 mt-1 max-w-xs">
+          Customer purchase frequency, lifetime value metrics, and order recurrence will display here.
+        </p>
+      </div>
+    );
   }
 
-  const topCustomers = orders.length > 0 ? getTopCustomersFromOrders() : []
+  // Filter orders by search
+  const filteredOrders = currentCustomer.orders.filter(order => {
+    const id = String(order.order_number || order.id).toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return id.includes(query) || (order.payment_method || '').toLowerCase().includes(query);
+  });
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getStatusBadge = (status) => {
+    const s = status?.toLowerCase() || 'pending';
+    switch (s) {
+      case 'delivered':
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Delivered</span>;
+      case 'shipped':
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">Shipped</span>;
+      case 'processing':
+      case 'confirmed':
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 capitalize">{s}</span>;
+      case 'cancelled':
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Cancelled</span>;
+      default:
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 capitalize">{s}</span>;
+    }
+  };
 
   return (
-    <div className="order-history bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <Clock size={18} className="text-primary-500" />
-          <h3 className="text-base font-semibold text-gray-900">Order History</h3>
+      <div>
+        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+              <Clock size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Customer Timeline & Intelligence</h3>
+              <p className="text-[11px] text-gray-400">Lifetime analytics and repeat purchase records</p>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-primary-800 bg-primary-50 border border-primary-200/70 px-2.5 py-0.5 rounded-full">
+            {currentCustomer.orderCount} Orders
+          </span>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Customer purchase history & insights</p>
-      </div>
 
-      {/* Customer Summary */}
-      <div className="p-4 border-b border-gray-100 bg-gray-50">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h4 className="text-sm font-bold text-gray-900">{customer.name}</h4>
-            <p className="text-xs text-gray-500">Customer since {customer.since}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-bold text-primary-600">₹{customer.totalSpent.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-500">Total spent</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500">{customer.phone}</span>
-            <span className="w-1 h-1 bg-gray-300 rounded-full" />
-            <span className="text-gray-500">{customer.email}</span>
-          </div>
-          <span className="text-sm font-semibold text-gray-900">{customer.totalOrders} orders</span>
-        </div>
-      </div>
+        {/* Customer Profile Card */}
+        <div className="p-4 sm:p-5 bg-gradient-to-br from-gray-50 via-white to-gray-50/50 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary-600 to-primary-500 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+                {currentCustomer.name?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+              <div>
+                <h4 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
+                  <span>{currentCustomer.name}</span>
+                  {currentCustomer.orderCount >= 3 && (
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                      <Sparkles size={10} /> VIP Buyer
+                    </span>
+                  )}
+                </h4>
+                <div className="flex items-center gap-3 text-[11px] text-gray-500 mt-1 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Mail size={11} className="text-gray-400" />
+                    <span>{currentCustomer.email}</span>
+                  </span>
+                  {currentCustomer.phone !== 'N/A' && (
+                    <span className="flex items-center gap-1">
+                      <Phone size={11} className="text-gray-400" />
+                      <span>{currentCustomer.phone}</span>
+                    </span>
+                  )}
+                  <span className="text-gray-400">Customer since {currentCustomer.since}</span>
+                </div>
+              </div>
+            </div>
 
-      {/* Search */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search orders by ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-          />
-        </div>
-      </div>
-
-      {/* Orders List */}
-      <div className="p-4 max-h-[300px] overflow-y-auto custom-scroll">
-        {paginatedOrders.length === 0 ? (
-          <div className="text-center py-8">
-            <Package size={32} className="mx-auto text-gray-300 mb-2" />
-            <p className="text-sm text-gray-500">No orders found</p>
+            {/* Total Spending Stat */}
+            <div className="sm:text-right shrink-0 bg-white sm:bg-transparent p-3 sm:p-0 rounded-2xl border sm:border-0 border-gray-100">
+              <p className="text-[11px] font-medium text-gray-400">Lifetime Spending (LTV)</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
+                ₹{currentCustomer.totalSpent.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </p>
+              <p className="text-[10px] text-gray-500">
+                Avg order: ₹{currentCustomer.avgOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {paginatedOrders.map((order, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{order.id}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                      <Calendar size={10} />
-                      <span>{formatDate(order.date)}</span>
+        </div>
+
+        {/* Search Orders */}
+        <div className="p-3 sm:px-5 border-b border-gray-100 flex items-center justify-between gap-3 bg-white">
+          <div className="relative flex-1">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search buyer's order history..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+            />
+          </div>
+          <span className="text-[11px] text-gray-400 font-medium shrink-0">
+            Showing {filteredOrders.length} records
+          </span>
+        </div>
+
+        {/* Orders Timeline List */}
+        <div className="p-4 sm:p-5 space-y-2.5 max-h-[300px] overflow-y-auto">
+          {paginatedOrders.length === 0 ? (
+            <div className="py-8 text-center">
+              <Package size={28} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-xs text-gray-400">No orders match this search</p>
+            </div>
+          ) : (
+            paginatedOrders.map((ord, idx) => {
+              const isSelected = selectedOrder && (selectedOrder.id === ord.id || selectedOrder.order_number === ord.order_number);
+              return (
+                <div 
+                  key={idx}
+                  className={`p-3 rounded-2xl border transition-all ${
+                    isSelected 
+                      ? 'border-primary-400 bg-primary-50/40 shadow-2xs' 
+                      : 'border-gray-200/80 bg-white hover:border-gray-300 hover:bg-gray-50/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-900 font-mono">
+                        {ord.order_number || `#ORD-${ord.id}`}
+                      </span>
+                      <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                        <Calendar size={11} />
+                        <span>{ord.created_at ? new Date(ord.created_at).toLocaleDateString('en-IN') : 'N/A'}</span>
+                      </span>
                     </div>
+                    {getStatusBadge(ord.status)}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">₹{order.amount.toLocaleString()}</p>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${getStatusClass(order.status)}`}>
-                      {order.status}
+
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1">
+                        <Package size={11} className="text-gray-400" />
+                        <span className="font-semibold text-gray-700">{ord.items?.length || 1} item(s)</span>
+                      </span>
+                      <span className="text-gray-300">•</span>
+                      <span className="capitalize">{ord.payment_method || 'Online'}</span>
+                    </div>
+
+                    <span className="font-bold text-gray-900 text-xs sm:text-sm">
+                      ₹{parseFloat(ord.grand_total || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <Package size={10} />
-                    <span>{order.items} items</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>Paid via {order.payment}</span>
-                    <button className="p-1 text-gray-400 hover:text-primary-600">
-                      <Eye size={12} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 sm:px-5 py-2.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <span className="text-[11px] text-gray-400">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {filteredOrders.length} orders
-          </p>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
-            >
-              <ChevronLeft size={12} />
-            </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
-            >
-              <ChevronRight size={12} />
-            </button>
+      {/* Top Customer Quick Selectors Footer */}
+      {topCustomers.length > 1 && (
+        <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/60">
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <TrendingUp size={13} className="text-primary-600" />
+            <h5 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Top Spenders</h5>
           </div>
-        </div>
-      )}
-
-      {/* Top Customers Insights */}
-      {topCustomers.length > 0 && (
-        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={12} className="text-green-500" />
-            <h4 className="text-xs font-semibold text-gray-700">Top Customers</h4>
-          </div>
-          <div className="space-y-2">
-            {topCustomers.map((customer, idx) => (
-              <div 
-                key={idx}
-                className="flex items-center justify-between cursor-pointer hover:bg-white p-2 rounded-lg transition-all"
-                onClick={() => setSelectedCustomer(customer)}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-600">
-                    {customer.name?.charAt(0) || '?'}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">{customer.name}</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900">₹{customer.totalSpent.toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-500">{customer.totalOrders} orders</p>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {topCustomers.map((cust, i) => {
+              const isActive = (currentCustomer?.key === cust.key);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setActiveCustomerKey(cust.key);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border text-left shrink-0 transition-all ${
+                    isActive
+                      ? 'bg-primary-600 text-white border-primary-600 shadow-xs'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300 hover:bg-primary-50/40'
+                  }`}
+                >
+                  <p className="text-xs font-bold truncate max-w-[120px]">{cust.name}</p>
+                  <p className={`text-[10px] ${isActive ? 'text-primary-100' : 'text-gray-400'}`}>
+                    ₹{cust.totalSpent.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • {cust.orderCount} ord
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

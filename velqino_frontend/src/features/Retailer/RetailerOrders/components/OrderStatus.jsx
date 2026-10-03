@@ -1,255 +1,222 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Clock, Package, Truck, CheckCircle, XCircle, RefreshCw, AlertCircle, Send } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerOrders/OrderStatus.scss'
-import ordersAPI from '@/redux/wholesaler/Api/ordersAPI'
+import React, { useState, useEffect } from 'react';
+import { 
+  Clock, 
+  Package, 
+  Truck, 
+  CheckCircle, 
+  XCircle, 
+  RefreshCw, 
+  AlertCircle, 
+  Send,
+  Sparkles,
+  ArrowRight
+} from '../../../../utils/icons';
 
-export default function OrderStatus({ selectedOrder, onStatusUpdate, onRefresh }) {
-  const [mounted, setMounted] = useState(false)
-  const [currentStatus, setCurrentStatus] = useState('')
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [selectedStatus, setSelectedStatus] = useState('')
-  const [error, setError] = useState(null)
+export default function OrderStatus({ selectedOrder, onStatusUpdate, onCancelOrder, onRefresh }) {
+  const [mounted, setMounted] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
+    setMounted(true);
     if (selectedOrder) {
-      setCurrentStatus(selectedOrder.status)
-      setSelectedStatus(selectedOrder.status)
-      setError(null)
+      setCurrentStatus(selectedOrder.status?.toLowerCase() || 'pending');
+      setSelectedStatus(selectedOrder.status?.toLowerCase() || 'pending');
     }
-  }, [selectedOrder])
+  }, [selectedOrder]);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
-  const statusFlow = [
-    { key: 'pending', label: 'Pending', icon: <Clock size={16} />, color: 'gray', description: 'Order received, awaiting confirmation' },
-    { key: 'confirmed', label: 'Confirmed', icon: <CheckCircle size={16} />, color: 'blue', description: 'Order confirmed' },
-    { key: 'processing', label: 'Processing', icon: <Package size={16} />, color: 'purple', description: 'Preparing for shipment' },
-    { key: 'shipped', label: 'Shipped', icon: <Truck size={16} />, color: 'indigo', description: 'On the way' },
-    { key: 'out_for_delivery', label: 'Out for Delivery', icon: <Truck size={16} />, color: 'indigo', description: 'Out for delivery' },
-    { key: 'delivered', label: 'Delivered', icon: <CheckCircle size={16} />, color: 'green', description: 'Order completed' },
-  ]
+  const statusSteps = [
+    { key: 'pending', label: 'Pending', icon: Clock, desc: 'Awaiting review' },
+    { key: 'confirmed', label: 'Confirmed', icon: CheckCircle, desc: 'Payment verified' },
+    { key: 'processing', label: 'Processing', icon: Package, desc: 'Picking & packing' },
+    { key: 'shipped', label: 'Shipped', icon: Truck, desc: 'In courier transit' },
+    { key: 'delivered', label: 'Delivered', icon: CheckCircle, desc: 'Customer received' },
+  ];
 
-  const getStatusColor = (color) => {
-    const colors = {
-      gray: 'bg-gray-100 text-gray-700 border-gray-300',
-      blue: 'bg-blue-100 text-blue-700 border-blue-300',
-      purple: 'bg-purple-100 text-purple-700 border-purple-300',
-      indigo: 'bg-indigo-100 text-indigo-700 border-indigo-300',
-      green: 'bg-green-100 text-green-700 border-green-300',
-      red: 'bg-red-100 text-red-700 border-red-300',
-      orange: 'bg-orange-100 text-orange-700 border-orange-300',
+  const getStepIndex = (status) => {
+    const idx = statusSteps.findIndex(s => s.key === status);
+    return idx >= 0 ? idx : 0;
+  };
+
+  const handleApplyStatusChange = async (newStatus) => {
+    if (!selectedOrder || !newStatus) return;
+    setIsUpdating(true);
+    try {
+      if (onStatusUpdate) {
+        await onStatusUpdate(selectedOrder.id || selectedOrder.order_number, newStatus);
+        setCurrentStatus(newStatus);
+        setSelectedStatus(newStatus);
+      }
+    } catch (err) {
+      console.error('Status update error:', err);
+    } finally {
+      setIsUpdating(false);
     }
-    return colors[color] || colors.gray
-  }
+  };
 
-  const getCurrentStepIndex = () => {
-    const index = statusFlow.findIndex(s => s.key === currentStatus)
-    return index >= 0 ? index : 0
-  }
-
-  // Real API call to update order status
-  const handleStatusUpdate = async (newStatus) => {
-  if (!selectedOrder) return
-  
-  setIsUpdating(true)
-  setError(null)
-  
-  try {
-    // Call your API service
-    const response = await ordersAPI.updateOrderStatus(selectedOrder.order_number, newStatus);
-    
-    if (response.data) {
-      setCurrentStatus(newStatus)
-      setSelectedStatus(newStatus)
-      if (onStatusUpdate) onStatusUpdate(newStatus)
-      if (onRefresh) onRefresh()
+  const handleCancelClick = async () => {
+    if (!selectedOrder) return;
+    if (onCancelOrder) {
+      await onCancelOrder(selectedOrder.id || selectedOrder.order_number);
     }
-  } catch (err) {
-    console.error('Status update error:', err)
-    setError(err.message)
-  } finally {
-    setIsUpdating(false)
-  }
-}
-
-  // Real API call to cancel order
-  // ✅ Use this instead of fetch
-const handleCancelOrder = async () => {
-  if (!selectedOrder) return
-  
-  setIsUpdating(true)
-  setError(null)
-  
-  try {
-    const response = await ordersAPI.cancelOrder(selectedOrder.order_number);
-    
-    if (response.data) {
-      setCurrentStatus('cancelled')
-      setSelectedStatus('cancelled')
-      if (onStatusUpdate) onStatusUpdate('cancelled')
-      if (onRefresh) onRefresh()
-    }
-  } catch (err) {
-    console.error('Cancel order error:', err)
-    setError(err.message)
-  } finally {
-    setIsUpdating(false)
-  }
-}
+  };
 
   if (!selectedOrder) {
     return (
-      <div className="order-status bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <Clock size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-sm text-gray-500">Select an order to view status</p>
-          <p className="text-xs text-gray-400 mt-1">Click on any order from the table</p>
+      <div className="bg-white rounded-3xl border border-gray-200/80 p-8 shadow-2xs h-full flex flex-col items-center justify-center text-center">
+        <div className="w-14 h-14 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-3 shadow-2xs">
+          <Clock size={26} />
         </div>
+        <h4 className="text-sm sm:text-base font-bold text-gray-900">Live Status Tracker</h4>
+        <p className="text-xs text-gray-400 mt-1 max-w-xs">
+          Select any order from the table to view its delivery timeline and update dispatch progress.
+        </p>
       </div>
-    )
+    );
   }
 
-  const currentStepIndex = getCurrentStepIndex()
+  const activeStepIdx = getStepIndex(currentStatus);
+  const isCancelled = currentStatus === 'cancelled';
 
   return (
-    <div className="order-status bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs h-full flex flex-col justify-between space-y-4">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <Clock size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Order Status</h3>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Truck size={17} />
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                Fulfillment Tracker
+              </h3>
+              <p className="text-[11px] text-gray-400 font-mono">
+                {selectedOrder.order_number || `#ORD-${selectedOrder.id}`}
+              </p>
+            </div>
           </div>
-          <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(
-            currentStatus === 'delivered' ? 'green' :
-            currentStatus === 'shipped' || currentStatus === 'out_for_delivery' ? 'indigo' :
-            currentStatus === 'processing' ? 'purple' :
-            currentStatus === 'confirmed' ? 'blue' :
-            currentStatus === 'cancelled' ? 'red' : 'gray'
-          )}`}>
-            {currentStatus?.charAt(0).toUpperCase() + currentStatus?.slice(1).replace(/_/g, ' ') || 'Pending'}
+
+          <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full ${
+            isCancelled 
+              ? 'bg-rose-100 text-rose-700 border border-rose-200' 
+              : currentStatus === 'delivered'
+              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+              : 'bg-primary-100 text-primary-800 border border-primary-200'
+          }`}>
+            {currentStatus}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Track your order progress</p>
-      </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mx-4 mt-4 p-2 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-xs text-red-600">{error}</p>
-        </div>
-      )}
+        {/* Stepper Progress */}
+        <div className="py-4">
+          {isCancelled ? (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-center space-y-1">
+              <XCircle size={28} className="text-rose-600 mx-auto" />
+              <h4 className="text-xs font-bold text-rose-900">Order Has Been Cancelled</h4>
+              <p className="text-[11px] text-rose-700">Inventory allocation was reverted and customer notified.</p>
+            </div>
+          ) : (
+            <div className="relative space-y-4">
+              {statusSteps.map((step, idx) => {
+                const Icon = step.icon;
+                const isPassed = idx < activeStepIdx;
+                const isCurrent = idx === activeStepIdx;
 
-      {/* Status Timeline */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative">
-          <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200" />
-          <div 
-            className="absolute left-5 top-0 w-0.5 bg-primary-500 transition-all duration-500"
-            style={{ height: `${(currentStepIndex / (statusFlow.length - 1)) * 100}%` }}
-          />
+                return (
+                  <div key={step.key} className="flex items-start gap-3 relative">
+                    {/* Connecting line */}
+                    {idx < statusSteps.length - 1 && (
+                      <div 
+                        className={`absolute left-4 top-8 w-0.5 h-6 -ml-px transition-colors ${
+                          idx < activeStepIdx ? 'bg-primary-600' : 'bg-gray-200'
+                        }`} 
+                      />
+                    )}
 
-          <div className="space-y-6 relative">
-            {statusFlow.map((status, index) => {
-              const isCompleted = index <= currentStepIndex
-              const isCurrent = index === currentStepIndex
-              
-              return (
-                <div key={status.key} className="flex items-start gap-3">
-                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    isCompleted 
-                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-200' 
-                      : 'bg-gray-100 text-gray-400'
-                  } ${isCurrent ? 'ring-4 ring-primary-100 scale-110' : ''}`}>
-                    {isCompleted ? <CheckCircle size={18} /> : status.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className={`text-sm font-semibold ${isCompleted ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {status.label}
-                      </h4>
-                      {isCurrent && (
-                        <span className="text-[10px] text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full animate-pulse">
-                          Current
-                        </span>
-                      )}
+                    {/* Step Icon Node */}
+                    <div className={`
+                      w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all z-10
+                      ${isPassed 
+                        ? 'bg-primary-600 text-white shadow-2xs' 
+                        : isCurrent 
+                        ? 'bg-primary-50 text-primary-700 ring-2 ring-primary-500 font-bold' 
+                        : 'bg-gray-100 text-gray-400'
+                      }
+                    `}>
+                      <Icon size={14} />
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{status.description}</p>
+
+                    {/* Label & Description */}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-bold ${isCurrent ? 'text-primary-900' : isPassed ? 'text-gray-900' : 'text-gray-400'}`}>
+                          {step.label}
+                        </span>
+                        {isCurrent && (
+                          <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-md bg-primary-100 text-primary-800">
+                            Active Stage
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{step.desc}</p>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Status Update Section */}
-      {currentStatus !== 'delivered' && currentStatus !== 'cancelled' && currentStatus !== 'refunded' && (
-        <div className="p-4 border-b border-gray-100">
-          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Update Status</h4>
-          <div className="flex flex-wrap gap-2">
-            {statusFlow.slice(currentStepIndex + 1).map(status => (
-              <button
-                key={status.key}
-                onClick={() => handleStatusUpdate(status.key)}
-                disabled={isUpdating}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${
-                  getStatusColor(status.color)
-                } hover:opacity-80 disabled:opacity-50`}
-              >
-                {status.icon}
-                <span>Mark as {status.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Cancel Action */}
-      {(currentStatus === 'pending' || currentStatus === 'confirmed') && (
-        <div className="p-4">
-          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Order Actions</h4>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCancelOrder}
-              disabled={isUpdating}
-              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${getStatusColor('red')} hover:opacity-80 disabled:opacity-50`}
+      {/* Action Controls */}
+      <div className="space-y-3 pt-3 border-t border-gray-100">
+        <div>
+          <label className="block text-xs font-bold text-gray-700 mb-1.5">
+            Advance Order Status
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              disabled={isUpdating || isCancelled}
+              className="flex-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white disabled:opacity-50 font-medium"
             >
-              <XCircle size={14} />
-              <span>Cancel Order</span>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="out_for_delivery">Out for Delivery</option>
+              <option value="delivered">Delivered</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => handleApplyStatusChange(selectedStatus)}
+              disabled={isUpdating || isCancelled || selectedStatus === currentStatus}
+              className="px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all shadow-2xs disabled:opacity-40 flex items-center gap-1 active:scale-95"
+            >
+              {isUpdating ? <RefreshCw size={13} className="animate-spin" /> : <span>Update</span>}
             </button>
           </div>
         </div>
-      )}
 
-      {/* Delivery Info */}
-      {currentStatus === 'delivered' && (
-        <div className="p-4 bg-green-50 rounded-b-xl">
-          <div className="flex items-center gap-2">
-            <CheckCircle size={16} className="text-green-600" />
-            <div>
-              <p className="text-sm font-semibold text-green-800">Order Delivered</p>
-              <p className="text-xs text-green-600 mt-0.5">Order completed successfully</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cancelled Info */}
-      {currentStatus === 'cancelled' && (
-        <div className="p-4 bg-red-50 rounded-b-xl">
-          <div className="flex items-center gap-2">
-            <XCircle size={16} className="text-red-600" />
-            <div>
-              <p className="text-sm font-semibold text-red-800">Order Cancelled</p>
-              <p className="text-xs text-red-600 mt-0.5">Order has been cancelled</p>
-            </div>
-          </div>
-        </div>
-      )}
+        {!isCancelled && currentStatus !== 'delivered' && (
+          <button
+            type="button"
+            onClick={handleCancelClick}
+            className="w-full py-2 text-xs font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100/70 border border-rose-200/80 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+          >
+            <XCircle size={14} />
+            <span>Cancel Order</span>
+          </button>
+        )}
+      </div>
     </div>
-  )
+  );
 }
