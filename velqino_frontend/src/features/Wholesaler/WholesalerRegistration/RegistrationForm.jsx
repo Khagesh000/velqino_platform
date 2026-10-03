@@ -29,7 +29,7 @@ import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import WholesalerLoginModal from '@/features/common/WholesalerLoginModal';
-import { setAuthTokens } from '@/utils/cookieUtils';
+import { setAuthTokens, setAuthUser } from '@/utils/cookieUtils';
 
 const availableCategories = [
   "Men's Clothing", "Women's Clothing", "Kids Wear", "Footwear",
@@ -261,9 +261,17 @@ function RegistrationFormContent() {
 
       const response = await registerWholesaler(payload).unwrap();
       setAuthTokens({ access: response.access, refresh: response.refresh });
-      localStorage.setItem('user_role', 'wholesaler');
-      localStorage.setItem('user_name', response.data?.business_name || formData.business_name);
-      localStorage.setItem('user_id', response.user_id || response.data?.user?.id || response.data?.id);
+      
+      const userEmail = formData.email.trim().toLowerCase();
+      const userName = response.data?.business_name || formData.business_name || (userEmail ? userEmail.split('@')[0] : 'Wholesaler');
+      const userId = response.user_id || response.data?.user?.id || response.data?.id;
+
+      setAuthUser({
+        name: userName,
+        email: userEmail,
+        role: 'wholesaler',
+        id: userId
+      });
       localStorage.setItem('is_wholesaler_registered', 'true');
 
       toast.success('Wholesaler registered successfully! Welcome to Velqino.');

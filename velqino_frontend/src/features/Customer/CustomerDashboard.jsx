@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import DashboardHeader from './components/DashboardHeader';
 import DashboardSidebar from './components/DashboardSidebar';
 import StatsCards from './components/StatsCards';
@@ -11,9 +11,46 @@ import ProfileOverviewCard from './components/ProfileOverviewCard';
 import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import { useGetUserAddressesQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { useGetWishlistQuery } from '@/redux/wholesaler/slices/wishlistSlice';
+import { getAuthUser } from '@/utils/cookieUtils';
 
 export default function CustomerDashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const initialAuth = useMemo(() => getAuthUser(), []);
+  const [userName, setUserName] = useState(
+    initialAuth.name && initialAuth.name !== 'undefined' ? initialAuth.name : ''
+  );
+  const [userEmail, setUserEmail] = useState(
+    initialAuth.email && initialAuth.email !== 'undefined' ? initialAuth.email : ''
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const auth = getAuthUser();
+      if (auth.name && auth.name !== 'undefined') setUserName(auth.name);
+      if (auth.email && auth.email !== 'undefined') setUserEmail(auth.email);
+
+      const handleUpdate = (e) => {
+        const detail = e?.detail || getAuthUser();
+        if (detail.name && detail.name !== 'undefined') setUserName(detail.name);
+        if (detail.email && detail.email !== 'undefined') setUserEmail(detail.email);
+      };
+
+      window.addEventListener('velqino:auth-user-updated', handleUpdate);
+      return () => window.removeEventListener('velqino:auth-user-updated', handleUpdate);
+    }
+  }, []);
+
+  const displayName = useMemo(() => {
+    if (userName && userName !== 'undefined' && userName !== 'null') return userName;
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail.split('@')[0];
+    return 'Customer';
+  }, [userName, userEmail]);
+
+  const displayEmail = useMemo(() => {
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail;
+    return 'customer@velqino.com';
+  }, [userEmail]);
+
   const { data: ordersData } = useGetOrdersQuery();
   const { data: addressesData } = useGetUserAddressesQuery();
   const { data: wishlistData } = useGetWishlistQuery();
@@ -58,8 +95,8 @@ export default function CustomerDashboard() {
             </div>
             <div className="space-y-6">
               <ProfileOverviewCard 
-                userName={localStorage.getItem('user_name') || 'Customer'}
-                userEmail={localStorage.getItem('user_email') || 'customer@example.com'}
+                userName={displayName}
+                userEmail={displayEmail}
                 addressesCount={addresses.length}
                 wishlistCount={wishlistItems.length}
               />

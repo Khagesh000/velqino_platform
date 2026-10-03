@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useLoginWholesalerMutation } from '@/redux/wholesaler/slices/wholesalerSlice';
 import API from '@/utils/apiConfig';
-import { setAuthTokens } from '@/utils/cookieUtils';
+import { setAuthTokens, setAuthUser } from '@/utils/cookieUtils';
 
 export default function WholesalerLoginModal({ isOpen, onClose, onLogin, initialMode = 'login' }) {
   const router = useRouter();
@@ -137,15 +137,17 @@ export default function WholesalerLoginModal({ isOpen, onClose, onLogin, initial
 
       // Store tokens securely in cookies
       setAuthTokens({ access: response.access, refresh: response.refresh });
-      localStorage.setItem('user_role', 'wholesaler');
       
-      const userName = response.data?.business_name || response.data?.user?.username || formData.email.split('@')[0];
-      localStorage.setItem('user_name', userName);
-
+      const userEmail = response.data?.user_email || response.data?.user?.email || formData.email.trim().toLowerCase();
+      const userName = response.data?.business_name || response.data?.username || response.data?.user?.username || (userEmail ? userEmail.split('@')[0] : 'Wholesaler');
       const userId = response.user_id || response.data?.user?.id || response.data?.id;
-      if (userId) {
-        localStorage.setItem('user_id', userId);
-      }
+
+      setAuthUser({
+        name: userName,
+        email: userEmail,
+        role: 'wholesaler',
+        id: userId
+      });
       localStorage.setItem('is_wholesaler_registered', 'true');
 
       // Cart merge via centralized API client (no hardcoded ports)

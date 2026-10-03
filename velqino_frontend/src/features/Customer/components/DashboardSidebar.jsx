@@ -1,14 +1,50 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, ShoppingBag, Heart, MapPin, User, Settings, Package, LogOut } from '../../../utils/icons';
-import { clearAuthTokens } from '@/utils/cookieUtils';
+import { clearAuthTokens, getAuthUser } from '@/utils/cookieUtils';
 
 export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const initialAuth = useMemo(() => getAuthUser(), []);
+  const [userName, setUserName] = useState(
+    initialAuth.name && initialAuth.name !== 'undefined' ? initialAuth.name : ''
+  );
+  const [userEmail, setUserEmail] = useState(
+    initialAuth.email && initialAuth.email !== 'undefined' ? initialAuth.email : ''
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const auth = getAuthUser();
+      if (auth.name && auth.name !== 'undefined') setUserName(auth.name);
+      if (auth.email && auth.email !== 'undefined') setUserEmail(auth.email);
+
+      const handleUpdate = (e) => {
+        const detail = e?.detail || getAuthUser();
+        if (detail.name && detail.name !== 'undefined') setUserName(detail.name);
+        if (detail.email && detail.email !== 'undefined') setUserEmail(detail.email);
+      };
+
+      window.addEventListener('velqino:auth-user-updated', handleUpdate);
+      return () => window.removeEventListener('velqino:auth-user-updated', handleUpdate);
+    }
+  }, []);
+
+  const displayName = useMemo(() => {
+    if (userName && userName !== 'undefined' && userName !== 'null') return userName;
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail.split('@')[0];
+    return 'Customer';
+  }, [userName, userEmail]);
+
+  const displayEmail = useMemo(() => {
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail;
+    return '';
+  }, [userEmail]);
   
   const navItems = [
     { icon: <Home size={18} />, label: 'Dashboard', href: '/customer/dashboard' },
@@ -26,9 +62,6 @@ export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
 
   const handleLogout = () => {
     clearAuthTokens();
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_id');
     router.push('/');
     if (onClose) onClose();
   };
@@ -37,9 +70,14 @@ export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
     <aside className={sidebarClasses}>
   <div className="p-4 border-b border-gray-200">
     <h2 className="text-xl font-bold text-primary-600">My Account</h2>
-    <p className="text-xs text-gray-500 mt-1">
-      {typeof window !== 'undefined' ? localStorage.getItem('user_name') || 'Customer' : 'Customer'}
+    <p className="text-sm font-semibold text-gray-800 mt-1 truncate">
+      {displayName}
     </p>
+    {displayEmail ? (
+      <p className="text-xs text-gray-500 truncate">
+        {displayEmail}
+      </p>
+    ) : null}
   </div>
   
   <nav className="p-4 space-y-1">

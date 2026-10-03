@@ -25,8 +25,7 @@ import WholesalerLoginModal from "./WholesalerLoginModal";
 import RetailerLoginModal from "./RetailerLoginModal";
 import CustomerLoginModal from "./CustomerLoginModal";
 import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
-import { toast } from 'react-toastify';
-import { getAccessToken, clearAuthTokens } from '@/utils/cookieUtils';
+import { getAccessToken, clearAuthTokens, getAuthUser, setAuthUser } from '@/utils/cookieUtils';
 import '../../styles/common/Navbar.scss';
 
 export default function Navbar() {
@@ -39,6 +38,7 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -63,16 +63,48 @@ export default function Navbar() {
   const { data: cartData, refetch: refetchCart } = useGetCartQuery();
   const cartCount = cartData?.summary?.item_count || 0;
 
+  const displayName = useMemo(() => {
+    if (userName && userName !== 'undefined' && userName !== 'null') return userName;
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail.split('@')[0];
+    return 'User';
+  }, [userName, userEmail]);
+
+  const displayEmail = useMemo(() => {
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail;
+    return '';
+  }, [userEmail]);
+
   useEffect(() => {
     setMounted(true);
-    const token = getAccessToken();
-    const role = localStorage.getItem('user_role');
-    const name = localStorage.getItem('user_name');
-    if (token && role) {
-      setIsLoggedIn(true);
-      setUserRole(role);
-      setUserName(name || 'User');
-    }
+    const syncAuth = () => {
+      const token = getAccessToken();
+      const auth = getAuthUser();
+      const role = auth.role || (typeof window !== 'undefined' ? localStorage.getItem('user_role') : null);
+      if (token && role) {
+        setIsLoggedIn(true);
+        setUserRole(role);
+        setUserName(auth.name && auth.name !== 'undefined' ? auth.name : '');
+        setUserEmail(auth.email && auth.email !== 'undefined' ? auth.email : '');
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
+        setUserName('');
+        setUserEmail('');
+      }
+    };
+
+    syncAuth();
+
+    const handleAuthUpdated = () => {
+      syncAuth();
+    };
+
+    window.addEventListener('velqino:auth-user-updated', handleAuthUpdated);
+    window.addEventListener('storage', handleAuthUpdated);
+    return () => {
+      window.removeEventListener('velqino:auth-user-updated', handleAuthUpdated);
+      window.removeEventListener('storage', handleAuthUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,11 +177,10 @@ export default function Navbar() {
 
   const handleLogout = () => {
     clearAuthTokens();
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_id');
     setIsLoggedIn(false);
     setUserRole(null);
+    setUserName('');
+    setUserEmail('');
     router.push('/');
   };
 
@@ -201,11 +232,13 @@ export default function Navbar() {
   };
 
   const handleLoginSuccess = (role, userData) => {
-    localStorage.setItem('user_role', role);
-    localStorage.setItem('user_name', userData.name || userData.email?.split('@')[0]);
+    const resolvedName = userData?.name || (userData?.email ? userData.email.split('@')[0] : '');
+    const resolvedEmail = userData?.email || '';
+    setAuthUser({ name: resolvedName, email: resolvedEmail, role, id: userData?.id });
     setIsLoggedIn(true);
     setUserRole(role);
-    setUserName(userData.name || userData.email?.split('@')[0]);
+    setUserName(resolvedName);
+    setUserEmail(resolvedEmail);
     
     setIsWholesalerLoginOpen(false);
     setIsRetailerLoginOpen(false);
@@ -431,7 +464,7 @@ export default function Navbar() {
                 >
                   <User size={16} className="text-primary-600" />
                   <span className="hidden lg:block">
-                    {isLoggedIn ? `Hi, ${userName}` : 'Account'}
+                    {isLoggedIn ? `Hi, ${displayName}` : 'Account'}
                   </span>
                   <ChevronDown size={13} className={`hidden lg:block transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -441,7 +474,10 @@ export default function Navbar() {
                     {isLoggedIn ? (
                       <>
                         <div className="px-3 py-2.5 border-b border-primary-100">
-                          <p className="text-xs font-bold text-gray-900">{userName}</p>
+                          <p className="text-xs font-bold text-gray-900 truncate">{displayName}</p>
+                          {displayEmail ? (
+                            <p className="text-[11px] text-gray-500 truncate">{displayEmail}</p>
+                          ) : null}
                           <p className="text-[11px] text-gray-500 mt-0.5">{userRole === 'wholesaler' ? 'Wholesaler Account' : userRole === 'retailer' ? 'Retailer Account' : 'Customer Account'}</p>
                           <span className={`inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full font-bold ${getRoleBadgeColor()}`}>
                             {userRole?.charAt(0).toUpperCase() + userRole?.slice(1)}
@@ -577,30 +613,59 @@ export default function Navbar() {
           {/* Mobile Menu Drawer */}
           {isMobileMenuOpen && (
             <div className="lg:hidden border-t border-primary-100 py-3 animate-slideDown" ref={mobileMenuRef}>
+              {isLoggedIn && (
+                <div className="px-3 py-2 mb-2 bg-primary-50/50 rounded-xl border border-primary-100 flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-gray-900 truncate">{displayName}</p>
+                    {displayEmail && <p className="text-[11px] text-gray-500 truncate">{displayEmail}</p>}
+                    <span className={`inline-block mt-1 text-[9px] px-2 py-0.5 rounded-full font-bold ${getRoleBadgeColor()}`}>
+                      {userRole?.charAt(0).toUpperCase() + userRole?.slice(1)}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="ml-2 text-xs font-bold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
               <div className="space-y-1">
-                <button 
-                  onClick={() => handleRoleLogin('customer')} 
-                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
-                >
-                  <User size={16} className="text-emerald-600" />
-                  <span>Customer Sign In</span>
-                </button>
-                
-                <button 
-                  onClick={() => handleRoleLogin('retailer')} 
-                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
-                >
-                  <Store size={16} className="text-primary-600" />
-                  <span>Retailer Sign In</span>
-                </button>
-                
-                <button 
-                  onClick={() => handleRoleLogin('wholesaler')} 
-                  className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
-                >
-                  <Shield size={16} className="text-accent-600" />
-                  <span>Wholesaler Sign In</span>
-                </button>
+                {!isLoggedIn ? (
+                  <>
+                    <button 
+                      onClick={() => handleRoleLogin('customer')} 
+                      className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                    >
+                      <User size={16} className="text-emerald-600" />
+                      <span>Customer Sign In</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => handleRoleLogin('retailer')} 
+                      className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                    >
+                      <Store size={16} className="text-primary-600" />
+                      <span>Retailer Sign In</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => handleRoleLogin('wholesaler')} 
+                      className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                    >
+                      <Shield size={16} className="text-accent-600" />
+                      <span>Wholesaler Sign In</span>
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={handleDashboardNavigation} 
+                    className="w-full flex items-center gap-3 py-2.5 px-3 text-gray-700 hover:bg-primary-50 rounded-xl text-xs font-semibold"
+                  >
+                    <Package size={16} className="text-primary-600" />
+                    <span>Go to Dashboard</span>
+                  </button>
+                )}
                 
                 <button 
                   onClick={() => handleNavigation('/product/cartpage')} 

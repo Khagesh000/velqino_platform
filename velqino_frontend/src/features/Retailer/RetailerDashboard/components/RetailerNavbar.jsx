@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link'
 import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, 
          Package, Grid, BarChart3, ShoppingBag, Heart, Settings, PlusCircle,
          ShoppingCart, Users, Box, Wallet, Truck, Star, LogOut } from '../../../../utils/icons';
-import { clearAuthTokens } from '@/utils/cookieUtils';
+import { useGetRetailerProfileQuery } from '@/redux/retailer/slices/retailerSlice';
+import { clearAuthTokens, getAuthUser, setAuthUser } from '@/utils/cookieUtils';
 import '../../../../styles/Retailer/RetailerDashboard/RetailerNavbar.scss'
 
 
@@ -22,6 +23,66 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
   const notificationsRef = useRef(null)
   const pathname = usePathname();
   const router = useRouter();
+
+  // Instant synchronous auth extraction from cookies / storage
+  const initialAuth = useMemo(() => getAuthUser(), []);
+
+  const [userName, setUserName] = useState(
+    initialAuth.name && initialAuth.name !== 'undefined' ? initialAuth.name : ''
+  );
+  const [userEmail, setUserEmail] = useState(
+    initialAuth.email && initialAuth.email !== 'undefined' ? initialAuth.email : ''
+  );
+  const [userId, setUserId] = useState(
+    initialAuth.id && initialAuth.id !== 'undefined' ? initialAuth.id : null
+  );
+
+  // Fetch retailer profile ONCE via RTK Query cache if name or email is missing
+  const needsProfileFetch = Boolean(userId) && (!userName || !userEmail);
+  const { data: profileResponse } = useGetRetailerProfileQuery(userId, {
+    skip: !needsProfileFetch,
+  });
+
+  useEffect(() => {
+    if (profileResponse?.data) {
+      const p = profileResponse.data;
+      const resolvedName = p.business_name || p.username || (p.email ? p.email.split('@')[0] : '');
+      const resolvedEmail = p.email || userEmail;
+      if (resolvedName && resolvedName !== 'undefined') setUserName(resolvedName);
+      if (resolvedEmail && resolvedEmail !== 'undefined') setUserEmail(resolvedEmail);
+      setAuthUser({ name: resolvedName, email: resolvedEmail, role: 'retailer', id: userId });
+    }
+  }, [profileResponse, userId]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const auth = getAuthUser();
+      if (auth.name && auth.name !== 'undefined') setUserName(auth.name);
+      if (auth.email && auth.email !== 'undefined') setUserEmail(auth.email);
+      if (auth.id && auth.id !== 'undefined') setUserId(auth.id);
+
+      const handleAuthUpdate = (e) => {
+        const detail = e?.detail || getAuthUser();
+        if (detail.name && detail.name !== 'undefined') setUserName(detail.name);
+        if (detail.email && detail.email !== 'undefined') setUserEmail(detail.email);
+        if (detail.id && detail.id !== 'undefined') setUserId(detail.id);
+      };
+
+      window.addEventListener('velqino:auth-user-updated', handleAuthUpdate);
+      return () => window.removeEventListener('velqino:auth-user-updated', handleAuthUpdate);
+    }
+  }, []);
+
+  const displayName = useMemo(() => {
+    if (userName && userName !== 'undefined' && userName !== 'null') return userName;
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail.split('@')[0];
+    return 'Retail Store';
+  }, [userName, userEmail]);
+
+  const displayEmail = useMemo(() => {
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail;
+    return '';
+  }, [userEmail]);
 
   const handleLogout = () => {
     try {
@@ -223,9 +284,9 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
                     <User size={18} className="text-white lg:hidden" />
                     <User size={22} className="text-white hidden lg:block" />
                   </div>
-                  <div className="hidden lg:block text-left">
-                    <p className="text-sm font-medium text-gray-900">Retail Store</p>
-                    <p className="text-xs text-gray-500">retailer@veltrix.com</p>
+                  <div className="hidden lg:block text-left max-w-[130px]">
+                    <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                    <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
                   </div>
                   <ChevronDown size={16} className={`hidden lg:block text-gray-400 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -233,8 +294,8 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 top-12 lg:top-14 w-64 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50">
                     <div className="px-4 py-3 border-b border-gray-100 lg:hidden">
-                      <p className="text-sm font-medium text-gray-900">Retail Store</p>
-                      <p className="text-xs text-gray-500">retailer@veltrix.com</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                      <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
                     </div>
                     
                     <Link href="/retailer/profile" className="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all">
@@ -365,6 +426,17 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
       >
         <X size={20} />
       </button>
+    </div>
+
+    {/* User profile mini-card in mobile drawer */}
+    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-3">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-r from-primary-500 to-primary-700 flex items-center justify-center text-white font-semibold text-sm">
+        {displayName ? displayName.charAt(0).toUpperCase() : 'R'}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+        <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+      </div>
     </div>
 
     <div className="p-4 overflow-y-auto h-[calc(100%-70px)]">

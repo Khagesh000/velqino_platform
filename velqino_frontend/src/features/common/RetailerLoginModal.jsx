@@ -19,7 +19,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useLoginRetailerMutation } from '@/redux/retailer/slices/retailerSlice';
 import API from '@/utils/apiConfig';
-import { setAuthTokens } from '@/utils/cookieUtils';
+import { setAuthTokens, setAuthUser } from '@/utils/cookieUtils';
 import { toast } from 'react-toastify';
 
 export default function RetailerLoginModal({ isOpen, onClose, onLogin, initialMode = 'login' }) {
@@ -131,15 +131,17 @@ export default function RetailerLoginModal({ isOpen, onClose, onLogin, initialMo
 
       // Store tokens securely in cookies
       setAuthTokens({ access: response.access, refresh: response.refresh });
-      localStorage.setItem('user_role', 'retailer');
       
-      const businessName = response.data?.business_name || response.data?.user?.username || formData.email.split('@')[0];
-      localStorage.setItem('user_name', businessName);
-      
+      const userEmail = response.data?.email || response.data?.user?.email || formData.email.trim().toLowerCase();
+      const businessName = response.data?.business_name || response.data?.username || response.data?.user?.username || (userEmail ? userEmail.split('@')[0] : 'Retailer');
       const userId = response.user_id || response.data?.user?.id || response.data?.id;
-      if (userId) {
-        localStorage.setItem('user_id', userId);
-      }
+
+      setAuthUser({
+        name: businessName,
+        email: userEmail,
+        role: 'retailer',
+        id: userId
+      });
       localStorage.setItem('is_retailer_registered', 'true');
 
       // Seamless guest cart merging using centralized API client

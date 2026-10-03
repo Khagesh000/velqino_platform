@@ -22,7 +22,7 @@ import {
   UserPlus
 } from '@/utils/icons';
 import RetailerLoginModal from '@/features/common/RetailerLoginModal';
-import { setAuthTokens } from '@/utils/cookieUtils';
+import { setAuthTokens, setAuthUser } from '@/utils/cookieUtils';
 import { toast } from 'react-toastify';
 
 const INDIAN_STATES = [
@@ -202,9 +202,17 @@ export default function RetailerRegistration() {
 
       if (response.access) {
         setAuthTokens({ access: response.access, refresh: response.refresh });
-        localStorage.setItem('user_role', 'retailer');
-        localStorage.setItem('user_name', formData.business_name.trim());
-        localStorage.setItem('user_id', response.user_id || response.data?.id);
+        
+        const userEmail = formData.email.trim().toLowerCase();
+        const userName = formData.business_name.trim() || (userEmail ? userEmail.split('@')[0] : 'Retailer');
+        const userId = response.user_id || response.data?.id;
+
+        setAuthUser({
+          name: userName,
+          email: userEmail,
+          role: 'retailer',
+          id: userId
+        });
         localStorage.setItem('is_retailer_registered', 'true');
         localStorage.removeItem('guest_session_id');
       }

@@ -26,7 +26,7 @@ import {
   useMergeCartMutation
 } from '../../redux/customer/slices/customerSlice';
 import { toast } from 'react-toastify';
-import { setAuthTokens } from '@/utils/cookieUtils';
+import { setAuthTokens, setAuthUser } from '@/utils/cookieUtils';
 
 export default function CustomerLoginModal({ isOpen, onClose, onLogin, initialMode = 'login' }) {
   const router = useRouter();
@@ -318,15 +318,17 @@ export default function CustomerLoginModal({ isOpen, onClose, onLogin, initialMo
 
       // Store tokens securely in cookies
       setAuthTokens({ access: response.access, refresh: response.refresh });
-      localStorage.setItem('user_role', 'customer');
       
-      const userName = response.data?.full_name || response.data?.username || loginForm.email.split('@')[0];
-      localStorage.setItem('user_name', userName);
-
+      const userEmail = response.data?.email || loginForm.email.trim().toLowerCase();
+      const userName = response.data?.full_name || response.data?.username || (userEmail ? userEmail.split('@')[0] : 'Customer');
       const userId = response.data?.id || response.user_id || response.id;
-      if (userId) {
-        localStorage.setItem('user_id', userId);
-      }
+
+      setAuthUser({
+        name: userName,
+        email: userEmail,
+        role: 'customer',
+        id: userId
+      });
 
       // Guest cart merge
       const sessionId = localStorage.getItem('guest_session_id');
@@ -381,15 +383,17 @@ export default function CustomerLoginModal({ isOpen, onClose, onLogin, initialMo
       // Auto login if access token returned
       if (response.access) {
         setAuthTokens({ access: response.access, refresh: response.refresh });
-        localStorage.setItem('user_role', 'customer');
-
-        const userName = response.data?.full_name || response.data?.username || registerForm.username;
-        localStorage.setItem('user_name', userName);
-
+        
+        const userEmail = registerForm.email.trim().toLowerCase();
+        const userName = response.data?.full_name || response.data?.username || registerForm.username || (userEmail ? userEmail.split('@')[0] : 'Customer');
         const userId = response.data?.id || response.user_id || response.id;
-        if (userId) {
-          localStorage.setItem('user_id', userId);
-        }
+
+        setAuthUser({
+          name: userName,
+          email: userEmail,
+          role: 'customer',
+          id: userId
+        });
 
         const sessionId = localStorage.getItem('guest_session_id');
         if (sessionId) {

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link'
 import {
@@ -31,7 +31,8 @@ import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
 import ImportImagesModal from '../../ProductsCatalog/Modals/ImportImagesModal';
 import ImportModal from '../../ProductsCatalog/Modals/ImportModal';
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
-import { clearAuthTokens } from '@/utils/cookieUtils';
+import { useFetchProfileQuery } from '@/redux/wholesaler/slices/wholesalerSlice';
+import { clearAuthTokens, getAuthUser, setAuthUser } from '@/utils/cookieUtils';
 
 export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollapsed }) {
   const router = useRouter();
@@ -49,32 +50,80 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
   const [showImportImagesModal, setShowImportImagesModal] = useState(false)
   const [showImportVideoModal, setShowImportVideoModal] = useState(false)
 
-  // User details from localStorage (SSR-safe)
-  const [userName, setUserName] = useState('Wholesale Store')
-  const [userEmail, setUserEmail] = useState('merchant@velqino.com')
-  const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
-  const [customersCount, setCustomersCount] = useState(0)
-
   const navbarRef = useRef(null);
+  const profileDropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
+  const importDropdownRef = useRef(null);
   const lastScrollTopRef = useRef(0);
   const scrollRafRef = useRef(null);
-  const profileDropdownRef = useRef(null)
-  const notificationsRef = useRef(null)
-  const importDropdownRef = useRef(null)
+
+  // Instant synchronous auth extraction from cookies / storage
+  const initialAuth = useMemo(() => getAuthUser(), []);
+
+  const [userName, setUserName] = useState(
+    initialAuth.name && initialAuth.name !== 'undefined' ? initialAuth.name : ''
+  );
+  const [userEmail, setUserEmail] = useState(
+    initialAuth.email && initialAuth.email !== 'undefined' ? initialAuth.email : ''
+  );
+  const [userId, setUserId] = useState(
+    initialAuth.id && initialAuth.id !== 'undefined' ? initialAuth.id : null
+  );
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [customersCount, setCustomersCount] = useState(0);
+
+  // Fetch wholesaler profile ONCE via RTK Query cache if name or email is missing
+  const needsProfileFetch = Boolean(userId) && (!userName || !userEmail || userName === 'Wholesale Store');
+  const { data: profileResponse } = useFetchProfileQuery(userId, {
+    skip: !needsProfileFetch,
+  });
+
+  // When profile returns, update state & store immediately
+  useEffect(() => {
+    if (profileResponse?.data) {
+      const p = profileResponse.data;
+      const resolvedName = p.business_name || p.username || (p.user_email ? p.user_email.split('@')[0] : '');
+      const resolvedEmail = p.user_email || p.email || userEmail;
+      if (resolvedName && resolvedName !== 'undefined') setUserName(resolvedName);
+      if (resolvedEmail && resolvedEmail !== 'undefined') setUserEmail(resolvedEmail);
+      setAuthUser({ name: resolvedName, email: resolvedEmail, role: 'wholesaler', id: userId });
+    }
+  }, [profileResponse, userId]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedName = localStorage.getItem('user_name');
-      const storedEmail = localStorage.getItem('user_email');
+      const auth = getAuthUser();
+      if (auth.name && auth.name !== 'undefined') setUserName(auth.name);
+      if (auth.email && auth.email !== 'undefined') setUserEmail(auth.email);
+      if (auth.id && auth.id !== 'undefined') setUserId(auth.id);
+
       const storedPending = parseInt(localStorage.getItem('wholesaler_pending_orders')) || 0;
       const storedCustomers = parseInt(localStorage.getItem('wholesaler_customers_count')) || 0;
-
-      if (storedName) setUserName(storedName);
-      if (storedEmail) setUserEmail(storedEmail);
       if (storedPending) setPendingOrdersCount(storedPending);
       if (storedCustomers) setCustomersCount(storedCustomers);
+
+      const handleAuthUpdate = (e) => {
+        const detail = e?.detail || getAuthUser();
+        if (detail.name && detail.name !== 'undefined') setUserName(detail.name);
+        if (detail.email && detail.email !== 'undefined') setUserEmail(detail.email);
+        if (detail.id && detail.id !== 'undefined') setUserId(detail.id);
+      };
+
+      window.addEventListener('velqino:auth-user-updated', handleAuthUpdate);
+      return () => window.removeEventListener('velqino:auth-user-updated', handleAuthUpdate);
     }
   }, []);
+
+  const displayName = useMemo(() => {
+    if (userName && userName !== 'undefined' && userName !== 'null') return userName;
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail.split('@')[0];
+    return 'Wholesale Merchant';
+  }, [userName, userEmail]);
+
+  const displayEmail = useMemo(() => {
+    if (userEmail && userEmail !== 'undefined' && userEmail !== 'null') return userEmail;
+    return '';
+  }, [userEmail]);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -373,8 +422,8 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
                     <User size={18} />
                   </div>
                   <div className="hidden lg:block text-left max-w-[130px]">
-                    <p className="text-xs font-bold text-slate-900 truncate">{userName}</p>
-                    <p className="text-2xs text-slate-400 font-medium truncate">{userEmail}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate">{displayName}</p>
+                    <p className="text-2xs text-slate-400 font-medium truncate">{displayEmail}</p>
                   </div>
                   <ChevronDown size={14} className={`hidden lg:block text-slate-400 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -383,8 +432,8 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 top-12 lg:top-14 w-60 bg-white border border-slate-200/80 rounded-2xl shadow-xl py-2 z-50 animate-scale-up">
                     <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="text-xs font-bold text-slate-900 truncate">{userName}</p>
-                      <p className="text-2xs text-slate-400 font-medium truncate">{userEmail}</p>
+                      <p className="text-xs font-bold text-slate-900 truncate">{displayName}</p>
+                      <p className="text-2xs text-slate-400 font-medium truncate">{displayEmail}</p>
                     </div>
                     
                     <Link
@@ -579,8 +628,8 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
                 <User size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-900 truncate">{userName}</p>
-                <p className="text-2xs text-slate-500 truncate">{userEmail}</p>
+                <p className="text-xs font-bold text-slate-900 truncate">{displayName}</p>
+                <p className="text-2xs text-slate-500 truncate">{displayEmail}</p>
               </div>
             </div>
 
