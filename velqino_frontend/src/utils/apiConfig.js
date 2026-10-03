@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessToken, getRefreshToken, setAuthTokens, clearAuthTokens } from './cookieUtils';
 
 //const BASE_URL = 'http://localhost:8000/api/';
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/` : 'http://localhost:8000/api/';
@@ -36,8 +37,8 @@ API.interceptors.request.use(
             console.log('❌ [ERROR] No session_id available');
         }
         
-        // Add auth token if user is logged in
-        const token = localStorage.getItem('access');
+        // Add auth token if user is logged in (from cookies)
+        const token = getAccessToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -63,22 +64,24 @@ API.interceptors.response.use(
             originalRequest._retry = true;
             
             try {
-                const refreshToken = localStorage.getItem('refresh');
+                const refreshToken = getRefreshToken();
                 if (refreshToken) {
                     const response = await axios.post(`${BASE_URL}token/refresh/`, {
                         refresh: refreshToken
                     });
                     
                     if (response.data.access) {
-                        localStorage.setItem('access', response.data.access);
+                        setAuthTokens({
+                            access: response.data.access,
+                            refresh: response.data.refresh || refreshToken
+                        });
                         originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
                        
                         return API(originalRequest);
                     }
                 }
             } catch (refreshError) {
-                localStorage.removeItem('access');
-                localStorage.removeItem('refresh');
+                clearAuthTokens();
                 if (typeof window !== 'undefined') {
                     window.location.href = '/';
                 }

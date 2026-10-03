@@ -26,6 +26,7 @@ import RetailerLoginModal from "./RetailerLoginModal";
 import CustomerLoginModal from "./CustomerLoginModal";
 import { useGetCartQuery } from '@/redux/wholesaler/slices/cartSlice';
 import { toast } from 'react-toastify';
+import { getAccessToken, clearAuthTokens } from '@/utils/cookieUtils';
 import '../../styles/common/Navbar.scss';
 
 export default function Navbar() {
@@ -64,7 +65,7 @@ export default function Navbar() {
 
   useEffect(() => {
     setMounted(true);
-    const token = localStorage.getItem('access');
+    const token = getAccessToken();
     const role = localStorage.getItem('user_role');
     const name = localStorage.getItem('user_name');
     if (token && role) {
@@ -113,7 +114,7 @@ export default function Navbar() {
 
   const handleDashboardNavigation = useMemo(() => {
     return () => {
-      const token = localStorage.getItem('access');
+      const token = getAccessToken();
       const role = localStorage.getItem('user_role');
       
       if (!token || !role) {
@@ -143,8 +144,7 @@ export default function Navbar() {
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
+    clearAuthTokens();
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
     localStorage.removeItem('user_id');
@@ -186,7 +186,7 @@ export default function Navbar() {
   };
 
   const handleRoleLogin = (role) => {
-    const token = localStorage.getItem('access');
+    const token = getAccessToken();
     const userRoleCurrent = localStorage.getItem('user_role');
     
     if (token && userRoleCurrent === role) {

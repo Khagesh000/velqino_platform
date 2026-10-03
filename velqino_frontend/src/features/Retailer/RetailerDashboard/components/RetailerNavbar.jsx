@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link'
 import { ChevronDown, Bell, User, HelpCircle, Search, Menu, X, Home, 
          Package, Grid, BarChart3, ShoppingBag, Heart, Settings, PlusCircle,
-         ShoppingCart, Users, Box, Wallet, Truck, Star    } from '../../../../utils/icons';
+         ShoppingCart, Users, Box, Wallet, Truck, Star, LogOut } from '../../../../utils/icons';
+import { clearAuthTokens } from '@/utils/cookieUtils';
 import '../../../../styles/Retailer/RetailerDashboard/RetailerNavbar.scss'
 
 
@@ -20,6 +21,20 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
   const profileDropdownRef = useRef(null)
   const notificationsRef = useRef(null)
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    try {
+      clearAuthTokens();
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('is_retailer_registered');
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    router.push('/');
+  };
 
   // Handle click outside for dropdowns
   useEffect(() => {
@@ -234,8 +249,12 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
                     
                     <div className="border-t border-gray-100 my-2"></div>
                     
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-all">
-                      <span className="text-sm">Sign Out</span>
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                    >
+                      <LogOut size={18} />
+                      <span className="text-sm font-medium">Sign Out</span>
                     </button>
                   </div>
                 )}
@@ -391,6 +410,19 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
           <HelpCircle size={18} className={`${isActive('/retailer/retailersupport') ? 'text-primary-600' : 'text-gray-500'}`} />
           <span className="text-sm font-medium">Support</span>
         </Link>
+
+        <div className="pt-2 border-t border-gray-100 mt-2">
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleLogout();
+            }}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+          >
+            <LogOut size={18} />
+            <span className="text-sm font-medium">Sign Out</span>
+          </button>
+        </div>
       </nav>
     </div>
   </aside>

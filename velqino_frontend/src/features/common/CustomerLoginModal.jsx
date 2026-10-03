@@ -26,6 +26,7 @@ import {
   useMergeCartMutation
 } from '../../redux/customer/slices/customerSlice';
 import { toast } from 'react-toastify';
+import { setAuthTokens } from '@/utils/cookieUtils';
 
 export default function CustomerLoginModal({ isOpen, onClose, onLogin, initialMode = 'login' }) {
   const router = useRouter();
@@ -315,9 +316,8 @@ export default function CustomerLoginModal({ isOpen, onClose, onLogin, initialMo
         password: loginForm.password
       }).unwrap();
 
-      // Store tokens and user info
-      localStorage.setItem('access', response.access);
-      localStorage.setItem('refresh', response.refresh);
+      // Store tokens securely in cookies
+      setAuthTokens({ access: response.access, refresh: response.refresh });
       localStorage.setItem('user_role', 'customer');
       
       const userName = response.data?.full_name || response.data?.username || loginForm.email.split('@')[0];
@@ -380,8 +380,7 @@ export default function CustomerLoginModal({ isOpen, onClose, onLogin, initialMo
 
       // Auto login if access token returned
       if (response.access) {
-        localStorage.setItem('access', response.access);
-        localStorage.setItem('refresh', response.refresh);
+        setAuthTokens({ access: response.access, refresh: response.refresh });
         localStorage.setItem('user_role', 'customer');
 
         const userName = response.data?.full_name || response.data?.username || registerForm.username;

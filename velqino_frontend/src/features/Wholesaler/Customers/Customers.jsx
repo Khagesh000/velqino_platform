@@ -4,6 +4,7 @@ import React, { useState, useMemo, lazy, Suspense, useRef, useEffect } from 'rea
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar';
 import { useGetOrdersQuery } from '@/redux/wholesaler/slices/ordersSlice';
 import { useListRetailersQuery } from '@/redux/retailer/slices/retailerSlice';
+import { getAccessToken } from '@/utils/cookieUtils';
 import { 
   Users, 
   CheckCircle, 
@@ -351,7 +352,7 @@ export default function Customers() {
     try {
       const response = await fetch('/api/identity/retailers/import/', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
         body: formData
       });
       if (response.ok) {

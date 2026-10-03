@@ -24,6 +24,7 @@ import {
 } from '../../utils/icons';
 import { toast } from 'react-toastify';
 import CustomerLoginModal from './CustomerLoginModal';
+import { setAuthTokens } from '@/utils/cookieUtils';
 
 export default function CustomerRegistration() {
   const router = useRouter();
@@ -231,8 +232,7 @@ export default function CustomerRegistration() {
 
       // Auto login if access token returned
       if (response.access) {
-        localStorage.setItem('access', response.access);
-        localStorage.setItem('refresh', response.refresh);
+        setAuthTokens({ access: response.access, refresh: response.refresh });
         localStorage.setItem('user_role', 'customer');
 
         const userName = response.data?.full_name || response.data?.username || formData.username;

@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useLoginWholesalerMutation } from '@/redux/wholesaler/slices/wholesalerSlice';
 import API from '@/utils/apiConfig';
+import { setAuthTokens } from '@/utils/cookieUtils';
 
 export default function WholesalerLoginModal({ isOpen, onClose, onLogin, initialMode = 'login' }) {
   const router = useRouter();
@@ -134,9 +135,8 @@ export default function WholesalerLoginModal({ isOpen, onClose, onLogin, initial
         password: formData.password
       }).unwrap();
 
-      // Store tokens and wholesaler identification
-      localStorage.setItem('access', response.access);
-      localStorage.setItem('refresh', response.refresh);
+      // Store tokens securely in cookies
+      setAuthTokens({ access: response.access, refresh: response.refresh });
       localStorage.setItem('user_role', 'wholesaler');
       
       const userName = response.data?.business_name || response.data?.user?.username || formData.email.split('@')[0];

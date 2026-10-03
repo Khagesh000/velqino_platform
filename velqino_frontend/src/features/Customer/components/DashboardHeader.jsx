@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, Search, Menu, X, LogOut } from '../../../utils/icons';
 import { toast } from 'react-toastify';
+import { clearAuthTokens } from '@/utils/cookieUtils';
 
 export default function DashboardHeader({ isMobileMenuOpen, setIsMobileMenuOpen }) {
   const router = useRouter();
@@ -28,8 +29,7 @@ export default function DashboardHeader({ isMobileMenuOpen, setIsMobileMenuOpen 
   }, []);
   
   const handleLogout = () => {
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
+    clearAuthTokens();
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
     toast.success('Logged out successfully');

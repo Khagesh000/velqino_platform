@@ -6,6 +6,7 @@ import API from '../../utils/apiConfig';
 import { Lock, Eye, EyeOff, Loader2 } from '../../utils/icons';
 import { toast } from 'react-toastify';
 import { useChangePasswordMutation } from '@/redux/customer/slices/customerSlice';
+import { clearAuthTokens } from '@/utils/cookieUtils';
 export default function ChangePassword() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -40,6 +41,7 @@ export default function ChangePassword() {
       
       toast.success('Password changed! Please login again');
       setTimeout(() => {
+        clearAuthTokens();
         localStorage.clear();
         router.push('/login');
       }, 2000);

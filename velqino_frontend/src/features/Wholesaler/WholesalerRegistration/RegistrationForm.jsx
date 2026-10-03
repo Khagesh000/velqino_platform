@@ -29,6 +29,7 @@ import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import WholesalerLoginModal from '@/features/common/WholesalerLoginModal';
+import { setAuthTokens } from '@/utils/cookieUtils';
 
 const availableCategories = [
   "Men's Clothing", "Women's Clothing", "Kids Wear", "Footwear",
@@ -259,8 +260,7 @@ function RegistrationFormContent() {
       };
 
       const response = await registerWholesaler(payload).unwrap();
-      localStorage.setItem('access', response.access);
-      localStorage.setItem('refresh', response.refresh);
+      setAuthTokens({ access: response.access, refresh: response.refresh });
       localStorage.setItem('user_role', 'wholesaler');
       localStorage.setItem('user_name', response.data?.business_name || formData.business_name);
       localStorage.setItem('user_id', response.user_id || response.data?.user?.id || response.data?.id);

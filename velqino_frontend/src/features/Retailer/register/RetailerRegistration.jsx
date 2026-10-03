@@ -22,6 +22,7 @@ import {
   UserPlus
 } from '@/utils/icons';
 import RetailerLoginModal from '@/features/common/RetailerLoginModal';
+import { setAuthTokens } from '@/utils/cookieUtils';
 import { toast } from 'react-toastify';
 
 const INDIAN_STATES = [
@@ -200,8 +201,7 @@ export default function RetailerRegistration() {
       const response = await registerRetailer(payload).unwrap();
 
       if (response.access) {
-        localStorage.setItem('access', response.access);
-        localStorage.setItem('refresh', response.refresh);
+        setAuthTokens({ access: response.access, refresh: response.refresh });
         localStorage.setItem('user_role', 'retailer');
         localStorage.setItem('user_name', formData.business_name.trim());
         localStorage.setItem('user_id', response.user_id || response.data?.id);

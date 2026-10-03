@@ -3,6 +3,7 @@
 import React, { useState, lazy, Suspense, useEffect } from 'react';
 import WholesaleNavbar from '../WholesalerDashboard/components/WholesaleNavbar';
 import { useFetchProfileQuery } from '@/redux/wholesaler/slices/wholesalerSlice';
+import { getAccessToken } from '@/utils/cookieUtils';
 import { 
   Settings as SettingsIcon,
   Building,
@@ -59,7 +60,7 @@ export default function Settings() {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('access');
+    const token = getAccessToken();
     if (token) {
       try {
         const base64Payload = token.split('.')[1];

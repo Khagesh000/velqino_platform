@@ -19,6 +19,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useLoginRetailerMutation } from '@/redux/retailer/slices/retailerSlice';
 import API from '@/utils/apiConfig';
+import { setAuthTokens } from '@/utils/cookieUtils';
 import { toast } from 'react-toastify';
 
 export default function RetailerLoginModal({ isOpen, onClose, onLogin, initialMode = 'login' }) {
@@ -128,9 +129,8 @@ export default function RetailerLoginModal({ isOpen, onClose, onLogin, initialMo
         password: formData.password
       }).unwrap();
 
-      // Store tokens and retailer profile
-      localStorage.setItem('access', response.access);
-      localStorage.setItem('refresh', response.refresh);
+      // Store tokens securely in cookies
+      setAuthTokens({ access: response.access, refresh: response.refresh });
       localStorage.setItem('user_role', 'retailer');
       
       const businessName = response.data?.business_name || response.data?.user?.username || formData.email.split('@')[0];

@@ -2,11 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, ShoppingBag, Heart, MapPin, User, Settings, Package, LogOut } from '../../../utils/icons';
+import { clearAuthTokens } from '@/utils/cookieUtils';
 
 export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
   const pathname = usePathname();
+  const router = useRouter();
   
   const navItems = [
     { icon: <Home size={18} />, label: 'Dashboard', href: '/customer/dashboard' },
@@ -23,14 +25,13 @@ export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
   `;
 
   const handleLogout = () => {
-  localStorage.removeItem('access');
-  localStorage.removeItem('refresh');
-  localStorage.removeItem('user_role');
-  localStorage.removeItem('user_name');
-  localStorage.removeItem('user_id');
-  router.push('/');
-  if (onClose) onClose();
-};
+    clearAuthTokens();
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_id');
+    router.push('/');
+    if (onClose) onClose();
+  };
   
   return (
     <aside className={sidebarClasses}>

@@ -31,6 +31,7 @@ import '../../../../styles/Wholesaler/WholesalerDashboard/WholesaleNavbar.scss'
 import ImportImagesModal from '../../ProductsCatalog/Modals/ImportImagesModal';
 import ImportModal from '../../ProductsCatalog/Modals/ImportModal';
 import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
+import { clearAuthTokens } from '@/utils/cookieUtils';
 
 export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollapsed }) {
   const router = useRouter();
@@ -143,20 +144,16 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
   // Unified Logout action
   const handleLogout = useCallback(() => {
     try {
-      localStorage.removeItem('access');
-      localStorage.removeItem('refresh');
+      // Clear all authentication cookies & purge sensitive tokens
+      clearAuthTokens();
+
       localStorage.removeItem('user_role');
       localStorage.removeItem('user_name');
       localStorage.removeItem('user_id');
       localStorage.removeItem('user_email');
-      localStorage.removeItem('token');
       localStorage.removeItem('wholesaler_id');
       localStorage.removeItem('wholesaler_pending_orders');
       localStorage.removeItem('wholesaler_customers_count');
-
-      // Clear authentication cookies
-      document.cookie = 'access=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'refresh=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     } catch (err) {
       console.error('Logout error:', err);
     }

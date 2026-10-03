@@ -14,6 +14,7 @@ import {
   FileText
 } from '@/utils/icons';
 import { toast } from 'react-toastify';
+import { getAccessToken } from '@/utils/cookieUtils';
 
 export default function OrderConfirmation({ 
   currentStep, 
@@ -30,7 +31,7 @@ export default function OrderConfirmation({
   if (currentStep !== 3) return null;
 
   const handlePlaceOrderClick = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access') : null;
+    const token = getAccessToken();
     const userRole = typeof window !== 'undefined' ? localStorage.getItem('user_role') : null;
     
     if (!token) {
