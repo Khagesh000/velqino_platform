@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Filter, Calendar, X, Check } from '../../../../../utils/icons';
+import { Filter, Calendar, X, Check, RotateCcw } from '../../../../../utils/icons';
 
 export default function StockAlertsFilter({ onApply, onClose, isOpen }) {
   const [startDate, setStartDate] = useState('');
@@ -27,10 +27,10 @@ export default function StockAlertsFilter({ onApply, onClose, isOpen }) {
 
   const handleApply = () => {
     onApply({
-      startDate,
-      endDate,
-      month: selectedMonth,
-      year: selectedYear,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      month: selectedMonth || undefined,
+      year: selectedYear || undefined,
       alertType
     });
     onClose();
@@ -49,122 +49,141 @@ export default function StockAlertsFilter({ onApply, onClose, isOpen }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <Filter size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Filter Stock Alerts</h3>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Filter size={16} />
+            </span>
+            <h3 className="text-sm sm:text-base font-bold text-gray-900">Filter Stock Alerts</h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-all">
-            <X size={18} className="text-gray-400" />
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={16} />
           </button>
         </div>
 
-        {/* Filter Content */}
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        {/* Content */}
+        <div className="p-4 sm:p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Alert Type */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Alert Type</label>
-            <div className="flex gap-2">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Alert Severity</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-gray-50 p-1 rounded-2xl border border-gray-200 text-xs">
               <button
+                type="button"
                 onClick={() => setAlertType('all')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${alertType === 'all' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  alertType === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                }`}
               >
                 All
               </button>
               <button
+                type="button"
                 onClick={() => setAlertType('critical')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${alertType === 'critical' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  alertType === 'critical' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-700 hover:bg-rose-50'
+                }`}
               >
                 Critical
               </button>
               <button
+                type="button"
                 onClick={() => setAlertType('warning')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${alertType === 'warning' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  alertType === 'warning' ? 'bg-amber-600 text-white shadow-2xs' : 'text-amber-700 hover:bg-amber-50'
+                }`}
               >
                 Warning
               </button>
               <button
+                type="button"
                 onClick={() => setAlertType('out')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${alertType === 'out' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  alertType === 'out' ? 'bg-gray-800 text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-100'
+                }`}
               >
-                Out of Stock
+                Out
               </button>
             </div>
           </div>
 
           {/* Date Range */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Date Range</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Date Span</label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-gray-500">Start Date</label>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">From</span>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-500">End Date</label>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">To</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
                 />
               </div>
             </div>
           </div>
 
-          {/* Month & Year */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">Month</label>
+          {/* Month / Year */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Month & Year Filter</label>
+            <div className="grid grid-cols-2 gap-3">
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
               >
-                <option value="">All Months</option>
-                {months.map(month => (
-                  <option key={month.value} value={month.value}>{month.label}</option>
+                <option value="">Any Month</option>
+                {months.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">Year</label>
+
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
               >
-                <option value="">All Years</option>
-                {years.map(year => (
-                  <option key={year.value} value={year.value}>{year.label}</option>
+                <option value="">Any Year</option>
+                {years.map(y => (
+                  <option key={y.value} value={y.value}>{y.label}</option>
                 ))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 p-4 border-t border-gray-100">
-          <button
-            onClick={handleReset}
-            className="flex-1 px-3 py-2 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+        {/* Footer Actions */}
+        <div className="flex items-center gap-2.5 p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50">
+          <button 
+            type="button"
+            onClick={handleReset} 
+            className="flex-1 py-2 text-xs font-bold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5"
           >
-            Reset
+            <RotateCcw size={12} />
+            <span>Reset</span>
           </button>
-          <button
-            onClick={handleApply}
-            className="flex-1 px-3 py-2 text-xs font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-all flex items-center justify-center gap-1"
+          <button 
+            type="button"
+            onClick={handleApply} 
+            className="flex-1 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all shadow-2xs flex items-center justify-center gap-1.5 active:scale-95"
           >
             <Check size={14} />
-            Apply Filters
+            <span>Apply Filters</span>
           </button>
         </div>
       </div>

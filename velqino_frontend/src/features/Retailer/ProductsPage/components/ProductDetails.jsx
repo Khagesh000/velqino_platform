@@ -1,225 +1,264 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { Package, TrendingUp, Truck, MapPin, AlertCircle, DollarSign, Percent, RefreshCw, Edit, Save, X } from '../../../../utils/icons';
+import { 
+  Package, 
+  TrendingUp, 
+  Truck, 
+  AlertCircle, 
+  DollarSign, 
+  Percent, 
+  Edit, 
+  Save, 
+  X, 
+  Tag, 
+  CheckCircle,
+  Copy,
+  Printer
+} from '../../../../utils/icons';
 import { useUpdateRetailerProductMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
-export default function ProductDetails({ selectedProduct, onUpdate }) {
-  const [mounted, setMounted] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProduct, setEditedProduct] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [updateProduct] = useUpdateRetailerProductMutation();
+export default function ProductDetails({ selectedProduct, onClear, onEditProduct, onUpdate }) {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [copiedSku, setCopiedSku] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (selectedProduct) {
-      setEditedProduct(selectedProduct);
-      setIsEditing(false);
-    }
+    setActiveImageIndex(0);
   }, [selectedProduct]);
-
-  if (!mounted) return null;
 
   if (!selectedProduct) {
     return (
-      <div className="product-details bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <Package size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-sm text-gray-500">Select a product to view details</p>
-          <p className="text-xs text-gray-400 mt-1">Click on any product from the grid</p>
+      <div 
+        id="product-details-section"
+        className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-2xs h-full flex flex-col items-center justify-center text-center"
+      >
+        <div className="w-14 h-14 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-3 shadow-2xs">
+          <Package size={26} />
         </div>
+        <h4 className="text-sm sm:text-base font-bold text-gray-900">Product Inspector</h4>
+        <p className="text-xs text-gray-400 mt-1 max-w-xs">
+          Select any product from the catalog grid above to examine high-resolution images, profit margins, SKU metadata, and stock levels.
+        </p>
       </div>
     );
   }
 
-  // Get image URL
-  const getImageUrl = () => {
-    return selectedProduct?.primary_image || selectedProduct?.images?.[0]?.image || null;
-  };
+  // Extract images
+  const allImages = [];
+  if (selectedProduct.primary_image) allImages.push(selectedProduct.primary_image);
+  if (Array.isArray(selectedProduct.images)) {
+    selectedProduct.images.forEach(img => {
+      const url = typeof img === 'string' ? img : img.image || img.image_url;
+      if (url && !allImages.includes(url)) allImages.push(url);
+    });
+  }
+  if (allImages.length === 0 && selectedProduct.image) allImages.push(selectedProduct.image);
 
-  // Calculate margin
-  const price = parseFloat(selectedProduct?.display_price || selectedProduct?.price || 0);
-  const cost = parseFloat(selectedProduct?.cost || 0);
-  const margin = cost > 0 ? ((price - cost) / price) * 100 : 0;
-  const isLowStock = selectedProduct?.stock <= selectedProduct?.threshold;
+  const activeImage = allImages[activeImageIndex] || allImages[0] || null;
 
-  const handleSave = async () => {
-    if (!editedProduct) return;
-    
-    setIsSaving(true);
-    try {
-      const formData = new FormData();
-      formData.append('price', editedProduct.price);
-      formData.append('cost', editedProduct.cost || 0);
-      formData.append('stock', editedProduct.stock);
-      formData.append('threshold', editedProduct.threshold);
-      formData.append('brand', editedProduct.brand || '');
-      formData.append('description', editedProduct.description || '');
-      
-      await updateProduct({ productId: editedProduct.id, data: formData }).unwrap();
-      toast.success('Product updated successfully');
-      if (onUpdate) onUpdate(editedProduct);
-      setIsEditing(false);
-    } catch (error) {
-      toast.error('Failed to update product');
-      console.error(error);
-    } finally {
-      setIsSaving(false);
+  // Pricing & Margins
+  const price = Number(selectedProduct.display_price ?? selectedProduct.price ?? 0);
+  const cost = Number(selectedProduct.cost || 0);
+  const margin = cost > 0 && price > 0 ? Math.round(((price - cost) / price) * 100) : 0;
+  const isOutOfStock = Number(selectedProduct.stock || 0) <= 0;
+  const isLowStock = Number(selectedProduct.stock || 0) <= (selectedProduct.threshold || 10);
+
+  const copySkuToClipboard = () => {
+    if (selectedProduct.sku) {
+      navigator.clipboard.writeText(selectedProduct.sku);
+      setCopiedSku(true);
+      setTimeout(() => setCopiedSku(false), 1500);
     }
   };
 
-  const handleCancel = () => {
-    setEditedProduct(selectedProduct);
-    setIsEditing(false);
-  };
-
-  const InfoRow = ({ label, value, icon, highlight, fieldName }) => (
-    <div className={`flex items-center justify-between py-2 border-b border-gray-100 last:border-0 ${highlight ? 'bg-red-50 -mx-2 px-2 rounded-lg' : ''}`}>
-      <div className="flex items-center gap-2">
-        {icon}
-        <span className="text-xs text-gray-500">{label}</span>
-      </div>
-      {isEditing && fieldName ? (
-        <input
-          type="number"
-          value={editedProduct?.[fieldName] || ''}
-          onChange={(e) => setEditedProduct({ ...editedProduct, [fieldName]: parseFloat(e.target.value) || 0 })}
-          className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg text-right focus:outline-none focus:border-primary-500"
-        />
-      ) : (
-        <span className={`text-sm font-medium ${highlight ? 'text-red-600' : 'text-gray-900'}`}>
-          {value}
-        </span>
-      )}
-    </div>
-  );
-
   return (
-    <div className="product-details bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+    <div 
+      id="product-details-section" 
+      className="bg-white rounded-3xl border-2 border-primary-300/80 p-5 sm:p-6 shadow-md transition-all duration-300 relative animate-fadeIn flex flex-col justify-between"
+    >
+      <div>
+        {/* Header Bar */}
+        <div className="flex items-center justify-between pb-3.5 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
-            <Package size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Product Details</h3>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Package size={17} />
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                Product Details
+              </h3>
+              <p className="text-[11px] text-gray-400">Inventory item inspection</p>
+            </div>
           </div>
-          <div className="flex gap-1">
-            {isEditing ? (
-              <>
-                <button onClick={handleCancel} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all">
-                  <X size={14} />
-                </button>
-                <button onClick={handleSave} disabled={isSaving} className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-all">
-                  {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setIsEditing(true)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all">
-                <Edit size={14} />
+
+          <div className="flex items-center gap-1.5">
+            {onEditProduct && (
+              <button
+                type="button"
+                onClick={() => onEditProduct(selectedProduct)}
+                className="px-2.5 py-1 rounded-xl bg-primary-50 text-primary-700 hover:bg-primary-100 font-bold text-xs flex items-center gap-1 transition-colors"
+              >
+                <Edit size={12} />
+                <span>Edit</span>
+              </button>
+            )}
+
+            {onClear && (
+              <button
+                type="button"
+                onClick={onClear}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Close Details"
+              >
+                <X size={17} />
               </button>
             )}
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Complete product information</p>
-      </div>
 
-      {/* Product Basic Info */}
-      <div className="p-4 border-b border-gray-100 bg-gray-50">
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
-            {getImageUrl() ? (
-              <img src={getImageUrl()} alt={selectedProduct.name} className="w-full h-full object-cover" />
+        {/* Product Media Gallery */}
+        <div className="mb-4">
+          <div className="relative w-full h-48 sm:h-56 rounded-2xl bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
+            {activeImage ? (
+              <img 
+                src={activeImage} 
+                alt={selectedProduct.name} 
+                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentNode.classList.add('flex', 'items-center', 'justify-center');
+                }}
+              />
             ) : (
-              <Package size={24} className="text-gray-400" />
+              <Package size={40} className="text-gray-400" />
             )}
+
+            {/* Stock Status Badge */}
+            <span className={`
+              absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs backdrop-blur-xs
+              ${isOutOfStock 
+                ? 'bg-rose-100/90 text-rose-800 border border-rose-200' 
+                : isLowStock 
+                  ? 'bg-amber-100/90 text-amber-800 border border-amber-200' 
+                  : 'bg-emerald-100/90 text-emerald-800 border border-emerald-200'
+              }
+            `}>
+              {isOutOfStock ? 'Out of Stock (0 units)' : `${selectedProduct.stock} units available`}
+            </span>
           </div>
-          <div className="flex-1">
-            <h4 className="text-base font-bold text-gray-900">{selectedProduct.name}</h4>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500">SKU: {selectedProduct.sku}</span>
+
+          {/* Thumbnail Strip */}
+          {allImages.length > 1 && (
+            <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
+              {allImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={`
+                    w-12 h-12 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all
+                    ${activeImageIndex === idx ? 'border-primary-600 scale-105 shadow-2xs' : 'border-gray-200 opacity-70 hover:opacity-100'}
+                  `}
+                >
+                  <img src={img} alt="thumb" className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
+          )}
+        </div>
+
+        {/* Product Identifiers */}
+        <div className="space-y-1 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary-100 text-primary-800">
+              {selectedProduct.category_name || selectedProduct.category || 'General'}
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+              {selectedProduct.status || 'Active'}
+            </span>
+          </div>
+
+          <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight mt-1">
+            {selectedProduct.name}
+          </h2>
+
+          <div className="flex items-center gap-2 text-xs text-gray-400 font-mono">
+            <span>SKU: {selectedProduct.sku}</span>
+            <button
+              type="button"
+              onClick={copySkuToClipboard}
+              className="text-gray-400 hover:text-gray-700 p-0.5"
+              title="Copy SKU"
+            >
+              {copiedSku ? <CheckCircle size={12} className="text-emerald-600" /> : <Copy size={12} />}
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Pricing Section */}
-      <div className="p-4 border-b border-gray-100">
-        <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <DollarSign size={12} />
-          Pricing
-        </h5>
-        <div className="space-y-1">
-          <InfoRow label="Price" value={`₹${price.toLocaleString()}`} icon={<DollarSign size={12} className="text-gray-400" />} fieldName="price" />
-          <InfoRow label="Cost" value={`₹${cost.toLocaleString()}`} icon={<DollarSign size={12} className="text-gray-400" />} fieldName="cost" />
-          <InfoRow 
-            label="Margin" 
-            value={`${margin.toFixed(1)}%`} 
-            icon={<Percent size={12} className="text-gray-400" />}
-            highlight={margin < 25}
-          />
+        {/* Pricing & Margins Grid */}
+        <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-gray-50 border border-gray-100 mb-4 text-center">
+          <div>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block">Selling Price</span>
+            <span className="text-sm sm:text-base font-black text-gray-900 mt-0.5 block">
+              ₹{price.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block">Unit Cost</span>
+            <span className="text-sm sm:text-base font-bold text-gray-600 mt-0.5 block">
+              ₹{cost > 0 ? cost.toLocaleString('en-IN') : '—'}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block">Gross Margin</span>
+            <span className={`text-sm sm:text-base font-black mt-0.5 block ${margin > 20 ? 'text-emerald-600' : 'text-primary-700'}`}>
+              {margin > 0 ? `${margin}%` : 'Standard'}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Inventory Section */}
-      <div className="p-4 border-b border-gray-100">
-        <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Package size={12} />
-          Inventory
-        </h5>
-        <div className="space-y-1">
-          <InfoRow 
-            label="Current Stock" 
-            value={`${selectedProduct.stock} units`} 
-            icon={<Package size={12} className="text-gray-400" />}
-            highlight={isLowStock}
-            fieldName="stock"
-          />
-          <InfoRow label="Reorder Level" value={`${selectedProduct.threshold || 10} units`} icon={<AlertCircle size={12} className="text-gray-400" />} fieldName="threshold" />
-          
-          {selectedProduct.stock <= (selectedProduct.threshold || 10) && (
-            <div className="mt-2 p-2 bg-orange-50 rounded-lg">
-              <div className="flex items-center gap-2 text-xs text-orange-700">
-                <AlertCircle size={12} />
-                <span>Reorder recommended: {(selectedProduct.threshold || 10) - selectedProduct.stock} units</span>
-              </div>
+        {/* Stock Metrics */}
+        <div className="space-y-2 text-xs border-t border-gray-100 pt-3">
+          <div className="flex justify-between items-center text-gray-600">
+            <span>Inventory Stock</span>
+            <span className="font-bold text-gray-900">{selectedProduct.stock || 0} pcs</span>
+          </div>
+          <div className="flex justify-between items-center text-gray-500">
+            <span>Reorder Level</span>
+            <span className="font-semibold text-gray-700">{selectedProduct.threshold || 10} pcs</span>
+          </div>
+          {selectedProduct.brand && (
+            <div className="flex justify-between items-center text-gray-500">
+              <span>Brand</span>
+              <span className="font-semibold text-gray-700">{selectedProduct.brand}</span>
+            </div>
+          )}
+          {selectedProduct.description && (
+            <div className="pt-2 text-gray-500">
+              <span className="font-semibold text-gray-700 block mb-0.5">Description:</span>
+              <p className="text-[11px] leading-relaxed text-gray-600 line-clamp-3">
+                {selectedProduct.description}
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Supplier & Location */}
-      <div className="p-4 border-b border-gray-100">
-        <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Truck size={12} />
-          Supplier & Location
-        </h5>
-        <div className="space-y-1">
-          <InfoRow label="Supplier" value={selectedProduct.brand || 'Not specified'} icon={<Truck size={12} className="text-gray-400" />} />
-          <InfoRow label="Category" value={selectedProduct.category_name || 'Not specified'} icon={<MapPin size={12} className="text-gray-400" />} />
-        </div>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="p-4">
-        <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <TrendingUp size={12} />
-          Performance
-        </h5>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-50 rounded-lg p-2 text-center">
-            <p className="text-[10px] text-gray-500">Total Stock</p>
-            <p className="text-sm font-bold text-gray-900">{selectedProduct.stock} units</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-2 text-center">
-            <p className="text-[10px] text-gray-500">Min Order Qty</p>
-            <p className="text-sm font-bold text-gray-900">{selectedProduct.min_order_qty || 1} units</p>
-          </div>
-        </div>
+      {/* Action Footer */}
+      <div className="pt-4 border-t border-gray-100 mt-4 flex items-center gap-2">
+        {onEditProduct && (
+          <button
+            type="button"
+            onClick={() => onEditProduct(selectedProduct)}
+            className="flex-1 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+          >
+            <Edit size={14} />
+            <span>Edit Product</span>
+          </button>
+        )}
       </div>
     </div>
   );

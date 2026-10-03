@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Download, Calendar, FileSpreadsheet, FileText, CheckCircle, AlertCircle, Package, Filter } from '../../../../utils/icons';
+import { 
+  X, 
+  Download, 
+  Calendar, 
+  FileSpreadsheet, 
+  FileText, 
+  CheckCircle, 
+  AlertCircle, 
+  Package, 
+  Filter,
+  Sparkles
+} from '../../../../utils/icons';
 import { useExportProductsMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
 
@@ -13,7 +24,8 @@ export default function ExportProductsModal({ onClose, onExport, isOpen, totalPr
   const [endDate, setEndDate] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
-  const [exportProducts, { isLoading: isExporting }] = useExportProductsMutation();
+  const [exportProducts] = useExportProductsMutation();
+
   const [includeFields, setIncludeFields] = useState({
     id: true,
     name: true,
@@ -25,24 +37,16 @@ export default function ExportProductsModal({ onClose, onExport, isOpen, totalPr
     brand: true,
     description: false,
     created_at: true,
-    updated_at: false,
-    image_url: true,
     sizes: true
   });
 
   const months = [
-    { value: '1', label: 'January' },
-    { value: '2', label: 'February' },
-    { value: '3', label: 'March' },
-    { value: '4', label: 'April' },
-    { value: '5', label: 'May' },
-    { value: '6', label: 'June' },
-    { value: '7', label: 'July' },
-    { value: '8', label: 'August' },
-    { value: '9', label: 'September' },
-    { value: '10', label: 'October' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'December' }
+    { value: '1', label: 'January' }, { value: '2', label: 'February' },
+    { value: '3', label: 'March' }, { value: '4', label: 'April' },
+    { value: '5', label: 'May' }, { value: '6', label: 'June' },
+    { value: '7', label: 'July' }, { value: '8', label: 'August' },
+    { value: '9', label: 'September' }, { value: '10', label: 'October' },
+    { value: '11', label: 'November' }, { value: '12', label: 'December' }
   ];
 
   const years = [];
@@ -51,7 +55,6 @@ export default function ExportProductsModal({ onClose, onExport, isOpen, totalPr
     years.push({ value: i.toString(), label: i.toString() });
   }
 
-  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setExportFormat('csv');
@@ -91,333 +94,206 @@ export default function ExportProductsModal({ onClose, onExport, isOpen, totalPr
     return {};
   };
 
-    const handleExport = async () => {
-      setExporting(true);
-      try {
-          const params = {
-              format: exportFormat,
-              ...getDateFilterParams(),
-              fields: Object.keys(includeFields).filter(field => includeFields[field]).join(',')
-          };
-          
-          // ✅ Call the API mutation
-          const response = await exportProducts(params).unwrap();
-          
-          // Create download link if response contains file URL or blob
-          if (response?.data?.file_url) {
-              window.open(response.data.file_url, '_blank');
-          } else if (response?.data?.content) {
-              // If response contains base64 content
-              const link = document.createElement('a');
-              link.href = `data:application/${exportFormat === 'excel' ? 'vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'csv'};charset=utf-8,${encodeURIComponent(response.data.content)}`;
-              link.download = `products_export_${new Date().toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : 'csv'}`;
-              link.click();
-          }
-          
-          toast.success(`Products exported successfully as ${exportFormat.toUpperCase()}`);
-          setTimeout(() => onClose(), 1500);
-      } catch (error) {
-          toast.error(error?.data?.message || 'Failed to export products');
-          console.error(error);
-      } finally {
-          setExporting(false);
+  const handleExport = async (e) => {
+    e?.preventDefault();
+    setExporting(true);
+    try {
+      const params = {
+        format: exportFormat,
+        ...getDateFilterParams(),
+        fields: Object.keys(includeFields).filter(field => includeFields[field]).join(',')
+      };
+
+      if (onExport) {
+        await onExport(params);
+        onClose();
+      } else {
+        await exportProducts(params).unwrap();
+        toast.success(`Catalog exported in ${exportFormat.toUpperCase()} format`);
+        onClose();
       }
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to export catalog');
+    } finally {
+      setExporting(false);
+    }
   };
 
+  const toggleField = (field) => {
+    setIncludeFields(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="absolute inset-y-0 right-0 w-full max-w-md pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-        <div className="h-full bg-white rounded-l-2xl shadow-xl overflow-y-auto">
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                  <Download size={20} className="text-primary-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Export Products</h2>
-                  <p className="text-sm text-gray-500">Download your product data</p>
-                </div>
-              </div>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <X size={20} className="text-gray-500" />
-              </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col justify-between">
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center border border-primary-200/60 shadow-2xs">
+              <Download size={20} />
             </div>
-
-            {/* Total Products Info */}
-            <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Products:</span>
-                <span className="text-lg font-bold text-primary-600">{totalProducts}</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-gray-900">Export Catalog Data</h3>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-primary-100 text-primary-800">
+                  {totalProducts} Items
+                </span>
               </div>
+              <p className="text-xs text-gray-500">Generate spreadsheet reports for accounting or audit</p>
             </div>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-            {/* Export Format */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Export Format
-              </label>
-              <div className="flex gap-3">
+        {/* Content */}
+        <div className="p-5 sm:p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Format Picker */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Export Format</label>
+            <div className="grid grid-cols-3 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-200 text-xs">
+              {[
+                { id: 'csv', label: 'CSV Spreadsheet' },
+                { id: 'xlsx', label: 'Excel (.xlsx)' },
+                { id: 'pdf', label: 'PDF Report' }
+              ].map(fmt => (
                 <button
-                  onClick={() => setExportFormat('csv')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                    exportFormat === 'csv'
-                      ? 'bg-primary-500 border-primary-500 text-white'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-primary-400'
+                  key={fmt.id}
+                  type="button"
+                  onClick={() => setExportFormat(fmt.id)}
+                  className={`py-2 text-xs font-bold rounded-xl transition-all ${
+                    exportFormat === fmt.id 
+                      ? 'bg-white text-primary-900 shadow-2xs border border-gray-200/60' 
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  <FileSpreadsheet size={16} />
-                  CSV
+                  {fmt.label}
                 </button>
-                <button
-                  onClick={() => setExportFormat('excel')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                    exportFormat === 'excel'
-                      ? 'bg-primary-500 border-primary-500 text-white'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-primary-400'
-                  }`}
-                >
-                  <FileText size={16} />
-                  Excel
-                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date Filter */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Date Range</label>
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+            >
+              <option value="all">Entire Catalog (All Time)</option>
+              <option value="today">Today Only</option>
+              <option value="this_week">This Week</option>
+              <option value="this_month">This Month</option>
+              <option value="custom">Custom Date Range</option>
+              <option value="month_year">Specific Month & Year</option>
+            </select>
+          </div>
+
+          {/* Custom Date Inputs */}
+          {dateRange === 'custom' && (
+            <div className="grid grid-cols-2 gap-3 animate-fadeIn">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">From</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+                />
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">To</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+                />
               </div>
             </div>
+          )}
 
-            {/* Date Filter */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} />
-                  Date Filter
-                </div>
-              </label>
+          {/* Month / Year Inputs */}
+          {dateRange === 'month_year' && (
+            <div className="grid grid-cols-2 gap-3 animate-fadeIn">
               <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 mb-3"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
               >
-                <option value="all">All Products (No date filter)</option>
-                <option value="today">Today</option>
-                <option value="this_week">This Week</option>
-                <option value="this_month">This Month</option>
-                <option value="custom">Custom Range</option>
-                <option value="month_year">Specific Month/Year</option>
+                <option value="">Month...</option>
+                {months.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
               </select>
 
-              {/* Custom Date Range */}
-              {dateRange === 'custom' && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Start Date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">End Date</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Month/Year Filter */}
-              {dateRange === 'month_year' && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Month</label>
-                    <select
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                    >
-                      <option value="">Select Month</option>
-                      {months.map(month => (
-                        <option key={month.value} value={month.value}>{month.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Year</label>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                    >
-                      <option value="">Select Year</option>
-                      {years.map(year => (
-                        <option key={year.value} value={year.value}>{year.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              >
+                <option value="">Year...</option>
+                {years.map(y => (
+                  <option key={y.value} value={y.value}>{y.label}</option>
+                ))}
+              </select>
             </div>
+          )}
 
-            {/* Fields to Include */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fields to Include
-              </label>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
-                <label className="flex items-center gap-2 text-sm">
+          {/* Export Columns Checkboxes */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Include Columns</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-gray-50/70 border border-gray-100 rounded-2xl">
+              {Object.keys(includeFields).map(field => (
+                <label key={field} className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
                   <input
                     type="checkbox"
-                    checked={includeFields.id}
-                    onChange={(e) => setIncludeFields({...includeFields, id: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                    checked={includeFields[field]}
+                    onChange={() => toggleField(field)}
+                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
-                  Product ID
+                  <span className="capitalize">{field.replace('_', ' ')}</span>
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.name}
-                    onChange={(e) => setIncludeFields({...includeFields, name: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Name
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.sku}
-                    onChange={(e) => setIncludeFields({...includeFields, sku: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  SKU
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.price}
-                    onChange={(e) => setIncludeFields({...includeFields, price: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Price
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.cost}
-                    onChange={(e) => setIncludeFields({...includeFields, cost: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Cost
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.stock}
-                    onChange={(e) => setIncludeFields({...includeFields, stock: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Stock
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.category}
-                    onChange={(e) => setIncludeFields({...includeFields, category: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Category
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.brand}
-                    onChange={(e) => setIncludeFields({...includeFields, brand: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Brand
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.image_url}
-                    onChange={(e) => setIncludeFields({...includeFields, image_url: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Image URL
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.sizes}
-                    onChange={(e) => setIncludeFields({...includeFields, sizes: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Sizes
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.created_at}
-                    onChange={(e) => setIncludeFields({...includeFields, created_at: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Created Date
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={includeFields.description}
-                    onChange={(e) => setIncludeFields({...includeFields, description: e.target.checked})}
-                    className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  Description
-                </label>
-              </div>
+              ))}
             </div>
-
-            {/* Note */}
-            <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle size={14} className="text-gray-400 mt-0.5" />
-                <p className="text-xs text-gray-500">
-                  Export will include only products matching your date filter. Maximum 10,000 products per export.
-                </p>
-              </div>
-            </div>
-
-            {/* Export Button */}
-            <button
-              onClick={handleExport}
-              disabled={exporting || (dateRange === 'custom' && (!startDate || !endDate)) || (dateRange === 'month_year' && (!selectedMonth || !selectedYear))}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {exporting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Download size={16} />
-                  Export Products
-                </>
-              )}
-            </button>
-
-            {/* Cancel Button */}
-            <button
-              onClick={onClose}
-              className="w-full mt-3 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
-            >
-              Cancel
-            </button>
           </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="px-6 py-2.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all shadow-2xs flex items-center gap-2 disabled:opacity-40 active:scale-95"
+          >
+            {exporting ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Generating Export...</span>
+              </>
+            ) : (
+              <>
+                <Download size={14} />
+                <span>Export {exportFormat.toUpperCase()}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

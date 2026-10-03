@@ -1,48 +1,68 @@
-"use client"
+"use client";
 
-import React, { useState, lazy, Suspense, useEffect } from 'react'
-import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
-import AddProductModal from './modals/AddProductModal'
-import BulkImagesModal from './modals/BulkImagesModal'
-import BulkVideoModal from './modals/BulkVideoModal'
-import ImportProductsModal from './modals/ImportProductsModal'
-import ExportProductsModal from './modals/ExportProductsModal'
-import BulkEditModal from './modals/BulkEditModal'
-import EditProductModal from './modals/EditProductModal'
-
+import React, { useState, lazy, Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar';
+import AddProductModal from './modals/AddProductModal';
+import BulkImagesModal from './modals/BulkImagesModal';
+import BulkVideoModal from './modals/BulkVideoModal';
+import ImportProductsModal from './modals/ImportProductsModal';
+import ExportProductsModal from './modals/ExportProductsModal';
+import BulkEditModal from './modals/BulkEditModal';
+import EditProductModal from './modals/EditProductModal';
 import { toast } from 'react-toastify';
+import { 
+  Package, 
+  Sparkles, 
+  TrendingUp, 
+  RefreshCw, 
+  Plus, 
+  Upload, 
+  Grid,
+  CheckCircle,
+  AlertCircle
+} from '../../../utils/icons';
 
 import { 
-    useCreateRetailerProductMutation, 
-    useGetRetailerProductsQuery,
-    useUpdateRetailerProductMutation, 
-    useBulkImagesSameMutation,
-    useBulkVideoMutation,
-    useBulkEditProductsMutation,
-    useDeleteRetailerProductMutation,
-    useImportProductsMutation,
-    useExportProductsMutation
-} from '@/redux/retailer/slices/retailerProductsSlice'
-import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice'
-// Lazy load all components
-const ProductsGrid = lazy(() => import('./components/ProductsGrid'))
-const QuickActionsBar = lazy(() => import('./components/QuickActionsBar'))
-const StockAlerts = lazy(() => import('./components/StockAlerts'))
-const Categories = lazy(() => import('./components/Categories'))
-const ProductDetails = lazy(() => import('./components/ProductDetails'))
-const BulkPriceUpdate = lazy(() => import('./components/BulkPriceUpdate'))
-const BarcodePrinting = lazy(() => import('./components/BarcodePrinting')) 
+  useCreateRetailerProductMutation, 
+  useGetRetailerProductsQuery,
+  useUpdateRetailerProductMutation, 
+  useBulkImagesSameMutation,
+  useBulkVideoMutation,
+  useBulkEditProductsMutation,
+  useDeleteRetailerProductMutation,
+  useImportProductsMutation,
+  useExportProductsMutation
+} from '@/redux/retailer/slices/retailerProductsSlice';
+import { useGetCategoriesQuery } from '@/redux/wholesaler/slices/categoriesSlice';
 
-// Loading placeholders
-const GridPlaceholder = () => <div className="w-full h-[500px] bg-gray-100 rounded-xl animate-pulse" />
-const SidebarPlaceholder = () => <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />
-const AlertsPlaceholder = () => <div className="w-full h-[150px] bg-gray-100 rounded-xl animate-pulse" /> 
+// Core Components
+import QuickActionsBar from './components/QuickActionsBar';
+import ProductsGrid from './components/ProductsGrid';
+import ProductDetails from './components/ProductDetails';
+import Categories from './components/Categories';
+import StockAlerts from './components/StockAlerts';
+
+const BulkPriceUpdate = lazy(() => import('./components/BulkPriceUpdate'));
+const BarcodePrinting = lazy(() => import('./components/BarcodePrinting'));
+
+const WidgetPlaceholder = ({ height = "h-72" }) => (
+  <div className={`w-full ${height} bg-white rounded-3xl border border-gray-200/80 p-6 shadow-2xs animate-pulse flex flex-col justify-between`}>
+    <div className="space-y-3">
+      <div className="h-5 bg-gray-200 rounded w-1/3" />
+      <div className="h-4 bg-gray-100 rounded w-1/2" />
+    </div>
+    <div className="h-36 bg-gray-50 rounded-2xl" />
+  </div>
+);
 
 export default function RetailerProducts() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState(null)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [currentView, setCurrentView] = useState('grid');
+  
+  // Modals state
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showBulkImagesModal, setShowBulkImagesModal] = useState(false);
   const [showBulkVideoModal, setShowBulkVideoModal] = useState(false);
@@ -50,76 +70,95 @@ export default function RetailerProducts() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterParams, setFilterParams] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
+  const searchParams = useSearchParams();
+
+  // Handle URL action triggers (e.g., from Dashboard quick actions)
+  useEffect(() => {
+    const action = searchParams?.get('action');
+    if (action === 'add-single') {
+      setShowAddProductModal(true);
+    } else if (action === 'bulk-images') {
+      setShowBulkImagesModal(true);
+    } else if (action === 'bulk-video') {
+      setShowBulkVideoModal(true);
+    } else if (action === 'import') {
+      setShowImportModal(true);
+    } else if (action === 'export') {
+      setShowExportModal(true);
+    }
+  }, [searchParams]);
+
+  // Mutations
+  const [createProduct] = useCreateRetailerProductMutation();
   const [bulkImagesSame] = useBulkImagesSameMutation();
   const [bulkVideo] = useBulkVideoMutation();
   const [bulkEditProducts] = useBulkEditProductsMutation();
   const [importProducts] = useImportProductsMutation();
   const [exportProducts] = useExportProductsMutation();
   const [updateProduct] = useUpdateRetailerProductMutation();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterParams, setFilterParams] = useState({});
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  
-  const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useGetCategoriesQuery();
+
+  // Categories API
+  const { data: categoriesData, refetch: refetchCategories } = useGetCategoriesQuery(undefined, {
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+  });
   const categories = categoriesData?.data || categoriesData || [];
 
-  const [createProduct, { isLoading: isCreating }] = useCreateRetailerProductMutation();
-  const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  
+  // Products API Query
+  const { 
+    data: productsData, 
+    refetch, 
+    isLoading,
+    isFetching 
+  } = useGetRetailerProductsQuery({ 
+    page: currentPage, 
+    per_page: 12,
+    search: searchQuery || undefined,
+    category_id: selectedCategory || undefined,
+    ...filterParams
+  });
+
+  const products = productsData?.data?.products || productsData?.products || [];
+  const totalProducts = productsData?.data?.pagination?.total || products.length || 0;
+  const totalPages = productsData?.data?.pagination?.total_pages || Math.max(1, Math.ceil(totalProducts / 12));
+
+  // Auto-scroll when selectedProduct changes
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  
-  return debouncedValue;
-};
-
-// Inside component
-const debouncedSearch = useDebounce(searchQuery, 500); // Wait 500ms after user stops typing
-
-// Use debouncedSearch in API call
-const { data: productsData, refetch, isLoading } = useGetRetailerProductsQuery({ 
-  page: currentPage, 
-  per_page: 12,
-  search: debouncedSearch,
-  ...filterParams
-});
-
-
-  const products = productsData?.data?.products || [];
-  const totalProducts = productsData?.data?.pagination?.total || 0;
-  const totalPages = productsData?.data?.pagination?.total_pages || 1;
-
-
-      const handleAddProduct = (type) => {
-      if (type === 'single') {
-        setShowAddProductModal(true);
-      } else if (type === 'bulk-images') {
-        setShowBulkImagesModal(true);
-      } else if (type === 'bulk-video') {
-        setShowBulkVideoModal(true);
+    if (selectedProduct) {
+      const el = document.getElementById('product-details-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    };
+    }
+  }, [selectedProduct]);
 
-    const handleSaveProduct = async (formData) => {
-    console.log('🔵 Calling API with:', formData);
+  // Handlers
+  const handleAddProduct = (type) => {
+    if (type === 'single') {
+      setShowAddProductModal(true);
+    } else if (type === 'bulk-images') {
+      setShowBulkImagesModal(true);
+    } else if (type === 'bulk-video') {
+      setShowBulkVideoModal(true);
+    }
+  };
+
+  const handleSaveProduct = async (formData) => {
     try {
       const response = await createProduct(formData).unwrap();
-      console.log('🔵 API Success:', response);
-      toast.success('Product added successfully');
+      toast.success('Product created successfully');
       setShowAddProductModal(false);
       refetch();
       return response;
     } catch (error) {
-      console.error('🔴 API Error:', error);
       toast.error(error?.data?.message || 'Failed to add product');
       throw error;
     }
@@ -127,152 +166,179 @@ const { data: productsData, refetch, isLoading } = useGetRetailerProductsQuery({
 
   const handleBulkImagesSave = async (formData) => {
     try {
-        const response = await bulkImagesSame(formData).unwrap();
-        toast.success('Products uploaded successfully');
-        setShowBulkImagesModal(false);
-        refetch();
-        return response;
+      const response = await bulkImagesSame(formData).unwrap();
+      toast.success('Products batch uploaded successfully');
+      setShowBulkImagesModal(false);
+      refetch();
+      return response;
     } catch (error) {
-        toast.error(error?.data?.message || 'Failed to upload products');
-        throw error;
+      toast.error(error?.data?.message || 'Failed to upload products');
+      throw error;
     }
-};
+  };
 
   const handleBulkVideoSave = async (formData) => {
     try {
-        const response = await bulkVideo(formData).unwrap();
-        toast.success('Products uploaded successfully');
-        setShowBulkVideoModal(false);
-        refetch();
-        return response;
+      const response = await bulkVideo(formData).unwrap();
+      toast.success('Video processed & products uploaded');
+      setShowBulkVideoModal(false);
+      refetch();
+      return response;
     } catch (error) {
-        toast.error(error?.data?.message || 'Failed to upload products');
-        throw error;
+      toast.error(error?.data?.message || 'Failed to upload video');
+      throw error;
     }
-};
+  };
 
   const handleImportProducts = async (formData) => {
     try {
-        const response = await importProducts(formData).unwrap();
-        toast.success('Products imported successfully');
-        setShowImportModal(false);
-        refetch();
-        return response;
+      const response = await importProducts(formData).unwrap();
+      toast.success('Products imported successfully');
+      setShowImportModal(false);
+      refetch();
+      return response;
     } catch (error) {
-        toast.error(error?.data?.message || 'Failed to import products');
-        throw error;
+      toast.error(error?.data?.message || 'Failed to import products');
+      throw error;
     }
-};
-
-const handleSelectCategory = (categoryId) => {
-  setSelectedCategory(categoryId);
-  // Apply filter to products based on category
-  setFilterParams(prev => ({ ...prev, category_id: categoryId }));
-  setCurrentPage(1);
-};
+  };
 
   const handleExportProducts = async (params) => {
     try {
-        const response = await exportProducts(params).unwrap();
-        toast.success('Products exported successfully');
-        return response;
+      const response = await exportProducts(params).unwrap();
+      toast.success('Catalog exported successfully');
+      return response;
     } catch (error) {
-        toast.error(error?.data?.message || 'Failed to export products');
-        throw error;
+      toast.error(error?.data?.message || 'Failed to export catalog');
+      throw error;
     }
-};
+  };
 
-const handleBulkEdit = async (payload) => {
+  const handleBulkEdit = async (payload) => {
     try {
-        const response = await bulkEditProducts(payload).unwrap();
-        toast.success('Products updated successfully');
-        setShowBulkEditModal(false);
-        setSelectedProducts([]);
-        refetch();
-        return response;
+      const response = await bulkEditProducts(payload).unwrap();
+      toast.success('Selected products updated successfully');
+      setShowBulkEditModal(false);
+      setSelectedProducts([]);
+      refetch();
+      return response;
     } catch (error) {
-        toast.error(error?.data?.message || 'Failed to update products');
-        throw error;
+      toast.error(error?.data?.message || 'Failed to update products');
+      throw error;
     }
-};
+  };
 
-const handleUpdateProduct = async (productId, formData) => {
+  const handleUpdateProduct = async (productId, formData) => {
     try {
-        const response = await updateProduct({ productId, data: formData }).unwrap();
-        toast.success('Product updated successfully');
-        setShowEditModal(false);
-        setEditingProduct(null);
-        refetch();
-        return response;
+      const response = await updateProduct({ productId, data: formData }).unwrap();
+      toast.success('Product updated successfully');
+      setShowEditModal(false);
+      setEditingProduct(null);
+      if (selectedProduct?.id === productId) {
+        setSelectedProduct(prev => ({ ...prev, ...formData }));
+      }
+      refetch();
+      return response;
     } catch (error) {
-        toast.error(error?.data?.message || 'Failed to update product');
-        throw error;
+      toast.error(error?.data?.message || 'Failed to update product');
+      throw error;
     }
-};
+  };
 
-    const handleScanBarcode = (barcode) => {
-      console.log('Scanned:', barcode);
-    };
+  const handleSelectCategory = (categoryId) => {
+    setSelectedCategory(categoryId);
+    setFilterParams(prev => ({ ...prev, category_id: categoryId || undefined }));
+    setCurrentPage(1);
+  };
 
-    const handleImport = () => {
-      setShowImportModal(true);
-    };
-
-    const handlePrintLabels = () => {
-      setShowPrintLabelsModal(true);
-    };
-
-
-
+  const handleScanBarcode = (barcode) => {
+    setSearchQuery(barcode);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <div className="min-h-screen bg-gray-50/50 pb-20 lg:pb-12">
+      {/* Top Navbar */}
       <RetailerNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
       
-      <main className={`
-        transition-all duration-300 p-4 lg:p-6
-        ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
-      `}>
-        <div className="max-w-7xl mx-auto">
+      {/* Main Content */}
+      <main className={`transition-all duration-300 p-3 sm:p-5 lg:p-7 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+        <div className="max-w-[1540px] mx-auto space-y-6">
           
-          {/* Page Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Products</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage your product inventory</p>
+          {/* Header Command Strip */}
+          <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-primary-700 bg-primary-50 px-2.5 py-0.5 rounded-full border border-primary-200">
+                    Store Catalog Management
+                  </span>
+                </div>
+
+                <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                  <span>Product Inventory</span>
+                </h1>
+                
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Manage inventory lots, batch upload photos/videos, print barcodes, and audit profit margins.
+                </p>
+              </div>
+
+              {/* Refresh & Live Sync */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="px-3.5 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-2xs"
+                >
+                  <RefreshCw size={14} className={isFetching ? 'animate-spin text-primary-600' : 'text-gray-500'} />
+                  <span>{isFetching ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Quick Actions Bar */}
-          <div className="mb-6" style={{ minHeight: '80px' }}>
-            <Suspense fallback={<AlertsPlaceholder />}>
-              <QuickActionsBar 
-                onAddProduct={handleAddProduct}
-                onScanBarcode={handleScanBarcode}
-                onImport={handleImport}
-                onPrintLabels={handlePrintLabels}
-                onViewChange={setCurrentView}
-                currentView={currentView}
-                onExportClick={() => setShowExportModal(true)}
-              />
-            </Suspense>
-          </div>
+          {/* Quick Actions Bar with First-Class Creation Tools */}
+          <QuickActionsBar 
+            onAddProduct={handleAddProduct}
+            onScanBarcode={handleScanBarcode}
+            onImport={() => setShowImportModal(true)}
+            onPrintLabels={() => {
+              const el = document.getElementById('barcode-printing-section');
+              el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            onBulkPriceUpdate={() => {
+              const el = document.getElementById('bulk-price-section');
+              el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            onViewChange={setCurrentView}
+            currentView={currentView}
+            onExportClick={() => setShowExportModal(true)}
+            onBulkEdit={() => {
+              if (selectedProducts.length > 0) {
+                setShowBulkEditModal(true);
+              } else {
+                toast.info('Select products in the catalog to use Bulk Edit');
+              }
+            }}
+            selectedCount={selectedProducts.length}
+          />
 
-          {/* Stock Alerts */}
-          <div className="mb-6" style={{ minHeight: 'auto' }}>
-            <Suspense fallback={<AlertsPlaceholder />}>
-              <StockAlerts />
-            </Suspense>
-          </div> 
+          {/* Critical Stock Alerts Pill (Collapsible & Compact) */}
+          <Suspense fallback={<WidgetPlaceholder height="h-28" />}>
+            <StockAlerts />
+          </Suspense>
 
-          {/* Main Content - 2 Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Main 2-Column Catalog Workspace: Robust Flexbox (Sidebar on Left, Full Width Catalog on Right) */}
+          <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
             
-            {/* Left Column - Categories (1/4 width) */}
-            <div className="lg:col-span-1">
-            <div style={{ minHeight: '400px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
+            {/* Left Sidebar: Categories Manager & Filter (fixed width on desktop) */}
+            <div className="w-full lg:w-72 xl:w-80 flex-shrink-0 space-y-4">
+              <Suspense fallback={<WidgetPlaceholder height="h-[480px]" />}>
                 <Categories 
                   categories={categories}
                   onSelectCategory={handleSelectCategory}
@@ -281,145 +347,150 @@ const handleUpdateProduct = async (productId, formData) => {
                 />
               </Suspense>
             </div>
-          </div>
 
-            {/* Right Column - Products Grid (3/4 width) */}
-            <div className="lg:col-span-3">
-              <div style={{ minHeight: '500px' }}>
-                <Suspense fallback={<GridPlaceholder />}>
-                  <ProductsGrid 
-                    selectedProduct={selectedProduct}
-                    setSelectedProduct={setSelectedProduct}
-                    refreshTrigger={refreshTrigger}
-                    categories={categories}
-                    products={products}
-                    totalProducts={totalProducts}
-                    totalPages={totalPages}
-                    currentPage={currentPage}
-                    isLoading={isLoading}        
-                    searchQuery={searchQuery} 
-                    onPageChange={setCurrentPage}
-                    onSearch={setSearchQuery}
-                    onFilter={setFilterParams}
-                    onRefresh={refetch}
-                    onEditProduct={(product) => {
-                      setEditingProduct(product);
-                      setShowEditModal(true);
-                    }}
-                    onBulkEdit={(products) => {
-                      setSelectedProducts(products);
-                      setShowBulkEditModal(true);
-                    }}
-                  />
-                </Suspense>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Bottom Section - 3 Columns */}
-           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            
-            <div style={{ minHeight: '350px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
-                <ProductDetails selectedProduct={selectedProduct} />
-              </Suspense>
-            </div>
-            
-           <div style={{ minHeight: '350px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
-                <BulkPriceUpdate 
-                  onComplete={() => setRefreshTrigger(prev => prev + 1)} 
-                  categories={categories}  // ✅ ADD THIS
+            {/* Right Main Area: Products Grid or List View (always takes 100% of remaining width) */}
+            <div className="flex-1 min-w-0 w-full space-y-4">
+              <Suspense fallback={<WidgetPlaceholder height="h-[580px]" />}>
+                <ProductsGrid 
+                  selectedProduct={selectedProduct}
+                  setSelectedProduct={setSelectedProduct}
+                  refreshTrigger={refreshTrigger}
+                  categories={categories}
+                  products={products}
+                  totalProducts={totalProducts}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  isLoading={isLoading}        
+                  searchQuery={searchQuery} 
+                  onPageChange={setCurrentPage}
+                  onSearch={setSearchQuery}
+                  onFilter={setFilterParams}
+                  onRefresh={refetch}
+                  onEditProduct={(product) => {
+                    setEditingProduct(product);
+                    setShowEditModal(true);
+                  }}
+                  onBulkEdit={(items) => {
+                    setSelectedProducts(items);
+                    setShowBulkEditModal(true);
+                  }}
                 />
               </Suspense>
-            </div> 
+            </div>
+
+          </div>
+
+          {/* Lower Workspace: Product Details Inspector (Auto-scrolled), Price Update, and Barcodes */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             
-           <div style={{ minHeight: '350px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
+            {/* Product Details Inspector (5 cols) */}
+            <div className="lg:col-span-5" id="product-details-section">
+              <ProductDetails 
+                selectedProduct={selectedProduct} 
+                onClear={() => setSelectedProduct(null)}
+                onEditProduct={(p) => {
+                  setEditingProduct(p);
+                  setShowEditModal(true);
+                }}
+                onUpdate={() => refetch()}
+              />
+            </div>
+
+            {/* Bulk Price Update (4 cols) */}
+            <div className="lg:col-span-4" id="bulk-price-section">
+              <Suspense fallback={<WidgetPlaceholder height="h-[400px]" />}>
+                <BulkPriceUpdate 
+                  onComplete={() => {
+                    setRefreshTrigger(prev => prev + 1);
+                    refetch();
+                  }} 
+                  categories={categories}
+                />
+              </Suspense>
+            </div>
+
+            {/* Barcode Printing Sheet (3 cols) */}
+            <div className="lg:col-span-3" id="barcode-printing-section">
+              <Suspense fallback={<WidgetPlaceholder height="h-[400px]" />}>
                 <BarcodePrinting />
               </Suspense>
-            </div> 
+            </div>
 
-                        {/* Add Product Modal */}
-            {showAddProductModal && (
-              <AddProductModal 
-                isOpen={showAddProductModal}
-                onClose={() => setShowAddProductModal(false)} 
-                onSave={handleSaveProduct}
-                categories={categories}
-              />
-            )}
+          </div>
 
-            {/* Import Images Modal */}
-           {showBulkImagesModal && (
-              <BulkImagesModal 
-                isOpen={showBulkImagesModal}
-                onClose={() => setShowBulkImagesModal(false)} 
-                onSave={handleBulkImagesSave}
-                categories={categories}
-              />
-            )}
+          {/* Modals Suite */}
+          {showAddProductModal && (
+            <AddProductModal 
+              isOpen={showAddProductModal}
+              onClose={() => setShowAddProductModal(false)} 
+              onSave={handleSaveProduct}
+              categories={categories}
+            />
+          )}
 
-            {/* Import Video Modal */}
-           {showBulkVideoModal && (
-              <BulkVideoModal 
-                isOpen={showBulkVideoModal}
-                onClose={() => setShowBulkVideoModal(false)} 
-                onSave={handleBulkVideoSave}
-                categories={categories}
-              />
-            )}
+          {showBulkImagesModal && (
+            <BulkImagesModal 
+              isOpen={showBulkImagesModal}
+              onClose={() => setShowBulkImagesModal(false)} 
+              onSave={handleBulkImagesSave}
+              categories={categories}
+            />
+          )}
 
-            {showImportModal && (
-              <ImportProductsModal 
-                isOpen={showImportModal}
-                onClose={() => setShowImportModal(false)} 
-                onImport={handleImportProducts}
-              />
-            )}
+          {showBulkVideoModal && (
+            <BulkVideoModal 
+              isOpen={showBulkVideoModal}
+              onClose={() => setShowBulkVideoModal(false)} 
+              onSave={handleBulkVideoSave}
+              categories={categories}
+            />
+          )}
 
-            {/* Export Modal */}
-            {showExportModal && (
-                <ExportProductsModal 
-                    isOpen={showExportModal}
-                    onClose={() => setShowExportModal(false)} 
-                    onExport={handleExportProducts}
-                    totalProducts={productsData?.data?.products?.length || 0}
-                />
-            )}
+          {showImportModal && (
+            <ImportProductsModal 
+              isOpen={showImportModal}
+              onClose={() => setShowImportModal(false)} 
+              onImport={handleImportProducts}
+            />
+          )}
 
-            {/* Bulk Edit Modal */}
-            {showBulkEditModal && (
-                <BulkEditModal 
-                    isOpen={showBulkEditModal}
-                    onClose={() => {
-                        setShowBulkEditModal(false);
-                        setSelectedProducts([]);
-                    }}
-                    products={selectedProducts}
-                    onSave={handleBulkEdit}
-                    categories={categories}
-                />
-            )}
+          {showExportModal && (
+            <ExportProductsModal 
+              isOpen={showExportModal}
+              onClose={() => setShowExportModal(false)} 
+              onExport={handleExportProducts}
+              totalProducts={totalProducts}
+            />
+          )}
 
-            {/* Edit Product Modal */}
-            {showEditModal && (
-                <EditProductModal 
-                    isOpen={showEditModal}
-                    onClose={() => {
-                        setShowEditModal(false);
-                        setEditingProduct(null);
-                    }}
-                    product={editingProduct}
-                    onSave={(formData) => handleUpdateProduct(editingProduct.id, formData)}
-                    categories={categories}
-                />
-            )}
+          {showBulkEditModal && (
+            <BulkEditModal 
+              isOpen={showBulkEditModal}
+              onClose={() => {
+                setShowBulkEditModal(false);
+                setSelectedProducts([]);
+              }}
+              products={selectedProducts}
+              onSave={handleBulkEdit}
+              categories={categories}
+            />
+          )}
 
-          </div> 
+          {showEditModal && editingProduct && (
+            <EditProductModal 
+              isOpen={showEditModal}
+              onClose={() => {
+                setShowEditModal(false);
+                setEditingProduct(null);
+              }}
+              product={editingProduct}
+              onSave={(formData) => handleUpdateProduct(editingProduct.id, formData)}
+              categories={categories}
+            />
+          )}
+
         </div>
       </main>
     </div>
-  )
+  );
 }

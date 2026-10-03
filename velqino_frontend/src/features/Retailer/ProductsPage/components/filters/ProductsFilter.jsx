@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Filter, X, Check, Search, DollarSign, Tag, Box } from '../../../../../utils/icons';
+import { Filter, X, Check, Search, DollarSign, Tag, Box, RotateCcw } from '../../../../../utils/icons';
 
 export default function ProductsFilter({ onApply, onClose, isOpen, categories = [] }) {
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
@@ -11,11 +11,11 @@ export default function ProductsFilter({ onApply, onClose, isOpen, categories = 
 
   const handleApply = () => {
     onApply({
-      min_price: priceRange.min,
-      max_price: priceRange.max,
-      category_id: selectedCategory,
-      stock_status: stockStatus,
-      sort: sortBy
+      min_price: priceRange.min || undefined,
+      max_price: priceRange.max || undefined,
+      category_id: selectedCategory || undefined,
+      stock_status: stockStatus || undefined,
+      sort: sortBy || undefined
     });
     onClose();
   };
@@ -32,46 +32,54 @@ export default function ProductsFilter({ onApply, onClose, isOpen, categories = 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <Filter size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Filter Products</h3>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Filter size={16} />
+            </span>
+            <h3 className="text-sm sm:text-base font-bold text-gray-900">Filter Products</h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-all">
-            <X size={18} className="text-gray-400" />
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={16} />
           </button>
         </div>
 
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        {/* Filter Content */}
+        <div className="p-4 sm:p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Price Range */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Price Range</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Price Range (₹)</label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-gray-500">Min Price</label>
-                <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Min</span>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
                   <input
                     type="number"
                     value={priceRange.min}
                     onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
                     placeholder="0"
-                    className="w-full pl-6 pr-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+                    className="w-full pl-7 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
                   />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500">Max Price</label>
-                <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Max</span>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
                   <input
                     type="number"
                     value={priceRange.max}
                     onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
                     placeholder="10000"
-                    className="w-full pl-6 pr-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+                    className="w-full pl-7 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
                   />
                 </div>
               </div>
@@ -80,11 +88,11 @@ export default function ProductsFilter({ onApply, onClose, isOpen, categories = 
 
           {/* Category */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Category</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
             >
               <option value="">All Categories</option>
               {categories.map(cat => (
@@ -95,44 +103,56 @@ export default function ProductsFilter({ onApply, onClose, isOpen, categories = 
 
           {/* Stock Status */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Stock Status</label>
-            <div className="flex gap-2">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Stock Status</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-gray-50 p-1 rounded-2xl border border-gray-200 text-xs">
               <button
+                type="button"
                 onClick={() => setStockStatus('')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${!stockStatus ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  !stockStatus ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                }`}
               >
                 All
               </button>
               <button
+                type="button"
                 onClick={() => setStockStatus('in_stock')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${stockStatus === 'in_stock' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  stockStatus === 'in_stock' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-700 hover:bg-emerald-50'
+                }`}
               >
                 In Stock
               </button>
               <button
+                type="button"
                 onClick={() => setStockStatus('low_stock')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${stockStatus === 'low_stock' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  stockStatus === 'low_stock' ? 'bg-amber-600 text-white shadow-2xs' : 'text-amber-700 hover:bg-amber-50'
+                }`}
               >
-                Low Stock
+                Low
               </button>
               <button
+                type="button"
                 onClick={() => setStockStatus('out_of_stock')}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all ${stockStatus === 'out_of_stock' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`py-1.5 font-bold rounded-xl transition-all ${
+                  stockStatus === 'out_of_stock' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-700 hover:bg-rose-50'
+                }`}
               >
-                Out of Stock
+                Out
               </button>
             </div>
           </div>
 
           {/* Sort By */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Sort By</label>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Sort Catalog</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:border-primary-500"
+              className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
             >
-              <option value="">Default</option>
+              <option value="">Default Order</option>
               <option value="price_asc">Price: Low to High</option>
               <option value="price_desc">Price: High to Low</option>
               <option value="name_asc">Name: A to Z</option>
@@ -143,13 +163,23 @@ export default function ProductsFilter({ onApply, onClose, isOpen, categories = 
           </div>
         </div>
 
-        <div className="flex gap-3 p-4 border-t border-gray-100">
-          <button onClick={handleReset} className="flex-1 px-3 py-2 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
-            Reset
+        {/* Footer Actions */}
+        <div className="flex items-center gap-2.5 p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50">
+          <button 
+            type="button"
+            onClick={handleReset} 
+            className="flex-1 py-2 text-xs font-bold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <RotateCcw size={12} />
+            <span>Reset</span>
           </button>
-          <button onClick={handleApply} className="flex-1 px-3 py-2 text-xs font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 flex items-center justify-center gap-1">
+          <button 
+            type="button"
+            onClick={handleApply} 
+            className="flex-1 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all shadow-2xs flex items-center justify-center gap-1.5 active:scale-95"
+          >
             <Check size={14} />
-            Apply Filters
+            <span>Apply Filters</span>
           </button>
         </div>
       </div>

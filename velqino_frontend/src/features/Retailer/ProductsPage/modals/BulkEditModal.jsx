@@ -1,17 +1,31 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Save, Package, DollarSign, Tag, Box, Archive, FileText, TrendingUp, AlertCircle } from '../../../../utils/icons';
+import { 
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  Save, 
+  Package, 
+  DollarSign, 
+  Tag, 
+  Box, 
+  Archive, 
+  FileText, 
+  TrendingUp, 
+  AlertCircle,
+  Sparkles,
+  Edit3
+} from '../../../../utils/icons';
 import { useBulkEditProductsMutation } from '@/redux/retailer/slices/retailerProductsSlice';
 import { toast } from 'react-toastify';
-
 
 export default function BulkEditModal({ isOpen, onClose, products = [], onSave, categories = [] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [bulkChanges, setBulkChanges] = useState({});
   const scrollContainerRef = useRef(null);
-  const [bulkEditProducts, { isLoading: isBulkEditing }] = useBulkEditProductsMutation();
+  const [bulkEditProducts] = useBulkEditProductsMutation();
 
   const [formData, setFormData] = useState({
     price: '',
@@ -25,7 +39,6 @@ export default function BulkEditModal({ isOpen, onClose, products = [], onSave, 
 
   const currentProduct = products[currentIndex];
 
-  // Reset when modal opens
   useEffect(() => {
     if (isOpen && products.length > 0) {
       setCurrentIndex(0);
@@ -43,20 +56,16 @@ export default function BulkEditModal({ isOpen, onClose, products = [], onSave, 
   }, [isOpen, products]);
 
   const handleFieldChange = (field, value) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     if (value !== '') {
-      setBulkChanges({
-        ...bulkChanges,
-        [field]: value
-      });
+      setBulkChanges(prev => ({ ...prev, [field]: value }));
     } else {
-      const newChanges = { ...bulkChanges };
-      delete newChanges[field];
-      setBulkChanges(newChanges);
+      setBulkChanges(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
     }
   };
 
@@ -86,323 +95,267 @@ export default function BulkEditModal({ isOpen, onClose, products = [], onSave, 
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
     if (Object.keys(bulkChanges).length === 0) {
-        toast.error('No changes to apply');
-        return;
+      toast.error('No changes entered to apply');
+      return;
     }
     
     setUploading(true);
     try {
-        const productIds = products.map(p => p.id);
-        const payload = {
-            product_ids: productIds,
-            updates: bulkChanges
-        };
-        
-        // ✅ Call the API mutation
-        const response = await bulkEditProducts(payload).unwrap();
-        
-        toast.success(`${products.length} products updated successfully`);
-        onClose();
-    } catch (error) {
-        toast.error(error?.data?.message || 'Failed to update products');
-        console.error(error);
-    } finally {
-        setUploading(false);
-    }
-};
+      const productIds = products.map(p => p.id);
+      const payload = {
+        product_ids: productIds,
+        updates: bulkChanges
+      };
 
-  const hasChanges = Object.keys(bulkChanges).length > 0;
+      if (onSave) {
+        await onSave(payload);
+      } else {
+        await bulkEditProducts(payload).unwrap();
+        toast.success(`Successfully updated ${products.length} products`);
+        onClose();
+      }
+    } catch (error) {
+      toast.error(error?.data?.message || 'Failed to apply bulk edits');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (!isOpen || products.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-hidden animate-fadeIn">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={onClose} />
       
-      <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-        <div className="h-full bg-white rounded-l-2xl shadow-xl overflow-y-auto">
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                  <TrendingUp size={20} className="text-primary-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Bulk Edit Products</h2>
-                  <p className="text-sm text-gray-500">Update {products.length} products at once</p>
-                </div>
-              </div>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <X size={20} className="text-gray-500" />
-              </button>
+      <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col justify-between overflow-hidden">
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-white z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center border border-primary-200/60 shadow-2xs">
+              <Edit3 size={20} />
             </div>
-
-            {/* Product Carousel */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Products</span>
-                  <span className="text-sm font-semibold text-primary-600">{currentIndex + 1} / {products.length}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handlePrev}
-                    disabled={currentIndex === 0}
-                    className="p-1 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={currentIndex === products.length - 1}
-                    className="p-1 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">Bulk Edit Products</h2>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  {products.length} Selected
+                </span>
               </div>
-
-              {/* Horizontal Scroll Product Cards */}
-              <div
-                ref={scrollContainerRef}
-                className="flex gap-3 overflow-x-auto pb-2 scroll-smooth hide-scrollbar"
-                style={{ scrollbarWidth: 'none' }}
-              >
-                {products.map((product, idx) => (
-                  <div
-                    key={product.id}
-                    onClick={() => scrollToProduct(idx)}
-                    className={`flex-shrink-0 w-32 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                      currentIndex === idx
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
-                    }`}
-                  >
-                    <div className="w-full h-16 bg-gray-100 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
-                      {product.primary_image || product.images?.[0]?.image ? (
-                        <img
-                          src={product.primary_image || product.images?.[0]?.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Package size={24} className="text-gray-400" />
-                      )}
-                    </div>
-                    <p className="text-xs font-medium text-gray-800 truncate">{product.name}</p>
-                    <p className="text-[10px] text-gray-500">₹{product.price}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-gray-500">Apply uniform updates across multiple catalog items at once</p>
             </div>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-            {/* Current Product Preview */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Currently Editing:</h3>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                  {currentProduct?.primary_image || currentProduct?.images?.[0]?.image ? (
-                    <img
-                      src={currentProduct?.primary_image || currentProduct?.images?.[0]?.image}
-                      alt={currentProduct?.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Package size={20} className="text-gray-400" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{currentProduct?.name}</p>
-                  <p className="text-xs text-gray-500">SKU: {currentProduct?.sku}</p>
-                  <p className="text-sm font-bold text-primary-600">₹{currentProduct?.price}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bulk Edit Fields */}
-            <div className="space-y-4">
-              <div className="border-b border-gray-200 pb-2 mb-2">
-                <h3 className="text-sm font-medium text-gray-900">Apply to all {products.length} products:</h3>
-              </div>
-
-              {/* Price */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (Selling)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => handleFieldChange('price', e.target.value)}
-                    placeholder="Enter new price"
-                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                </div>
-                {bulkChanges.price && (
-                  <p className="text-xs text-green-600 mt-1">Will set price to ₹{bulkChanges.price} for all products</p>
-                )}
-              </div>
-
-              {/* Cost */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cost (Your expense)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                  <input
-                    type="number"
-                    value={formData.cost}
-                    onChange={(e) => handleFieldChange('cost', e.target.value)}
-                    placeholder="Enter new cost"
-                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                </div>
-                {bulkChanges.cost && (
-                  <p className="text-xs text-green-600 mt-1">Will set cost to ₹{bulkChanges.cost} for all products</p>
-                )}
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={formData.category_id}
-                  onChange={(e) => handleFieldChange('category_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                >
-                  <option value="">-- No change --</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-                {bulkChanges.category_id && (
-                  <p className="text-xs text-green-600 mt-1">Will change category for all products</p>
-                )}
-              </div>
-
-              {/* Brand */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                <input
-                  type="text"
-                  value={formData.brand}
-                  onChange={(e) => handleFieldChange('brand', e.target.value)}
-                  placeholder="Enter brand name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                />
-                {bulkChanges.brand && (
-                  <p className="text-xs text-green-600 mt-1">Will set brand to "{bulkChanges.brand}" for all products</p>
-                )}
-              </div>
-
-              {/* Stock */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stock Quantity
-                </label>
-                <input
-                  type="number"
-                  value={formData.stock}
-                  onChange={(e) => handleFieldChange('stock', e.target.value)}
-                  placeholder="Enter stock quantity"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                />
-                {bulkChanges.stock && (
-                  <p className="text-xs text-green-600 mt-1">Will set stock to {bulkChanges.stock} for all products</p>
-                )}
-              </div>
-
-              {/* Threshold */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Low Stock Alert
-                </label>
-                <input
-                  type="number"
-                  value={formData.threshold}
-                  onChange={(e) => handleFieldChange('threshold', e.target.value)}
-                  placeholder="Enter alert threshold"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                />
-                {bulkChanges.threshold && (
-                  <p className="text-xs text-green-600 mt-1">Will set alert at {bulkChanges.threshold} for all products</p>
-                )}
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleFieldChange('status', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                >
-                  <option value="">-- No change --</option>
-                  <option value="active">Active</option>
-                  <option value="draft">Draft</option>
-                  <option value="archived">Archived</option>
-                </select>
-                {bulkChanges.status && (
-                  <p className="text-xs text-green-600 mt-1">Will set status to {bulkChanges.status} for all products</p>
-                )}
-              </div>
-            </div>
-
-            {/* Changes Summary */}
-            {hasChanges && (
-              <div className="mt-6 p-3 bg-primary-50 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertCircle size={14} className="text-primary-500 mt-0.5" />
-                  <div className="text-xs text-primary-700">
-                    <p className="font-medium mb-1">Changes to apply:</p>
-                    <ul className="list-disc list-inside">
-                      {bulkChanges.price && <li>Price: ₹{bulkChanges.price}</li>}
-                      {bulkChanges.cost && <li>Cost: ₹{bulkChanges.cost}</li>}
-                      {bulkChanges.category_id && <li>Category: Changed</li>}
-                      {bulkChanges.brand && <li>Brand: {bulkChanges.brand}</li>}
-                      {bulkChanges.stock && <li>Stock: {bulkChanges.stock}</li>}
-                      {bulkChanges.threshold && <li>Low Stock Alert: {bulkChanges.threshold}</li>}
-                      {bulkChanges.status && <li>Status: {bulkChanges.status}</li>}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+        {/* Selected Products Carousel Bar */}
+        <div className="bg-gray-50/70 p-3 sm:p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-gray-700">
+              Selected Item {currentIndex + 1} of {products.length}
+            </span>
+            <div className="flex items-center gap-1">
               <button
-                onClick={onClose}
-                disabled={uploading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
+                type="button"
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
+                className="p-1 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-40 hover:bg-gray-100"
               >
-                Cancel
+                <ChevronLeft size={14} />
               </button>
               <button
-                onClick={handleSubmit}
-                disabled={uploading || !hasChanges}
-                className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                type="button"
+                onClick={handleNext}
+                disabled={currentIndex === products.length - 1}
+                className="p-1 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-40 hover:bg-gray-100"
               >
-                {uploading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    Update {products.length} Products
-                  </>
-                )}
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
+
+          <div ref={scrollContainerRef} className="flex gap-2 overflow-x-auto pb-1">
+            {products.map((p, idx) => {
+              const isCurrent = idx === currentIndex;
+              const img = p.primary_image || p.images?.[0]?.image || p.image;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`
+                    w-28 flex-shrink-0 p-2 rounded-xl border cursor-pointer transition-all bg-white
+                    ${isCurrent 
+                      ? 'border-primary-500 ring-2 ring-primary-200 shadow-2xs' 
+                      : 'border-gray-200/80 opacity-70 hover:opacity-100'
+                    }
+                  `}
+                >
+                  <div className="w-full aspect-square bg-gray-100 rounded-lg overflow-hidden mb-1 flex items-center justify-center">
+                    {img ? (
+                      <img src={img} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package size={16} className="text-gray-400" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-bold text-gray-900 truncate">{p.name}</p>
+                  <p className="text-[9px] font-mono text-gray-400 truncate">{p.sku}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/70 text-xs text-amber-800 flex items-start gap-2">
+            <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-amber-600" />
+            <span>
+              Leave fields blank to preserve their existing values on the selected products. Only filled fields will overwrite current settings.
+            </span>
+          </div>
+
+          {/* Pricing Updates */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                New Selling Price (₹)
+              </label>
+              <input
+                type="number"
+                placeholder="Preserve current price"
+                value={formData.price}
+                onChange={(e) => handleFieldChange('price', e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                New Cost Price (₹)
+              </label>
+              <input
+                type="number"
+                placeholder="Preserve current cost"
+                value={formData.cost}
+                onChange={(e) => handleFieldChange('cost', e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Category & Brand */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Move to Category
+              </label>
+              <select
+                value={formData.category_id}
+                onChange={(e) => handleFieldChange('category_id', e.target.value)}
+                className="w-full px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              >
+                <option value="">Preserve current categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Brand / Manufacturer
+              </label>
+              <input
+                type="text"
+                placeholder="Preserve current brand"
+                value={formData.brand}
+                onChange={(e) => handleFieldChange('brand', e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Stock & Threshold */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Set Stock Units
+              </label>
+              <input
+                type="number"
+                placeholder="Preserve current stock"
+                value={formData.stock}
+                onChange={(e) => handleFieldChange('stock', e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Reorder Threshold
+              </label>
+              <input
+                type="number"
+                placeholder="Preserve current threshold"
+                value={formData.threshold}
+                onChange={(e) => handleFieldChange('threshold', e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Catalog Visibility Status
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) => handleFieldChange('status', e.target.value)}
+              className="w-full px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+            >
+              <option value="">Preserve current status</option>
+              <option value="active">Active (Visible)</option>
+              <option value="inactive">Inactive (Hidden)</option>
+            </select>
+          </div>
+        </form>
+
+        {/* Footer Bar */}
+        <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 z-10">
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
+            onClick={handleSubmit}
+            disabled={uploading || Object.keys(bulkChanges).length === 0}
+            className="px-6 py-2.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all shadow-2xs flex items-center gap-2 disabled:opacity-40 active:scale-95"
+          >
+            {uploading ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Applying to {products.length} Products...</span>
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                <span>Apply to {products.length} Products</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

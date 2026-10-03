@@ -1,178 +1,262 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Plus, Scan, Upload, Printer, Download, Filter, Grid, List, Search, X } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerProducts/QuickActionsBar.scss'
+import React, { useState } from 'react';
+import { 
+  Plus, 
+  Scan, 
+  Upload, 
+  Printer, 
+  Download, 
+  Filter, 
+  Grid, 
+  List, 
+  Search, 
+  X, 
+  Image as ImageIcon, 
+  Video, 
+  Edit3, 
+  DollarSign, 
+  Sparkles,
+  ChevronDown
+} from '../../../../utils/icons';
 
-export default function QuickActionsBar({ onAddProduct, onScanBarcode, onImport, onPrintLabels, onViewChange, currentView, onExportClick }) {
-  const [mounted, setMounted] = useState(false)
-  const [showScanner, setShowScanner] = useState(false)
-  const [barcodeValue, setBarcodeValue] = useState('')
+export default function QuickActionsBar({ 
+  onAddProduct, 
+  onScanBarcode, 
+  onImport, 
+  onPrintLabels, 
+  onBulkPriceUpdate,
+  onViewChange, 
+  currentView = 'grid', 
+  onExportClick,
+  onBulkEdit,
+  selectedCount = 0
+}) {
+  const [showScanner, setShowScanner] = useState(false);
+  const [barcodeValue, setBarcodeValue] = useState('');
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
-  const handleBarcodeSubmit = () => {
+  const handleBarcodeSubmit = (e) => {
+    e.preventDefault();
     if (barcodeValue && onScanBarcode) {
-      onScanBarcode(barcodeValue)
-      setBarcodeValue('')
-      setShowScanner(false)
+      onScanBarcode(barcodeValue);
+      setBarcodeValue('');
+      setShowScanner(false);
     }
-  }
+  };
 
-  const actions = [
-  { 
-    id: 'add', 
-    label: 'Add Product', 
-    icon: <Plus size={18} />, 
-    color: 'primary', 
-    onClick: () => {
-      // Show dropdown with three options
-      const dropdown = document.createElement('div');
-      dropdown.className = 'absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[160px]';
-      dropdown.innerHTML = `
-        <div class="py-1">
-          <button class="add-single-product w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Single Product
-          </button>
-          <button class="add-bulk-images w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            Bulk Images
-          </button>
-          <button class="add-bulk-video w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-            Bulk Video
-          </button>
-        </div>
-      `;
-      
-      const btn = document.querySelector('.action-btn-primary');
-      if (btn) {
-        const rect = btn.getBoundingClientRect();
-        dropdown.style.position = 'fixed';
-        dropdown.style.top = `${rect.bottom + 5}px`;
-        dropdown.style.left = `${rect.left}px`;
-        document.body.appendChild(dropdown);
-        
-        const closeDropdown = (e) => {
-          if (!dropdown.contains(e.target) && e.target !== btn) {
-            dropdown.remove();
-            document.removeEventListener('click', closeDropdown);
-          }
-        };
-        setTimeout(() => document.addEventListener('click', closeDropdown), 0);
-        
-        dropdown.querySelector('.add-single-product')?.addEventListener('click', () => {
-          onAddProduct?.('single');
-          dropdown.remove();
-        });
-        dropdown.querySelector('.add-bulk-images')?.addEventListener('click', () => {
-          onAddProduct?.('bulk-images');
-          dropdown.remove();
-        });
-        dropdown.querySelector('.add-bulk-video')?.addEventListener('click', () => {
-          onAddProduct?.('bulk-video');
-          dropdown.remove();
-        });
-      }
-    } 
-  },
-  { id: 'scan', label: 'Scan Barcode', icon: <Scan size={18} />, color: 'blue', onClick: () => setShowScanner(true) },
-  { id: 'import', label: 'Import Products', icon: <Upload size={18} />, color: 'green', onClick: onImport },
-  { id: 'print', label: 'Print Labels', icon: <Printer size={18} />, color: 'purple', onClick: onPrintLabels },
-];
-
-
-
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   return (
-    <div className="quick-actions-bar bg-white rounded-xl shadow-sm border border-gray-100">
-      <div className="p-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2">
-            {actions.map((action) => (
-              <button
-                key={action.id}
-                onClick={action.onClick}
-                className={`action-btn action-btn-${action.color} px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2`}
-              >
-                {action.icon}
-                <span className="hidden sm:inline">{action.label}</span>
-              </button>
-            ))}
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs space-y-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        
+        {/* Left Side: Creation & Bulk Ingestion Suite */}
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          
+          {/* Hero Action: Add Single Product */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => onAddProduct?.('single')}
+              className="px-4 py-2.5 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xs hover:shadow-md active:scale-95"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              <span>Add Product</span>
+            </button>
           </div>
 
-          {/* Export Button */}
-          <button 
-          onClick={onExportClick}
-          className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
-        >
-          <Download size={16} />
-          <span className="hidden sm:inline">Export</span>
-        </button>
+          {/* Bulk Images Action */}
+          <button
+            type="button"
+            onClick={() => onAddProduct?.('bulk-images')}
+            className="px-3.5 py-2.5 rounded-2xl bg-primary-50 hover:bg-primary-100/80 border border-primary-200/90 text-primary-800 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            title="Upload multiple products at once using photos"
+          >
+            <ImageIcon size={15} className="text-primary-600" />
+            <span>Bulk Images</span>
+            <span className="text-[10px] font-extrabold bg-primary-200/60 text-primary-800 px-1.5 py-0.2 rounded-md">
+              Fast
+            </span>
+          </button>
+
+          {/* Bulk Video Action */}
+          <button
+            type="button"
+            onClick={() => onAddProduct?.('bulk-video')}
+            className="px-3.5 py-2.5 rounded-2xl bg-accent-50 hover:bg-accent-100/80 border border-accent-200/90 text-accent-900 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            title="Import products extracted from video frames"
+          >
+            <Video size={15} className="text-accent-700" />
+            <span>Bulk Video</span>
+          </button>
+
+          {/* Import CSV / Excel Action */}
+          <button
+            type="button"
+            onClick={onImport}
+            className="px-3.5 py-2.5 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
+            title="Import spreadsheet CSV or XLSX"
+          >
+            <Upload size={14} className="text-gray-500" />
+            <span className="hidden sm:inline">Import CSV</span>
+          </button>
+
+          {/* Export Catalog Action */}
+          <button
+            type="button"
+            onClick={onExportClick}
+            className="px-3.5 py-2.5 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
+            title="Export full catalog to Excel"
+          >
+            <Download size={14} className="text-gray-500" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+        </div>
+
+        {/* Right Side: Operational Tools & View Controls */}
+        <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+          
+          {/* Bulk Edit Trigger (Highlights when products selected) */}
+          <button
+            type="button"
+            onClick={onBulkEdit}
+            className={`
+              px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border
+              ${selectedCount > 0 
+                ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-xs' 
+                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }
+            `}
+          >
+            <Edit3 size={14} />
+            <span>Bulk Edit</span>
+            {selectedCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] flex items-center justify-center font-black">
+                {selectedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Barcode Labels Trigger */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onPrintLabels) onPrintLabels();
+              scrollToSection('barcode-printing-section');
+            }}
+            className="px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-all"
+            title="Print Barcode Labels"
+          >
+            <Printer size={14} className="text-gray-500" />
+            <span className="hidden md:inline">Barcodes</span>
+          </button>
+
+          {/* Bulk Price Update Trigger */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onBulkPriceUpdate) onBulkPriceUpdate();
+              scrollToSection('bulk-price-section');
+            }}
+            className="px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-all"
+            title="Bulk Price Update"
+          >
+            <DollarSign size={14} className="text-gray-500" />
+            <span className="hidden md:inline">Price Tool</span>
+          </button>
+
+          {/* Barcode Scanner Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowScanner(!showScanner)}
+            className={`
+              p-2 rounded-xl border transition-all text-xs font-bold flex items-center gap-1
+              ${showScanner 
+                ? 'bg-primary-600 text-white border-primary-600' 
+                : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700'
+              }
+            `}
+            title="Scan Barcode"
+          >
+            <Scan size={15} />
+          </button>
+
+          {/* Grid vs List View Mode Toggle */}
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200">
+            <button
+              type="button"
+              onClick={() => onViewChange?.('grid')}
+              className={`p-1.5 rounded-lg transition-all ${
+                currentView === 'grid' 
+                  ? 'bg-white text-gray-900 shadow-2xs' 
+                  : 'text-gray-400 hover:text-gray-700'
+              }`}
+              title="Grid View"
+            >
+              <Grid size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewChange?.('list')}
+              className={`p-1.5 rounded-lg transition-all ${
+                currentView === 'list' 
+                  ? 'bg-white text-gray-900 shadow-2xs' 
+                  : 'text-gray-400 hover:text-gray-700'
+              }`}
+              title="List View"
+            >
+              <List size={15} />
+            </button>
+          </div>
+
         </div>
       </div>
 
-      {/* Barcode Scanner Modal */}
+      {/* Optical Barcode Scanner Input Bar */}
       {showScanner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Scan size={20} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Scan Barcode</h3>
-              </div>
-              <button onClick={() => setShowScanner(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
+        <form onSubmit={handleBarcodeSubmit} className="pt-3 border-t border-gray-100 flex items-center gap-2 animate-fadeIn">
+          <div className="relative flex-1">
+            <Scan size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary-600" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Scan or enter barcode number and press Enter..."
+              value={barcodeValue}
+              onChange={(e) => setBarcodeValue(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+            />
+            {barcodeValue && (
+              <button
+                type="button"
+                onClick={() => setBarcodeValue('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X size={13} />
               </button>
-            </div>
-
-            {/* Scanner Preview */}
-            <div className="bg-gray-900 rounded-xl p-4 mb-4">
-              <div className="h-32 flex items-center justify-center relative">
-                <div className="w-full h-0.5 bg-green-500 animate-scan" />
-                <div className="absolute inset-0 border-2 border-green-500 rounded-lg opacity-50" />
-              </div>
-              <p className="text-center text-xs text-gray-400 mt-2">
-                Position barcode in front of camera
-              </p>
-            </div>
-
-            {/* Manual Input */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Or enter barcode manually
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter barcode number"
-                  value={barcodeValue}
-                  onChange={(e) => setBarcodeValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleBarcodeSubmit()}
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                  autoFocus
-                />
-                <button
-                  onClick={handleBarcodeSubmit}
-                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-gray-400 text-center">
-              Supported: EAN-13, UPC-A, Code 128, QR Code
-            </p>
+            )}
           </div>
-        </div>
+
+          <button
+            type="submit"
+            className="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-bold hover:bg-primary-700 shadow-2xs"
+          >
+            Lookup
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowScanner(false)}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-xl"
+          >
+            <X size={16} />
+          </button>
+        </form>
       )}
     </div>
-  )
+  );
 }

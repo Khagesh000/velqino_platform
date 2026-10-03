@@ -1,315 +1,286 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react'
-import { Printer, Scan, Plus, Minus, Trash2, Download, RefreshCw, CheckCircle, AlertCircle, Package, Settings } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerProducts/BarcodePrinting.scss'
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Printer, 
+  Scan, 
+  Plus, 
+  Minus, 
+  Trash2, 
+  Download, 
+  RefreshCw, 
+  CheckCircle, 
+  AlertCircle, 
+  Package, 
+  Settings,
+  Sparkles,
+  X
+} from '../../../../utils/icons';
 
 export default function BarcodePrinting() {
-  const [mounted, setMounted] = useState(false)
-  const [selectedProducts, setSelectedProducts] = useState([])
-  const [printQuantity, setPrintQuantity] = useState(1)
-  const [labelSize, setLabelSize] = useState('medium')
-  const [isPrinting, setIsPrinting] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const printRef = useRef(null)
+  const [mounted, setMounted] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [labelSize, setLabelSize] = useState('medium');
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const printRef = useRef(null);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
-  const products = [
-    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', price: 499, image: '👕', barcode: '890123456789' },
-    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', price: 2499, image: '🎧', barcode: '890123456788' },
-    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', price: 4999, image: '⌚', barcode: '890123456787' },
-    { id: 4, name: 'Leather Wallet', sku: 'LW-004', price: 1499, image: '👛', barcode: '890123456786' },
-    { id: 5, name: 'Running Shoes', sku: 'RS-005', price: 2999, image: '👟', barcode: '890123456785' },
-  ]
+  const catalogSamples = [
+    { id: 1, name: 'Denim Black Jacket', sku: 'RET-80409D4B', price: 1700, barcode: '890123456789' },
+    { id: 2, name: 'Plain Shirts Premium', sku: 'RET-89FD97C3', price: 650, barcode: '890123456788' },
+    { id: 3, name: 'Cotton Casual T-Shirt', sku: 'RET-38409012', price: 499, barcode: '890123456787' },
+    { id: 4, name: 'Classic Track Pants', sku: 'RET-77409210', price: 899, barcode: '890123456786' },
+  ];
 
-  const filteredProducts = products.filter(p =>
+  const filteredProducts = catalogSamples.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.sku.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  );
 
   const toggleProductSelection = (product) => {
     if (selectedProducts.find(p => p.id === product.id)) {
-      setSelectedProducts(selectedProducts.filter(p => p.id !== product.id))
+      setSelectedProducts(selectedProducts.filter(p => p.id !== product.id));
     } else {
-      setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }])
+      setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }]);
     }
-  }
+  };
 
   const updateQuantity = (productId, newQuantity) => {
     if (newQuantity < 1) {
-      setSelectedProducts(selectedProducts.filter(p => p.id !== productId))
+      setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
     } else {
       setSelectedProducts(selectedProducts.map(p =>
         p.id === productId ? { ...p, quantity: newQuantity } : p
-      ))
+      ));
     }
-  }
+  };
 
   const removeFromSelection = (productId) => {
-    setSelectedProducts(selectedProducts.filter(p => p.id !== productId))
-  }
+    setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
+  };
 
   const handlePrint = async () => {
-    if (selectedProducts.length === 0) return
+    if (selectedProducts.length === 0) return;
     
-    setIsPrinting(true)
-    // Simulate print generation
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsPrinting(false)
-    setShowSuccess(true)
-    
-    // Trigger browser print
-    setTimeout(() => {
-      window.print()
-    }, 500)
+    setIsPrinting(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsPrinting(false);
+    setShowSuccess(true);
     
     setTimeout(() => {
-      setShowSuccess(false)
-    }, 3000)
-  }
+      window.print();
+    }, 400);
+    
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
+  };
 
-  const totalLabels = selectedProducts.reduce((sum, p) => sum + p.quantity, 0)
+  const totalLabels = selectedProducts.reduce((sum, p) => sum + p.quantity, 0);
 
   const getLabelSizeClass = () => {
     switch(labelSize) {
-      case 'small': return 'w-24 h-16 text-[8px]'
-      case 'medium': return 'w-32 h-20 text-[10px]'
-      case 'large': return 'w-40 h-24 text-xs'
-      default: return 'w-32 h-20 text-[10px]'
+      case 'small': return 'w-24 h-16 text-[8px]';
+      case 'medium': return 'w-32 h-20 text-[10px]';
+      case 'large': return 'w-40 h-24 text-xs';
+      default: return 'w-32 h-20 text-[10px]';
     }
-  }
+  };
 
   if (showSuccess) {
     return (
-      <div className="barcode-printing bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-scale">
-            <CheckCircle size={32} className="text-green-500" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-1">Labels Generated!</h3>
-          <p className="text-sm text-gray-500">{totalLabels} barcode labels ready for printing</p>
-          <button
-            onClick={() => setShowSuccess(false)}
-            className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-          >
-            Print More
-          </button>
+      <div className="bg-white rounded-3xl border border-gray-200/80 p-8 shadow-2xs h-full flex flex-col items-center justify-center text-center">
+        <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-3">
+          <CheckCircle size={28} className="text-emerald-600" />
         </div>
+        <h3 className="text-base font-bold text-gray-900">Labels Dispatched!</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{totalLabels} barcode labels sent to printer.</p>
+        <button
+          type="button"
+          onClick={() => setShowSuccess(false)}
+          className="mt-4 px-4 py-2 bg-primary-600 text-white text-xs font-bold rounded-xl hover:bg-primary-700 shadow-2xs"
+        >
+          Print More
+        </button>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="barcode-printing bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs h-full flex flex-col justify-between space-y-4">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <Printer size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Barcode Printing</h3>
-          </div>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all">
-            <Settings size={14} />
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Print barcode labels for products</p>
-      </div>
-
-      <div className="p-4 space-y-4">
-        {/* Search Products */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Search Products</label>
-          <div className="relative">
-            <Scan size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name or SKU..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-            />
-          </div>
-        </div>
-
-        {/* Product List */}
-        {searchQuery && (
-          <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto animate-fadeIn">
-            {filteredProducts.map(product => (
-              <button
-                key={product.id}
-                onClick={() => toggleProductSelection(product)}
-                className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 transition-all border-b border-gray-100 last:border-0 text-left"
-              >
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
-                  {product.image}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                  <p className="text-xs text-gray-500">{product.sku}</p>
-                </div>
-                <Plus size={14} className="text-primary-500" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Selected Products */}
-        {selectedProducts.length > 0 && (
-          <div className="animate-fadeIn">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-gray-700">Selected Products ({selectedProducts.length})</label>
-              <button
-                onClick={() => setSelectedProducts([])}
-                className="text-xs text-red-500 hover:text-red-600"
-              >
-                Clear All
-              </button>
+            <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600">
+              <Printer size={16} />
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                Barcode Generator
+              </h3>
+              <p className="text-[11px] text-gray-400">Generate retail price tags & barcodes</p>
             </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {selectedProducts.map(product => (
-                <div key={product.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-lg">
-                    {product.image}
+          </div>
+          <span className="text-[10px] font-mono font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+            EAN-13
+          </span>
+        </div>
+
+        <div className="space-y-4 mt-4">
+          {/* Search Products */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">Select Products</label>
+            <div className="relative">
+              <Scan size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search catalog by name or SKU..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-7 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Product Dropdown List */}
+          {searchQuery && (
+            <div className="border border-gray-200 rounded-2xl max-h-36 overflow-y-auto divide-y divide-gray-100 bg-white shadow-md animate-fadeIn">
+              {filteredProducts.map(product => {
+                const isSelected = !!selectedProducts.find(p => p.id === product.id);
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => toggleProductSelection(product)}
+                    className="w-full flex items-center justify-between p-2.5 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-gray-900">{product.name}</p>
+                      <p className="text-[10px] font-mono text-gray-400">{product.sku} &bull; ₹{product.price}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
+                      isSelected ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {isSelected ? 'Added' : '+ Add'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Selected Products List */}
+          {selectedProducts.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-gray-700">Print Queue ({selectedProducts.length})</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProducts([])}
+                  className="text-[11px] font-bold text-rose-600 hover:text-rose-700"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {selectedProducts.map(product => (
+                  <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-gray-900 truncate">{product.name}</p>
+                      <p className="text-[9px] font-mono text-gray-400">{product.sku}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(product.id, product.quantity - 1)}
+                        className="w-5 h-5 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100"
+                      >
+                        <Minus size={10} />
+                      </button>
+                      <span className="text-xs font-bold text-gray-900 w-5 text-center">{product.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(product.id, product.quantity + 1)}
+                        className="w-5 h-5 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100"
+                      >
+                        <Plus size={10} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFromSelection(product.id)}
+                        className="p-1 text-gray-400 hover:text-rose-600"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 truncate">{product.name}</p>
-                    <p className="text-[10px] text-gray-500">{product.sku}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => updateQuantity(product.id, product.quantity - 1)}
-                      className="p-1 text-gray-400 hover:text-primary-600"
-                    >
-                      <Minus size={12} />
-                    </button>
-                    <span className="text-sm font-semibold text-gray-900 w-6 text-center">{product.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(product.id, product.quantity + 1)}
-                      className="p-1 text-gray-400 hover:text-primary-600"
-                    >
-                      <Plus size={12} />
-                    </button>
-                    <button
-                      onClick={() => removeFromSelection(product.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 ml-1"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Size Selector */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Label Size</label>
+            <div className="grid grid-cols-3 gap-1.5 bg-gray-50 p-1 rounded-2xl border border-gray-200 text-xs">
+              {['small', 'medium', 'large'].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setLabelSize(size)}
+                  className={`py-1.5 font-bold uppercase text-[10px] rounded-xl transition-all ${
+                    labelSize === size 
+                      ? 'bg-white text-primary-900 shadow-2xs border border-gray-200/60' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {size}
+                </button>
               ))}
             </div>
           </div>
-        )}
-
-        {/* Label Settings */}
-        {selectedProducts.length > 0 && (
-          <div className="animate-fadeIn">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Label Size</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLabelSize('small')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${labelSize === 'small' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-              >
-                Small
-              </button>
-              <button
-                onClick={() => setLabelSize('medium')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${labelSize === 'medium' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-              >
-                Medium
-              </button>
-              <button
-                onClick={() => setLabelSize('large')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${labelSize === 'large' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-              >
-                Large
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Label Preview */}
-        {selectedProducts.length > 0 && (
-          <div className="animate-fadeIn">
-            <label className="block text-xs font-medium text-gray-700 mb-2">Preview</label>
-            <div className="bg-gray-100 rounded-lg p-3">
-              <div className="flex flex-wrap gap-2 justify-center">
-                {selectedProducts.slice(0, 3).map(product => (
-                  <div key={product.id} className={`${getLabelSizeClass()} bg-white rounded-lg shadow-sm p-2 flex flex-col items-center justify-center border border-gray-200`}>
-                    <div className="text-lg">{product.image}</div>
-                    <div className="font-mono font-bold mt-1">{product.barcode.slice(-8)}</div>
-                    <div className="text-gray-500 truncate w-full text-center">{product.name.slice(0, 10)}</div>
-                    <div className="mt-1 h-4 w-full bg-gradient-to-r from-gray-300 to-gray-400" />
-                  </div>
-                ))}
-                {selectedProducts.length > 3 && (
-                  <div className={`${getLabelSizeClass()} bg-gray-200 rounded-lg flex items-center justify-center`}>
-                    <span className="text-gray-500">+{selectedProducts.length - 3} more</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Print Button */}
-        {selectedProducts.length > 0 && (
-          <button
-            onClick={handlePrint}
-            disabled={isPrinting}
-            className={`w-full py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-              isPrinting ? 'bg-gray-300 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600'
-            }`}
-          >
-            {isPrinting ? (
-              <>
-                <RefreshCw size={16} className="animate-spin" />
-                <span>Generating Labels...</span>
-              </>
-            ) : (
-              <>
-                <Printer size={16} />
-                <span>Print {totalLabels} Label{totalLabels !== 1 ? 's' : ''}</span>
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Info Note */}
-        <div className="bg-blue-50 rounded-lg p-2 flex items-start gap-2">
-          <AlertCircle size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
-          <p className="text-[10px] text-blue-700">
-            Labels will be generated in {labelSize} size. Compatible with all standard barcode printers.
-          </p>
         </div>
       </div>
 
-      {/* Hidden Print Area */}
-      <div ref={printRef} className="hidden print:block">
-        <div className="p-4">
-          <h2 className="text-lg font-bold mb-4">Barcode Labels</h2>
-          <div className="flex flex-wrap gap-4">
-            {selectedProducts.map(product => (
-              Array(product.quantity).fill().map((_, idx) => (
-                <div key={`${product.id}-${idx}`} className="w-48 h-32 border p-3 rounded flex flex-col items-center justify-center">
-                  <div className="text-2xl mb-2">{product.image}</div>
-                  <div className="font-mono text-lg font-bold">{product.barcode.slice(-8)}</div>
-                  <div className="text-sm mt-1">{product.name}</div>
-                  <div className="text-xs text-gray-500">₹{product.price}</div>
-                  <div className="mt-2 h-6 w-full bg-gray-800" />
-                </div>
-              ))
-            ))}
-          </div>
-        </div>
+      {/* Print Action */}
+      <div className="pt-2 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={isPrinting || selectedProducts.length === 0}
+          className="w-full py-2.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all flex items-center justify-center gap-2 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isPrinting ? (
+            <>
+              <RefreshCw size={14} className="animate-spin" />
+              <span>Preparing Print...</span>
+            </>
+          ) : (
+            <>
+              <Printer size={14} />
+              <span>Print {totalLabels > 0 ? `${totalLabels} Labels` : 'Labels'}</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,7 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Tag, DollarSign, Box, Archive, FileText, Save, Package, Trash2 } from '../../../../utils/icons';
+import { 
+  X, 
+  Upload, 
+  Tag, 
+  DollarSign, 
+  Box, 
+  Archive, 
+  FileText, 
+  Save, 
+  Package, 
+  Trash2,
+  TrendingUp,
+  Sparkles
+} from '../../../../utils/icons';
 import { toast } from 'react-toastify';
 
 export default function EditProductModal({ isOpen, onClose, product, onSave, categories = [] }) {
@@ -24,34 +37,32 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
   });
 
   const [selectedSizes, setSelectedSizes] = useState([]);
-  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
-  // Reset form when modal opens or product changes
   useEffect(() => {
     if (isOpen && product) {
       setFormData({
         name: product.name || '',
         sku: product.sku || '',
-        price: product.price || '',
+        price: product.price || product.display_price || '',
         cost: product.cost || '',
         category_id: product.category_id || '',
         brand: product.brand || '',
         description: product.description || '',
-        stock: product.stock || '',
+        stock: product.stock ?? '',
         threshold: product.threshold || 10,
         status: product.status || 'active'
       });
       
-      // Set initial image preview
-      if (product.primary_image || product.images?.[0]?.image) {
-        setImagePreview(product.primary_image || product.images?.[0]?.image);
+      const primaryImg = product.primary_image || product.images?.[0]?.image || product.image;
+      if (primaryImg) {
+        setImagePreview(primaryImg);
       } else {
         setImagePreview(null);
       }
       
-      // Parse sizes from product variants
-      if (product.variants && product.variants.length > 0) {
-        const sizes = product.variants.map(v => v.size);
+      if (product.variants && Array.isArray(product.variants)) {
+        const sizes = product.variants.map(v => v.size).filter(Boolean);
         setSelectedSizes(sizes);
       } else {
         setSelectedSizes([]);
@@ -63,7 +74,7 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
   }, [isOpen, product]);
 
   const handleImageSelect = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Image size should be less than 5MB');
@@ -96,34 +107,46 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
     });
   };
 
-  const handleSubmit = async () => {
-    if (!formData.name) {
+  const toggleSize = (size) => {
+    if (selectedSizes.includes(size)) {
+      setSelectedSizes(selectedSizes.filter(s => s !== size));
+    } else {
+      setSelectedSizes([...selectedSizes, size]);
+    }
+  };
+
+  const priceNum = Number(formData.price || 0);
+  const costNum = Number(formData.cost || 0);
+  const profitMargin = priceNum > 0 && costNum > 0 ? Math.round(((priceNum - costNum) / priceNum) * 100) : null;
+
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
+    if (!formData.name.trim()) {
       toast.error('Please enter product name');
       return;
     }
     if (!formData.price) {
-      toast.error('Please enter price');
+      toast.error('Please enter selling price');
       return;
     }
 
     setUploading(true);
     try {
       const submitData = new FormData();
-      submitData.append('name', formData.name);
+      submitData.append('name', formData.name.trim());
       submitData.append('price', formData.price);
       submitData.append('cost', formData.cost || 0);
       submitData.append('category_id', formData.category_id || '');
       submitData.append('brand', formData.brand || '');
       submitData.append('description', formData.description || '');
-      submitData.append('stock', formData.stock || 1);
-      submitData.append('threshold', formData.threshold);
-      submitData.append('status', formData.status);
+      submitData.append('stock', formData.stock || 0);
+      submitData.append('threshold', formData.threshold || 10);
+      submitData.append('status', formData.status || 'active');
       
       if (selectedImage) {
         submitData.append('images', selectedImage);
       }
-      
-      if (deleteImage && !selectedImage) {
+      if (deleteImage) {
         submitData.append('delete_image', 'true');
       }
       
@@ -132,16 +155,12 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
           submitData.append('sizes', size);
         });
       }
-      
+
       if (onSave) {
-        await onSave(product.id, submitData);
+        await onSave(submitData);
       }
-      
-      toast.success('Product updated successfully');
-      onClose();
     } catch (error) {
-      toast.error('Failed to update product');
-      console.error(error);
+      console.error('Error updating product:', error);
     } finally {
       setUploading(false);
     }
@@ -150,285 +169,262 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
   if (!isOpen || !product) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-hidden animate-fadeIn">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={onClose} />
       
-      <div className="absolute inset-y-0 right-0 w-full max-w-2xl pt-[56px] pb-[70px] sm:pt-20 sm:pb-16">
-        <div className="h-full bg-white rounded-l-2xl shadow-xl overflow-y-auto">
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                  <Package size={20} className="text-primary-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Edit Product</h2>
-                  <p className="text-sm text-gray-500">Update product information</p>
-                </div>
-              </div>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <X size={20} className="text-gray-500" />
-              </button>
+      <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col justify-between overflow-hidden">
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-white z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center border border-primary-200/60 shadow-2xs">
+              <Package size={20} />
             </div>
-
-            {/* Form */}
-            <div className="space-y-4">
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Image
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    id="edit-product-image"
-                  />
-                  <label
-                    htmlFor="edit-product-image"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 transition-all bg-gray-50"
-                  >
-                    {imagePreview ? (
-                      <div className="relative w-full h-full">
-                        <img src={imagePreview} alt="Preview" className="h-full object-contain rounded-lg mx-auto" />
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleRemoveImage();
-                          }}
-                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <Upload size={24} className="text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-500">Click to upload new image</span>
-                        <span className="text-xs text-gray-400">JPG, PNG, WEBP (Max 5MB)</span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
-
-              {/* Product Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="e.g., Cotton T-Shirt"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
-
-              {/* SKU */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
-                <input
-                  type="text"
-                  name="sku"
-                  value={formData.sku}
-                  onChange={handleChange}
-                  placeholder="e.g., CT-001"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  disabled
-                />
-                <p className="text-xs text-gray-400 mt-1">SKU cannot be changed</p>
-              </div>
-
-              {/* Price and Cost Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price (Selling) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      placeholder="0.00"
-                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cost (Your expense)</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                    <input
-                      type="number"
-                      name="cost"
-                      value={formData.cost}
-                      onChange={handleChange}
-                      placeholder="0.00"
-                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Category and Brand Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    name="category_id"
-                    value={formData.category_id}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                  <input
-                    type="text"
-                    name="brand"
-                    value={formData.brand}
-                    onChange={handleChange}
-                    placeholder="e.g., Velqino"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                </div>
-              </div>
-
-              {/* Sizes / Variants */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sizes (Variants)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {availableSizes.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => {
-                        if (selectedSizes.includes(size)) {
-                          setSelectedSizes(selectedSizes.filter(s => s !== size));
-                        } else {
-                          setSelectedSizes([...selectedSizes, size]);
-                        }
-                      }}
-                      className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
-                        selectedSizes.includes(size)
-                          ? 'bg-primary-500 border-primary-500 text-white'
-                          : 'bg-white border-gray-300 text-gray-700 hover:border-primary-400'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-                {selectedSizes.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Selected: {selectedSizes.join(', ')}
-                  </p>
-                )}
-              </div>
-
-              {/* Stock and Threshold Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Stock
-                  </label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    placeholder="e.g., 50"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reorder Alert
-                  </label>
-                  <input
-                    type="number"
-                    name="threshold"
-                    value={formData.threshold}
-                    onChange={handleChange}
-                    placeholder="e.g., 10"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows="3"
-                  placeholder="Product description..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                />
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="draft">Draft</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-              <button
-                onClick={onClose}
-                disabled={uploading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={uploading}
-                className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {uploading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    Save Changes
-                  </>
-                )}
-              </button>
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">Edit Product</h2>
+              <p className="text-xs font-mono text-gray-400">SKU: {formData.sku || 'N/A'}</p>
             </div>
           </div>
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+          {/* Photo Management */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              Product Photo
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+                id="edit-product-image-file"
+              />
+              <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl border border-gray-200">
+                <div className="w-20 h-20 rounded-xl bg-white border border-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <Package size={28} className="text-gray-300" />
+                  )}
+                </div>
+
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="edit-product-image-file"
+                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors shadow-2xs"
+                    >
+                      Change Photo
+                    </label>
+                    {imagePreview && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400">JPG, PNG, or WEBP up to 5MB</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Name */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Product Title <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              required
+            />
+          </div>
+
+          {/* Category & Brand */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Category
+              </label>
+              <select
+                name="category_id"
+                value={formData.category_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              >
+                <option value="">Select category...</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Brand / Manufacturer
+              </label>
+              <input
+                type="text"
+                name="brand"
+                value={formData.brand}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Price & Cost */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-gray-700">Financials (₹)</label>
+              {profitMargin !== null && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  profitMargin > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700'
+                }`}>
+                  <TrendingUp size={11} />
+                  <span>{profitMargin}% estimated profit margin</span>
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Selling Price (₹)</span>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  className="w-full mt-1 px-3.5 py-2.5 text-xs font-bold bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Cost Price (₹)</span>
+                <input
+                  type="number"
+                  name="cost"
+                  value={formData.cost}
+                  onChange={handleChange}
+                  className="w-full mt-1 px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Stock & Low Threshold */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Current Stock (Units)
+              </label>
+              <input
+                type="number"
+                name="stock"
+                value={formData.stock}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Reorder Threshold
+              </label>
+              <input
+                type="number"
+                name="threshold"
+                value={formData.threshold}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              Available Sizes
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {availableSizes.map(size => {
+                const isSelected = selectedSizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      isSelected 
+                        ? 'bg-primary-600 text-white shadow-2xs' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              name="description"
+              rows={3}
+              value={formData.description}
+              onChange={handleChange}
+              className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white"
+            />
+          </div>
+        </form>
+
+        {/* Footer Bar */}
+        <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 z-10">
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
+            onClick={handleSubmit}
+            disabled={uploading}
+            className="px-6 py-2.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-all shadow-2xs flex items-center gap-2 disabled:opacity-50 active:scale-95"
+          >
+            {uploading ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Saving Changes...</span>
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                <span>Update Product</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
