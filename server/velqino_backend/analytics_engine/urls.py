@@ -27,6 +27,7 @@ urlpatterns = [
 
     #-----------------------------------------------RETAILERS---------------------------------------
     path('retailer/dashboard-summary/', views.retailer_dashboard_summary, name='retailer-dashboard-summary'),
+    path('retailer/customers-summary/', views.retailer_customers_summary, name='retailer-customers-summary'),
 
     path('retailer/kpi-stats/', views.retailer_kpi_stats, name='retailer-kpi-stats'),
     path('retailer/daily-sales/', views.retailer_daily_sales, name='retailer-daily-sales'),

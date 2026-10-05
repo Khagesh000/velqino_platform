@@ -27,6 +27,9 @@ const retailerStatsAPI = {
 
     // Single dashboard endpoint - replaces all 8 calls
     getDashboardSummary: () => API.get('analytics/retailer/dashboard-summary/'),
+
+    // Single unified customers endpoint - replaces all customer endpoints
+    getCustomersSummary: (params) => API.get('analytics/retailer/customers-summary/', { params }),
 };
 
 export default retailerStatsAPI;

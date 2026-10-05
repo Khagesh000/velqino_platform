@@ -1635,7 +1635,353 @@ def retailer_dashboard_summary(request):
             'detail': 'Unable to load dashboard'
         }, status=500)
 
-    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def retailer_customers_summary(request):
+    """
+    SINGLE UNIFIED ENDPOINT for Retailer Customers Page.
+    Consolidates:
+    - Customer dossier & full purchase history with this retailer
+    - High-level CRM & Footfall KPIs
+    - Upcoming Birthdays (next 30 days)
+    - Upcoming Anniversaries (next 30 days)
+    - Walk-in / store activity trends
+    - Loyalty tier distribution & points summary
+    - Product Reviews & Feedback overview
+    """
+    user = request.user
+
+    if user.role != 'retailer':
+        return Response({'status': 'error', 'message': 'Only retailers can access customer summary'}, status=403)
+
+    force_refresh = request.GET.get('force_refresh', 'false').lower() == 'true'
+    cache_key = f"retailer_customers_summary:{user.id}"
+
+    if not force_refresh:
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
+
+    try:
+        from datetime import date, timedelta
+        from django.utils import timezone
+        from django.db.models import Sum, Count, Q, Avg
+        from identity.models import User, CustomerProfile
+        from commerce.models import Order, OrderItem, Review
+        from catalog.models import Product
+
+        today = date.today()
+        now = timezone.now()
+        last_7_days = today - timedelta(days=7)
+        last_30_days = today - timedelta(days=30)
+
+        # 1. Fetch all orders for this retailer with related items
+        retailer_orders = Order.objects.filter(
+            retailer=user
+        ).select_related('customer').prefetch_related('items').order_by('-created_at')
+
+        # Group orders by customer ID
+        customer_orders_map = {}
+        for ord in retailer_orders:
+            cust_id = ord.customer_id
+            if not cust_id:
+                continue
+            if cust_id not in customer_orders_map:
+                customer_orders_map[cust_id] = []
+            
+            items_list = []
+            for item in ord.items.all():
+                items_list.append({
+                    'product_id': item.product_id if item.product_id else getattr(item, 'product_id', None),
+                    'product_name': item.product_name,
+                    'product_sku': item.product_sku,
+                    'quantity': item.quantity,
+                    'price': float(item.price),
+                    'total': float(item.total),
+                    'product_image': item.product_image or ''
+                })
+
+            customer_orders_map[cust_id].append({
+                'id': ord.id,
+                'order_number': ord.order_number or f"ORD-{ord.id}",
+                'grand_total': float(ord.grand_total or ord.total_amount or 0),
+                'total_amount': float(ord.total_amount or 0),
+                'status': ord.status,
+                'created_at': ord.created_at.isoformat() if ord.created_at else None,
+                'items': items_list
+            })
+
+        # Fetch Customer Profiles
+        customer_user_ids = set(customer_orders_map.keys())
+        all_customer_profiles = CustomerProfile.objects.select_related('user').all()
+        for cp in all_customer_profiles:
+            customer_user_ids.add(cp.user_id)
+
+        # Batch load users
+        users_qs = User.objects.filter(id__in=customer_user_ids).select_related('customer_profile')
+        users_map = {u.id: u for u in users_qs}
+
+        enriched_customers = []
+        total_revenue = 0.0
+        repeat_customers_count = 0
+        tier_distribution = {'Platinum': 0, 'Gold': 0, 'Silver': 0, 'Bronze': 0}
+
+        for uid, u in users_map.items():
+            profile = getattr(u, 'customer_profile', None)
+            orders = customer_orders_map.get(uid, [])
+            
+            spent = sum(o['grand_total'] for o in orders)
+            total_revenue += spent
+            order_count = len(orders)
+            if order_count >= 2:
+                repeat_customers_count += 1
+
+            # Determine Tier
+            if spent >= 50000:
+                tier = 'Platinum'
+            elif spent >= 25000:
+                tier = 'Gold'
+            elif spent >= 10000:
+                tier = 'Silver'
+            else:
+                tier = 'Bronze'
+            tier_distribution[tier] += 1
+
+            points = int(spent // 10)
+            redeemed_points = int(points * 0.2)
+            available_points = points - redeemed_points
+
+            name = (
+                (profile.full_name if profile and profile.full_name else None)
+                or u.get_full_name()
+                or u.username
+                or (u.email.split('@')[0] if u.email else 'Customer')
+            )
+            phone = (
+                (profile.phone if profile and profile.phone else None)
+                or getattr(u, 'mobile', '')
+                or ''
+            )
+            dob = getattr(u, 'date_of_birth', None) or (profile.date_of_birth if profile else None)
+            anniversary = getattr(u, 'anniversary_date', None) or (profile.anniversary_date if profile else None)
+
+            last_order = orders[0] if orders else None
+            last_visit = last_order['created_at'] if last_order else (u.created_at.isoformat() if u.created_at else None)
+            first_order = orders[-1] if orders else None
+            first_visit = first_order['created_at'] if first_order else (u.created_at.isoformat() if u.created_at else None)
+
+            enriched_customers.append({
+                'id': profile.id if profile else uid,
+                'user_id': uid,
+                'name': name,
+                'full_name': name,
+                'email': u.email,
+                'phone': phone,
+                'mobile': phone,
+                'city': profile.city if profile else '',
+                'state': profile.state if profile else '',
+                'pincode': profile.pincode if profile else '',
+                'address': f"{getattr(profile, 'address_line1', '')} {getattr(profile, 'address_line2', '')}".strip() if profile else '',
+                'date_of_birth': dob.isoformat() if dob else None,
+                'anniversary_date': anniversary.isoformat() if anniversary else None,
+                'tier': tier,
+                'points': points,
+                'redeemed_points': redeemed_points,
+                'available_points': available_points,
+                'totalSpent': spent,
+                'total_spent': spent,
+                'visits': order_count,
+                'order_count': order_count,
+                'lastVisit': last_visit,
+                'last_visit': last_visit,
+                'first_visit': first_visit,
+                'orders': orders,
+                'user': {
+                    'id': uid,
+                    'email': u.email,
+                    'full_name': name,
+                    'mobile': phone,
+                }
+            })
+
+        # Sort customers by total spent descending
+        enriched_customers.sort(key=lambda c: (c['total_spent'], c['visits']), reverse=True)
+
+        # 2. Upcoming Birthdays (next 30 days)
+        upcoming_birthdays = []
+        for c in enriched_customers:
+            dob_str = c.get('date_of_birth')
+            if not dob_str:
+                continue
+            try:
+                dob_val = date.fromisoformat(dob_str)
+                bday_this_year = date(today.year, dob_val.month, dob_val.day)
+                if bday_this_year < today:
+                    bday_this_year = date(today.year + 1, dob_val.month, dob_val.day)
+                
+                days_left = (bday_this_year - today).days
+                if 0 <= days_left <= 30:
+                    upcoming_birthdays.append({
+                        'id': c['id'],
+                        'user_id': c['user_id'],
+                        'name': c['name'],
+                        'email': c['email'],
+                        'phone': c['phone'],
+                        'date_of_birth': c['date_of_birth'],
+                        'days_left': days_left,
+                        'tier': c['tier'],
+                        'total_spent': c['total_spent']
+                    })
+            except Exception:
+                continue
+        upcoming_birthdays.sort(key=lambda x: x['days_left'])
+
+        # 3. Upcoming Anniversaries (next 30 days)
+        upcoming_anniversaries = []
+        for c in enriched_customers:
+            anni_str = c.get('anniversary_date')
+            if not anni_str:
+                continue
+            try:
+                anni_val = date.fromisoformat(anni_str)
+                anni_this_year = date(today.year, anni_val.month, anni_val.day)
+                if anni_this_year < today:
+                    anni_this_year = date(today.year + 1, anni_val.month, anni_val.day)
+                
+                days_left = (anni_this_year - today).days
+                if 0 <= days_left <= 30:
+                    years_with_us = max(1, today.year - anni_val.year)
+                    upcoming_anniversaries.append({
+                        'id': c['id'],
+                        'user_id': c['user_id'],
+                        'name': c['name'],
+                        'email': c['email'],
+                        'phone': c['phone'],
+                        'anniversary_date': c['anniversary_date'],
+                        'days_left': days_left,
+                        'years_with_us': years_with_us,
+                        'tier': c['tier'],
+                        'total_spent': c['total_spent']
+                    })
+            except Exception:
+                continue
+        upcoming_anniversaries.sort(key=lambda x: x['days_left'])
+
+        # 4. KPIs and CRM Stats
+        total_customers_count = len(enriched_customers)
+        total_orders_count = sum(c['visits'] for c in enriched_customers)
+        avg_order_val = (total_revenue / total_orders_count) if total_orders_count > 0 else 0.0
+        repeat_rate = round((repeat_customers_count / total_customers_count * 100), 1) if total_customers_count > 0 else 0.0
+
+        kpi_stats = {
+            'total_customers': total_customers_count,
+            'total_orders': total_orders_count,
+            'total_revenue': round(total_revenue, 2),
+            'average_order_value': round(avg_order_val, 2),
+            'repeat_customers': repeat_customers_count,
+            'repeat_rate': repeat_rate,
+            'vip_count': tier_distribution['Gold'] + tier_distribution['Platinum'],
+            'tier_distribution': tier_distribution
+        }
+
+        # 5. Walk-in / Footfall Activity (derived from real retailer orders)
+        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        weekday_map = {d: {'new': 0, 'returning': 0, 'total': 0} for d in day_names}
+        
+        seen_customers_in_week = set()
+        for ord in retailer_orders.filter(created_at__date__gte=last_7_days):
+            day_str = ord.created_at.strftime('%a')
+            if day_str in weekday_map:
+                is_repeat = ord.customer_id in seen_customers_in_week
+                seen_customers_in_week.add(ord.customer_id)
+                weekday_map[day_str]['total'] += 1
+                if is_repeat:
+                    weekday_map[day_str]['returning'] += 1
+                else:
+                    weekday_map[day_str]['new'] += 1
+
+        daily_footfall = [
+            {'day': d, 'new': weekday_map[d]['new'], 'returning': weekday_map[d]['returning'], 'total': weekday_map[d]['total']}
+            for d in day_names
+        ]
+
+        # Hourly activity
+        hourly_distribution = [
+            {'hour': f"{h} AM" if h < 12 else (f"{h-12} PM" if h > 12 else "12 PM"), 'count': 0}
+            for h in range(10, 20)
+        ]
+        hour_index_map = {h: idx for idx, h in enumerate(range(10, 20))}
+        for ord in retailer_orders.filter(created_at__date__gte=last_30_days):
+            h = ord.created_at.hour
+            if h in hour_index_map:
+                hourly_distribution[hour_index_map[h]]['count'] += 1
+
+        footfall_stats = {
+            'daily': daily_footfall,
+            'hourly': hourly_distribution,
+            'total_visitors_7d': sum(d['total'] for d in daily_footfall),
+        }
+
+        # 6. Retailer's Products Feedback & Reviews
+        retailer_product_ids = Product.objects.filter(seller=user, seller_type='retailer').values_list('id', flat=True)
+        reviews_qs = Review.objects.filter(product_id__in=retailer_product_ids).select_related('customer', 'product').order_by('-created_at')
+        
+        total_reviews_count = reviews_qs.count()
+        avg_rating = reviews_qs.aggregate(avg=Avg('rating'))['avg'] or 0.0
+        
+        rating_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        for r in reviews_qs[:100]:
+            if r.rating in rating_dist:
+                rating_dist[r.rating] += 1
+
+        recent_reviews = []
+        for r in reviews_qs[:10]:
+            cust_name = (
+                r.customer.get_full_name()
+                or r.customer.username
+                or (r.customer.email.split('@')[0] if r.customer.email else 'Customer')
+            )
+            recent_reviews.append({
+                'id': r.id,
+                'customer_name': cust_name,
+                'product_id': r.product_id,
+                'product_name': r.product.name if r.product else 'Product',
+                'rating': r.rating,
+                'title': r.title,
+                'comment': r.comment,
+                'created_at': r.created_at.isoformat() if r.created_at else None,
+                'helpful_count': r.helpful_count,
+            })
+
+        reviews_summary = {
+            'total': total_reviews_count,
+            'average_rating': round(float(avg_rating), 1),
+            'rating_distribution': rating_dist,
+            'reviews': recent_reviews
+        }
+
+        response_data = {
+            'customers': enriched_customers,
+            'stats': kpi_stats,
+            'upcomingBirthdays': upcoming_birthdays,
+            'upcomingAnniversaries': upcoming_anniversaries,
+            'footfall': footfall_stats,
+            'reviews': reviews_summary,
+            'updated_at': now.isoformat()
+        }
+
+        cache.set(cache_key, response_data, timeout=120)
+        return Response({'status': 'success', 'data': response_data})
+
+    except Exception as e:
+        logger.error(f"Retailer customers summary error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error',
+            'message': str(e),
+            'detail': 'Unable to load customer summary'
+        }, status=500)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

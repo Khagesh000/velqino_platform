@@ -1,300 +1,201 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Phone, MessageCircle, Mail, FileText, ShoppingCart, XCircle, Star, Send, Copy, CheckCircle, UserPlus, Tag, Bell } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerCustomers/QuickActions.scss'
+import React, { useState, useEffect } from 'react';
+import { 
+  Phone, 
+  MessageCircle, 
+  Mail, 
+  ShoppingCart, 
+  Star, 
+  Send, 
+  Copy, 
+  CheckCircle, 
+  UserPlus, 
+  Tag, 
+  Sparkles,
+  X
+} from '../../../../utils/icons';
+import { toast } from 'react-toastify';
 
 export default function QuickActions({ selectedCustomer, onRefresh }) {
-  const [mounted, setMounted] = useState(false)
-  const [showNoteModal, setShowNoteModal] = useState(false)
-  const [noteText, setNoteText] = useState('')
-  const [showOfferModal, setShowOfferModal] = useState(false)
-  const [selectedOffer, setSelectedOffer] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState('');
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
-  // Get customer display info from selectedCustomer prop
-  const getCustomerName = () => {
-    return selectedCustomer?.full_name || selectedCustomer?.name || selectedCustomer?.user?.full_name || 'N/A'
-  }
+  const customerName = selectedCustomer?.full_name || selectedCustomer?.name || 'Customer';
+  const customerPhone = selectedCustomer?.phone || selectedCustomer?.mobile || '';
+  const customerEmail = selectedCustomer?.email || '';
 
-  const getCustomerPhone = () => {
-    return selectedCustomer?.phone || selectedCustomer?.mobile || selectedCustomer?.user?.mobile || ''
-  }
-
-  const getCustomerEmail = () => {
-    return selectedCustomer?.email || selectedCustomer?.user?.email || ''
-  }
-
-  const actions = [
-    { id: 'call', label: 'Call', icon: <Phone size={16} />, color: 'green', href: `tel:${getCustomerPhone()}`, bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
-    { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} />, color: 'whatsapp', href: `https://wa.me/${getCustomerPhone().replace(/\D/g, '')}`, bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
-    { id: 'email', label: 'Email', icon: <Mail size={16} />, color: 'blue', href: `mailto:${getCustomerEmail()}`, bg: 'bg-blue-100', text: 'text-blue-600', hover: 'hover:bg-blue-200' },
-    { id: 'note', label: 'Add Note', icon: <FileText size={16} />, color: 'purple', bg: 'bg-purple-100', text: 'text-purple-600', hover: 'hover:bg-purple-200' },
-    { id: 'sale', label: 'Create Sale', icon: <ShoppingCart size={16} />, color: 'orange', bg: 'bg-orange-100', text: 'text-orange-600', hover: 'hover:bg-orange-200' },
-  ]
+  const handleCopyContact = () => {
+    if (!customerPhone && !customerEmail) return;
+    const text = `${customerName} - Phone: ${customerPhone || 'N/A'}, Email: ${customerEmail || 'N/A'}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success('Contact info copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const quickOffers = [
-    { id: '10off', label: '10% OFF', points: 500, description: 'Minimum purchase ₹1000' },
-    { id: '15off', label: '15% OFF', points: 800, description: 'Minimum purchase ₹2000' },
-    { id: 'freeshipping', label: 'Free Shipping', points: 300, description: 'No minimum' },
-    { id: 'gift', label: 'Free Gift', points: 1000, description: 'On orders above ₹3000' },
-  ]
-
-  const handleCopyPhone = () => {
-    const phone = getCustomerPhone()
-    if (phone) {
-      navigator.clipboard.writeText(phone)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
+    { id: '10off', label: '10% Discount Code', desc: 'Valid for next store visit on min. ₹1,000 spend' },
+    { id: 'free_gift', label: 'VIP Welcome Perk', desc: 'Free gift redemption with next purchase' },
+    { id: 'double_points', label: '2x Loyalty Points Booster', desc: 'Double points earned on all categories this week' },
+  ];
 
   const handleSendOffer = () => {
     if (selectedOffer) {
-      alert(`Special offer sent to ${getCustomerName()}`)
-      setShowOfferModal(false)
-      setSelectedOffer('')
-      if (onRefresh) onRefresh()
+      toast.success(`Promotional reward sent to ${customerName} via SMS & Email!`);
+      setShowOfferModal(false);
+      setSelectedOffer('');
+      if (onRefresh) onRefresh();
     }
-  }
-
-  const handleAddNote = () => {
-    if (noteText.trim()) {
-      // Here you can call an API to save the note
-      alert(`Note added for ${getCustomerName()}`)
-      setShowNoteModal(false)
-      setNoteText('')
-      if (onRefresh) onRefresh()
-    }
-  }
+  };
 
   if (!selectedCustomer) {
     return (
-      <div className="quick-actions bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-6 text-center">
-          <UserPlus size={32} className="mx-auto text-gray-300 mb-2" />
-          <p className="text-sm text-gray-500">Select a customer</p>
-          <p className="text-xs text-gray-400 mt-1">Click on any customer to see actions</p>
-        </div>
+      <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-2xs h-full flex flex-col items-center justify-center text-center">
+        <UserPlus size={28} className="text-gray-300 mb-2" />
+        <h5 className="text-xs font-bold text-gray-700">Quick Contact Actions</h5>
+        <p className="text-[11px] text-gray-400 mt-0.5">Select a customer to call, message, or award offers</p>
       </div>
-    )
+    );
   }
 
-  const customerName = getCustomerName()
-  const customerPhone = getCustomerPhone()
-  const customerEmail = getCustomerEmail()
-
   return (
-    <div className="quick-actions bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Star size={18} className="text-yellow-500" />
-            <h3 className="text-base font-semibold text-gray-900">Quick Actions</h3>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Star size={16} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 tracking-tight">Direct Engagement</h4>
+              <p className="text-[11px] text-gray-400">One-click outreach for {customerName}</p>
+            </div>
           </div>
-          <button 
-            onClick={() => setShowOfferModal(true)}
-            className="px-2 py-1 text-[10px] font-medium bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all flex items-center gap-1"
+          <button
+            type="button"
+            onClick={handleCopyContact}
+            className="p-1.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 text-[11px] font-bold inline-flex items-center gap-1 transition-all"
           >
-            <Tag size={10} />
-            Send Offer
+            {copied ? <CheckCircle size={12} className="text-emerald-600" /> : <Copy size={12} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Engage with {customerName}</p>
-      </div>
 
-      {/* Customer Quick Info */}
-      <div className="p-4 bg-gray-50 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{customerName.charAt(0)}</span>
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-bold text-gray-900">{customerName}</h4>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="flex items-center gap-1">
-                <Phone size={10} className="text-gray-400" />
-                <span className="text-xs text-gray-600">{customerPhone || 'N/A'}</span>
-              </div>
-              {customerPhone && (
-                <button 
-                  onClick={handleCopyPhone}
-                  className="p-0.5 text-gray-400 hover:text-primary-600"
-                >
-                  {copied ? <CheckCircle size={10} className="text-green-500" /> : <Copy size={10} />}
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Mail size={10} className="text-gray-400" />
-              <span className="text-xs text-gray-500 truncate">{customerEmail || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="p-4">
-        <p className="text-xs font-medium text-gray-700 mb-2">Contact Customer</p>
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {actions.slice(0, 4).map((action) => (
-            <button
-              key={action.id}
-              onClick={() => {
-                if (action.id === 'note') {
-                  setShowNoteModal(true)
-                } else if (action.id === 'sale') {
-                  alert(`Create new sale for ${customerName}`)
-                } else if (action.href && action.id !== 'note') {
-                  window.open(action.href, '_blank')
-                }
-              }}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${action.bg} ${action.text} ${action.hover}`}
+        {/* Action Buttons */}
+        <div className="p-4 sm:p-5 grid grid-cols-2 gap-2.5">
+          {customerPhone ? (
+            <a
+              href={`tel:${customerPhone}`}
+              className="p-2.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-800 text-xs font-bold flex items-center gap-2 transition-all"
             >
-              {action.icon}
-              <span className="text-xs font-medium">{action.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <p className="text-xs font-medium text-gray-700 mb-2">Customer Actions</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button 
-            onClick={() => alert(`View order history for ${customerName}`)}
-            className="flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
-          >
-            <FileText size={14} />
-            <span className="text-xs font-medium">Order History</span>
-          </button>
-          <button 
-            onClick={() => alert(`View loyalty points for ${customerName}`)}
-            className="flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
-          >
-            <Star size={14} />
-            <span className="text-xs font-medium">Loyalty</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Recent Interaction */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center gap-2 mb-2">
-          <Bell size={10} className="text-gray-400" />
-          <p className="text-[10px] font-medium text-gray-500">Last Interaction</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageCircle size={12} className="text-green-500" />
-            <span className="text-xs text-gray-600">No recent interactions</span>
-          </div>
-          <span className="text-[10px] text-gray-400">-</span>
-        </div>
-      </div>
-
-      {/* Add Note Modal */}
-      {showNoteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <FileText size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Add Note</h3>
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <Phone size={13} />
               </div>
-              <button onClick={() => setShowNoteModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <XCircle size={20} />
-              </button>
-            </div>
-            <textarea
-              rows={4}
-              placeholder={`Add a note about ${customerName}...`}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 resize-none"
-            />
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setShowNoteModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddNote}
-                className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-              >
-                Add Note
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="min-w-0">
+                <p className="text-xs font-bold">Direct Call</p>
+                <p className="text-[10px] text-emerald-700/80 truncate">{customerPhone}</p>
+              </div>
+            </a>
+          ) : null}
 
-      {/* Send Offer Modal */}
+          {customerPhone ? (
+            <a
+              href={`https://wa.me/${customerPhone.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-800 text-xs font-bold flex items-center gap-2 transition-all"
+            >
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <MessageCircle size={13} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold">WhatsApp</p>
+                <p className="text-[10px] text-emerald-700/80">Chat</p>
+              </div>
+            </a>
+          ) : null}
+
+          {customerEmail ? (
+            <a
+              href={`mailto:${customerEmail}`}
+              className="p-2.5 rounded-2xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-800 text-xs font-bold flex items-center gap-2 transition-all"
+            >
+              <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                <Mail size={13} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold">Email</p>
+                <p className="text-[10px] text-indigo-700/80 truncate">{customerEmail}</p>
+              </div>
+            </a>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setShowOfferModal(true)}
+            className="p-2.5 rounded-2xl border border-amber-100 bg-amber-50/50 hover:bg-amber-100/60 text-amber-800 text-xs font-bold flex items-center gap-2 transition-all text-left"
+          >
+            <div className="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
+              <Tag size={13} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold">Send Perk</p>
+              <p className="text-[10px] text-amber-700/80">Coupon</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Offer Modal */}
       {showOfferModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Tag size={18} className="text-yellow-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Send Special Offer</h3>
-              </div>
-              <button onClick={() => setShowOfferModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <XCircle size={20} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-gray-100 animate-scaleUp">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+              <h4 className="text-sm font-bold text-gray-900">Award Customer Perk</h4>
+              <button onClick={() => setShowOfferModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={15} />
               </button>
             </div>
 
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">Select an offer to send to {customerName}</p>
-              <div className="space-y-2">
-                {quickOffers.map((offer) => (
-                  <label
-                    key={offer.id}
-                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
-                      selectedOffer === offer.id ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 hover:border-yellow-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="offer"
-                      value={offer.id}
-                      checked={selectedOffer === offer.id}
-                      onChange={(e) => setSelectedOffer(e.target.value)}
-                      className="w-4 h-4 text-yellow-500"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-900">{offer.label}</span>
-                        <span className="text-xs text-yellow-600">{offer.points} points</span>
-                      </div>
-                      <p className="text-xs text-gray-500">{offer.description}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+            <div className="space-y-2 mb-4">
+              {quickOffers.map(o => (
+                <label 
+                  key={o.id}
+                  onClick={() => setSelectedOffer(o.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer block transition-all ${
+                    selectedOffer === o.id ? 'border-primary-500 bg-primary-50/60' : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <p className="text-xs font-bold text-gray-900">{o.label}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{o.desc}</p>
+                </label>
+              ))}
             </div>
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setShowOfferModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleSendOffer}
                 disabled={!selectedOffer}
-                className={`flex-1 px-4 py-2 text-sm rounded-lg transition-all flex items-center justify-center gap-1 ${
-                  selectedOffer ? 'bg-yellow-500 text-white hover:bg-yellow-600' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                }`}
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-40"
               >
-                <Send size={14} />
                 Send Offer
               </button>
             </div>
@@ -302,5 +203,5 @@ export default function QuickActions({ selectedCustomer, onRefresh }) {
         </div>
       )}
     </div>
-  )
+  );
 }

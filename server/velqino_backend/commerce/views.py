@@ -1117,7 +1117,7 @@ def get_retailer_customers(request):
         items_data = []
         for item in order.items.all():
             items_data.append({
-                'product_id': item.product.id,
+                'product_id': item.product.id if item.product else getattr(item, 'product_id', None),
                 'product_name': item.product_name,
                 'product_sku': item.product_sku,
                 'quantity': item.quantity,
@@ -1125,10 +1125,14 @@ def get_retailer_customers(request):
                 'total': str(item.total)
             })
         
+        customer_id = order.customer.id if order.customer else None
+        customer_email = order.customer.email if order.customer else ''
+        customer_mobile = getattr(order.customer, 'mobile', '') if order.customer else ''
+
         data.append({
-            'customer__id': order.customer.id,
-            'customer__email': order.customer.email,
-            'customer__mobile': order.customer.mobile,
+            'customer__id': customer_id,
+            'customer__email': customer_email,
+            'customer__mobile': customer_mobile,
             'order_number': order.order_number,
             'grand_total': str(order.grand_total),
             'status': order.status,
