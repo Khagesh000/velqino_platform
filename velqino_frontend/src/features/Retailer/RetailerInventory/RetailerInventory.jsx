@@ -1,104 +1,162 @@
-"use client"
+"use client";
 
-import React, { useState, lazy, Suspense } from 'react'
-import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
+import React, { useState, lazy, Suspense } from 'react';
+import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar';
+import { 
+  Package, 
+  TrendingUp, 
+  Truck, 
+  RefreshCw, 
+  Sparkles, 
+  ClipboardList, 
+  ShoppingCart,
+  Calendar,
+  AlertCircle
+} from '../../../utils/icons';
+import { toast } from 'react-toastify';
 
 // Lazy load all components
-const StockOverview = lazy(() => import('./components/StockOverview'))
-const StockMovement = lazy(() => import('./components/StockMovement'))
-const ReorderList = lazy(() => import('./components/ReorderList'))
-const SupplierInfo = lazy(() => import('./components/SupplierInfo'))
-const StockTake = lazy(() => import('./components/StockTake'))
-const ExpiryTracking = lazy(() => import('./components/ExpiryTracking'))
-const InwardStock = lazy(() => import('./components/InwardStock')) 
+const StockOverview = lazy(() => import('./components/StockOverview'));
+const StockMovement = lazy(() => import('./components/StockMovement'));
+const ReorderList = lazy(() => import('./components/ReorderList'));
+const SupplierInfo = lazy(() => import('./components/SupplierInfo'));
+const StockTake = lazy(() => import('./components/StockTake'));
+const ExpiryTracking = lazy(() => import('./components/ExpiryTracking'));
+const InwardStock = lazy(() => import('./components/InwardStock'));
 
-// Loading placeholders
-const CardPlaceholder = () => <div className="w-full h-[180px] bg-gray-100 rounded-xl animate-pulse" />
-const TablePlaceholder = () => <div className="w-full h-[350px] bg-gray-100 rounded-xl animate-pulse" />
-const SidebarPlaceholder = () => <div className="w-full h-[300px] bg-gray-100 rounded-xl animate-pulse" />
+// Sleek loading placeholders matching card geometry
+const CardPlaceholder = ({ height = '350px' }) => (
+  <div 
+    style={{ minHeight: height }} 
+    className="w-full bg-white rounded-3xl border border-gray-200/80 p-6 shadow-2xs flex flex-col justify-between animate-pulse"
+  >
+    <div className="flex items-center justify-between">
+      <div className="h-6 w-36 bg-gray-200 rounded-xl" />
+      <div className="h-6 w-16 bg-gray-100 rounded-lg" />
+    </div>
+    <div className="space-y-3 my-4">
+      <div className="h-4 w-full bg-gray-100 rounded-lg" />
+      <div className="h-4 w-5/6 bg-gray-100 rounded-lg" />
+      <div className="h-4 w-4/6 bg-gray-100 rounded-lg" />
+    </div>
+    <div className="h-9 w-full bg-gray-100 rounded-xl" />
+  </div>
+);
 
 export default function RetailerInventory() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    await new Promise(r => setTimeout(r, 600));
+    setRefreshTrigger(prev => prev + 1);
+    setIsSyncing(false);
+    toast.success('Inventory ledger synchronized with store checkout balances!');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#f8fafc] text-gray-900 pb-20 lg:pb-12">
       <RetailerNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
       
-      <main className={`
-        transition-all duration-300 p-4 lg:p-6
-        ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
-      `}>
-        <div className="max-w-7xl mx-auto">
+      <main className={`transition-all duration-300 p-4 sm:p-6 lg:p-8 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+        <div className="max-w-[1600px] mx-auto space-y-6">
           
-          {/* Page Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Inventory Management</h1>
-            <p className="text-sm text-gray-500 mt-1">Track and manage your stock</p>
-          </div>
-
-          {/* Stock Overview Cards */}
-          <div className="mb-6">
-            <Suspense fallback={<CardPlaceholder />}>
-              <StockOverview refreshTrigger={refreshTrigger} />
-            </Suspense>
-          </div>
-
-          {/* Main Content - 2 Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            
-            {/* Left Column - Stock Movement (2/3 width) */}
-            <div className="lg:col-span-2">
-             <div style={{ minHeight: '400px' }}>
-                <Suspense fallback={<TablePlaceholder />}>
-                  <StockMovement />
-                </Suspense>
-              </div> 
+          {/* Executive Header Ribbon */}
+          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-gray-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-50 text-primary-700 border border-primary-100">
+                  <Sparkles size={11} className="text-primary-500" />
+                  Warehouse & Stock Operations
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                  Live Sync
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                Inventory & Stock Management
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl leading-relaxed">
+                Supervise real-time SKU movements, automate low-stock procurement triggers, reconcile physical floor counts, and track batch shelf-life across store locations.
+              </p>
             </div>
 
-            {/* Right Column - Reorder List (1/3 width) */}
-           <div style={{ minHeight: '400px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
-                <ReorderList onReorder={() => setRefreshTrigger(prev => prev + 1)} />
-              </Suspense>
-            </div> 
-
+            {/* Quick Actions / Refresh */}
+            <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className="px-4 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-95 text-xs font-bold transition-all shadow-2xs flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={isSyncing ? 'animate-spin text-primary-600' : 'text-gray-500'} />
+                <span>{isSyncing ? 'Syncing...' : 'Sync Stock'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Bottom Section - 3 Columns */}
+          {/* Top KPI Metrics Ribbon */}
+          <Suspense fallback={<CardPlaceholder height="120px" />}>
+            <StockOverview refreshTrigger={refreshTrigger} />
+          </Suspense>
+
+          {/* Primary Operations Grid: Stock Movement Ledger (2 Cols) + Reorder Queue (1 Col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-           <div style={{ minHeight: '300px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
-                <SupplierInfo />
+            {/* Left 2 Columns: Stock Movement Ledger */}
+            <div className="lg:col-span-2">
+              <Suspense fallback={<CardPlaceholder height="450px" />}>
+                <StockMovement />
               </Suspense>
-            </div> 
-            
-           <div style={{ minHeight: '300px' }}>
-              <Suspense fallback={<SidebarPlaceholder />}>
-                <StockTake onComplete={() => setRefreshTrigger(prev => prev + 1)} />
+            </div>
+
+            {/* Right 1 Column: Automated Reorder Queue */}
+            <div>
+              <Suspense fallback={<CardPlaceholder height="450px" />}>
+                <ReorderList onReorder={() => setRefreshTrigger(prev => prev + 1)} />
               </Suspense>
-            </div> 
-            
-            <div className="space-y-6">
-             <div style={{ minHeight: '250px' }}>
-                <Suspense fallback={<SidebarPlaceholder />}>
-                  <ExpiryTracking />
-                </Suspense>
-              </div> 
-              <div style={{ minHeight: '200px' }}>
-                <Suspense fallback={<SidebarPlaceholder />}>
-                  <InwardStock onComplete={() => setRefreshTrigger(prev => prev + 1)} />
-                </Suspense>
-              </div> 
             </div>
 
           </div>
+
+          {/* Secondary Operations Grid: Receiving (Col 1) + Audit (Col 2) + Quality & Suppliers (Col 3) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+            
+            {/* Column 1: Inward Stock Receiving */}
+            <div>
+              <Suspense fallback={<CardPlaceholder height="380px" />}>
+                <InwardStock onComplete={() => setRefreshTrigger(prev => prev + 1)} />
+              </Suspense>
+            </div>
+            
+            {/* Column 2: Physical Stock Take & Audit */}
+            <div>
+              <Suspense fallback={<CardPlaceholder height="380px" />}>
+                <StockTake onComplete={() => setRefreshTrigger(prev => prev + 1)} />
+              </Suspense>
+            </div>
+
+            {/* Column 3: Stacked Expiry Control + Verified Suppliers */}
+            <div className="space-y-6">
+              <Suspense fallback={<CardPlaceholder height="240px" />}>
+                <ExpiryTracking />
+              </Suspense>
+              
+              <Suspense fallback={<CardPlaceholder height="280px" />}>
+                <SupplierInfo />
+              </Suspense>
+            </div>
+
+          </div>
+
         </div>
       </main>
     </div>
-  )
+  );
 }

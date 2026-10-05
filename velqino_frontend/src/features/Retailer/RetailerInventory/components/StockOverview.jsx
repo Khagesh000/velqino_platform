@@ -1,107 +1,117 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Package, AlertCircle, TrendingUp, TrendingDown, Truck, Clock, RefreshCw } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerInventory/StockOverview.scss'
+import React, { useState, useEffect } from 'react';
+import { 
+  Package, 
+  AlertCircle, 
+  TrendingUp, 
+  TrendingDown, 
+  Truck, 
+  DollarSign,
+  Sparkles,
+  CheckCircle,
+  XCircle
+} from '../../../../utils/icons';
 
 export default function StockOverview({ refreshTrigger }) {
-  const [mounted, setMounted] = useState(false)
-  const [hoveredCard, setHoveredCard] = useState(null)
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   const stockStats = [
     {
       id: 'total',
-      title: 'Total Products',
+      title: 'Total SKU Units',
       value: '2,450',
-      change: '+12%',
+      change: '+12% vs last mo',
       trend: 'up',
-      icon: <Package size={20} />,
-      color: 'primary',
-      description: 'Active products in inventory'
+      icon: Package,
+      colorClass: 'text-primary-600 bg-primary-50 border-primary-100',
+      badge: 'Active Stock',
+      description: 'Active items in warehouse'
     },
     {
       id: 'low',
-      title: 'Low Stock',
+      title: 'Low Stock Triggers',
       value: '23',
-      change: '-5',
-      trend: 'down',
-      icon: <AlertCircle size={20} />,
-      color: 'warning',
-      description: 'Below reorder level'
+      change: 'Needs Reorder',
+      trend: 'warning',
+      icon: AlertCircle,
+      colorClass: 'text-amber-700 bg-amber-50 border-amber-200',
+      badge: 'Threshold Alert',
+      description: 'Below minimum safety level'
     },
     {
       id: 'out',
-      title: 'Out of Stock',
+      title: 'Depleted / Out of Stock',
       value: '8',
-      change: '+2',
-      trend: 'up',
-      icon: <Package size={20} />,
-      color: 'error',
-      description: 'Need immediate restock'
+      change: 'Critical Attention',
+      trend: 'down',
+      icon: XCircle,
+      colorClass: 'text-rose-600 bg-rose-50 border-rose-100',
+      badge: 'Stock-out',
+      description: 'Zero units remaining'
     },
     {
       id: 'incoming',
-      title: 'Incoming Stock',
+      title: 'Inward Consignments',
       value: '450',
-      change: '+150',
+      change: '5 Shipments',
       trend: 'up',
-      icon: <Truck size={20} />,
-      color: 'success',
-      description: 'Expected in 7 days'
+      icon: Truck,
+      colorClass: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+      badge: 'En Route',
+      description: 'Expected within 48-72h'
     },
-  ]
-
-  const getColorClasses = (color) => {
-    const colors = {
-      primary: { bg: 'bg-primary-50', text: 'text-primary-600', border: 'border-primary-100' },
-      warning: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-100' },
-      error: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100' },
-      success: { bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-100' },
+    {
+      id: 'valuation',
+      title: 'Inventory Valuation',
+      value: '₹14.8L',
+      change: '+8.4% asset value',
+      trend: 'up',
+      icon: DollarSign,
+      colorClass: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      badge: 'Asset Value',
+      description: 'Total wholesale capital locked'
     }
-    return colors[color] || colors.primary
-  }
+  ];
 
   return (
-    <div className="stock-overview">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stockStats.map((stat, index) => {
-          const colors = getColorClasses(stat.color)
-          return (
-            <div
-              key={stat.id}
-              className={`stock-card bg-white rounded-xl p-4 border ${colors.border} shadow-sm transition-all duration-300 ${
-                hoveredCard === stat.id ? 'transform -translate-y-1 shadow-lg' : ''
-              }`}
-              onMouseEnter={() => setHoveredCard(stat.id)}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={`p-2 rounded-lg ${colors.bg} ${colors.text}`}>
-                  {stat.icon}
-                </div>
-                <div className={`flex items-center gap-1 text-xs font-medium ${
-                  stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {stat.trend === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  <span>{stat.change}</span>
-                </div>
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      {stockStats.map((stat) => {
+        const IconComponent = stat.icon;
+        return (
+          <div
+            key={stat.id}
+            className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className={`w-9 h-9 rounded-2xl border flex items-center justify-center shrink-0 ${stat.colorClass}`}>
+                <IconComponent size={18} />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-sm font-medium text-gray-700 mt-1">{stat.title}</p>
-                <p className="text-xs text-gray-400 mt-1">{stat.description}</p>
-              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                {stat.badge}
+              </span>
             </div>
-          )
-        })}
-      </div>
+
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                {stat.title}
+              </p>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mt-1 tracking-tight">
+                {stat.value}
+              </h3>
+              <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                {stat.change}
+              </p>
+            </div>
+          </div>
+        );
+      })}
     </div>
-  )
+  );
 }

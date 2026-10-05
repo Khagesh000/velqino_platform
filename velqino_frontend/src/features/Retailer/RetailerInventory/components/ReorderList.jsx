@@ -1,257 +1,208 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Package, Truck, Clock, AlertCircle, ShoppingCart, Eye, RefreshCw, ChevronRight, TrendingUp, CheckCircle } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerInventory/ReorderList.scss'
+import React, { useState, useEffect } from 'react';
+import { 
+  Package, 
+  Truck, 
+  Clock, 
+  AlertCircle, 
+  ShoppingCart, 
+  RefreshCw, 
+  CheckCircle,
+  Phone,
+  Sparkles
+} from '../../../../utils/icons';
+import { toast } from 'react-toastify';
 
 export default function ReorderList({ onReorder }) {
-  const [mounted, setMounted] = useState(false)
-  const [selectedItems, setSelectedItems] = useState([])
-  const [hoveredItem, setHoveredItem] = useState(null)
-  const [filter, setFilter] = useState('all')
+  const [mounted, setMounted] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   const reorderItems = [
-    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', currentStock: 8, reorderLevel: 20, requiredQty: 12, supplier: 'Fashion Hub', supplierContact: '+91 98765 43210', leadTime: '3-5 days', price: 499, status: 'critical', image: '👕' },
-    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', currentStock: 12, reorderLevel: 25, requiredQty: 13, supplier: 'ElectroMart', supplierContact: '+91 87654 32109', leadTime: '5-7 days', price: 2499, status: 'warning', image: '🎧' },
-    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', currentStock: 5, reorderLevel: 15, requiredQty: 10, supplier: 'TechGadgets', supplierContact: '+91 76543 21098', leadTime: '7-10 days', price: 4999, status: 'critical', image: '⌚' },
-    { id: 4, name: 'Leather Wallet', sku: 'LW-004', currentStock: 15, reorderLevel: 20, requiredQty: 5, supplier: 'LeatherCraft', supplierContact: '+91 65432 10987', leadTime: '3-5 days', price: 1499, status: 'warning', image: '👛' },
-    { id: 5, name: 'Running Shoes', sku: 'RS-005', currentStock: 3, reorderLevel: 12, requiredQty: 9, supplier: 'SportFit', supplierContact: '+91 54321 09876', leadTime: '4-6 days', price: 2999, status: 'critical', image: '👟' },
-  ]
+    { id: 1, name: 'Premium Cotton T-Shirt', sku: 'CT-001', currentStock: 8, reorderLevel: 20, requiredQty: 12, supplier: 'Fashion Hub', supplierContact: '+91 98765 43210', leadTime: '3-5 days', price: 499, status: 'critical' },
+    { id: 2, name: 'Wireless Headphones', sku: 'WH-002', currentStock: 12, reorderLevel: 25, requiredQty: 13, supplier: 'ElectroMart', supplierContact: '+91 87654 32109', leadTime: '5-7 days', price: 2499, status: 'warning' },
+    { id: 3, name: 'Smart Watch Pro', sku: 'SW-003', currentStock: 5, reorderLevel: 15, requiredQty: 10, supplier: 'TechGadgets', supplierContact: '+91 76543 21098', leadTime: '7-10 days', price: 4999, status: 'critical' },
+    { id: 4, name: 'Leather Wallet', sku: 'LW-004', currentStock: 15, reorderLevel: 20, requiredQty: 5, supplier: 'LeatherCraft', supplierContact: '+91 65432 10987', leadTime: '3-5 days', price: 1499, status: 'warning' },
+    { id: 5, name: 'Running Shoes', sku: 'RS-005', currentStock: 3, reorderLevel: 12, requiredQty: 9, supplier: 'SportFit', supplierContact: '+91 54321 09876', leadTime: '4-6 days', price: 2999, status: 'critical' },
+  ];
 
-  const filteredItems = filter === 'all' ? reorderItems : reorderItems.filter(item => item.status === filter)
+  const filteredItems = filter === 'all' ? reorderItems : reorderItems.filter(item => item.status === filter);
 
   const toggleItemSelection = (id) => {
     if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter(i => i !== id))
+      setSelectedItems(selectedItems.filter(i => i !== id));
     } else {
-      setSelectedItems([...selectedItems, id])
+      setSelectedItems([...selectedItems, id]);
     }
-  }
+  };
 
   const toggleSelectAll = () => {
     if (selectedItems.length === filteredItems.length) {
-      setSelectedItems([])
+      setSelectedItems([]);
     } else {
-      setSelectedItems(filteredItems.map(i => i.id))
+      setSelectedItems(filteredItems.map(i => i.id));
     }
-  }
+  };
 
   const handleReorder = () => {
-    const itemsToReorder = reorderItems.filter(item => selectedItems.includes(item.id))
-    console.log('Reordering:', itemsToReorder)
-    alert(`Reorder placed for ${selectedItems.length} items`)
-    if (onReorder) onReorder()
-    setSelectedItems([])
-  }
-
-  const getStatusBadge = (status) => {
-    if (status === 'critical') {
-      return { bg: 'bg-red-500', text: 'text-white', label: 'CRITICAL', icon: <AlertCircle size={10} /> }
-    }
-    return { bg: 'bg-orange-500', text: 'text-white', label: 'WARNING', icon: <Clock size={10} /> }
-  }
+    if (selectedItems.length === 0) return;
+    toast.success(`Purchase order generated for ${selectedItems.length} SKU line items!`);
+    if (onReorder) onReorder();
+    setSelectedItems([]);
+  };
 
   const totalReorderCost = reorderItems
     .filter(item => selectedItems.includes(item.id))
-    .reduce((sum, item) => sum + (item.requiredQty * item.price), 0)
-
-  const getStockPercentage = (current, reorder) => {
-    return Math.min((current / reorder) * 100, 100)
-  }
+    .reduce((sum, item) => sum + (item.requiredQty * item.price), 0);
 
   return (
-    <div className="reorder-list bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Reorder List</h3>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-              {reorderItems.length} items
-            </span>
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <ShoppingCart size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Reorder Queue</h3>
+              <p className="text-[11px] text-gray-400">Low stock SKUs with supplier lead times</p>
+            </div>
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all">
-            <RefreshCw size={14} />
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Products needing reorder with supplier details</p>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="px-4 pt-3 flex gap-2 border-b border-gray-100">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filter === 'all' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-        >
-          All ({reorderItems.length})
-        </button>
-        <button
-          onClick={() => setFilter('critical')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filter === 'critical' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600'}`}
-        >
-          Critical ({reorderItems.filter(i => i.status === 'critical').length})
-        </button>
-        <button
-          onClick={() => setFilter('warning')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filter === 'warning' ? 'bg-orange-500 text-white' : 'bg-orange-50 text-orange-600'}`}
-        >
-          Warning ({reorderItems.filter(i => i.status === 'warning').length})
-        </button>
-      </div>
-
-      {/* Selection Bar */}
-      {selectedItems.length > 0 && (
-        <div className="mx-4 mt-3 p-2 bg-primary-50 rounded-lg flex items-center justify-between animate-fadeIn">
-          <span className="text-xs text-primary-700">
-            <span className="font-semibold">{selectedItems.length}</span> items selected
+          <span className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+            {reorderItems.length} Needed
           </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-primary-600">Total: ₹{totalReorderCost.toLocaleString()}</span>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="px-4 sm:px-5 py-2.5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={handleReorder}
-              className="px-2 py-1 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
+              type="button"
+              onClick={() => setFilter('all')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                filter === 'all' 
+                  ? 'bg-white text-primary-600 shadow-2xs border border-gray-200/80' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
             >
-              Reorder Selected
+              All ({reorderItems.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('critical')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                filter === 'critical' 
+                  ? 'bg-rose-600 text-white shadow-xs' 
+                  : 'text-rose-600 hover:bg-rose-50'
+              }`}
+            >
+              Critical ({reorderItems.filter(i => i.status === 'critical').length})
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="text-[11px] font-bold text-primary-600 hover:text-primary-800"
+          >
+            {selectedItems.length === filteredItems.length ? 'Deselect All' : 'Select All'}
+          </button>
         </div>
-      )}
 
-      {/* Reorder List */}
-      <div className="p-4 max-h-[380px] overflow-y-auto custom-scroll">
-        <div className="space-y-3">
-          {/* Select All */}
-          {filteredItems.length > 0 && (
-            <label className="flex items-center gap-2 px-2 py-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedItems.length === filteredItems.length && filteredItems.length > 0}
-                onChange={toggleSelectAll}
-                className="rounded border-gray-300 text-primary-600"
-              />
-              <span className="text-xs text-gray-600">Select All</span>
-            </label>
-          )}
+        {/* Item List */}
+        <div className="p-4 sm:p-5 max-h-[380px] overflow-y-auto space-y-2.5">
+          {filteredItems.map((item) => {
+            const isSelected = selectedItems.includes(item.id);
+            const isCritical = item.status === 'critical';
+            const pct = Math.min(100, Math.round((item.currentStock / item.reorderLevel) * 100));
 
-          {filteredItems.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle size={32} className="mx-auto text-green-300 mb-2" />
-              <p className="text-sm text-gray-500">No items need reorder</p>
-              <p className="text-xs text-gray-400 mt-1">All stock levels are healthy</p>
-            </div>
-          ) : (
-            filteredItems.map((item, index) => {
-              const stockPercent = getStockPercentage(item.currentStock, item.reorderLevel)
-              const statusBadge = getStatusBadge(item.status)
-              return (
-                <div
-                  key={item.id}
-                  className={`reorder-item border rounded-lg p-3 transition-all ${selectedItems.includes(item.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:shadow-md'}`}
-                  onMouseEnter={() => setHoveredItem(item.id)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox */}
+            return (
+              <div
+                key={item.id}
+                onClick={() => toggleItemSelection(item.id)}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                  isSelected 
+                    ? 'border-primary-500 bg-primary-50/50 shadow-2xs' 
+                    : 'border-gray-200/80 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start gap-2.5 min-w-0">
                     <input
                       type="checkbox"
-                      checked={selectedItems.includes(item.id)}
+                      checked={isSelected}
                       onChange={() => toggleItemSelection(item.id)}
-                      className="mt-1 rounded border-gray-300 text-primary-600"
+                      className="mt-0.5 rounded text-primary-600 focus:ring-primary-500"
                     />
-
-                    {/* Product Image */}
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
-                      {item.image}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-900 truncate">{item.name}</p>
+                      <span className="text-[10px] text-gray-400 font-mono">SKU: {item.sku} • {item.supplier}</span>
                     </div>
-
-                    {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">{item.name}</h4>
-                          <p className="text-xs text-gray-500">SKU: {item.sku}</p>
-                        </div>
-                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge.bg} ${statusBadge.text}`}>
-                          {statusBadge.icon}
-                          {statusBadge.label}
-                        </div>
-                      </div>
-
-                      {/* Stock Progress */}
-                      <div className="mt-2">
-                        <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
-                          <span>Stock: {item.currentStock} / {item.reorderLevel}</span>
-                          <span>Need: {item.requiredQty} units</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${item.status === 'critical' ? 'bg-red-500' : 'bg-orange-500'}`}
-                            style={{ width: `${stockPercent}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Supplier Details */}
-                      <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Truck size={10} />
-                          <span>{item.supplier}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock size={10} />
-                          <span>Lead: {item.leadTime}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <TrendingUp size={10} />
-                          <span>₹{item.price}/unit</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Button */}
-                    <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-                      <Eye size={14} />
-                    </button>
                   </div>
 
-                  {/* Quick Reorder Button */}
-                  <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-                    <button
-                      onClick={() => {
-                        setSelectedItems([...selectedItems, item.id])
-                        handleReorder()
-                      }}
-                      className="px-3 py-1 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all flex items-center gap-1"
-                    >
-                      <ShoppingCart size={10} />
-                      Quick Reorder
-                    </button>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isCritical ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  }`}>
+                    {isCritical ? 'Critical' : 'Low'}
+                  </span>
+                </div>
+
+                {/* Stock bar & Order Specs */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-gray-500">
+                      Stock: <strong className="text-gray-900">{item.currentStock}</strong> / {item.reorderLevel}
+                    </span>
+                    <span className="font-bold text-primary-700">
+                      Order +{item.requiredQty} units
+                    </span>
+                  </div>
+
+                  <div className="w-full h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${isCritical ? 'bg-rose-500' : 'bg-amber-500'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
+                    <span>Lead time: {item.leadTime}</span>
+                    <span className="font-bold text-gray-700">₹{(item.requiredQty * item.price).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-              )
-            })
-          )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center justify-between text-[10px] text-gray-500">
-          <div className="flex items-center gap-1">
-            <Truck size={10} />
-            <span>Estimated cost: ₹{reorderItems.reduce((sum, i) => sum + (i.requiredQty * i.price), 0).toLocaleString()}</span>
-          </div>
-          <button className="text-primary-600">View All Suppliers</button>
+      {/* Reorder Action Bottom Bar */}
+      <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] font-bold text-gray-400 uppercase block">Selected Cost</span>
+          <p className="text-sm sm:text-base font-extrabold text-gray-900">
+            ₹{totalReorderCost.toLocaleString('en-IN')}
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleReorder}
+          disabled={selectedItems.length === 0}
+          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs flex items-center gap-1.5"
+        >
+          <ShoppingCart size={13} />
+          <span>Place PO ({selectedItems.length})</span>
+        </button>
       </div>
     </div>
-  )
+  );
 }

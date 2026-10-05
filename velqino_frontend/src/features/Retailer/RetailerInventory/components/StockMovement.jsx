@@ -1,242 +1,267 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Package, Truck, RefreshCw, AlertTriangle, CheckCircle, Clock, Search, Filter, ChevronLeft, ChevronRight } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerInventory/StockMovement.scss'
+import React, { useState, useEffect } from 'react';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Package, 
+  Truck, 
+  RefreshCw, 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  Search, 
+  Filter, 
+  ChevronLeft, 
+  ChevronRight,
+  X
+} from '../../../../utils/icons';
 
 export default function StockMovement() {
-  const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hoveredRow, setHoveredRow] = useState(null)
-  const itemsPerPage = 6
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   const movements = [
-    { id: 1, type: 'inward', product: 'Premium Cotton T-Shirt', quantity: 100, date: '2026-04-14', reference: 'PO-001', status: 'completed', supplier: 'Fashion Hub' },
-    { id: 2, type: 'outward', product: 'Wireless Headphones', quantity: 25, date: '2026-04-14', reference: 'SO-045', status: 'completed', customer: 'Rajesh Kumar' },
-    { id: 3, type: 'damaged', product: 'Smart Watch Pro', quantity: 2, date: '2026-04-13', reference: 'DMG-003', status: 'pending', note: 'Screen damaged' },
-    { id: 4, type: 'returned', product: 'Leather Wallet', quantity: 1, date: '2026-04-13', reference: 'RET-002', status: 'completed', customer: 'Priya Sharma' },
-    { id: 5, type: 'inward', product: 'Running Shoes', quantity: 50, date: '2026-04-12', reference: 'PO-002', status: 'pending', supplier: 'SportFit' },
-    { id: 6, type: 'outward', product: 'Coffee Mug', quantity: 30, date: '2026-04-12', reference: 'SO-046', status: 'completed', customer: 'Amit Singh' },
-    { id: 7, type: 'damaged', product: 'Leather Wallet', quantity: 1, date: '2026-04-11', reference: 'DMG-004', status: 'completed', note: 'Scratched' },
-    { id: 8, type: 'returned', product: 'Wireless Headphones', quantity: 1, date: '2026-04-11', reference: 'RET-003', status: 'pending', customer: 'Sneha Reddy' },
-  ]
+    { id: 1, type: 'inward', product: 'Premium Cotton T-Shirt', sku: 'CT-001', quantity: 100, date: '2026-04-14', reference: 'PO-001', status: 'completed', party: 'Fashion Hub Supplier' },
+    { id: 2, type: 'outward', product: 'Wireless Headphones', sku: 'WH-002', quantity: 25, date: '2026-04-14', reference: 'SO-045', status: 'completed', party: 'Customer Sale #45' },
+    { id: 3, type: 'damaged', product: 'Smart Watch Pro', sku: 'SW-003', quantity: 2, date: '2026-04-13', reference: 'DMG-003', status: 'pending', party: 'Warehouse Inspection: Screen damage' },
+    { id: 4, type: 'returned', product: 'Leather Wallet', sku: 'LW-004', quantity: 1, date: '2026-04-13', reference: 'RET-002', status: 'completed', party: 'Customer Return #2' },
+    { id: 5, type: 'inward', product: 'Running Shoes', sku: 'RS-005', quantity: 50, date: '2026-04-12', reference: 'PO-002', status: 'completed', party: 'SportFit Wholesaler' },
+    { id: 6, type: 'outward', product: 'Coffee Mug Ceramic', sku: 'CM-006', quantity: 30, date: '2026-04-12', reference: 'SO-046', status: 'completed', party: 'Customer Sale #46' },
+    { id: 7, type: 'damaged', product: 'Leather Wallet', sku: 'LW-004', quantity: 1, date: '2026-04-11', reference: 'DMG-004', status: 'completed', party: 'Defective Stitching' },
+    { id: 8, type: 'returned', product: 'Wireless Headphones', sku: 'WH-002', quantity: 1, date: '2026-04-11', reference: 'RET-003', status: 'pending', party: 'Customer Return #3' },
+  ];
 
-  const getTypeConfig = (type) => {
+  const getTypeBadge = (type) => {
     switch(type) {
       case 'inward':
-        return { label: 'Inward', icon: <Truck size={14} />, bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Truck size={11} className="text-emerald-500" />
+            <span>Inward Restock</span>
+          </span>
+        );
       case 'outward':
-        return { label: 'Outward', icon: <Package size={14} />, bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <Package size={11} className="text-indigo-500" />
+            <span>Customer Outward</span>
+          </span>
+        );
       case 'damaged':
-        return { label: 'Damaged', icon: <AlertTriangle size={14} />, bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            <AlertCircle size={11} className="text-rose-500" />
+            <span>Damaged / Write-off</span>
+          </span>
+        );
       case 'returned':
-        return { label: 'Returned', icon: <RefreshCw size={14} />, bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <RefreshCw size={11} className="text-amber-500" />
+            <span>Customer Return</span>
+          </span>
+        );
       default:
-        return { label: 'Unknown', icon: <Package size={14} />, bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+            <Package size={11} />
+            <span className="capitalize">{type}</span>
+          </span>
+        );
     }
-  }
+  };
 
-  const getStatusConfig = (status) => {
-    switch(status) {
-      case 'completed':
-        return { label: 'Completed', icon: <CheckCircle size={10} />, bg: 'bg-green-100', text: 'text-green-700' }
-      case 'pending':
-        return { label: 'Pending', icon: <Clock size={10} />, bg: 'bg-yellow-100', text: 'text-yellow-700' }
-      default:
-        return { label: status, icon: null, bg: 'bg-gray-100', text: 'text-gray-700' }
-    }
-  }
-
-  const filteredMovements = movements.filter(movement => {
+  const filteredMovements = movements.filter(m => {
     const matchesSearch = searchQuery === '' || 
-      movement.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      movement.reference.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = activeTab === 'all' || movement.type === activeTab
-    return matchesSearch && matchesType
-  })
+      m.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.reference.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = activeTab === 'all' || m.type === activeTab;
+    return matchesSearch && matchesType;
+  });
 
-  const totalPages = Math.ceil(filteredMovements.length / itemsPerPage)
-  const paginatedMovements = filteredMovements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  const totalPages = Math.ceil(filteredMovements.length / itemsPerPage) || 1;
+  const paginatedMovements = filteredMovements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const summary = {
-    inward: movements.filter(m => m.type === 'inward').reduce((sum, m) => sum + m.quantity, 0),
-    outward: movements.filter(m => m.type === 'outward').reduce((sum, m) => sum + m.quantity, 0),
-    damaged: movements.filter(m => m.type === 'damaged').reduce((sum, m) => sum + m.quantity, 0),
-    returned: movements.filter(m => m.type === 'returned').reduce((sum, m) => sum + m.quantity, 0),
-  }
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-  }
-
-  const tabCounts = {
-    all: movements.length,
-    inward: movements.filter(m => m.type === 'inward').length,
-    outward: movements.filter(m => m.type === 'outward').length,
-    damaged: movements.filter(m => m.type === 'damaged').length,
-    returned: movements.filter(m => m.type === 'returned').length,
-  }
+  const tabs = [
+    { key: 'all', label: 'All Movements' },
+    { key: 'inward', label: 'Inward' },
+    { key: 'outward', label: 'Outward' },
+    { key: 'damaged', label: 'Damaged' },
+    { key: 'returned', label: 'Returned' },
+  ];
 
   return (
-    <div className="stock-movement bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Stock Movement</h3>
-          </div>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all">
-            <RefreshCw size={14} />
-          </button>
-        </div>
-
-        {/* Summary Chips */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-lg">
-            <Truck size={12} className="text-green-600" />
-            <span className="text-xs font-medium text-green-700">In: {summary.inward}</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-lg">
-            <Package size={12} className="text-blue-600" />
-            <span className="text-xs font-medium text-blue-700">Out: {summary.outward}</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-1 bg-red-100 rounded-lg">
-            <AlertTriangle size={12} className="text-red-600" />
-            <span className="text-xs font-medium text-red-700">Damaged: {summary.damaged}</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-lg">
-            <RefreshCw size={12} className="text-orange-600" />
-            <span className="text-xs font-medium text-orange-700">Returned: {summary.returned}</span>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by product or reference..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-          />
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex overflow-x-auto border-b border-gray-100">
-        {['all', 'inward', 'outward', 'damaged', 'returned'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => {
-              setActiveTab(tab)
-              setCurrentPage(1)
-            }}
-            className={`px-4 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-              activeTab === tab 
-                ? 'text-primary-600 border-b-2 border-primary-500' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)} ({tabCounts[tab]})
-          </button>
-        ))}
-      </div>
-
-      {/* Movements Table */}
-      <div className="p-4 max-h-[350px] overflow-y-auto custom-scroll">
-        <div className="space-y-2">
-          {paginatedMovements.length === 0 ? (
-            <div className="text-center py-8">
-              <Package size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No stock movements found</p>
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
+      <div>
+        {/* Header & Controls */}
+        <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+              <TrendingUp size={18} />
             </div>
-          ) : (
-            paginatedMovements.map((movement, idx) => {
-              const typeConfig = getTypeConfig(movement.type)
-              const statusConfig = getStatusConfig(movement.status)
-              return (
-                <div
-                  key={movement.id}
-                  className={`movement-item border rounded-lg p-3 transition-all ${
-                    hoveredRow === movement.id ? 'shadow-md transform -translate-y-0.5' : ''
-                  } ${typeConfig.border}`}
-                  onMouseEnter={() => setHoveredRow(movement.id)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  style={{ animationDelay: `${idx * 0.03}s` }}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeConfig.bg}`}>
-                        {typeConfig.icon}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{movement.product}</p>
-                        <p className="text-xs text-gray-500">Ref: {movement.reference}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${
-                        movement.type === 'inward' ? 'text-green-600' : 
-                        movement.type === 'outward' ? 'text-blue-600' : 
-                        movement.type === 'damaged' ? 'text-red-600' : 'text-orange-600'
-                      }`}>
-                        {movement.type === 'inward' ? '+' : '-'}{movement.quantity} units
-                      </p>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
-                        {statusConfig.icon}
-                        {statusConfig.label}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>{formatDate(movement.date)}</span>
-                    {movement.supplier && <span>• Supplier: {movement.supplier}</span>}
-                    {movement.customer && <span>• Customer: {movement.customer}</span>}
-                    {movement.note && <span className="text-red-500">• {movement.note}</span>}
-                  </div>
-                </div>
-              )
-            })
-          )}
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Stock Movement Ledger</h3>
+              <p className="text-[11px] text-gray-400">Track inbound, outbound, customer returns, and damaged stock</p>
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search product, SKU, reference..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-8 pr-7 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl w-48 sm:w-60 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Filter Tabs */}
+        <div className="px-4 sm:px-5 py-2.5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-1.5 overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.key);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-white text-primary-600 shadow-2xs border border-gray-200/80'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Table Content */}
+        {filteredMovements.length === 0 ? (
+          <div className="p-12 text-center">
+            <Package size={36} className="mx-auto text-gray-300 mb-2" />
+            <p className="text-xs font-semibold text-gray-700">No stock movements found</p>
+            <p className="text-[11px] text-gray-400 mt-1">Adjust search terms or movement type filters</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/40 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="py-3 px-4 sm:px-5">Product SKU</th>
+                  <th className="py-3 px-4">Movement Type</th>
+                  <th className="py-3 px-4 text-center">Quantity</th>
+                  <th className="py-3 px-4">Reference / Destination</th>
+                  <th className="py-3 px-4 text-right">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs">
+                {paginatedMovements.map((m) => {
+                  const isPositive = m.type === 'inward' || m.type === 'returned';
+                  return (
+                    <tr key={m.id} className="hover:bg-gray-50/60 transition-all">
+                      <td className="py-3 px-4 sm:px-5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold text-xs shrink-0">
+                            <Package size={14} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 truncate max-w-[180px] sm:max-w-[220px]">
+                              {m.product}
+                            </p>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              SKU: {m.sku}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {getTypeBadge(m.type)}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-flex items-center gap-0.5 px-2.5 py-0.5 rounded-lg font-bold text-xs ${
+                          isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                        }`}>
+                          {isPositive ? '+' : '-'}{m.quantity}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-gray-800 font-mono text-[11px] block">{m.reference}</span>
+                        <span className="text-[10px] text-gray-400 truncate max-w-[180px] block">{m.party}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right text-gray-500 font-mono text-[11px]">
+                        {new Date(m.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {filteredMovements.length} movements
+        <div className="px-4 sm:px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs">
+          <p className="text-gray-400 text-[11px]">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredMovements.length)} of {filteredMovements.length}
           </p>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
+            <span className="px-2 text-xs font-bold text-gray-700">
+              {currentPage} / {totalPages}
+            </span>
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
