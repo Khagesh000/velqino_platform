@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Store, MapPin, Phone, Mail, FileText, Edit, Save, X, Camera, Upload } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerSettings/StoreProfile.scss'
+import { Store, MapPin, Phone, Mail, FileText, Edit, Save, X, Camera, Upload, CheckCircle, ShieldCheck } from '../../../../utils/icons'
 
 export default function StoreProfile() {
   const [mounted, setMounted] = useState(false)
@@ -20,7 +19,7 @@ export default function StoreProfile() {
     gstNumber: '29ABCDE1234F1Z5',
     panNumber: 'ABCDE1234F',
     website: 'www.veltrix.com',
-    description: 'Leading retail store for electronics and fashion'
+    description: 'Leading retail store for electronics, appliances, and fashion lifestyle.'
   })
   const [logoPreview, setLogoPreview] = useState(null)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -38,7 +37,7 @@ export default function StoreProfile() {
   const handleSave = () => {
     setIsEditing(false)
     setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
+    setTimeout(() => setShowSuccess(false), 2500)
   }
 
   const handleLogoUpload = (e) => {
@@ -53,56 +52,71 @@ export default function StoreProfile() {
   }
 
   return (
-    <div className="store-profile bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden">
       {/* Header */}
-      <div className="p-5 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Store size={22} className="text-primary-500" />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Store Profile</h3>
-              <p className="text-sm text-gray-500">Manage your store information</p>
-            </div>
+      <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+            <Store size={20} />
           </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Store Profile &amp; Legal Identity</h3>
+            <p className="text-xs text-gray-500">Official business credentials, registered location, and contact lines</p>
+          </div>
+        </div>
+
+        <div>
           {isEditing ? (
-            <div className="flex gap-2">
-              <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={() => setIsEditing(false)} 
+                className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+              >
                 Cancel
               </button>
-              <button onClick={handleSave} className="px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2">
-                <Save size={16} />
-                Save Changes
+              <button 
+                type="button"
+                onClick={handleSave} 
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-xs transition-all"
+              >
+                <Save size={13} />
+                <span>Save Changes</span>
               </button>
             </div>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="px-4 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 flex items-center gap-2">
-              <Edit size={16} />
-              Edit Profile
+            <button 
+              type="button"
+              onClick={() => setIsEditing(true)} 
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 rounded-xl shadow-2xs transition-all"
+            >
+              <Edit size={13} />
+              <span>Edit Profile</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Success Message */}
+      {/* Success Notification */}
       {showSuccess && (
-        <div className="mx-5 mt-4 p-3 bg-green-100 rounded-lg flex items-center gap-2 animate-fadeIn">
-          <CheckCircle size={16} className="text-green-600" />
-          <span className="text-sm text-green-700">Profile updated successfully!</span>
+        <div className="mx-6 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-xs font-bold text-emerald-800 animate-fadeIn">
+          <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+          <span>Store credentials updated and verified successfully!</span>
         </div>
       )}
 
-      {/* Logo Upload */}
-      <div className="p-5 border-b border-gray-100">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Store Logo</label>
-        <div className="flex items-center gap-4">
-          <div className="w-24 h-24 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
-            {logoPreview ? (
-              <img src={logoPreview} alt="Store logo" className="w-full h-full object-cover" />
-            ) : (
-              <Store size={32} className="text-gray-400" />
-            )}
-          </div>
-          <div>
+      {/* Brand Logo Upload Banner */}
+      <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="w-20 h-20 bg-gray-50 border border-gray-200/80 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+          {logoPreview ? (
+            <img src={logoPreview} alt="Store logo" className="w-full h-full object-cover" />
+          ) : (
+            <Store size={28} className="text-gray-300" />
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 mb-1">Official Brand Emblem</label>
+          <div className="flex items-center gap-2 mt-1">
             <input
               type="file"
               accept="image/*"
@@ -110,194 +124,208 @@ export default function StoreProfile() {
               className="hidden"
               id="logo-upload"
             />
-            <label htmlFor="logo-upload" className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition-all flex items-center gap-2">
-              <Upload size={14} />
-              Upload Logo
+            <label 
+              htmlFor="logo-upload" 
+              className="px-3.5 py-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl cursor-pointer transition-all inline-flex items-center gap-1.5"
+            >
+              <Upload size={13} />
+              <span>Upload New Emblem</span>
             </label>
-            <p className="text-xs text-gray-400 mt-1">Recommended: 200x200px, PNG or JPG</p>
           </div>
+          <p className="text-[11px] text-gray-400 mt-1">Rendered on thermal receipts, order invoices, and wholesale purchase vouchers.</p>
         </div>
       </div>
 
       {/* Form Fields */}
-      <div className="p-5">
+      <div className="p-4 sm:p-5 space-y-3.5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Store Name *</label>
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Store Legal Name *</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.storeName}
                 onChange={(e) => handleInputChange('storeName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.storeName}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.storeName}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Proprietor / Managing Partner</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.ownerName}
                 onChange={(e) => handleInputChange('ownerName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.ownerName}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.ownerName}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Official Business Email *</label>
             {isEditing ? (
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.email}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.email}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Primary Desk Contact *</label>
             {isEditing ? (
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.phone}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.phone}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Phone</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Alternate Escalation Phone</label>
             {isEditing ? (
               <input
                 type="tel"
                 value={formData.alternatePhone}
                 onChange={(e) => handleInputChange('alternatePhone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.alternatePhone || '-'}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.alternatePhone || '-'}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Store Web Domain</label>
             {isEditing ? (
               <input
                 type="url"
                 value={formData.website}
                 onChange={(e) => handleInputChange('website', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.website || '-'}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.website || '-'}</p>
             )}
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+        {/* Physical Address */}
+        <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Registered Store Address *</label>
           {isEditing ? (
             <textarea
               rows={2}
               value={formData.address}
               onChange={(e) => handleInputChange('address', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 resize-none"
+              className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500 resize-none"
             />
           ) : (
-            <p className="text-gray-900">{formData.address}</p>
+            <p className="text-xs sm:text-sm font-semibold text-gray-800">{formData.address}</p>
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">City</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.city}
                 onChange={(e) => handleInputChange('city', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.city}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.city}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">State / Province</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.state}
                 onChange={(e) => handleInputChange('state', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.state}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.state}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Postal Code (PIN)</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.pincode}
                 onChange={(e) => handleInputChange('pincode', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500"
               />
             ) : (
-              <p className="text-gray-900">{formData.pincode}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900">{formData.pincode}</p>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
+        {/* GST & PAN Identification */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">GSTIN Identification *</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.gstNumber}
                 onChange={(e) => handleInputChange('gstNumber', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500 font-mono"
               />
             ) : (
-              <p className="text-gray-900">{formData.gstNumber || '-'}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-emerald-800 font-mono">{formData.gstNumber || '-'}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
+
+          <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Income Tax PAN</label>
             {isEditing ? (
               <input
                 type="text"
                 value={formData.panNumber}
                 onChange={(e) => handleInputChange('panNumber', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500 font-mono"
               />
             ) : (
-              <p className="text-gray-900">{formData.panNumber || '-'}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900 font-mono">{formData.panNumber || '-'}</p>
             )}
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Store Description</label>
+        {/* Description */}
+        <div className="p-3.5 rounded-2xl border border-gray-200/60 bg-gray-50/40">
+          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Store Overview</label>
           {isEditing ? (
             <textarea
-              rows={3}
+              rows={2}
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 resize-none"
+              className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:border-primary-500 resize-none"
             />
           ) : (
-            <p className="text-gray-600">{formData.description || '-'}</p>
+            <p className="text-xs text-gray-600 leading-relaxed">{formData.description || '-'}</p>
           )}
         </div>
       </div>

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { FileText, Percent, AlertCircle, CheckCircle, Edit, Save, X, Plus, Trash2, Calculator, Receipt } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerSettings/TaxSettings.scss'
 
 export default function TaxSettings() {
   const [mounted, setMounted] = useState(false)
@@ -37,35 +36,58 @@ export default function TaxSettings() {
   if (!mounted) return null
 
   const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value })
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleRateChange = (id, field, value) => {
-    setFormData({
-      ...formData,
-      taxRates: formData.taxRates.map(rate =>
+    setFormData(prev => ({
+      ...prev,
+      taxRates: prev.taxRates.map(rate =>
         rate.id === id ? { ...rate, [field]: value } : rate
       )
-    })
+    }))
   }
 
   const handleToggleApplicability = (field) => {
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       taxApplicability: {
-        ...formData.taxApplicability,
-        [field]: !formData.taxApplicability[field]
+        ...prev.taxApplicability,
+        [field]: !prev.taxApplicability[field]
       }
-    })
+    }))
   }
 
   const handleToggleRate = (id) => {
-    setFormData({
-      ...formData,
-      taxRates: formData.taxRates.map(rate =>
+    setFormData(prev => ({
+      ...prev,
+      taxRates: prev.taxRates.map(rate =>
         rate.id === id ? { ...rate, applicable: !rate.applicable } : rate
       )
-    })
+    }))
+  }
+
+  const handleAddNewRate = () => {
+    const newId = Math.max(0, ...formData.taxRates.map(r => r.id)) + 1
+    const newRate = {
+      id: newId,
+      name: `GST - Custom ${newId}`,
+      rate: 12,
+      cgst: 6,
+      sgst: 6,
+      applicable: true
+    }
+    setFormData(prev => ({
+      ...prev,
+      taxRates: [...prev.taxRates, newRate]
+    }))
+  }
+
+  const handleDeleteRate = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      taxRates: prev.taxRates.filter(r => r.id !== id)
+    }))
   }
 
   const handleSave = () => {
@@ -75,343 +97,474 @@ export default function TaxSettings() {
   }
 
   return (
-    <div className="tax-settings bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden transition-all duration-300">
       {/* Header */}
-      <div className="p-5 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+      <div className="p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50/60 via-white to-gray-50/30">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Percent size={22} className="text-primary-500" />
+            <div className="w-10 h-10 rounded-2xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 shadow-2xs shrink-0">
+              <Percent size={20} />
+            </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Tax Settings</h3>
-              <p className="text-sm text-gray-500">Configure GST rates and tax applicability</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Tax &amp; GST Compliance</h3>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  GST Verified
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">Configure statutory tax numbers, GST rate slabs, and applicability rules</p>
             </div>
           </div>
-          {isEditing ? (
-            <div className="flex gap-2">
-              <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
-                Cancel
+          
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-xs transition-all"
+                >
+                  <Save size={14} />
+                  Save Changes
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 rounded-xl shadow-2xs transition-all"
+              >
+                <Edit size={14} />
+                Edit Tax Rules
               </button>
-              <button onClick={handleSave} className="px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2">
-                <Save size={16} />
-                Save Changes
-              </button>
-            </div>
-          ) : (
-            <button onClick={() => setIsEditing(true)} className="px-4 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 flex items-center gap-2">
-              <Edit size={16} />
-              Edit Settings
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Success Message */}
+      {/* Success Notification */}
       {showSuccess && (
-        <div className="mx-5 mt-4 p-3 bg-green-100 rounded-lg flex items-center gap-2 animate-fadeIn">
-          <CheckCircle size={16} className="text-green-600" />
-          <span className="text-sm text-green-700">Tax settings saved successfully!</span>
+        <div className="mx-6 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5 animate-fadeIn">
+          <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <CheckCircle size={16} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-emerald-900">Tax Settings Updated</p>
+            <p className="text-xs text-emerald-700">All statutory rates and filing schedules were synchronized with the POS register.</p>
+          </div>
         </div>
       )}
 
-      <div className="p-5 space-y-6">
-        {/* Tax Registration Numbers */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText size={18} className="text-gray-600" />
-            <h4 className="text-base font-semibold text-gray-900">Tax Registration</h4>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="p-5 sm:p-6 space-y-6">
+        {/* Section 1: Tax Registration Identifiers */}
+        <div>
+          <div className="flex items-center gap-2 mb-3.5">
+            <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700">
+              <FileText size={16} />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
+              <h4 className="text-sm font-bold text-gray-900">Statutory Registrations</h4>
+              <p className="text-xs text-gray-500">Government issued GST identification and permanent account numbers</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl border border-gray-200/80 bg-gray-50/50">
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">GST Identification Number (GSTIN)</label>
               {isEditing ? (
                 <input
                   type="text"
                   value={formData.gstNumber}
-                  onChange={(e) => handleInputChange('gstNumber', e.target.value)}
-                  placeholder="22AAAAA0000A1Z"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  onChange={(e) => handleInputChange('gstNumber', e.target.value.toUpperCase())}
+                  placeholder="29ABCDE1234F1Z5"
+                  className="w-full px-3.5 py-2 text-sm font-mono font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all uppercase"
                 />
               ) : (
-                <p className="text-gray-900 font-mono">{formData.gstNumber}</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm font-bold text-gray-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200">
+                    {formData.gstNumber}
+                  </span>
+                  <span className="text-xs font-medium text-emerald-600 flex items-center gap-1">
+                    <CheckCircle size={12} /> Validated
+                  </span>
+                </div>
               )}
-              <p className="text-xs text-gray-400 mt-1">15-digit GST identification number</p>
+              <p className="text-xs text-gray-400 mt-2">15-character alphanumeric tax identifier</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
+
+            <div className="p-4 rounded-2xl border border-gray-200/80 bg-gray-50/50">
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">PAN Identification Number</label>
               {isEditing ? (
                 <input
                   type="text"
                   value={formData.panNumber}
-                  onChange={(e) => handleInputChange('panNumber', e.target.value)}
-                  placeholder="AAAAA1234A"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  onChange={(e) => handleInputChange('panNumber', e.target.value.toUpperCase())}
+                  placeholder="ABCDE1234F"
+                  className="w-full px-3.5 py-2 text-sm font-mono font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all uppercase"
                 />
               ) : (
-                <p className="text-gray-900 font-mono">{formData.panNumber}</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm font-bold text-gray-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200">
+                    {formData.panNumber}
+                  </span>
+                  <span className="text-xs font-medium text-gray-500">Corporate PAN</span>
+                </div>
               )}
-              <p className="text-xs text-gray-400 mt-1">10-digit PAN number</p>
+              <p className="text-xs text-gray-400 mt-2">10-character Income Tax Department identifier</p>
             </div>
-          </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tax Type</label>
-            {isEditing ? (
-              <select
-                value={formData.taxType}
-                onChange={(e) => handleInputChange('taxType', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-              >
-                <option value="gst">GST (Goods & Services Tax)</option>
-                <option value="vat">VAT (Value Added Tax)</option>
-                <option value="sales">Sales Tax</option>
-              </select>
-            ) : (
-              <p className="text-gray-900">{formData.taxType.toUpperCase()}</p>
-            )}
-          </div>
-        </div>
-
-        {/* GST Rates */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Calculator size={18} className="text-gray-600" />
-            <h4 className="text-base font-semibold text-gray-900">GST Rates</h4>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr className="text-left text-xs font-medium text-gray-500">
-                  <th className="px-3 py-2">Tax Rate</th>
-                  <th className="px-3 py-2">CGST</th>
-                  <th className="px-3 py-2">SGST</th>
-                  <th className="px-3 py-2">Total</th>
-                  <th className="px-3 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {formData.taxRates.map((rate) => (
-                  <tr key={rate.id}>
-                    <td className="px-3 py-2">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          value={rate.rate}
-                          onChange={(e) => handleRateChange(rate.id, 'rate', parseFloat(e.target.value))}
-                          className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-sm"
-                          step="0.5"
-                        />
-                      ) : (
-                        <span className="text-sm text-gray-900">{rate.rate}%</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          value={rate.cgst}
-                          onChange={(e) => handleRateChange(rate.id, 'cgst', parseFloat(e.target.value))}
-                          className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-sm"
-                          step="0.5"
-                        />
-                      ) : (
-                        <span className="text-sm text-gray-600">{rate.cgst}%</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          value={rate.sgst}
-                          onChange={(e) => handleRateChange(rate.id, 'sgst', parseFloat(e.target.value))}
-                          className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-sm"
-                          step="0.5"
-                        />
-                      ) : (
-                        <span className="text-sm text-gray-600">{rate.sgst}%</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="text-sm font-semibold text-gray-900">{rate.rate}%</span>
-                    </td>
-                    <td className="px-3 py-2">
-                      {isEditing ? (
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={rate.applicable}
-                            onChange={() => handleToggleRate(rate.id)}
-                            className="rounded border-gray-300 text-primary-500"
-                          />
-                          <span className="text-sm text-gray-600">Active</span>
-                        </label>
-                      ) : (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${rate.applicable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {rate.applicable ? 'Active' : 'Inactive'}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {isEditing && (
-            <button className="mt-3 text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              <Plus size={14} />
-              Add New Tax Rate
-            </button>
-          )}
-        </div>
-
-        {/* Tax Applicability */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Receipt size={18} className="text-gray-600" />
-            <h4 className="text-base font-semibold text-gray-900">Tax Applicability</h4>
-          </div>
-          
-          <div className="space-y-2">
-            {isEditing ? (
-              <>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Apply tax on products</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.taxApplicability.onProducts}
-                    onChange={() => handleToggleApplicability('onProducts')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Apply tax on shipping charges</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.taxApplicability.onShipping}
-                    onChange={() => handleToggleApplicability('onShipping')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Apply tax on packaging charges</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.taxApplicability.onPackaging}
-                    onChange={() => handleToggleApplicability('onPackaging')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Apply tax on discounts</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.taxApplicability.onDiscount}
-                    onChange={() => handleToggleApplicability('onDiscount')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-              </>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Tax on products</span>
-                  <span className="text-sm text-gray-900">{formData.taxApplicability.onProducts ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Tax on shipping</span>
-                  <span className="text-sm text-gray-900">{formData.taxApplicability.onShipping ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Tax on packaging</span>
-                  <span className="text-sm text-gray-900">{formData.taxApplicability.onPackaging ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Tax on discounts</span>
-                  <span className="text-sm text-gray-900">{formData.taxApplicability.onDiscount ? 'Yes' : 'No'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Filing Settings */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle size={18} className="text-gray-600" />
-            <h4 className="text-base font-semibold text-gray-900">Filing Settings</h4>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filing Frequency</label>
+            <div className="p-4 rounded-2xl border border-gray-200/80 bg-gray-50/50">
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Active Tax System</label>
               {isEditing ? (
                 <select
-                  value={formData.filingFrequency}
-                  onChange={(e) => handleInputChange('filingFrequency', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  value={formData.taxType}
+                  onChange={(e) => handleInputChange('taxType', e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all font-medium"
                 >
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="annually">Annually</option>
+                  <option value="gst">GST (Goods & Services Tax - India)</option>
+                  <option value="vat">VAT (Value Added Tax)</option>
+                  <option value="sales">Sales Tax (Standard Direct)</option>
                 </select>
               ) : (
-                <p className="text-gray-900 capitalize">{formData.filingFrequency}</p>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-primary-100 text-primary-800">
+                    {formData.taxType.toUpperCase()}
+                  </span>
+                  <span className="text-xs text-gray-600">Unified Indirect Tax System</span>
+                </div>
               )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Next Due Date</label>
-              <p className="text-gray-900">April 20, 2026</p>
-              <p className="text-xs text-orange-600">15 days remaining</p>
+              <p className="text-xs text-gray-400 mt-2">Determines split between CGST, SGST & IGST</p>
             </div>
           </div>
-          
-          {isEditing && (
-            <div className="mt-3">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.autoFiling}
-                  onChange={() => handleInputChange('autoFiling', !formData.autoFiling)}
-                  className="rounded border-gray-300 text-primary-500"
-                />
-                <span className="text-sm text-gray-700">Enable auto-filing of GST returns</span>
-              </label>
-            </div>
-          )}
-          
-          {!isEditing && formData.autoFiling && (
-            <div className="mt-2 text-sm text-green-600">✓ Auto-filing enabled</div>
-          )}
         </div>
 
-        {/* HSN Summary */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
+        {/* Section 2: GST Rate Slabs */}
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3.5">
             <div className="flex items-center gap-2">
-              <FileText size={18} className="text-gray-600" />
-              <h4 className="text-base font-semibold text-gray-900">HSN/SAC Summary</h4>
+              <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700">
+                <Calculator size={16} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-gray-900">Standard GST Tax Slabs</h4>
+                <p className="text-xs text-gray-500">Configured tax rates applied during checkout and catalog pricing</p>
+              </div>
             </div>
-            {isEditing ? (
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.enableHsnSummary}
-                  onChange={() => handleInputChange('enableHsnSummary', !formData.enableHsnSummary)}
-                  className="rounded border-gray-300 text-primary-500"
-                />
-                <span className="text-sm text-gray-600">Enable</span>
-              </label>
-            ) : (
-              <span className={`text-sm ${formData.enableHsnSummary ? 'text-green-600' : 'text-gray-400'}`}>
-                {formData.enableHsnSummary ? 'Enabled' : 'Disabled'}
-              </span>
+
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleAddNewRate}
+                className="self-start sm:self-auto px-3 py-1.5 text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg flex items-center gap-1.5 transition-all"
+              >
+                <Plus size={14} />
+                Add Custom Tax Slab
+              </button>
             )}
           </div>
-          {formData.enableHsnSummary && (
-            <p className="text-xs text-gray-500 mt-2">HSN/SAC summary will be included in invoices</p>
-          )}
+
+          <div className="border border-gray-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3.5 px-4">Tax Slab Name</th>
+                    <th className="py-3.5 px-4">Total GST Rate</th>
+                    <th className="py-3.5 px-4">CGST Split</th>
+                    <th className="py-3.5 px-4">SGST Split</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    {isEditing && <th className="py-3.5 px-4 text-right">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {formData.taxRates.map((rate) => (
+                    <tr key={rate.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={rate.name}
+                            onChange={(e) => handleRateChange(rate.id, 'name', e.target.value)}
+                            className="px-2.5 py-1 text-sm bg-white border border-gray-200 rounded-lg text-gray-900 font-semibold focus:outline-none focus:border-primary-500"
+                          />
+                        ) : (
+                          <div className="font-semibold text-gray-900 flex items-center gap-2">
+                            <span>{rate.name}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={rate.rate}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0
+                                handleRateChange(rate.id, 'rate', val)
+                                handleRateChange(rate.id, 'cgst', +(val / 2).toFixed(2))
+                                handleRateChange(rate.id, 'sgst', +(val / 2).toFixed(2))
+                              }}
+                              className="w-20 px-2 py-1 text-sm bg-white border border-gray-200 rounded-lg text-gray-900 font-bold focus:outline-none focus:border-primary-500"
+                              step="0.5"
+                            />
+                            <span className="text-xs text-gray-500">%</span>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-50 text-primary-700 border border-primary-200">
+                            {rate.rate}%
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={rate.cgst}
+                              onChange={(e) => handleRateChange(rate.id, 'cgst', parseFloat(e.target.value) || 0)}
+                              className="w-18 px-2 py-1 text-sm bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:border-primary-500"
+                              step="0.1"
+                            />
+                            <span className="text-xs text-gray-500">%</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-700">{rate.cgst}%</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={rate.sgst}
+                              onChange={(e) => handleRateChange(rate.id, 'sgst', parseFloat(e.target.value) || 0)}
+                              className="w-18 px-2 py-1 text-sm bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:border-primary-500"
+                              step="0.1"
+                            />
+                            <span className="text-xs text-gray-500">%</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-700">{rate.sgst}%</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {isEditing ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleRate(rate.id)}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                              rate.applicable
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
+                            }`}
+                          >
+                            {rate.applicable ? 'Active' : 'Inactive'}
+                          </button>
+                        ) : (
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            rate.applicable ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${rate.applicable ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                            {rate.applicable ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
+                      </td>
+                      {isEditing && (
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRate(rate.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete rate"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Tax Applicability & Rules */}
+        <div>
+          <div className="flex items-center gap-2 mb-3.5">
+            <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700">
+              <Receipt size={16} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Tax Applicability Rules</h4>
+              <p className="text-xs text-gray-500">Control when and where tax calculations apply automatically</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {[
+              { key: 'onProducts', label: 'Product Catalog', desc: 'Levy GST on item prices' },
+              { key: 'onShipping', label: 'Shipping & Delivery', desc: 'Levy 18% GST on logistics' },
+              { key: 'onPackaging', label: 'Packaging Materials', desc: 'Levy GST on gift boxing' },
+              { key: 'onDiscount', label: 'Discount Deductions', desc: 'Calculate tax after discount' },
+            ].map(({ key, label, desc }) => {
+              const isActive = formData.taxApplicability[key]
+              return (
+                <div
+                  key={key}
+                  className={`p-4 rounded-2xl border transition-all ${
+                    isActive ? 'border-primary-200/80 bg-primary-50/20' : 'border-gray-200/80 bg-gray-50/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-gray-900">{label}</span>
+                    {isEditing ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleApplicability(key)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          isActive ? 'bg-primary-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            isActive ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold ${
+                        isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {isActive ? 'Applied' : 'Exempt'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xs text-gray-500">{desc}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Section 4: Filing & HSN Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Filing Card */}
+          <div className="p-5 rounded-2xl border border-gray-200/80 bg-white">
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <AlertCircle size={16} />
+                </div>
+                <h4 className="text-sm font-bold text-gray-900">GST Return Schedule</h4>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                15 Days Remaining
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <span className="text-gray-500 block mb-1 font-medium">Filing Frequency</span>
+                {isEditing ? (
+                  <select
+                    value={formData.filingFrequency}
+                    onChange={(e) => handleInputChange('filingFrequency', e.target.value)}
+                    className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-gray-900 font-bold capitalize"
+                  >
+                    <option value="monthly">Monthly (GSTR-1 & 3B)</option>
+                    <option value="quarterly">Quarterly (QRMP)</option>
+                    <option value="annually">Annual (GSTR-9)</option>
+                  </select>
+                ) : (
+                  <span className="font-bold text-gray-900 capitalize text-sm">{formData.filingFrequency} (QRMP)</span>
+                )}
+              </div>
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <span className="text-gray-500 block mb-1 font-medium">Next Due Date</span>
+                <span className="font-bold text-gray-900 text-sm">April 20, 2026</span>
+              </div>
+            </div>
+
+            <div className="mt-3.5 flex items-center justify-between pt-3 border-t border-gray-100">
+              <div>
+                <span className="text-xs font-semibold text-gray-800">Auto-GST Filing Sync</span>
+                <p className="text-2xs text-gray-500">Automated submission via GST Suvidha Provider</p>
+              </div>
+              {isEditing ? (
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('autoFiling', !formData.autoFiling)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    formData.autoFiling ? 'bg-primary-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                      formData.autoFiling ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              ) : (
+                <span className={`text-xs font-bold ${formData.autoFiling ? 'text-emerald-600' : 'text-gray-500'}`}>
+                  {formData.autoFiling ? 'Enabled' : 'Disabled'}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* HSN Summary Card */}
+          <div className="p-5 rounded-2xl border border-gray-200/80 bg-white">
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center">
+                  <FileText size={16} />
+                </div>
+                <h4 className="text-sm font-bold text-gray-900">HSN/SAC Invoice Summary</h4>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                CBIC Mandatory
+              </span>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed mb-4">
+              Harmonized System of Nomenclature (HSN) tables are automatically appended to customer thermal and B2B invoices in compliance with Indian GST laws.
+            </p>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div>
+                <span className="text-xs font-semibold text-gray-900">Append HSN Table on Invoices</span>
+                <p className="text-2xs text-gray-500">Shows 4/6/8 digit code breakdown per item</p>
+              </div>
+              {isEditing ? (
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('enableHsnSummary', !formData.enableHsnSummary)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    formData.enableHsnSummary ? 'bg-primary-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                      formData.enableHsnSummary ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              ) : (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Active
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

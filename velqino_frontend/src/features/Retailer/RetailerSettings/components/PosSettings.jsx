@@ -1,8 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Printer, CreditCard, Scan, Monitor, Settings, Save, Edit, X, CheckCircle, AlertCircle, RefreshCw, Plus, Trash2 } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerSettings/PosSettings.scss'
+import { 
+  Printer, CreditCard, Scan, Monitor, Settings, Save, 
+  Edit, X, CheckCircle, AlertCircle, RefreshCw, Plus, 
+  Trash2, ShieldCheck, Sparkles 
+} from '../../../../utils/icons'
 
 export default function PosSettings() {
   const [mounted, setMounted] = useState(false)
@@ -68,14 +71,13 @@ export default function PosSettings() {
   const handleSave = () => {
     setIsEditing(false)
     setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
+    setTimeout(() => setShowSuccess(false), 2500)
   }
 
   const handleTestPrint = () => {
     setTestPrinting(true)
     setTimeout(() => {
       setTestPrinting(false)
-      alert('Test print sent to printer!')
     }, 1500)
   }
 
@@ -83,366 +85,387 @@ export default function PosSettings() {
     setTestScanner(true)
     setTimeout(() => {
       setTestScanner(false)
-      alert('Scanner test completed!')
     }, 1500)
   }
 
   return (
-    <div className="pos-settings bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden">
       {/* Header */}
-      <div className="p-5 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Printer size={22} className="text-primary-500" />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">POS Settings</h3>
-              <p className="text-sm text-gray-500">Configure hardware and display settings</p>
-            </div>
+      <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Printer size={20} />
           </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">POS Hardware &amp; Peripherals</h3>
+            <p className="text-xs text-gray-500">Receipt printer drivers, barcode decoders, and cash drawer interfaces</p>
+          </div>
+        </div>
+
+        <div>
           {isEditing ? (
-            <div className="flex gap-2">
-              <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={() => setIsEditing(false)} 
+                className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+              >
                 Cancel
               </button>
-              <button onClick={handleSave} className="px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2">
-                <Save size={16} />
-                Save Changes
+              <button 
+                type="button"
+                onClick={handleSave} 
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-xs transition-all"
+              >
+                <Save size={13} />
+                <span>Save Hardware</span>
               </button>
             </div>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="px-4 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 flex items-center gap-2">
-              <Edit size={16} />
-              Edit Settings
+            <button 
+              type="button"
+              onClick={() => setIsEditing(true)} 
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 rounded-xl shadow-2xs transition-all"
+            >
+              <Edit size={13} />
+              <span>Configure Devices</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Success Message */}
+      {/* Success Notification */}
       {showSuccess && (
-        <div className="mx-5 mt-4 p-3 bg-green-100 rounded-lg flex items-center gap-2 animate-fadeIn">
-          <CheckCircle size={16} className="text-green-600" />
-          <span className="text-sm text-green-700">POS settings saved successfully!</span>
+        <div className="mx-6 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-xs font-bold text-emerald-800 animate-fadeIn">
+          <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+          <span>POS peripheral parameters calibrated successfully!</span>
         </div>
       )}
 
-      <div className="p-5 space-y-6">
-        {/* Receipt Printer Settings */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Printer size={18} className="text-gray-600" />
-              <h4 className="text-base font-semibold text-gray-900">Receipt Printer</h4>
+      <div className="p-5 sm:p-6 space-y-5">
+        {/* Receipt Printer Card */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-gray-200/80 bg-gray-50/30">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+                <Printer size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold text-gray-900">Thermal Receipt Printer</h4>
+                <p className="text-[10px] text-gray-400">High-speed customer receipt and tax invoice dispenser</p>
+              </div>
             </div>
-            {isEditing && (
-              <label className="flex items-center gap-2">
+            
+            {isEditing ? (
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.receiptPrinter.enabled}
                   onChange={() => handleToggle('receiptPrinter', 'enabled')}
-                  className="rounded border-gray-300 text-primary-500"
+                  className="rounded text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-600">Enable</span>
+                <span className="text-xs font-bold text-gray-700">Driver Active</span>
               </label>
+            ) : (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                formData.receiptPrinter.enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
+              }`}>
+                {formData.receiptPrinter.enabled ? 'Online' : 'Disabled'}
+              </span>
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Printer Name</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2">
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Model Name</label>
               {isEditing ? (
                 <input
                   type="text"
                   value={formData.receiptPrinter.name}
                   onChange={(e) => handleInputChange('receiptPrinter', 'name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2.5 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 />
               ) : (
-                <p className="text-gray-900">{formData.receiptPrinter.name}</p>
+                <p className="text-xs font-extrabold text-gray-900">{formData.receiptPrinter.name}</p>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Port</label>
+
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Interface Port</label>
               {isEditing ? (
                 <select
                   value={formData.receiptPrinter.port}
                   onChange={(e) => handleInputChange('receiptPrinter', 'port', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 >
                   <option>USB-001</option>
                   <option>USB-002</option>
                   <option>COM1</option>
                   <option>COM2</option>
                   <option>COM3</option>
-                  <option>LPT1</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{formData.receiptPrinter.port}</p>
+                <p className="text-xs font-extrabold text-gray-900 font-mono">{formData.receiptPrinter.port}</p>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Paper Size</label>
+
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Paper Roll Width</label>
               {isEditing ? (
                 <select
                   value={formData.receiptPrinter.paperSize}
                   onChange={(e) => handleInputChange('receiptPrinter', 'paperSize', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 >
                   <option>58mm</option>
-                  <option>80mm</option>
+                  <option>80mm (Standard)</option>
                   <option>112mm</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{formData.receiptPrinter.paperSize}</p>
+                <p className="text-xs font-extrabold text-gray-900">{formData.receiptPrinter.paperSize}</p>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Copies</label>
+
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Copies Printed</label>
               {isEditing ? (
                 <select
                   value={formData.receiptPrinter.copies}
                   onChange={(e) => handleInputChange('receiptPrinter', 'copies', parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 >
-                  <option value={1}>1 Copy</option>
-                  <option value={2}>2 Copies</option>
+                  <option value={1}>1 Original</option>
+                  <option value={2}>2 (Customer + Store)</option>
                   <option value={3}>3 Copies</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{formData.receiptPrinter.copies} {formData.receiptPrinter.copies === 1 ? 'copy' : 'copies'}</p>
+                <p className="text-xs font-extrabold text-gray-900">{formData.receiptPrinter.copies} Copies</p>
               )}
             </div>
           </div>
           
           {formData.receiptPrinter.enabled && (
-            <div className="mt-4">
+            <div className="mt-3.5 pt-3 border-t border-gray-200/60 flex items-center justify-between">
+              <span className="text-[11px] text-gray-400">Prints self-test diagnostics page</span>
               <button
+                type="button"
                 onClick={handleTestPrint}
                 disabled={testPrinting}
-                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-2xs transition-all disabled:opacity-50"
               >
-                {testPrinting ? <RefreshCw size={14} className="animate-spin" /> : <Printer size={14} />}
-                Test Print
+                {testPrinting ? <RefreshCw size={13} className="animate-spin text-primary-600" /> : <Printer size={13} />}
+                <span>{testPrinting ? 'Transmitting...' : 'Dispatch Test Slip'}</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Cash Drawer Settings */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CreditCard size={18} className="text-gray-600" />
-              <h4 className="text-base font-semibold text-gray-900">Cash Drawer</h4>
+        {/* Cash Drawer Card */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-gray-200/80 bg-gray-50/30">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <CreditCard size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold text-gray-900">Automatic Cash Drawer (RJ11/COM)</h4>
+                <p className="text-[10px] text-gray-400">Solenoid trigger mechanism for currency drawers</p>
+              </div>
             </div>
-            {isEditing && (
-              <label className="flex items-center gap-2">
+            
+            {isEditing ? (
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.cashDrawer.enabled}
                   onChange={() => handleToggle('cashDrawer', 'enabled')}
-                  className="rounded border-gray-300 text-primary-500"
+                  className="rounded text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-600">Enable</span>
+                <span className="text-xs font-bold text-gray-700">Driver Active</span>
               </label>
+            ) : (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                formData.cashDrawer.enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
+              }`}>
+                {formData.cashDrawer.enabled ? 'Connected' : 'Disabled'}
+              </span>
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Drawer Name</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Drawer Mechanism</label>
               {isEditing ? (
                 <input
                   type="text"
                   value={formData.cashDrawer.name}
                   onChange={(e) => handleInputChange('cashDrawer', 'name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2.5 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 />
               ) : (
-                <p className="text-gray-900">{formData.cashDrawer.name}</p>
+                <p className="text-xs font-extrabold text-gray-900">{formData.cashDrawer.name}</p>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Port</label>
+
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Trigger Port</label>
               {isEditing ? (
                 <select
                   value={formData.cashDrawer.port}
                   onChange={(e) => handleInputChange('cashDrawer', 'port', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 >
                   <option>COM1</option>
                   <option>COM2</option>
                   <option>COM3</option>
-                  <option>USB-001</option>
+                  <option>RJ11 (Printer Kick)</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{formData.cashDrawer.port}</p>
+                <p className="text-xs font-extrabold text-gray-900 font-mono">{formData.cashDrawer.port}</p>
               )}
             </div>
           </div>
           
           {isEditing && (
-            <div className="mt-3">
-              <label className="flex items-center gap-2">
+            <div className="mt-3 pt-2.5 border-t border-gray-200/60 flex items-center justify-between">
+              <span className="text-xs text-gray-600 font-medium">Automatic solenoid ejection on finalized transaction:</span>
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.cashDrawer.autoOpen}
                   onChange={() => handleToggle('cashDrawer', 'autoOpen')}
-                  className="rounded border-gray-300 text-primary-500"
+                  className="rounded text-primary-600"
                 />
-                <span className="text-sm text-gray-600">Auto-open on sale completion</span>
+                <span className="text-xs font-bold text-gray-800">Auto Kick</span>
               </label>
             </div>
           )}
         </div>
 
-        {/* Barcode Scanner Settings */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Scan size={18} className="text-gray-600" />
-              <h4 className="text-base font-semibold text-gray-900">Barcode Scanner</h4>
+        {/* Barcode Scanner Card */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-gray-200/80 bg-gray-50/30">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Scan size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold text-gray-900">1D / 2D Barcode &amp; QR Scanner</h4>
+                <p className="text-[10px] text-gray-400">High-speed optical laser reader for retail checkout</p>
+              </div>
             </div>
-            {isEditing && (
-              <label className="flex items-center gap-2">
+            
+            {isEditing ? (
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.barcodeScanner.enabled}
                   onChange={() => handleToggle('barcodeScanner', 'enabled')}
-                  className="rounded border-gray-300 text-primary-500"
+                  className="rounded text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-600">Enable</span>
+                <span className="text-xs font-bold text-gray-700">Driver Active</span>
               </label>
+            ) : (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                formData.barcodeScanner.enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
+              }`}>
+                {formData.barcodeScanner.enabled ? 'Armed & Listening' : 'Disabled'}
+              </span>
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Scanner Name</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Scanner Engine</label>
               {isEditing ? (
                 <input
                   type="text"
                   value={formData.barcodeScanner.name}
                   onChange={(e) => handleInputChange('barcodeScanner', 'name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2.5 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 />
               ) : (
-                <p className="text-gray-900">{formData.barcodeScanner.name}</p>
+                <p className="text-xs font-extrabold text-gray-900">{formData.barcodeScanner.name}</p>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Port</label>
+
+            <div className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Comms Port</label>
               {isEditing ? (
                 <select
                   value={formData.barcodeScanner.port}
                   onChange={(e) => handleInputChange('barcodeScanner', 'port', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:border-primary-500 font-bold"
                 >
-                  <option>USB-001</option>
+                  <option>USB-001 (HID Emulation)</option>
                   <option>USB-002</option>
-                  <option>COM1</option>
+                  <option>Virtual COM</option>
                 </select>
               ) : (
-                <p className="text-gray-900">{formData.barcodeScanner.port}</p>
+                <p className="text-xs font-extrabold text-gray-900 font-mono">{formData.barcodeScanner.port}</p>
               )}
             </div>
           </div>
           
-          {isEditing && (
-            <div className="mt-3">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.barcodeScanner.beepOnScan}
-                  onChange={() => handleToggle('barcodeScanner', 'beepOnScan')}
-                  className="rounded border-gray-300 text-primary-500"
-                />
-                <span className="text-sm text-gray-600">Beep on successful scan</span>
-              </label>
-            </div>
-          )}
-          
           {formData.barcodeScanner.enabled && (
-            <div className="mt-4">
+            <div className="mt-3.5 pt-3 border-t border-gray-200/60 flex items-center justify-between">
+              <span className="text-[11px] text-gray-400">Decodes UPC, EAN-13, Code-128, and GS1 DataBar</span>
               <button
+                type="button"
                 onClick={handleTestScanner}
                 disabled={testScanner}
-                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-2xs transition-all disabled:opacity-50"
               >
-                {testScanner ? <RefreshCw size={14} className="animate-spin" /> : <Scan size={14} />}
-                Test Scanner
+                {testScanner ? <RefreshCw size={13} className="animate-spin text-primary-600" /> : <Scan size={13} />}
+                <span>{testScanner ? 'Scanning...' : 'Test Laser Decode'}</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Display Settings */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Monitor size={18} className="text-gray-600" />
-            <h4 className="text-base font-semibold text-gray-900">Display Settings</h4>
+        {/* Display & Checkout Screen Preferences */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-gray-200/80 bg-gray-50/30">
+          <div className="flex items-center gap-2.5 mb-3.5">
+            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+              <Monitor size={16} />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-extrabold text-gray-900">Dual Display &amp; Checkout Preferences</h4>
+              <p className="text-[10px] text-gray-400">Customer pole display and cashier screen behaviors</p>
+            </div>
           </div>
           
-          <div className="space-y-2">
-            {isEditing ? (
-              <>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Show Customer Details</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.displaySettings.showCustomerDetails}
-                    onChange={() => handleToggle('displaySettings', 'showCustomerDetails')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Show Product Images</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.displaySettings.showProductImage}
-                    onChange={() => handleToggle('displaySettings', 'showProductImage')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Show Discount Popup</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.displaySettings.showDiscountPopup}
-                    onChange={() => handleToggle('displaySettings', 'showDiscountPopup')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-700">Auto Print Receipt</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.displaySettings.autoPrintReceipt}
-                    onChange={() => handleToggle('displaySettings', 'autoPrintReceipt')}
-                    className="rounded border-gray-300 text-primary-500"
-                  />
-                </label>
-              </>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Show Customer Details</span>
-                  <span className="text-sm text-gray-900">{formData.displaySettings.showCustomerDetails ? 'Yes' : 'No'}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {[
+              { id: 'showCustomerDetails', label: 'Display Customer VIP Name & Points on Register' },
+              { id: 'showProductImage', label: 'Render High-Res Product Thumbnail on POS Cart Grid' },
+              { id: 'showDiscountPopup', label: 'Prompt Quick-Discount Modal on Order Checkout' },
+              { id: 'autoPrintReceipt', label: 'Instantly Fire Print Job on Successful Payment' },
+            ].map(setting => {
+              const isChecked = formData.displaySettings[setting.id]
+              return (
+                <div 
+                  key={setting.id}
+                  className="p-3 bg-white rounded-xl border border-gray-200/60 shadow-2xs flex items-center justify-between gap-3"
+                >
+                  <span className="text-xs text-gray-700 font-medium">{setting.label}</span>
+                  {isEditing ? (
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggle('displaySettings', setting.id)}
+                      className="rounded text-primary-600 focus:ring-primary-500"
+                    />
+                  ) : (
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      isChecked ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {isChecked ? 'Active' : 'Off'}
+                    </span>
+                  )}
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Show Product Images</span>
-                  <span className="text-sm text-gray-900">{formData.displaySettings.showProductImage ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Show Discount Popup</span>
-                  <span className="text-sm text-gray-900">{formData.displaySettings.showDiscountPopup ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-sm text-gray-600">Auto Print Receipt</span>
-                  <span className="text-sm text-gray-900">{formData.displaySettings.autoPrintReceipt ? 'Yes' : 'No'}</span>
-                </div>
-              </div>
-            )}
+              )
+            })}
           </div>
         </div>
       </div>
