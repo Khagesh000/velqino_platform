@@ -1,8 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Users, Search, Filter, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Phone, Mail, Calendar, Clock, Plus, X, Save } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerStaff/StaffList.scss'
+import { 
+  Users, Search, Filter, ChevronLeft, ChevronRight, Eye, 
+  Edit, Trash2, Phone, Mail, Calendar, Clock, Plus, X, 
+  Save, ShieldCheck, Sparkles, DollarSign 
+} from '../../../../utils/icons'
 
 export default function StaffList({ selectedStaff, setSelectedStaff, refreshTrigger }) {
   const [mounted, setMounted] = useState(false)
@@ -15,16 +18,21 @@ export default function StaffList({ selectedStaff, setSelectedStaff, refreshTrig
     name: '',
     email: '',
     phone: '',
-    role: '',
-    shift: '',
+    role: 'Sales Associate',
+    shift: '9 AM - 6 PM',
     salary: '',
     joinDate: ''
   })
-  const itemsPerPage = 4
+  const itemsPerPage = 5
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, roleFilter])
 
   if (!mounted) return null
 
@@ -52,169 +60,280 @@ export default function StaffList({ selectedStaff, setSelectedStaff, refreshTrig
 
   const getRoleBadge = (role) => {
     switch(role) {
-      case 'Store Manager': return 'bg-purple-100 text-purple-700'
-      case 'Sales Associate': return 'bg-blue-100 text-blue-700'
-      case 'Cashier': return 'bg-green-100 text-green-700'
-      case 'Stock Clerk': return 'bg-orange-100 text-orange-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case 'Store Manager': 
+        return { bg: 'bg-purple-50 text-purple-700 border-purple-200' }
+      case 'Sales Associate': 
+        return { bg: 'bg-sky-50 text-sky-700 border-sky-200' }
+      case 'Cashier': 
+        return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+      case 'Stock Clerk': 
+        return { bg: 'bg-amber-50 text-amber-700 border-amber-200' }
+      default: 
+        return { bg: 'bg-gray-100 text-gray-700 border-gray-200' }
     }
   }
 
   const formatDate = (date) => {
+    if (!date) return '-'
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
   const handleAddStaff = () => {
     if (!formData.name || !formData.role) return
     setShowAddModal(false)
-    setFormData({ name: '', email: '', phone: '', role: '', shift: '', salary: '', joinDate: '' })
+    setFormData({ name: '', email: '', phone: '', role: 'Sales Associate', shift: '9 AM - 6 PM', salary: '', joinDate: '' })
+  }
+
+  const handleRowClick = (staff) => {
+    if (setSelectedStaff) {
+      setSelectedStaff(staff)
+    }
+  }
+
+  const summary = {
+    totalStaff: staffMembers.length,
+    activeRoles: 4,
+    monthlyBasePayroll: staffMembers.reduce((sum, s) => sum + s.salary, 0),
+    avgBaseSalary: Math.round(staffMembers.reduce((sum, s) => sum + s.salary, 0) / staffMembers.length)
   }
 
   return (
-    <div className="staff-list bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Users size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Staff List</h3>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-              {filteredStaff.length} staff
-            </span>
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-3 py-1.5 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all flex items-center gap-1"
-          >
-            <Plus size={12} />
-            Add Staff
-          </button>
-        </div>
-
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex-1 relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search staff..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-            />
-          </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-          >
-            {roles.map(role => (
-              <option key={role} value={role}>{role === 'all' ? 'All Roles' : role}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Staff Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr className="text-left text-xs font-medium text-gray-500">
-              <th className="px-4 py-3">Staff</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Shift</th>
-              <th className="px-4 py-3">Joined</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {paginatedStaff.map((staff, index) => (
-              <tr
-                key={staff.id}
-                className={`staff-row cursor-pointer transition-all ${selectedStaff?.id === staff.id ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
-                onClick={() => setSelectedStaff(staff)}
-                onMouseEnter={() => setHoveredRow(staff.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                style={{ animationDelay: `${index * 0.03}s` }}
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span className="text-primary-600 font-semibold">{staff.name.charAt(0)}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{staff.name}</p>
-                      <p className="text-xs text-gray-500">ID: #{staff.id}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1 text-xs text-gray-600">
-                      <Mail size={10} className="text-gray-400" />
-                      <span className="truncate max-w-[120px]">{staff.email}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Phone size={10} className="text-gray-400" />
-                      <span>{staff.phone}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-1 rounded-full ${getRoleBadge(staff.role)}`}>
-                    {staff.role}
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs h-full flex flex-col justify-between overflow-hidden">
+      <div>
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+                <Users size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Staff &amp; Workforce Directory</h3>
+                  <span className="text-[11px] font-bold bg-primary-50 text-primary-700 border border-primary-100 px-2.5 py-0.5 rounded-full">
+                    {filteredStaff.length} team members
                   </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <Clock size={10} className="text-gray-400" />
-                    <span className="text-sm text-gray-700">{staff.shift}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <Calendar size={10} className="text-gray-400" />
-                    <span className="text-sm text-gray-600">{formatDate(staff.joinDate)}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1">
-                    <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                      <Eye size={14} />
-                    </button>
-                    <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                      <Edit size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Click any staff member to audit attendance, performance targets, and payroll</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-xs transition-all"
+            >
+              <Plus size={13} />
+              <span>Add Staff</span>
+            </button>
+          </div>
+
+          {/* Search Bar & Role Filters */}
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="flex-1 relative">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search staff by name, email, or phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-gray-50/50 hover:bg-white focus:bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 transition-all"
+              />
+            </div>
+            
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {roles.map(role => {
+                const isActive = roleFilter === role
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setRoleFilter(role)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                      isActive 
+                        ? 'bg-primary-600 text-white shadow-xs' 
+                        : 'bg-gray-100/80 text-gray-600 hover:bg-gray-200/70'
+                    }`}
+                  >
+                    {role === 'all' ? 'All Roles' : role}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Summary Ribbon */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3.5 sm:p-4 bg-gray-50/60 border-b border-gray-100 text-center">
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Headcount</p>
+            <p className="text-base font-extrabold text-gray-900 mt-0.5">{summary.totalStaff}</p>
+          </div>
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-purple-600">Active Roles</p>
+            <p className="text-base font-extrabold text-purple-700 mt-0.5">{summary.activeRoles} roles</p>
+          </div>
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Monthly Base</p>
+            <p className="text-base font-extrabold text-emerald-800 mt-0.5">₹{summary.monthlyBasePayroll.toLocaleString('en-IN')}</p>
+          </div>
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-primary-600">Avg. Base Pay</p>
+            <p className="text-base font-extrabold text-primary-700 mt-0.5">₹{summary.avgBaseSalary.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+
+        {/* Staff Table */}
+        {filteredStaff.length === 0 ? (
+          <div className="p-12 text-center">
+            <Search size={32} className="mx-auto text-gray-300 mb-2" />
+            <p className="text-sm font-bold text-gray-700">No employees match your search</p>
+            <p className="text-xs text-gray-400 mt-1">Try another role filter or search term.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/40 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                  <th className="py-3 px-4">Employee</th>
+                  <th className="py-3 px-4">Contact</th>
+                  <th className="py-3 px-4">Role Designation</th>
+                  <th className="py-3 px-4">Shift Timings</th>
+                  <th className="py-3 px-4">Base Salary</th>
+                  <th className="py-3 px-4">Joined Date</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                {paginatedStaff.map((staff) => {
+                  const roleBadge = getRoleBadge(staff.role)
+                  const isSelected = selectedStaff?.id === staff.id
+
+                  return (
+                    <tr
+                      key={staff.id}
+                      onClick={() => handleRowClick(staff)}
+                      onMouseEnter={() => setHoveredRow(staff.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                      className={`cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'bg-primary-50/70 font-medium' 
+                          : hoveredRow === staff.id 
+                            ? 'bg-gray-50/70' 
+                            : 'hover:bg-gray-50/40'
+                      }`}
+                    >
+                      {/* Employee Info */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-extrabold text-xs shrink-0 ${
+                            isSelected 
+                              ? 'bg-primary-600 text-white shadow-xs' 
+                              : 'bg-primary-50 text-primary-700 border border-primary-100'
+                          }`}>
+                            {staff.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 leading-tight">{staff.name}</p>
+                            <span className="text-[10px] text-gray-400">EMP #{staff.id}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <Mail size={11} className="text-gray-400 shrink-0" />
+                            <span className="truncate max-w-[130px]">{staff.email}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                            <Phone size={11} className="text-gray-400 shrink-0" />
+                            <span>{staff.phone}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Role Designation */}
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${roleBadge.bg}`}>
+                          {staff.role}
+                        </span>
+                      </td>
+
+                      {/* Shift Timings */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-gray-600 font-medium">
+                          <Clock size={11} className="text-gray-400" />
+                          {staff.shift}
+                        </span>
+                      </td>
+
+                      {/* Base Salary */}
+                      <td className="py-3.5 px-4">
+                        <span className="text-xs font-extrabold text-gray-900">
+                          ₹{staff.salary.toLocaleString('en-IN')}
+                        </span>
+                      </td>
+
+                      {/* Joined Date */}
+                      <td className="py-3.5 px-4">
+                        <span className="text-[11px] text-gray-500">
+                          {formatDate(staff.joinDate)}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRowClick(staff)
+                          }}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-xl transition-all ${
+                            isSelected
+                              ? 'bg-primary-600 text-white'
+                              : 'text-primary-600 bg-primary-50 hover:bg-primary-100'
+                          }`}
+                        >
+                          {isSelected ? 'Selected' : 'Inspect'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredStaff.length)} of {filteredStaff.length} staff
+        <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white">
+          <p className="text-xs text-gray-500 font-medium">
+            Showing <span className="font-bold text-gray-800">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold text-gray-800">{Math.min(currentPage * itemsPerPage, filteredStaff.length)}</span> of <span className="font-bold text-gray-800">{filteredStaff.length}</span> staff members
           </p>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-40 rounded-xl transition-all"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
+            <span className="text-xs font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-700">
+              {currentPage} / {totalPages}
+            </span>
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-40 rounded-xl transition-all"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -222,120 +341,121 @@ export default function StaffList({ selectedStaff, setSelectedStaff, refreshTrig
 
       {/* Add Staff Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xl max-w-md w-full p-6 animate-fadeIn">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Users size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Add New Staff</h3>
+                <Users size={20} className="text-primary-600" />
+                <h3 className="text-lg font-extrabold text-gray-900">Add Team Member</h3>
               </div>
-              <button onClick={() => setShowAddModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <button 
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
                 <input
                   type="text"
-                  placeholder="Staff name"
+                  placeholder="e.g. Ramesh Patel"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Email Address</label>
                   <input
                     type="email"
-                    placeholder="Email"
+                    placeholder="ramesh@store.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Phone Number</label>
                   <input
                     type="tel"
-                    placeholder="Phone number"
+                    placeholder="+91 98765 43210"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Role Designation</label>
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                   >
-                    <option value="">Select role</option>
-                    <option>Store Manager</option>
-                    <option>Sales Associate</option>
-                    <option>Cashier</option>
-                    <option>Stock Clerk</option>
+                    <option value="Store Manager">Store Manager</option>
+                    <option value="Sales Associate">Sales Associate</option>
+                    <option value="Cashier">Cashier</option>
+                    <option value="Stock Clerk">Stock Clerk</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
-                  <select
-                    value={formData.shift}
-                    onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                  >
-                    <option value="">Select shift</option>
-                    <option>9 AM - 6 PM</option>
-                    <option>10 AM - 7 PM</option>
-                    <option>11 AM - 8 PM</option>
-                    <option>8 AM - 5 PM</option>
-                  </select>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Monthly Base Salary</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 25000"
+                    value={formData.salary}
+                    onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Salary (₹)</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Shift Timings</label>
                   <input
-                    type="number"
-                    placeholder="Monthly salary"
-                    value={formData.salary}
-                    onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    type="text"
+                    placeholder="9 AM - 6 PM"
+                    value={formData.shift}
+                    onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Join Date</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Join Date</label>
                   <input
                     type="date"
                     value={formData.joinDate}
                     onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    className="w-full px-3.5 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddStaff}
-                className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-              >
-                Add Staff
-              </button>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddStaff}
+                  className="px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-xs"
+                >
+                  Enroll Staff
+                </button>
+              </div>
             </div>
           </div>
         </div>

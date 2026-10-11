@@ -1,15 +1,18 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Target, Award, Star, Calendar, Eye, Download, ChevronLeft, ChevronRight, Gift, Trophy, Zap } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerStaff/StaffPerformance.scss'
+import { 
+  TrendingUp, TrendingDown, Target, Award, Star, 
+  Calendar, Eye, Download, ChevronLeft, ChevronRight, 
+  Gift, Trophy, Zap, Sparkles 
+} from '../../../../utils/icons'
 
 export default function StaffPerformance({ selectedStaff }) {
   const [mounted, setMounted] = useState(false)
   const [period, setPeriod] = useState('month')
   const [currentPage, setCurrentPage] = useState(1)
   const [hoveredRow, setHoveredRow] = useState(null)
-  const itemsPerPage = 4
+  const itemsPerPage = 3
 
   useEffect(() => {
     setMounted(true)
@@ -34,212 +37,200 @@ export default function StaffPerformance({ selectedStaff }) {
 
   const summary = {
     totalSales: staffPerformance.reduce((sum, s) => sum + s.sales, 0),
-    avgAchievement: (staffPerformance.filter(s => s.achievement > 0).reduce((sum, s) => sum + s.achievement, 0) / staffPerformance.filter(s => s.achievement > 0).length).toFixed(1),
+    avgAchievement: (staffPerformance.filter(s => s.achievement > 0).reduce((sum, s) => sum + s.achievement, 0) / (staffPerformance.filter(s => s.achievement > 0).length || 1)).toFixed(1),
     topPerformer: staffPerformance.reduce((max, s) => s.sales > max.sales ? s : max, staffPerformance[0]),
     totalIncentives: staffPerformance.reduce((sum, s) => sum + s.incentives + s.commission, 0)
   }
 
-  const getAchievementColor = (achievement) => {
-    if (achievement >= 100) return 'text-green-600'
-    if (achievement >= 85) return 'text-yellow-600'
-    return 'text-red-600'
+  const getAchievementBadge = (achievement) => {
+    if (achievement >= 100) return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    if (achievement >= 85) return 'bg-amber-50 text-amber-700 border-amber-200'
+    return 'bg-rose-50 text-rose-700 border-rose-200'
   }
 
-  const getAchievementBg = (achievement) => {
-    if (achievement >= 100) return 'bg-green-100'
-    if (achievement >= 85) return 'bg-yellow-100'
-    return 'bg-red-100'
-  }
-
-  const getRankIcon = (index) => {
-    if (index === 0) return <Trophy size={14} className="text-yellow-500" />
-    if (index === 1) return <Award size={14} className="text-gray-400" />
-    if (index === 2) return <Star size={14} className="text-orange-500" />
+  const getRankBadge = (index) => {
+    if (index === 0) return { icon: <Trophy size={13} className="text-amber-500 fill-amber-500" />, label: 'Rank #1' }
+    if (index === 1) return { icon: <Award size={13} className="text-slate-500" />, label: 'Rank #2' }
+    if (index === 2) return { icon: <Star size={13} className="text-amber-600" />, label: 'Rank #3' }
     return null
   }
 
   return (
-    <div className="staff-performance bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Staff Performance</h3>
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs h-full flex flex-col justify-between overflow-hidden">
+      <div>
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <TrendingUp size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Sales Quota &amp; Efficiency</h3>
+                  {selectedStaff && (
+                    <span className="text-[11px] font-bold bg-primary-50 text-primary-700 border border-primary-100 px-2.5 py-0.5 rounded-full">
+                      {selectedStaff.name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Individual revenue output, quota paces, and commission rewards</p>
+              </div>
+            </div>
+
+            {/* Period Selector Pills */}
+            <div className="flex bg-gray-100 p-0.5 rounded-xl text-[11px] font-bold">
+              {[
+                { id: 'week', label: 'Week' },
+                { id: 'month', label: 'Month' },
+                { id: 'quarter', label: 'Quarter' }
+              ].map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPeriod(p.id)}
+                  className={`px-3 py-1.5 rounded-lg transition-all ${
+                    period === p.id 
+                      ? 'bg-white text-gray-900 shadow-2xs' 
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-            <Download size={14} />
-          </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Sales per staff, targets and incentives</p>
-      </div>
 
-      {/* Period Selector */}
-      <div className="px-4 pt-3 pb-2 border-b border-gray-100">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPeriod('week')}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${period === 'week' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            This Week
-          </button>
-          <button
-            onClick={() => setPeriod('month')}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${period === 'month' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => setPeriod('quarter')}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${period === 'quarter' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            This Quarter
-          </button>
+        {/* 4 KPI Summary Ribbon */}
+        <div className="grid grid-cols-4 gap-2.5 p-3.5 bg-gray-50/60 border-b border-gray-100 text-center">
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-emerald-700">Team Volume</p>
+            <p className="text-base font-extrabold text-emerald-800 mt-0.5">₹{(summary.totalSales / 100000).toFixed(1)}L</p>
+          </div>
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-indigo-600">Quota Pace</p>
+            <p className="text-base font-extrabold text-indigo-700 mt-0.5">{summary.avgAchievement}%</p>
+          </div>
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-amber-600">Top Rep</p>
+            <p className="text-base font-extrabold text-amber-700 mt-0.5 truncate">{summary.topPerformer?.name?.split(' ')[0]}</p>
+          </div>
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-purple-600">Incentives</p>
+            <p className="text-base font-extrabold text-purple-700 mt-0.5">₹{summary.totalIncentives.toLocaleString('en-IN')}</p>
+          </div>
         </div>
-      </div>
 
-      {/* Summary Stats */}
-      <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-gray-100 bg-gray-50">
-        <div className="text-center">
-          <p className="text-lg font-bold text-gray-900">₹{(summary.totalSales / 1000).toFixed(0)}k</p>
-          <p className="text-[10px] text-gray-500">Total Sales</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-green-600">{summary.avgAchievement}%</p>
-          <p className="text-[10px] text-gray-500">Avg Achievement</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-yellow-600">{summary.topPerformer.name.split(' ')[0]}</p>
-          <p className="text-[10px] text-gray-500">Top Performer</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-purple-600">₹{(summary.totalIncentives / 1000).toFixed(0)}k</p>
-          <p className="text-[10px] text-gray-500">Incentives Paid</p>
-        </div>
-      </div>
+        {/* Performance Cards List */}
+        <div className="p-4 sm:p-5 max-h-[350px] overflow-y-auto space-y-3">
+          {paginatedPerformance.map((staff, idx) => {
+            const rank = getRankBadge(idx)
+            const achievementBadge = getAchievementBadge(staff.achievement)
+            const progress = staff.target > 0 ? Math.min((staff.sales / staff.target) * 100, 100) : 0
 
-      {/* Performance Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px]">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr className="text-left text-xs font-medium text-gray-500">
-              <th className="px-4 py-3">Staff</th>
-              <th className="px-4 py-3">Sales</th>
-              <th className="px-4 py-3">Target</th>
-              <th className="px-4 py-3">Achievement</th>
-              <th className="px-4 py-3">Orders</th>
-              <th className="px-4 py-3">Incentives</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {paginatedPerformance.map((staff, index) => (
-              <tr
+            return (
+              <div
                 key={staff.id}
-                className={`performance-row transition-all ${hoveredRow === staff.id ? 'bg-gray-50' : ''}`}
                 onMouseEnter={() => setHoveredRow(staff.id)}
                 onMouseLeave={() => setHoveredRow(null)}
-                style={{ animationDelay: `${index * 0.03}s` }}
+                className={`p-3.5 rounded-2xl border transition-all ${
+                  hoveredRow === staff.id 
+                    ? 'border-primary-300 bg-gray-50/60 shadow-xs' 
+                    : 'border-gray-200/80 bg-white'
+                }`}
               >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span className="text-primary-600 font-semibold">{staff.name.charAt(0)}</span>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-700 font-extrabold text-xs flex items-center justify-center shrink-0 border border-indigo-100">
+                      {staff.name.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">{staff.name}</p>
-                      <p className="text-xs text-gray-500">{staff.role}</p>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs sm:text-sm font-bold text-gray-900">{staff.name}</h4>
+                        {rank && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded-md">
+                            {rank.icon}
+                            {rank.label}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-400">{staff.role}</p>
                     </div>
                   </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-bold text-gray-900">₹{staff.sales.toLocaleString()}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm text-gray-600">₹{staff.target.toLocaleString()}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+
+                  <div className="text-right">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${achievementBadge}`}>
+                      {staff.achievement > 0 ? `${staff.achievement}% of Target` : 'Non-Sales Role'}
+                    </span>
+                    <p className="text-xs font-extrabold text-gray-900 mt-0.5">
+                      ₹{staff.sales.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                {staff.target > 0 && (
+                  <div className="space-y-1 mb-2">
+                    <div className="flex justify-between text-[10px] text-gray-400">
+                      <span>Quota target: ₹{staff.target.toLocaleString('en-IN')}</span>
+                      <span className="font-bold text-gray-700">{progress.toFixed(0)}% reached</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
-                          staff.achievement >= 100 ? 'bg-green-500' : staff.achievement >= 85 ? 'bg-yellow-500' : 'bg-red-500'
+                          staff.achievement >= 100 ? 'bg-emerald-500' : 'bg-primary-500'
                         }`}
-                        style={{ width: `${Math.min(staff.achievement, 100)}%` }}
+                        style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <span className={`text-xs font-semibold ${getAchievementColor(staff.achievement)}`}>
-                      {staff.achievement}%
-                    </span>
                   </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm text-gray-700">{staff.orders}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-green-600">₹{(staff.incentives + staff.commission).toLocaleString()}</p>
-                    <p className="text-[10px] text-gray-500">Inc: ₹{staff.incentives} | Comm: ₹{staff.commission}</p>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                    <Eye size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                )}
+
+                {/* Submetrics row */}
+                <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
+                  <span>{staff.orders} bills billed</span>
+                  <span>Incentives: <strong className="text-emerald-700">₹{(staff.incentives + staff.commission).toLocaleString('en-IN')}</strong></span>
+                  <span className="inline-flex items-center gap-0.5 font-bold text-amber-700">
+                    <Star size={10} className="fill-amber-500 text-amber-500" />
+                    {staff.rating} / 5.0
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {filteredPerformance.length} staff members
+        <div className="p-3.5 border-t border-gray-100 flex items-center justify-between bg-white">
+          <p className="text-xs text-gray-400">
+            {filteredPerformance.length} team quotas
           </p>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-40 rounded-xl"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+              {currentPage} / {totalPages}
+            </span>
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-40 rounded-xl"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
       )}
-
-      {/* Top Performers */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center gap-2 mb-3">
-          <Trophy size={14} className="text-yellow-500" />
-          <h4 className="text-xs font-semibold text-gray-700">Top Performers This Month</h4>
-        </div>
-        <div className="space-y-2">
-          {staffPerformance.filter(s => s.sales > 0).sort((a, b) => b.sales - a.sales).slice(0, 3).map((staff, idx) => (
-            <div key={staff.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {getRankIcon(idx)}
-                <span className="text-sm font-medium text-gray-700">{staff.name}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-gray-900">₹{staff.sales.toLocaleString()}</span>
-                <span className="text-xs text-green-600">+{staff.achievement - 100}% over target</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

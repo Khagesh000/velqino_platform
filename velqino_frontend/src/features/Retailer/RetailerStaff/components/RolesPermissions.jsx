@@ -1,15 +1,17 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Lock, Users, Package, Eye, Edit, Save, X, Plus, Trash2, CheckCircle, AlertCircle, Settings, BarChart3, ShoppingCart, FileText, CreditCard } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerStaff/RolesPermissions.scss'
+import { 
+  Shield, Lock, Users, Package, Eye, Edit, Save, X, Plus, 
+  Trash2, CheckCircle, AlertCircle, Settings, BarChart3, 
+  ShoppingCart, FileText, CreditCard, Sparkles, Check 
+} from '../../../../utils/icons'
 
 export default function RolesPermissions() {
   const [mounted, setMounted] = useState(false)
   const [selectedRole, setSelectedRole] = useState('manager')
   const [showAddRoleModal, setShowAddRoleModal] = useState(false)
   const [newRoleName, setNewRoleName] = useState('')
-  const [editingRole, setEditingRole] = useState(null)
 
   useEffect(() => {
     setMounted(true)
@@ -23,6 +25,7 @@ export default function RolesPermissions() {
       name: 'Store Manager', 
       staffCount: 1, 
       color: 'purple',
+      badge: 'bg-purple-50 text-purple-700 border-purple-200',
       permissions: {
         pos: { view: true, create: true, edit: true, delete: true },
         products: { view: true, create: true, edit: true, delete: true },
@@ -40,6 +43,7 @@ export default function RolesPermissions() {
       name: 'Sales Associate', 
       staffCount: 2, 
       color: 'blue',
+      badge: 'bg-sky-50 text-sky-700 border-sky-200',
       permissions: {
         pos: { view: true, create: true, edit: true, delete: false },
         products: { view: true, create: false, edit: false, delete: false },
@@ -57,6 +61,7 @@ export default function RolesPermissions() {
       name: 'Cashier', 
       staffCount: 1, 
       color: 'green',
+      badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       permissions: {
         pos: { view: true, create: true, edit: false, delete: false },
         products: { view: true, create: false, edit: false, delete: false },
@@ -74,6 +79,7 @@ export default function RolesPermissions() {
       name: 'Stock Clerk', 
       staffCount: 1, 
       color: 'orange',
+      badge: 'bg-amber-50 text-amber-700 border-amber-200',
       permissions: {
         pos: { view: false, create: false, edit: false, delete: false },
         products: { view: true, create: false, edit: false, delete: false },
@@ -89,111 +95,116 @@ export default function RolesPermissions() {
   ]
 
   const permissionModules = [
-    { id: 'pos', label: 'Point of Sale (POS)', icon: <ShoppingCart size={14} />, actions: ['view', 'create', 'edit', 'delete'] },
-    { id: 'products', label: 'Products', icon: <Package size={14} />, actions: ['view', 'create', 'edit', 'delete'] },
-    { id: 'orders', label: 'Orders', icon: <FileText size={14} />, actions: ['view', 'create', 'edit', 'delete'] },
-    { id: 'customers', label: 'Customers', icon: <Users size={14} />, actions: ['view', 'create', 'edit', 'delete'] },
-    { id: 'inventory', label: 'Inventory', icon: <Package size={14} />, actions: ['view', 'create', 'edit', 'delete'] },
-    { id: 'reports', label: 'Reports & Analytics', icon: <BarChart3 size={14} />, actions: ['view', 'export'] },
-    { id: 'settings', label: 'Settings', icon: <Settings size={14} />, actions: ['view', 'edit'] },
-    { id: 'staff', label: 'Staff Management', icon: <Users size={14} />, actions: ['view', 'create', 'edit', 'delete'] },
-    { id: 'payments', label: 'Payments & Refunds', icon: <CreditCard size={14} />, actions: ['view', 'create', 'refund'] },
+    { id: 'pos', label: 'Point of Sale (POS)', icon: <ShoppingCart size={13} />, actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'products', label: 'Product Catalog', icon: <Package size={13} />, actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'orders', label: 'Order Processing', icon: <FileText size={13} />, actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'customers', label: 'Customer CRM', icon: <Users size={13} />, actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'inventory', label: 'Stock & Inventory', icon: <Package size={13} />, actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'reports', label: 'Reports & Analytics', icon: <BarChart3 size={13} />, actions: ['view', 'export'] },
+    { id: 'settings', label: 'Store Settings', icon: <Settings size={13} />, actions: ['view', 'edit'] },
+    { id: 'staff', label: 'Staff Management', icon: <Users size={13} />, actions: ['view', 'create', 'edit', 'delete'] },
+    { id: 'payments', label: 'Payments & Refunds', icon: <CreditCard size={13} />, actions: ['view', 'create', 'refund'] },
   ]
 
-  const currentRole = roles.find(r => r.id === selectedRole)
+  const activeRoleData = roles.find(r => r.id === selectedRole) || roles[0]
 
-  const getColorClasses = (color) => {
-    const colors = {
-      purple: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200', active: 'bg-purple-500' },
-      blue: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200', active: 'bg-blue-500' },
-      green: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200', active: 'bg-green-500' },
-      orange: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200', active: 'bg-orange-500' },
-    }
-    return colors[color] || colors.blue
-  }
-
-  const handlePermissionToggle = (module, action) => {
-    // Permission toggle logic would go here
-    console.log(`Toggle ${module}.${action} for role ${selectedRole}`)
+  const handleAddRole = () => {
+    if (!newRoleName.trim()) return
+    setShowAddRoleModal(false)
+    setNewRoleName('')
   }
 
   return (
-    <div className="roles-permissions bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Roles & Permissions</h3>
-          </div>
-          <button
-            onClick={() => setShowAddRoleModal(true)}
-            className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all"
-          >
-            <Plus size={14} />
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Manage access levels for staff</p>
-      </div>
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs h-full flex flex-col justify-between overflow-hidden">
+      <div>
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Shield size={18} />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Security Access Control</h3>
+                <p className="text-xs text-gray-500">Role permissions &amp; privilege governance</p>
+              </div>
+            </div>
 
-      {/* Role Tabs */}
-      <div className="flex border-b border-gray-100 overflow-x-auto">
-        {roles.map((role) => {
-          const colors = getColorClasses(role.color)
-          return (
             <button
-              key={role.id}
-              onClick={() => setSelectedRole(role.id)}
-              className={`px-4 py-2 text-xs font-medium whitespace-nowrap transition-all ${
-                selectedRole === role.id 
-                  ? `${colors.text} border-b-2 ${colors.border}`
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+              type="button"
+              onClick={() => setShowAddRoleModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 active:scale-95 transition-all"
             >
-              {role.name}
-              <span className="ml-1 text-[10px] text-gray-400">({role.staffCount})</span>
+              <Plus size={13} />
+              <span>New Role</span>
             </button>
-          )
-        })}
-      </div>
+          </div>
+        </div>
 
-      {/* Permissions Table */}
-      <div className="p-4 max-h-[400px] overflow-y-auto custom-scroll">
-        <div className="space-y-4">
-          {permissionModules.map((module) => {
-            const permissions = currentRole?.permissions[module.id] || {}
-            const colors = getColorClasses(currentRole?.color)
-            
+        {/* Role Selector Pills */}
+        <div className="p-3.5 bg-gray-50/60 border-b border-gray-100 flex items-center gap-1.5 overflow-x-auto">
+          {roles.map(role => {
+            const isActive = selectedRole === role.id
             return (
-              <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className={`px-3 py-2 ${colors.bg} border-b border-gray-200`}>
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => setSelectedRole(role.id)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  isActive 
+                    ? 'bg-primary-600 text-white shadow-xs' 
+                    : 'bg-white border border-gray-200/80 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <span>{role.name}</span>
+                <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {role.staffCount}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Permissions Module Matrix */}
+        <div className="p-4 sm:p-5 max-h-[350px] overflow-y-auto space-y-2.5">
+          {permissionModules.map(module => {
+            const rolePerms = activeRoleData.permissions[module.id] || {}
+
+            return (
+              <div
+                key={module.id}
+                className="p-3 rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50/50 transition-all"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className={colors.text}>{module.icon}</span>
-                    <span className={`text-sm font-medium ${colors.text}`}>{module.label}</span>
+                    <span className="text-gray-400">{module.icon}</span>
+                    <span className="text-xs font-bold text-gray-900">{module.label}</span>
                   </div>
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">
+                    {module.actions.filter(act => rolePerms[act]).length} / {module.actions.length} allowed
+                  </span>
                 </div>
-                <div className="p-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {module.actions.map((action) => {
-                      const hasPermission = permissions[action] || false
-                      return (
-                        <label
-                          key={action}
-                          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${
-                            hasPermission ? `${colors.bg} ${colors.text}` : 'bg-gray-50 text-gray-500'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={hasPermission}
-                            onChange={() => handlePermissionToggle(module.id, action)}
-                            className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                          />
-                          <span className="text-xs capitalize">{action}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
+
+                {/* Actions Chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {module.actions.map(action => {
+                    const isAllowed = !!rolePerms[action]
+                    return (
+                      <span
+                        key={action}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all ${
+                          isAllowed 
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                            : 'bg-gray-50 text-gray-400 border-gray-200/60'
+                        }`}
+                      >
+                        {isAllowed ? <Check size={9} /> : <X size={9} />}
+                        {action.toUpperCase()}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )
@@ -201,72 +212,61 @@ export default function RolesPermissions() {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-        <button className="w-full py-2 text-sm font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all flex items-center justify-center gap-2">
-          <Save size={14} />
-          Save Permissions
-        </button>
+      {/* Footer Info */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50/40 text-[11px] text-gray-400 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1">
+          <Lock size={11} className="text-gray-400" />
+          End-to-End Role-Based ACL
+        </span>
+        <span className="font-bold text-primary-600">Active Policy</span>
       </div>
 
       {/* Add Role Modal */}
       {showAddRoleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xl max-w-sm w-full p-6 animate-fadeIn">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Shield size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Add New Role</h3>
+                <Shield size={20} className="text-primary-600" />
+                <h3 className="text-base font-extrabold text-gray-900">Define Custom Role</h3>
               </div>
-              <button onClick={() => setShowAddRoleModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <button 
+                type="button"
+                onClick={() => setShowAddRoleModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Role Title</label>
                 <input
                   type="text"
-                  placeholder="e.g., Supervisor"
+                  placeholder="e.g. Inventory Supervisor"
                   value={newRoleName}
                   onChange={(e) => setNewRoleName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Copy Permissions From</label>
-                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500">
-                  <option>None (Start Fresh)</option>
-                  <option>Store Manager</option>
-                  <option>Sales Associate</option>
-                  <option>Cashier</option>
-                  <option>Stock Clerk</option>
-                </select>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddRoleModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddRole}
+                  className="px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-xs"
+                >
+                  Create Role
+                </button>
               </div>
-
-              <div className="bg-blue-50 rounded-lg p-3">
-                <p className="text-xs text-blue-700">New role will have customizable permissions</p>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={() => setShowAddRoleModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowAddRoleModal(false)
-                  setNewRoleName('')
-                }}
-                className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
-              >
-                Create Role
-              </button>
             </div>
           </div>
         </div>
