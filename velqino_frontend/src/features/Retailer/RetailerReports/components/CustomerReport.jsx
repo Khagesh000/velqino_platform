@@ -1,389 +1,246 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { Users, UserPlus, UserCheck, TrendingUp, Star, Calendar, Download, ChevronLeft, ChevronRight, Eye, Award } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerReports/CustomerReport.scss'
-import { useGetRetailerCustomersQuery } from '@/redux/retailer/slices/retailerOrdersSlice'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Users, UserPlus, UserCheck, TrendingUp, ChevronLeft, ChevronRight, Award } from '../../../../utils/icons'
 
-export default function CustomerReport({ dateRange, dateRangeString, onRefresh }) {
+export default function CustomerReport({ 
+  dateRange = 'month', 
+  customersData = [], 
+  isLoading, 
+  onRefresh 
+}) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('top')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 4
 
-  // API Call - Get customer orders data
-  const { data: customersData, isLoading, refetch } = useGetRetailerCustomersQuery()
-
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  useEffect(() => {
-    if (onRefresh) {
-      refetch()
-    }
-  }, [onRefresh, refetch])
-
   if (!mounted) return null
 
-  // Transform customer orders data to get unique customers with their stats
-  const customerOrders = customersData?.data || []
+  // Customers data is passed directly from consolidated reports endpoint!
+  // Structure: [{ customer__id, customer__email, customer__mobile, grand_total, order_count, created_at }, ...]
+  const customersList = useMemo(() => {
+    if (!customersData || !Array.isArray(customersData)) return []
+    return customersData.map(c => {
+      const totalSpent = parseFloat(c.grand_total || 0)
+      const ordersCount = parseInt(c.order_count || 1)
+      const tier = totalSpent >= 50000 ? 'Platinum' 
+                 : totalSpent >= 25000 ? 'Gold' 
+                 : totalSpent >= 10000 ? 'Silver' 
+                 : 'Bronze'
+      
+      const email = c.customer__email || `customer${c.customer__id || ''}@mail.com`
+      const name = email.split('@')[0] || `Customer #${c.customer__id}`
+      return {
+        id: c.customer__id,
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        email,
+        phone: c.customer__mobile || 'N/A',
+        totalSpent,
+        ordersCount,
+        avgOrder: ordersCount > 0 ? totalSpent / ordersCount : 0,
+        tier,
+        lastVisit: c.created_at
+      }
+    }).sort((a, b) => b.totalSpent - a.totalSpent)
+  }, [customersData])
 
-  // Group orders by customer
-  const customerMap = new Map()
+  const totalCustomers = customersList.length
+  const returningCustomers = customersList.filter(c => c.ordersCount > 1)
+  const newCustomers = customersList.filter(c => c.ordersCount === 1)
+  const totalRevenue = customersList.reduce((sum, c) => sum + c.totalSpent, 0)
+  const avgOrderValue = customersList.length > 0 ? totalRevenue / customersList.reduce((acc, c) => acc + c.ordersCount, 0) : 0
 
-  customerOrders.forEach(order => {
-    const customerId = order.customer__id
-    if (!customerMap.has(customerId)) {
-      customerMap.set(customerId, {
-        id: customerId,
-        name: order.customer__email?.split('@')[0] || `Customer ${customerId}`,
-        email: order.customer__email,
-        phone: order.customer__mobile || 'N/A',
-        totalSpent: 0,
-        orders: [],
-        lastVisit: null
-      })
-    }
-    
-    const customer = customerMap.get(customerId)
-    customer.totalSpent += parseFloat(order.grand_total || 0)
-    customer.orders.push(order)
-    
-    const orderDate = new Date(order.created_at)
-    if (!customer.lastVisit || orderDate > new Date(customer.lastVisit)) {
-      customer.lastVisit = order.created_at
-    }
-  })
-
-  // Convert map to array and calculate additional metrics
-  let topCustomers = Array.from(customerMap.values()).map(customer => ({
-    ...customer,
-    ordersCount: customer.orders.length,
-    avgOrder: customer.totalSpent / customer.orders.length,
-    tier: customer.totalSpent >= 50000 ? 'Platinum' 
-          : customer.totalSpent >= 25000 ? 'Gold' 
-          : customer.totalSpent >= 10000 ? 'Silver' : 'Bronze',
-    visits: customer.orders.length
-  }))
-
-  // Sort by total spent descending for top customers
-  topCustomers = topCustomers.sort((a, b) => b.totalSpent - a.totalSpent)
-
-  // Calculate new vs returning customers
-  const today = new Date()
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(today.getDate() - 30)
-
-  const newCustomers = topCustomers.filter(c => {
-    const firstOrderDate = new Date(c.orders[0]?.created_at)
-    return firstOrderDate >= thirtyDaysAgo
-  })
-
-  const returningCustomers = topCustomers.filter(c => c.orders.length > 1)
-  const totalCustomers = topCustomers.length
-
-  const newVsReturning = {
-    new: newCustomers.length,
-    returning: returningCustomers.length,
-    total: totalCustomers,
-    newPercentage: totalCustomers > 0 ? Math.round((newCustomers.length / totalCustomers) * 100) : 0,
-    returningPercentage: totalCustomers > 0 ? Math.round((returningCustomers.length / totalCustomers) * 100) : 0
-  }
-
-  // Calculate visit frequency
-  const frequencyRanges = [
-    { min: 1, max: 2, label: '1-2 visits' },
-    { min: 3, max: 5, label: '3-5 visits' },
-    { min: 6, max: 10, label: '6-10 visits' },
-    { min: 11, max: Infinity, label: '10+ visits' }
-  ]
-
-  const visitFrequency = frequencyRanges.map(range => {
-    const count = topCustomers.filter(c => c.visits >= range.min && c.visits <= range.max).length
-    return {
-      frequency: range.label,
-      count: count,
-      percentage: totalCustomers > 0 ? Math.round((count / totalCustomers) * 100) : 0
-    }
-  })
-
-  // Calculate average order value
-  const totalRevenue = topCustomers.reduce((sum, c) => sum + c.totalSpent, 0)
-  const totalOrders = topCustomers.reduce((sum, c) => sum + c.ordersCount, 0)
-  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
-
-  // Pagination
-  const currentData = activeTab === 'top' 
-    ? topCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-    : []
-
-  const totalPages = activeTab === 'top' ? Math.ceil(topCustomers.length / itemsPerPage) : 1
-
-  const getTierBadge = (tier) => {
-    switch(tier) {
-      case 'Platinum': return 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
-      case 'Gold': return 'bg-yellow-500 text-white'
-      case 'Silver': return 'bg-gray-400 text-white'
-      default: return 'bg-orange-600 text-white'
-    }
-  }
-
-  const formatDate = (date) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-  }
+  const totalPages = Math.max(1, Math.ceil(customersList.length / itemsPerPage))
+  const paginatedCustomers = customersList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN').format(amount)
+    return new Intl.NumberFormat('en-IN').format(Math.round(amount || 0))
+  }
+
+  const getTierBadge = (tier) => {
+    switch (tier) {
+      case 'Platinum': return 'bg-indigo-50 text-indigo-700 border-indigo-200'
+      case 'Gold': return 'bg-amber-50 text-amber-700 border-amber-200'
+      case 'Silver': return 'bg-gray-100 text-gray-700 border-gray-200'
+      default: return 'bg-orange-50 text-orange-700 border-orange-200'
+    }
   }
 
   if (isLoading) {
     return (
-      <div className="customer-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="text-sm text-gray-500 mt-2">Loading customer data...</p>
-        </div>
+      <div className="bg-white rounded-2xl shadow-xs border border-gray-100 p-6 flex flex-col items-center justify-center min-h-[380px]">
+        <div className="animate-spin rounded-full h-9 w-9 border-2 border-primary-500 border-t-transparent" />
+        <p className="text-xs font-medium text-gray-500 mt-3">Loading customer insights...</p>
       </div>
     )
   }
 
   return (
-    <div className="customer-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+    <div className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col h-full overflow-hidden transition-all duration-200">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Customer Report</h3>
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+            <Users size={18} />
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-            <Download size={14} />
-          </button>
+          <div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900">Customer Performance</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Customer revenue and repeat buyer metrics</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Customer insights and behavior</p>
+        <span className="text-[11px] font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+          {totalCustomers} Active Buyers
+        </span>
       </div>
 
-      {/* Summary Stats */}
-      <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-gray-100">
-        <div className="text-center p-2 bg-blue-50 rounded-lg">
-          <p className="text-lg font-bold text-blue-700">{totalCustomers}</p>
-          <p className="text-[10px] text-blue-600">Total Customers</p>
+      {/* Summary KPI Strip */}
+      <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Total Buyers</p>
+          <p className="text-base font-bold text-gray-900 mt-0.5">{totalCustomers}</p>
         </div>
-        <div className="text-center p-2 bg-green-50 rounded-lg">
-          <p className="text-lg font-bold text-green-700">{newVsReturning.new}</p>
-          <p className="text-[10px] text-green-600">New Customers</p>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Repeat Buyers</p>
+          <p className="text-base font-bold text-purple-600 mt-0.5">{returningCustomers.length}</p>
         </div>
-        <div className="text-center p-2 bg-purple-50 rounded-lg">
-          <p className="text-lg font-bold text-purple-700">{newVsReturning.returning}</p>
-          <p className="text-[10px] text-purple-600">Returning</p>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">New Buyers</p>
+          <p className="text-base font-bold text-emerald-600 mt-0.5">{newCustomers.length}</p>
         </div>
-        <div className="text-center p-2 bg-orange-50 rounded-lg">
-          <p className="text-lg font-bold text-orange-700">₹{formatCurrency(avgOrderValue)}</p>
-          <p className="text-[10px] text-orange-600">Avg Order Value</p>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Avg Order Val</p>
+          <p className="text-base font-bold text-primary-600 mt-0.5">₹{formatCurrency(avgOrderValue)}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100">
+      <div className="flex border-b border-gray-100 px-3 bg-white">
         <button
-          onClick={() => { setActiveTab('top'); setCurrentPage(1) }}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'top' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          onClick={() => { setActiveTab('top'); setCurrentPage(1); }}
+          className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === 'top' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-gray-400 hover:text-gray-700'
+          }`}
         >
-          Top Customers ({topCustomers.length})
+          Top Spenders ({totalCustomers})
         </button>
         <button
-          onClick={() => setActiveTab('newVsReturning')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'newVsReturning' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          onClick={() => setActiveTab('segments')}
+          className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === 'segments' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-gray-400 hover:text-gray-700'
+          }`}
         >
-          New vs Returning
-        </button>
-        <button
-          onClick={() => setActiveTab('frequency')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'frequency' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Visit Frequency
+          Customer Retention
         </button>
       </div>
 
-      {/* Content */}
-      <div className="p-4 max-h-[350px] overflow-y-auto custom-scroll">
-        {activeTab === 'top' && (
-          <div className="space-y-3">
-            {topCustomers.length === 0 ? (
-              <div className="text-center py-8">
-                <Users size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No customers found</p>
-                <p className="text-xs text-gray-400 mt-1">Customers who have placed orders will appear here</p>
-              </div>
-            ) : (
-              currentData.map((customer, index) => (
-                <div key={customer.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all" style={{ animationDelay: `${index * 0.05}s` }}>
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span className="text-primary-600 font-semibold">{customer.name.charAt(0).toUpperCase()}</span>
+      {/* Tab Content */}
+      <div className="p-4 flex-1 overflow-y-auto max-h-[300px]">
+        {activeTab === 'top' ? (
+          customersList.length === 0 ? (
+            <div className="text-center py-10">
+              <Users size={28} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-xs font-medium text-gray-500">No customer records in this period</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {paginatedCustomers.map((cust) => (
+                <div 
+                  key={cust.id || cust.email} 
+                  className="p-3 rounded-xl border border-gray-100 bg-white hover:border-gray-200 hover:shadow-xs transition-all flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-primary-50 text-primary-600 font-bold flex items-center justify-center shrink-0 text-sm">
+                      {cust.name.charAt(0)}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">{customer.name}</h4>
-                          <p className="text-xs text-gray-500">{customer.phone !== 'N/A' ? customer.phone : customer.email}</p>
-                        </div>
-                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getTierBadge(customer.tier)}`}>
-                          {customer.tier}
-                        </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{cust.name}</h4>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getTierBadge(cust.tier)}`}>
+                          {cust.tier}
+                        </span>
                       </div>
-                      
-                      <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <p className="text-gray-500">Total Spent</p>
-                          <p className="font-semibold text-gray-900">₹{formatCurrency(customer.totalSpent)}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Orders</p>
-                          <p className="font-semibold text-gray-900">{customer.ordersCount}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Last Visit</p>
-                          <p className="text-gray-600">{formatDate(customer.lastVisit)}</p>
-                        </div>
-                      </div>
+                      <p className="text-[11px] text-gray-400 truncate">{cust.phone !== 'N/A' ? cust.phone : cust.email} • {cust.ordersCount} orders</p>
                     </div>
-                    <button className="p-1 text-gray-400 hover:text-primary-600">
-                      <Eye size={14} />
-                    </button>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className="text-xs sm:text-sm font-bold text-gray-900">₹{formatCurrency(cust.totalSpent)}</p>
+                    <p className="text-[10px] text-gray-400">AOV: ₹{formatCurrency(cust.avgOrder)}</p>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === 'newVsReturning' && (
+              ))}
+            </div>
+          )
+        ) : (
           <div className="space-y-4">
-            {totalCustomers === 0 ? (
-              <div className="text-center py-8">
-                <Users size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No customer data available</p>
+            {/* Visual breakdown */}
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                <span>Repeat Buyer Ratio</span>
+                <span className="text-purple-600">
+                  {totalCustomers > 0 ? Math.round((returningCustomers.length / totalCustomers) * 100) : 0}% Retention
+                </span>
               </div>
-            ) : (
-              <>
-                {/* Donut Chart */}
-                <div className="flex items-center justify-center">
-                  <div className="relative w-32 h-32">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="15" />
-                      <circle 
-                        cx="50" cy="50" r="40" fill="none" 
-                        stroke="#22c55e" strokeWidth="15" 
-                        strokeDasharray={`${newVsReturning.newPercentage * 2.51} 251`}
-                        strokeLinecap="round"
-                      />
-                      <circle 
-                        cx="50" cy="50" r="40" fill="none" 
-                        stroke="#3b82f6" strokeWidth="15" 
-                        strokeDasharray={`${newVsReturning.returningPercentage * 2.51} 251`}
-                        strokeDashoffset={-newVsReturning.newPercentage * 2.51}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-sm font-bold text-gray-900">{totalCustomers}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <UserPlus size={14} className="text-green-600" />
-                      <span className="text-sm text-gray-700">New Customers (30 days)</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold text-green-600">{newVsReturning.new}</span>
-                      <span className="text-xs text-gray-500 ml-1">({newVsReturning.newPercentage}%)</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <UserCheck size={14} className="text-blue-600" />
-                      <span className="text-sm text-gray-700">Returning Customers (2+ orders)</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold text-blue-600">{newVsReturning.returning}</span>
-                      <span className="text-xs text-gray-500 ml-1">({newVsReturning.returningPercentage}%)</span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+              <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden flex">
+                <div 
+                  className="h-full bg-purple-500 transition-all duration-500" 
+                  style={{ width: `${totalCustomers > 0 ? (returningCustomers.length / totalCustomers) * 100 : 0}%` }}
+                />
+                <div 
+                  className="h-full bg-emerald-400 transition-all duration-500" 
+                  style={{ width: `${totalCustomers > 0 ? (newCustomers.length / totalCustomers) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block" />
+                  Returning ({returningCustomers.length})
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
+                  First-Time ({newCustomers.length})
+                </span>
+              </div>
+            </div>
 
-        {activeTab === 'frequency' && (
-          <div className="space-y-3">
-            {totalCustomers === 0 ? (
-              <div className="text-center py-8">
-                <Users size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No customer data available</p>
-              </div>
-            ) : (
-              <>
-                {visitFrequency.map((item, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">{item.frequency}</span>
-                      <span className="text-sm font-bold text-gray-900">{item.count} customers</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary-500 rounded-full transition-all duration-500"
-                        style={{ width: `${item.percentage}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1">{item.percentage}% of total</p>
-                  </div>
-                ))}
-                
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp size={14} className="text-green-500" />
-                    <span className="text-xs font-semibold text-gray-700">Insights</span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    {returningCustomers.length > 0 
-                      ? `${Math.round((returningCustomers.length / totalCustomers) * 100)}% of customers are repeat buyers, showing good loyalty`
-                      : 'No repeat customers yet. Focus on customer retention strategies.'}
-                  </p>
-                </div>
-              </>
-            )}
+            <div className="p-3 bg-purple-50/60 border border-purple-100 rounded-xl text-xs text-purple-900 flex items-start gap-2">
+              <TrendingUp size={16} className="text-purple-600 shrink-0 mt-0.5" />
+              <span>
+                {returningCustomers.length > 0 
+                  ? `${returningCustomers.length} loyal customers have ordered multiple times, creating sustained recurring revenue.`
+                  : 'Encourage first-time buyers with targeted loyalty points to drive repeat orders.'}
+              </span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {activeTab === 'top' && totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {topCustomers.length} customers
-          </p>
-          <div className="flex gap-1">
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
+          <span>Page {currentPage} of {totalPages}</span>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>

@@ -11,6 +11,8 @@ import uuid
 import io
 import logging
 
+logger = logging.getLogger(__name__)
+
 from .models import Order, OrderItem, Cart, CartItem, LoyaltySettings, PointsTransaction, Reward, Campaign
 from .serializers import (
     CartSerializer, AddToCartSerializer, ApplyCouponSerializer, 
@@ -3048,56 +3050,81 @@ def get_retailer_expenses(request):
     if user.role != 'retailer':
         return Response({'status': 'error', 'message': 'Only retailers can access'}, status=403)
     
-    from django.db.models import Sum
-    from .models import Expense
-    
-    # Get date range filters
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    category = request.GET.get('category')
-    
-    expenses = Expense.objects.filter(retailer=user)
-    
-    if start_date:
-        expenses = expenses.filter(date__gte=start_date)
-    if end_date:
-        expenses = expenses.filter(date__lte=end_date)
-    if category:
-        expenses = expenses.filter(category=category)
-    
-    expenses = expenses.order_by('-date')
-    
-    # Pagination
-    page = int(request.GET.get('page', 1))
-    per_page = int(request.GET.get('per_page', 20))
-    start = (page - 1) * per_page
-    end = start + per_page
-    
-    total = expenses.count()
-    paginated = expenses[start:end]
-    
-    from .serializers import ExpenseSerializer
-    serializer = ExpenseSerializer(paginated, many=True)
-    
-    # Calculate totals
-    total_amount = expenses.aggregate(total=Sum('amount'))['total'] or 0
-    
-    return Response({
-        'status': 'success',
-        'data': {
-            'expenses': serializer.data,
-            'summary': {
-                'total_expenses': float(total_amount),
-                'count': total
-            },
-            'pagination': {
-                'page': page,
-                'per_page': per_page,
-                'total': total,
-                'total_pages': (total + per_page - 1) // per_page
+    try:
+        from django.db.models import Sum
+        from django.utils import timezone
+        from datetime import timedelta
+        from .models import Expense
+        
+        # Get date range filters
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        category = request.GET.get('category')
+        period = request.GET.get('period')
+        
+        expenses = Expense.objects.filter(retailer=user)
+        
+        if period:
+            today = timezone.now().date()
+            if period == 'day':
+                expenses = expenses.filter(date=today)
+            elif period == 'week':
+                expenses = expenses.filter(date__gte=today - timedelta(days=7))
+            elif period == 'month':
+                expenses = expenses.filter(date__gte=today - timedelta(days=30))
+            elif period == 'quarter':
+                expenses = expenses.filter(date__gte=today - timedelta(days=90))
+            elif period == 'year':
+                expenses = expenses.filter(date__gte=today - timedelta(days=365))
+
+        if start_date:
+            expenses = expenses.filter(date__gte=start_date)
+        if end_date:
+            expenses = expenses.filter(date__lte=end_date)
+        if category:
+            expenses = expenses.filter(category=category)
+        
+        expenses = expenses.order_by('-date')
+        
+        # Pagination
+        page = max(1, int(request.GET.get('page', 1)))
+        per_page = max(1, int(request.GET.get('per_page', 20)))
+        start = (page - 1) * per_page
+        end = start + per_page
+        
+        total = expenses.count()
+        paginated = expenses[start:end]
+        
+        from .serializers import ExpenseSerializer
+        serializer = ExpenseSerializer(paginated, many=True)
+        
+        # Calculate totals
+        total_amount = expenses.aggregate(total=Sum('amount'))['total'] or 0
+        total_pages = max(1, (total + per_page - 1) // per_page) if total > 0 else 1
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'expenses': serializer.data,
+                'summary': {
+                    'total_expenses': float(total_amount),
+                    'count': total
+                },
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'total_pages': total_pages
+                }
             }
-        }
-    })
+        })
+    except Exception as e:
+        logger.error(f"Get retailer expenses error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error',
+            'message': str(e),
+            'detail': 'Unable to load expenses'
+        }, status=500)
 
 
 @api_view(['POST'])
@@ -3131,6 +3158,12 @@ def create_expense(request):
     
     from .serializers import ExpenseSerializer
     response_serializer = ExpenseSerializer(expense)
+    
+    try:
+        from analytics_engine.views import invalidate_retailer_reports_cache
+        invalidate_retailer_reports_cache(user.id)
+    except Exception:
+        pass
     
     return Response({
         'status': 'success',
@@ -3176,6 +3209,12 @@ def update_expense(request, expense_id):
     
     expense.save()
     
+    try:
+        from analytics_engine.views import invalidate_retailer_reports_cache
+        invalidate_retailer_reports_cache(user.id)
+    except Exception:
+        pass
+    
     from .serializers import ExpenseSerializer
     response_serializer = ExpenseSerializer(expense)
     
@@ -3204,6 +3243,12 @@ def delete_expense(request, expense_id):
     
     expense.delete()
     
+    try:
+        from analytics_engine.views import invalidate_retailer_reports_cache
+        invalidate_retailer_reports_cache(user.id)
+    except Exception:
+        pass
+    
     return Response({
         'status': 'success',
         'message': 'Expense deleted successfully'
@@ -3224,9 +3269,23 @@ def get_expense_by_category(request):
     
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    period = request.GET.get('period')
     
     expenses = Expense.objects.filter(retailer=user)
     
+    if period:
+        today = timezone.now().date()
+        if period == 'day':
+            expenses = expenses.filter(date=today)
+        elif period == 'week':
+            expenses = expenses.filter(date__gte=today - timedelta(days=7))
+        elif period == 'month':
+            expenses = expenses.filter(date__gte=today - timedelta(days=30))
+        elif period == 'quarter':
+            expenses = expenses.filter(date__gte=today - timedelta(days=90))
+        elif period == 'year':
+            expenses = expenses.filter(date__gte=today - timedelta(days=365))
+
     if start_date:
         expenses = expenses.filter(date__gte=start_date)
     if end_date:

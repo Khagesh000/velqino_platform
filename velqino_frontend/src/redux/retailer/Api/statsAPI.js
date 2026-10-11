@@ -30,6 +30,9 @@ const retailerStatsAPI = {
 
     // Single unified customers endpoint - replaces all customer endpoints
     getCustomersSummary: (params) => API.get('analytics/retailer/customers-summary/', { params }),
+
+    // Single unified reports endpoint - replaces all reports endpoints
+    getReportsSummary: (params) => API.get('analytics/retailer/reports-summary/', { params }),
 };
 
 export default retailerStatsAPI;

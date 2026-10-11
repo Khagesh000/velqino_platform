@@ -4,8 +4,21 @@ import retailerReportsAPI from '../Api/retailerReportsAPI';
 export const retailerReportsApi = createApi({
     reducerPath: 'retailerReportsApi',
     baseQuery: fakeBaseQuery(),
-    tagTypes: ['Expenses', 'GSTReturns', 'ScheduledReports', 'COGS'],
+    tagTypes: ['Expenses', 'GSTReturns', 'ScheduledReports', 'COGS', 'ReportsSummary'],
     endpoints: (builder) => ({
+
+        // ========== UNIFIED REPORTS SUMMARY (SINGLE ENDPOINT) ==========
+        getReportsSummary: builder.query({
+            async queryFn(params) {
+                try {
+                    const response = await retailerReportsAPI.getReportsSummary(params);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error: error.response?.data || error };
+                }
+            },
+            providesTags: ['ReportsSummary']
+        }),
 
         // ========== COGS ==========
         getCOGS: builder.query({
@@ -42,7 +55,7 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['Expenses']
+            invalidatesTags: ['Expenses', 'ReportsSummary']
         }),
 
         updateExpense: builder.mutation({
@@ -54,7 +67,7 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['Expenses']
+            invalidatesTags: ['Expenses', 'ReportsSummary']
         }),
 
         deleteExpense: builder.mutation({
@@ -66,7 +79,7 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['Expenses']
+            invalidatesTags: ['Expenses', 'ReportsSummary']
         }),
 
         getExpenseByCategory: builder.query({
@@ -115,7 +128,7 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['GSTReturns']
+            invalidatesTags: ['GSTReturns', 'ReportsSummary']
         }),
 
         // ========== EXPORT OPTIONS ==========
@@ -162,7 +175,7 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['ScheduledReports']
+            invalidatesTags: ['ScheduledReports', 'ReportsSummary']
         }),
 
         updateScheduledReport: builder.mutation({
@@ -174,7 +187,7 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['ScheduledReports']
+            invalidatesTags: ['ScheduledReports', 'ReportsSummary']
         }),
 
         deleteScheduledReport: builder.mutation({
@@ -186,13 +199,16 @@ export const retailerReportsApi = createApi({
                     return { error: error.response?.data || error };
                 }
             },
-            invalidatesTags: ['ScheduledReports']
+            invalidatesTags: ['ScheduledReports', 'ReportsSummary']
         }),
     }),
 });
 
 // Export hooks
 export const {
+    // UNIFIED REPORTS SUMMARY
+    useGetReportsSummaryQuery,
+    useGetReportsSummaryQuery: useGetRetailerReportsSummaryQuery,
     // COGS
     useGetCOGSQuery,
     // Expenses

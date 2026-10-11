@@ -1,6 +1,9 @@
 import API from "@/utils/apiConfig";
 
 const retailerReportsAPI = {
+    // ========== UNIFIED REPORTS SUMMARY (SINGLE ENDPOINT) ==========
+    getReportsSummary: (params) => API.get('analytics/retailer/reports-summary/', { params }),
+
     // ========== COGS (Product Report) ==========
     getCOGS: (params) => API.get('analytics/retailer/cogs/', { params }),
 

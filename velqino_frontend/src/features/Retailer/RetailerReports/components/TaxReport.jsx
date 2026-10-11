@@ -1,47 +1,46 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { FileText, TrendingUp, TrendingDown, Calendar, Download, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, Clock, Eye } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerReports/TaxReport.scss'
+import { FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight } from '../../../../utils/icons'
 import { useFileGSTReturnMutation } from '@/redux/retailer/slices/retailerReportsSlice'
 
-export default function TaxReport({ dateRange, taxSummary, gstReturns = [], isLoading: propLoading, onRefresh }) {
+export default function TaxReport({ 
+  dateRange = 'month', 
+  taxSummary, 
+  gstReturns = [], 
+  isLoading, 
+  onRefresh 
+}) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [currentPage, setCurrentPage] = useState(1)
   const [filingReturnId, setFilingReturnId] = useState(null)
   const itemsPerPage = 4
 
-  // ADD these lines
-  const isLoading = propLoading
-  const [fileGSTReturn, { isLoading: filingLoading }] = useFileGSTReturnMutation() 
+  const [fileGSTReturn] = useFileGSTReturnMutation()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-
-
   if (!mounted) return null
 
-  // Get tax data from API or use defaults
-  const data = {
-    gstCollected: taxSummary?.total_gst_collected || 0,
-    gstPayable: taxSummary?.total_gst_collected || 0,
-    cgst: taxSummary?.cgst || 0,
-    sgst: taxSummary?.sgst || 0,
-    pending: taxSummary?.pending_returns || 0,
-    filed: (taxSummary?.total_orders || 0) > 0
-  }
+  // Support both nested summary and top-level fields
+  const totalGst = taxSummary?.total_gst_collected ?? taxSummary?.summary?.total_gst_collected ?? 0
+  const taxableAmount = taxSummary?.total_taxable_amount ?? taxSummary?.summary?.total_taxable_amount ?? 0
+  const cgst = taxSummary?.cgst ?? taxSummary?.summary?.cgst ?? (totalGst / 2)
+  const sgst = taxSummary?.sgst ?? taxSummary?.summary?.sgst ?? (totalGst / 2)
+  const totalOrders = taxSummary?.total_orders ?? taxSummary?.summary?.total_orders ?? 0
 
-  const getStatusBadge = (status) => {
-    if (status === 'filed') {
-      return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle size={10} />, label: 'Filed' }
-    }
-    if (status === 'overdue') {
-      return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertCircle size={10} />, label: 'Overdue' }
-    }
-    return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={10} />, label: 'Pending' }
+  const returnsList = Array.isArray(gstReturns) ? gstReturns : (gstReturns?.returns || [])
+  const filedReturns = returnsList.filter(r => r.status === 'filed').length
+  const pendingReturns = returnsList.filter(r => r.status === 'pending').length
+
+  const totalPages = Math.max(1, Math.ceil(returnsList.length / itemsPerPage))
+  const paginatedReturns = returnsList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN').format(Math.round(amount || 0))
   }
 
   const formatDate = (date) => {
@@ -49,20 +48,10 @@ export default function TaxReport({ dateRange, taxSummary, gstReturns = [], isLo
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN').format(amount)
-  }
-
-  const pendingReturns = gstReturns?.filter(r => r.status === 'pending').length || 0
-  const filedReturns = gstReturns?.filter(r => r.status === 'filed').length || 0
-  const totalTaxLiability = gstReturns?.reduce((sum, r) => sum + (r.tax_amount || 0), 0) || 0
-
   const handleFileReturn = async (returnId) => {
     setFilingReturnId(returnId)
     try {
       await fileGSTReturn({ return_id: returnId }).unwrap()
-      refetchGSTReturns()
-      refetchTaxSummary()
       if (onRefresh) onRefresh()
     } catch (error) {
       console.error('Failed to file return:', error)
@@ -72,275 +61,179 @@ export default function TaxReport({ dateRange, taxSummary, gstReturns = [], isLo
     }
   }
 
-  const currentData = gstReturns.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-  const totalPages = Math.ceil(gstReturns.length / itemsPerPage)
-
-  const getPeriodLabel = (period) => {
-    if (!period) return 'N/A'
-    return period
-  }
-
-  if (isLoading && !taxSummary && gstReturns.length === 0) {
+  if (isLoading) {
     return (
-      <div className="tax-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="text-sm text-gray-500 mt-2">Loading tax data...</p>
-        </div>
+      <div className="bg-white rounded-2xl shadow-xs border border-gray-100 p-6 flex flex-col items-center justify-center min-h-[380px]">
+        <div className="animate-spin rounded-full h-9 w-9 border-2 border-primary-500 border-t-transparent" />
+        <p className="text-xs font-medium text-gray-500 mt-3">Loading tax & GST compliance...</p>
       </div>
     )
   }
 
   return (
-    <div className="tax-report bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+    <div className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col h-full overflow-hidden transition-all duration-200">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Tax Report</h3>
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+            <FileText size={18} />
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-            <Download size={14} />
-          </button>
+          <div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900">Tax & GST Compliance</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Automated tax collection & return filing</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">GST compliance and tax summary</p>
+        <span className="text-[11px] font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+          {returnsList.length} Filings
+        </span>
+      </div>
+
+      {/* Summary KPI Strip */}
+      <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Total Tax Collected</p>
+          <p className="text-base font-bold text-gray-900 mt-0.5">₹{formatCurrency(totalGst)}</p>
+        </div>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Taxable Sales</p>
+          <p className="text-base font-bold text-primary-600 mt-0.5">₹{formatCurrency(taxableAmount)}</p>
+        </div>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Filed Returns</p>
+          <p className="text-base font-bold text-emerald-600 mt-0.5">{filedReturns}</p>
+        </div>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Pending Returns</p>
+          <p className={`text-base font-bold mt-0.5 ${pendingReturns > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+            {pendingReturns}
+          </p>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100">
+      <div className="flex border-b border-gray-100 px-3 bg-white">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'overview' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === 'overview' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-gray-400 hover:text-gray-700'
+          }`}
         >
-          Overview
+          Tax Breakdown
         </button>
         <button
-          onClick={() => setActiveTab('returns')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'returns' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          onClick={() => { setActiveTab('returns'); setCurrentPage(1); }}
+          className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === 'returns' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-gray-400 hover:text-gray-700'
+          }`}
         >
-          GST Returns ({gstReturns.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'settings' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Settings
+          GST Returns ({returnsList.length})
         </button>
       </div>
 
-      {/* Content */}
-      <div className="p-4 max-h-[350px] overflow-y-auto custom-scroll">
-        {activeTab === 'overview' && (
-          <div className="space-y-4">
-            {/* Summary Cards */}
-            {data.gstCollected === 0 ? (
-              <div className="text-center py-8">
-                <FileText size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No tax data available</p>
-                <p className="text-xs text-gray-400 mt-1">Complete orders to see tax summary</p>
+      {/* Tab Content */}
+      <div className="p-4 flex-1 overflow-y-auto max-h-[300px]">
+        {activeTab === 'overview' ? (
+          <div className="space-y-3.5">
+            {/* Split cards for CGST and SGST */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <span className="text-[11px] font-medium text-gray-400 block">CGST (9%)</span>
+                <p className="text-base font-bold text-gray-900 mt-1">₹{formatCurrency(cgst)}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Central GST share</p>
               </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-blue-50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-blue-600 mb-1">GST Collected</p>
-                    <p className="text-xl font-bold text-blue-700">₹{formatCurrency(data.gstCollected)}</p>
-                  </div>
-                  <div className="bg-orange-50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-orange-600 mb-1">GST Payable</p>
-                    <p className="text-xl font-bold text-orange-700">₹{formatCurrency(data.gstPayable)}</p>
-                  </div>
-                </div>
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <span className="text-[11px] font-medium text-gray-400 block">SGST (9%)</span>
+                <p className="text-base font-bold text-gray-900 mt-1">₹{formatCurrency(sgst)}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">State GST share</p>
+              </div>
+            </div>
 
-                {/* GST Breakdown */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">GST Breakdown</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">CGST (9%)</span>
-                      <span className="font-semibold text-gray-900">₹{formatCurrency(data.cgst)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">SGST (9%)</span>
-                      <span className="font-semibold text-gray-900">₹{formatCurrency(data.sgst)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-                      <span className="font-medium text-gray-700">Total</span>
-                      <span className="font-bold text-primary-600">₹{formatCurrency(data.gstCollected)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Compliance Status */}
-                <div className={`rounded-lg p-3 ${data.filed ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                  <div className="flex items-center gap-2">
-                    {data.filed ? <CheckCircle size={16} className="text-green-600" /> : <Clock size={16} className="text-yellow-600" />}
-                    <span className="text-sm font-medium text-gray-700">Compliance Status</span>
-                  </div>
-                  <p className={`text-xs mt-1 ${data.filed ? 'text-green-700' : 'text-yellow-700'}`}>
-                    {data.filed ? 'GST returns tracked for this period' : 'No GST returns filed yet'}
-                  </p>
-                </div>
-
-                {/* Tax Summary */}
-                {gstReturns.length > 0 && (
-                  <div className="bg-yellow-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock size={14} className="text-yellow-600" />
-                      <span className="text-xs font-semibold text-yellow-700">Next Due Date</span>
-                    </div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {gstReturns.find(r => r.status === 'pending')?.due_date || 'No pending returns'}
-                    </p>
-                    <p className="text-xs text-yellow-600 mt-1">Quarterly GST return filing</p>
-                  </div>
-                )}
-              </>
-            )}
+            {/* Compliance Badge */}
+            <div className="p-3.5 bg-emerald-50/70 border border-emerald-100 rounded-xl flex items-start gap-2.5">
+              <CheckCircle size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-xs">
+                <p className="font-semibold text-emerald-950">Automated Tax Accrual Active</p>
+                <p className="text-emerald-700 mt-0.5">
+                  18% unified GST is automatically captured across {totalOrders} orders processed in this reporting cycle.
+                </p>
+              </div>
+            </div>
           </div>
-        )}
-
-        {activeTab === 'returns' && (
-          <div className="space-y-3">
-            {gstReturns.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText size={32} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No GST returns data available</p>
-                <p className="text-xs text-gray-400 mt-1">Returns will appear when orders are completed</p>
+        ) : (
+          <div className="space-y-2.5">
+            {returnsList.length === 0 ? (
+              <div className="text-center py-10">
+                <FileText size={28} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-xs font-medium text-gray-500">No GST returns in this period</p>
               </div>
             ) : (
-              <>
-                {/* Summary */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="bg-green-50 rounded-lg p-2 text-center">
-                    <p className="text-lg font-bold text-green-700">{filedReturns}</p>
-                    <p className="text-[10px] text-green-600">Returns Filed</p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg p-2 text-center">
-                    <p className="text-lg font-bold text-red-700">{pendingReturns}</p>
-                    <p className="text-[10px] text-red-600">Pending</p>
-                  </div>
-                </div>
+              paginatedReturns.map((ret) => {
+                const isFiled = ret.status === 'filed'
+                const isFilingThis = filingReturnId === ret.id
+                return (
+                  <div 
+                    key={ret.id} 
+                    className="p-3 rounded-xl border border-gray-100 bg-white hover:border-gray-200 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-semibold text-gray-900">{ret.period}</h4>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          isFiled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {isFiled ? 'Filed' : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Due: {formatDate(ret.due_date)} {isFiled && ret.filed_date ? `• Filed: ${formatDate(ret.filed_date)}` : ''}
+                      </p>
+                    </div>
 
-                {/* Returns List */}
-                {currentData.map((returnItem, idx) => {
-                  const status = getStatusBadge(returnItem.status)
-                  const isFiling = filingReturnId === returnItem.id
-                  return (
-                    <div key={idx} className="border border-gray-200 rounded-lg p-3 transition-all hover:shadow-md">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">{getPeriodLabel(returnItem.period)}</h4>
-                          <p className="text-xs text-gray-500">GST Return</p>
-                        </div>
-                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${status.bg} ${status.text}`}>
-                          {status.icon}
-                          {status.label}
-                        </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-3">
+                      <div className="text-right">
+                        <p className="text-xs sm:text-sm font-bold text-gray-900">₹{formatCurrency(ret.tax_amount)}</p>
+                        <p className="text-[10px] text-gray-400">Tax Liability</p>
                       </div>
-                      
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <p className="text-gray-500">Due Date</p>
-                          <p className="font-medium text-gray-700">{formatDate(returnItem.due_date)}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Tax Amount</p>
-                          <p className="font-semibold text-gray-900">₹{formatCurrency(returnItem.tax_amount)}</p>
-                        </div>
-                      </div>
-                      
-                      {returnItem.status === 'filed' && returnItem.filed_date && (
-                        <div className="mt-2 pt-2 border-t border-gray-100">
-                          <p className="text-[10px] text-green-600">Filed on {formatDate(returnItem.filed_date)}</p>
-                        </div>
-                      )}
-                      
-                      {returnItem.status === 'pending' && (
-                        <button 
-                          onClick={() => handleFileReturn(returnItem.id)}
-                          disabled={isFiling}
-                          className="mt-2 w-full py-1.5 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all disabled:bg-gray-400"
+                      {!isFiled && (
+                        <button
+                          onClick={() => handleFileReturn(ret.id)}
+                          disabled={isFilingThis}
+                          className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                         >
-                          {isFiling ? 'Filing...' : 'File Now'}
+                          {isFilingThis ? 'Filing...' : 'File Return'}
                         </button>
                       )}
                     </div>
-                  )
-                })}
-              </>
+                  </div>
+                )
+              })
             )}
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="text-xs font-semibold text-gray-700 mb-2">GST Configuration</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">GST Number</span>
-                  <span className="font-medium text-gray-900">Not configured</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">GST Rate</span>
-                  <span className="font-medium text-gray-900">18% (CGST 9% + SGST 9%)</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Filing Frequency</span>
-                  <span className="font-medium text-gray-900">Quarterly</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={14} className="text-blue-600" />
-                <span className="text-xs font-semibold text-blue-700">Auto-filing Settings</span>
-              </div>
-              <label className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-600">Enable auto GST filing</span>
-                <input type="checkbox" className="rounded text-primary-500" />
-              </label>
-              <label className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-600">Email reminders for due dates</span>
-                <input type="checkbox" defaultChecked className="rounded text-primary-500" />
-              </label>
-            </div>
-
-            <div className="bg-yellow-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={14} className="text-yellow-600" />
-                <span className="text-xs font-semibold text-yellow-700">GST Rate Information</span>
-              </div>
-              <p className="text-xs text-gray-600">Current GST rate is set to 18% (9% CGST + 9% SGST) for all products. Update product-specific rates in catalog settings.</p>
-            </div>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {activeTab === 'returns' && totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {gstReturns.length} returns
-          </p>
-          <div className="flex gap-1">
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
+          <span>Page {currentPage} of {totalPages}</span>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>

@@ -221,6 +221,7 @@ import {
   Pause,
   FilterX,
   ZoomOut,
+  Layers,
 } from 'lucide-react';
 
 // Then export them
@@ -428,4 +429,5 @@ export {
   Pause,
   FilterX,
   ZoomOut,
+  Layers,
 };

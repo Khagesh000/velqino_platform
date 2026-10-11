@@ -136,6 +136,19 @@ export const retailerStatsApi = createApi({
             },
             providesTags: ['RetailerCustomers']
         }),
+
+        // ---- SINGLE COMBINED ENDPOINT for retailer reports page ----
+        getRetailerReportsSummary: builder.query({
+            async queryFn(params) {
+                try {
+                    const response = await retailerStatsAPI.getReportsSummary(params);
+                    return { data: response.data };
+                } catch (error) {
+                    return { error: error.response?.data || error };
+                }
+            },
+            providesTags: ['RetailerDashboard']
+        }),
     }),
 });
 
@@ -151,4 +164,5 @@ export const {
     useGetRetailerQuickReorderQuery,
     useGetRetailerDashboardSummaryQuery,
     useGetRetailerCustomersSummaryQuery,
+    useGetRetailerReportsSummaryQuery,
 } = retailerStatsApi;

@@ -1,10 +1,9 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Users, TrendingUp, TrendingDown, Star, Award, Calendar, Download, ChevronLeft, ChevronRight, Eye, Target, CheckCircle, Clock } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerReports/StaffPerformance.scss'
+import { Users, Award, ChevronLeft, ChevronRight, Target, Clock, Star } from '../../../../utils/icons'
 
-export default function StaffPerformance({ dateRange }) {
+export default function StaffPerformance({ dateRange = 'month', isLoading }) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [currentPage, setCurrentPage] = useState(1)
@@ -28,8 +27,7 @@ export default function StaffPerformance({ dateRange }) {
       avgValue: 356,
       customers: 89,
       rating: 4.8,
-      joinDate: '2024-01-15',
-      status: 'active'
+      joinDate: '2024-01-15'
     },
     { 
       id: 2, 
@@ -42,8 +40,7 @@ export default function StaffPerformance({ dateRange }) {
       avgValue: 347,
       customers: 76,
       rating: 4.9,
-      joinDate: '2024-03-10',
-      status: 'active'
+      joinDate: '2024-03-10'
     },
     { 
       id: 3, 
@@ -56,8 +53,7 @@ export default function StaffPerformance({ dateRange }) {
       avgValue: 349,
       customers: 67,
       rating: 4.5,
-      joinDate: '2024-06-20',
-      status: 'active'
+      joinDate: '2024-06-20'
     },
     { 
       id: 4, 
@@ -70,8 +66,7 @@ export default function StaffPerformance({ dateRange }) {
       avgValue: 185,
       customers: 134,
       rating: 4.7,
-      joinDate: '2024-02-05',
-      status: 'active'
+      joinDate: '2024-02-05'
     },
     { 
       id: 5, 
@@ -84,219 +79,147 @@ export default function StaffPerformance({ dateRange }) {
       avgValue: 353,
       customers: 98,
       rating: 5.0,
-      joinDate: '2023-11-10',
-      status: 'active'
+      joinDate: '2023-11-10'
     },
   ]
 
   const summary = {
     totalStaff: staffData.length,
     totalSales: staffData.reduce((sum, s) => sum + s.sales, 0),
-    avgAchievement: (staffData.reduce((sum, s) => sum + s.achievement, 0) / staffData.length).toFixed(1),
+    avgAchievement: Math.round(staffData.reduce((sum, s) => sum + s.achievement, 0) / staffData.length),
     topPerformer: staffData.reduce((max, s) => s.achievement > max.achievement ? s : max, staffData[0])
   }
 
   const currentData = staffData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   const totalPages = Math.ceil(staffData.length / itemsPerPage)
 
-  const getAchievementColor = (achievement) => {
-    if (achievement >= 100) return 'text-green-600'
-    if (achievement >= 85) return 'text-yellow-600'
-    return 'text-red-600'
-  }
-
-  const getAchievementBg = (achievement) => {
-    if (achievement >= 100) return 'bg-green-100'
-    if (achievement >= 85) return 'bg-yellow-100'
-    return 'bg-red-100'
-  }
-
-  const getRankIcon = (index) => {
-    if (index === 0) return <Award size={14} className="text-yellow-500" />
-    if (index === 1) return <Award size={14} className="text-gray-400" />
-    if (index === 2) return <Award size={14} className="text-orange-500" />
-    return null
-  }
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN').format(Math.round(amount || 0))
   }
 
   return (
-    <div className="staff-performance bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+    <div className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col h-full overflow-hidden transition-all duration-200">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Staff Performance</h3>
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <Users size={18} />
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-            <Download size={14} />
-          </button>
+          <div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900">Staff Sales Performance</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Individual quotas, achievements & rankings</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Sales performance by staff member</p>
+        <span className="text-[11px] font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+          {staffData.length} Team Members
+        </span>
       </div>
 
-      {/* Summary Stats */}
-      <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-gray-100">
-        <div className="text-center p-2 bg-blue-50 rounded-lg">
-          <p className="text-lg font-bold text-blue-700">{summary.totalStaff}</p>
-          <p className="text-[10px] text-blue-600">Active Staff</p>
+      {/* Summary KPI Strip */}
+      <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Team Size</p>
+          <p className="text-base font-bold text-gray-900 mt-0.5">{summary.totalStaff} members</p>
         </div>
-        <div className="text-center p-2 bg-green-50 rounded-lg">
-          <p className="text-lg font-bold text-green-700">₹{(summary.totalSales / 1000).toFixed(0)}k</p>
-          <p className="text-[10px] text-green-600">Total Sales</p>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Staff Sales</p>
+          <p className="text-base font-bold text-emerald-600 mt-0.5">₹{formatCurrency(summary.totalSales)}</p>
         </div>
-        <div className="text-center p-2 bg-yellow-50 rounded-lg">
-          <p className="text-lg font-bold text-yellow-700">{summary.avgAchievement}%</p>
-          <p className="text-[10px] text-yellow-600">Avg Achievement</p>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Avg Target Met</p>
+          <p className="text-base font-bold text-primary-600 mt-0.5">{summary.avgAchievement}%</p>
         </div>
-        <div className="text-center p-2 bg-purple-50 rounded-lg">
-          <p className="text-lg font-bold text-purple-700">{summary.topPerformer.name.split(' ')[0]}</p>
-          <p className="text-[10px] text-purple-600">Top Performer</p>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-center">
+          <p className="text-xs text-gray-400">Top Performer</p>
+          <p className="text-base font-bold text-blue-600 mt-0.5 truncate">{summary.topPerformer.name.split(' ')[0]}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100">
+      <div className="flex border-b border-gray-100 px-3 bg-white">
         <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'overview' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          onClick={() => { setActiveTab('overview'); setCurrentPage(1); }}
+          className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === 'overview' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-gray-400 hover:text-gray-700'
+          }`}
         >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('targets')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'targets' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Targets
+          Staff Overview
         </button>
         <button
           onClick={() => setActiveTab('ranking')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'ranking' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+            activeTab === 'ranking' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-gray-400 hover:text-gray-700'
+          }`}
         >
-          Ranking
+          Leaderboard Ranking
         </button>
       </div>
 
-      {/* Content */}
-      <div className="p-4 max-h-[320px] overflow-y-auto custom-scroll">
-        {activeTab === 'overview' && (
+      {/* Tab Content */}
+      <div className="p-4 flex-1 overflow-y-auto max-h-[300px]">
+        {activeTab === 'overview' ? (
           <div className="space-y-3">
-            {currentData.map((staff, idx) => (
-              <div key={staff.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all" style={{ animationDelay: `${idx * 0.05}s` }}>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                    <span className="text-primary-600 font-semibold">{staff.name.charAt(0)}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-900">{staff.name}</h4>
-                        <p className="text-xs text-gray-500">{staff.role}</p>
-                      </div>
-                      <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${getAchievementBg(staff.achievement)} ${getAchievementColor(staff.achievement)}`}>
-                        <Target size={10} />
-                        {staff.achievement}% achieved
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p className="text-gray-500">Sales</p>
-                        <p className="font-semibold text-gray-900">₹{staff.sales.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Orders</p>
-                        <p className="font-semibold text-gray-900">{staff.orders}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Customers</p>
-                        <p className="font-semibold text-gray-900">{staff.customers}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2 flex items-center gap-2 text-[10px] text-gray-500">
-                      <Clock size={10} />
-                      <span>Joined {formatDate(staff.joinDate)}</span>
-                      <div className="flex items-center gap-1 ml-2">
-                        <Star size={10} className="text-yellow-400 fill-current" />
-                        <span>{staff.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button className="p-1 text-gray-400 hover:text-primary-600">
-                    <Eye size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'targets' && (
-          <div className="space-y-4">
-            {staffData.map((staff, idx) => (
-              <div key={staff.id} className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-semibold">
+            {currentData.map((staff) => {
+              const isExceeded = staff.achievement >= 100
+              return (
+                <div 
+                  key={staff.id} 
+                  className="p-3.5 rounded-xl border border-gray-100 bg-white hover:border-gray-200 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center shrink-0 text-sm">
                       {staff.name.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">{staff.name}</p>
-                      <p className="text-xs text-gray-500">Target: ₹{staff.target.toLocaleString()}</p>
+                      <h4 className="text-xs sm:text-sm font-semibold text-gray-900">{staff.name}</h4>
+                      <p className="text-[11px] text-gray-400">{staff.role} • {staff.orders} orders closed</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-bold ${getAchievementColor(staff.achievement)}`}>
-                    {staff.achievement}%
-                  </span>
-                </div>
-                
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      staff.achievement >= 100 ? 'bg-green-500' : 
-                      staff.achievement >= 85 ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}
-                    style={{ width: `${Math.min(staff.achievement, 100)}%` }}
-                  />
-                </div>
-                
-                <div className="mt-2 flex justify-between text-[10px] text-gray-500">
-                  <span>Achieved: ₹{staff.sales.toLocaleString()}</span>
-                  <span>Shortfall: ₹{(staff.target - staff.sales).toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
-            
-            <div className="bg-green-50 rounded-lg p-3 mt-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-green-600" />
-                <span className="text-xs font-medium text-green-700">Team Achievement: {summary.avgAchievement}%</span>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'ranking' && (
+                  <div className="flex items-center justify-between sm:justify-end gap-3">
+                    <div className="text-right">
+                      <p className="text-xs sm:text-sm font-bold text-gray-900">₹{formatCurrency(staff.sales)}</p>
+                      <p className="text-[10px] text-gray-400">Target: ₹{formatCurrency(staff.target)}</p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      isExceeded 
+                        ? 'bg-emerald-50 text-emerald-700' 
+                        : staff.achievement >= 85 
+                        ? 'bg-amber-50 text-amber-700' 
+                        : 'bg-rose-50 text-rose-700'
+                    }`}>
+                      {staff.achievement}% met
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
           <div className="space-y-2">
-            {staffData.sort((a, b) => b.achievement - a.achievement).map((staff, idx) => (
-              <div key={staff.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${idx < 3 ? 'bg-yellow-50' : 'bg-gray-50'}`}>
-                <div className="w-8 text-center">
-                  {getRankIcon(idx) || <span className="text-sm font-bold text-gray-400">#{idx + 1}</span>}
-                </div>
-                <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-semibold">
-                  {staff.name.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{staff.name}</p>
-                  <p className="text-xs text-gray-500">{staff.role}</p>
+            {[...staffData].sort((a, b) => b.achievement - a.achievement).map((staff, idx) => (
+              <div 
+                key={staff.id} 
+                className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                  idx === 0 ? 'bg-amber-50/50 border-amber-200' : 'bg-gray-50/60 border-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`w-6 text-center text-xs font-black ${idx === 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                    #{idx + 1}
+                  </span>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-900">{staff.name}</h4>
+                    <p className="text-[11px] text-gray-400">{staff.role}</p>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900">{staff.achievement}%</p>
-                  <p className="text-xs text-gray-500">achieved</p>
+                  <span className="text-xs sm:text-sm font-bold text-gray-900">{staff.achievement}% achieved</span>
+                  <p className="text-[10px] text-gray-400">₹{formatCurrency(staff.sales)} volume</p>
                 </div>
               </div>
             ))}
@@ -304,27 +227,24 @@ export default function StaffPerformance({ dateRange }) {
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {activeTab === 'overview' && totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {staffData.length} staff members
-          </p>
-          <div className="flex gap-1">
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
+          <span>Page {currentPage} of {totalPages}</span>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 rounded-lg hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>

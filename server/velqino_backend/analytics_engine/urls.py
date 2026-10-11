@@ -39,6 +39,7 @@ urlpatterns = [
     path('retailer/quick-reorder/', views.retailer_quick_reorder, name='retailer-quick-reorder'),
 
     #----------------------------------------Retailers Reports--------------------------------------
+    path('retailer/reports-summary/', views.retailer_reports_summary, name='retailer-reports-summary'),
     path('retailer/cogs/', views.retailer_cogs, name='retailer-cogs'),
     # ========== TAX REPORT URLS ==========
     path('retailer/tax-summary/', views.retailer_tax_summary, name='retailer-tax-summary'),

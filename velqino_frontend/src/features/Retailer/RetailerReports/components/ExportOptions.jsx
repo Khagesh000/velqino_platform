@@ -1,8 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Download, Edit, FileText, FileSpreadsheet, Mail, Printer, CheckCircle, AlertCircle, Calendar, Filter, RefreshCw, X, Plus, Trash2 } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerReports/ExportOptions.scss'
+import { 
+  Download, Edit, FileText, FileSpreadsheet, Mail, CheckCircle, 
+  AlertCircle, Calendar, RefreshCw, X, Plus, Trash2 
+} from '../../../../utils/icons'
 import { 
   useExportReportMutation, 
   useEmailReportMutation,
@@ -12,7 +14,12 @@ import {
   useDeleteScheduledReportMutation
 } from '@/redux/retailer/slices/retailerReportsSlice'
 
-export default function ExportOptions({ onRefresh, dateRange: propDateRange, scheduledReports: propScheduledReports, isLoading: propLoading }) {
+export default function ExportOptions({ 
+  onRefresh, 
+  dateRange: propDateRange, 
+  scheduledReports: propScheduledReports, 
+  isLoading: propLoading 
+}) {
   const [mounted, setMounted] = useState(false)
   const [selectedFormat, setSelectedFormat] = useState('excel')
   const [selectedReport, setSelectedReport] = useState('sales')
@@ -32,10 +39,12 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
     is_active: true
   })
 
-  // RTK Query hooks
+  // RTK Query hooks - skip fetching if propScheduledReports provided
   const [exportReport, { isLoading: exportLoading }] = useExportReportMutation()
   const [emailReport, { isLoading: emailLoading }] = useEmailReportMutation()
-  const { data: scheduledReportsData, refetch: refetchScheduled } = useGetScheduledReportsQuery()
+  const { data: scheduledReportsData, refetch: refetchScheduled } = useGetScheduledReportsQuery(undefined, {
+    skip: Array.isArray(propScheduledReports) && propScheduledReports.length > 0
+  })
   const [createScheduledReport, { isLoading: createLoading }] = useCreateScheduledReportMutation()
   const [updateScheduledReport, { isLoading: updateLoading }] = useUpdateScheduledReportMutation()
   const [deleteScheduledReport, { isLoading: deleteLoading }] = useDeleteScheduledReportMutation()
@@ -45,7 +54,6 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
 
   useEffect(() => {
     setMounted(true)
-    // Set default date range (last 30 days)
     const end = new Date()
     const start = new Date()
     start.setDate(start.getDate() - 30)
@@ -55,33 +63,20 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
     })
   }, [])
 
-  // Sync with parent dateRange if provided
-  useEffect(() => {
-    if (propDateRange && typeof propDateRange === 'string') {
-      const end = new Date()
-      const start = new Date()
-      start.setDate(start.getDate() - 30)
-      setDateRange({
-        start: start.toISOString().split('T')[0],
-        end: end.toISOString().split('T')[0]
-      })
-    }
-  }, [propDateRange])
-
   if (!mounted) return null
 
   const reportTypes = [
-    { id: 'sales', label: 'Sales Report', icon: <FileText size={16} />, description: 'Daily/Weekly/Monthly sales data' },
-    { id: 'products', label: 'Product Report', icon: <FileText size={16} />, description: 'Best sellers, inventory status' },
-    { id: 'customers', label: 'Customer Report', icon: <FileText size={16} />, description: 'Customer insights and analytics' },
-    { id: 'tax', label: 'Tax Report', icon: <FileText size={16} />, description: 'GST summary and returns' },
-    { id: 'profit_loss', label: 'Profit & Loss', icon: <FileText size={16} />, description: 'Revenue, expenses, net profit' },
+    { id: 'sales', label: 'Sales Report', icon: <FileText size={15} />, description: 'Volume, revenue & average bill' },
+    { id: 'products', label: 'Product Report', icon: <FileText size={15} />, description: 'COGS, stock & margin matrix' },
+    { id: 'customers', label: 'Customer Report', icon: <FileText size={15} />, description: 'Lifetime spend & order counts' },
+    { id: 'tax', label: 'Tax & GST Report', icon: <FileText size={15} />, description: 'CGST, SGST & filing ledger' },
+    { id: 'profit_loss', label: 'Profit & Loss', icon: <FileText size={15} />, description: 'Net profit & cost statement' },
   ]
 
   const exportFormats = [
-    { id: 'excel', label: 'Excel', icon: <FileSpreadsheet size={18} />, color: 'green', description: 'Export to Excel/CSV' },
-    { id: 'pdf', label: 'PDF', icon: <FileText size={18} />, color: 'red', description: 'Download as PDF document' },
-    { id: 'email', label: 'Email', icon: <Mail size={18} />, color: 'blue', description: 'Send report via email' },
+    { id: 'excel', label: 'Excel / CSV', icon: <FileSpreadsheet size={18} />, color: 'emerald', description: 'Raw spreadsheet data' },
+    { id: 'pdf', label: 'PDF Document', icon: <FileText size={18} />, color: 'rose', description: 'Executive print document' },
+    { id: 'email', label: 'Direct Email', icon: <Mail size={18} />, color: 'primary', description: 'Dispatch via email' },
   ]
 
   const frequencyOptions = [
@@ -106,7 +101,6 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
         end_date: dateRange.end
       }).unwrap()
       
-      // Handle blob response for file download
       if (result instanceof Blob) {
         const url = window.URL.createObjectURL(result)
         const a = document.createElement('a')
@@ -130,7 +124,6 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
 
   const handleSendEmail = async () => {
     if (!emailAddress) return
-    
     try {
       await emailReport({
         report_type: selectedReport,
@@ -202,180 +195,166 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
     setShowScheduleModal(true)
   }
 
-  const getFrequencyLabel = (frequency) => {
-    switch(frequency) {
-      case 'daily': return 'Daily'
-      case 'weekly': return 'Weekly'
-      case 'monthly': return 'Monthly'
-      default: return frequency
-    }
-  }
-
-  const getReportTypeLabel = (type) => {
-    const report = reportTypes.find(r => r.id === type)
-    return report ? report.label : type
-  }
-
   return (
-    <div className="export-options bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col h-full overflow-hidden transition-all duration-200">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Download size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Export Options</h3>
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+            <Download size={18} />
           </div>
-          <button
-            onClick={() => {
-              setEditingSchedule(null)
-              setScheduleForm({ name: '', report_type: 'sales', frequency: 'daily', format_type: 'excel', recipients: '', is_active: true })
-              setShowScheduleModal(true)
-            }}
-            className="px-2 py-1 text-[10px] font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-          >
-            + Add Schedule
-          </button>
+          <div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900">Export & Automation</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Generate downloads or schedule recurring dispatch</p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Export reports in multiple formats</p>
+        <button
+          onClick={() => {
+            setEditingSchedule(null)
+            setScheduleForm({ name: '', report_type: 'sales', frequency: 'daily', format_type: 'excel', recipients: '', is_active: true })
+            setShowScheduleModal(true)
+          }}
+          className="px-2.5 py-1.5 text-xs font-semibold bg-primary-500 hover:bg-primary-600 text-white rounded-xl shadow-xs transition-all flex items-center gap-1"
+        >
+          <Plus size={14} /> Schedule
+        </button>
       </div>
 
-      {/* Success Message */}
+      {/* Success Notification */}
       {showSuccess && (
-        <div className="mx-4 mt-4 p-3 bg-green-100 rounded-lg flex items-center gap-2 animate-fadeIn">
-          <CheckCircle size={16} className="text-green-600" />
-          <span className="text-sm text-green-700">Report exported successfully!</span>
+        <div className="mx-4 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs">
+          <CheckCircle size={15} className="text-emerald-600 shrink-0" />
+          <span>Report dispatch processed successfully!</span>
         </div>
       )}
 
-      <div className="p-4 space-y-4">
+      {/* Body Options */}
+      <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto max-h-[360px]">
         {/* Report Type Selection */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-2">Select Report</label>
+          <label className="block text-xs font-semibold text-gray-700 mb-2">1. Select Report Focus</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {reportTypes.map((report) => (
               <button
                 key={report.id}
                 onClick={() => setSelectedReport(report.id)}
-                className={`p-2 rounded-lg border text-left transition-all ${
+                className={`p-2.5 rounded-xl border text-left transition-all ${
                   selectedReport === report.id
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-primary-500 bg-primary-50/60 shadow-xs'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-1.5 mb-1">
                   <span className={selectedReport === report.id ? 'text-primary-600' : 'text-gray-400'}>
                     {report.icon}
                   </span>
-                  <span className="text-xs font-medium text-gray-700">{report.label}</span>
+                  <span className={`text-xs font-bold truncate ${selectedReport === report.id ? 'text-primary-950' : 'text-gray-800'}`}>
+                    {report.label}
+                  </span>
                 </div>
-                <p className="text-[10px] text-gray-500">{report.description}</p>
+                <p className="text-[10px] text-gray-400 line-clamp-1">{report.description}</p>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Date Range */}
+        {/* Date Interval Picker */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-2">Date Range</label>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1 relative">
-              <Calendar size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <label className="block text-xs font-semibold text-gray-700 mb-2">2. Custom Date Range</label>
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="w-full relative">
+              <Calendar size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 bg-gray-50/50"
               />
             </div>
-            <span className="text-gray-400 self-center">to</span>
-            <div className="flex-1 relative">
-              <Calendar size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <span className="text-xs text-gray-400">to</span>
+            <div className="w-full relative">
+              <Calendar size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 bg-gray-50/50"
               />
             </div>
           </div>
         </div>
 
-        {/* Export Format */}
+        {/* Export Format Selector */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-2">Export Format</label>
-          <div className="grid grid-cols-3 gap-2">
-            {exportFormats.map((format) => (
-              <button
-                key={format.id}
-                onClick={() => setSelectedFormat(format.id)}
-                className={`p-3 rounded-lg border text-center transition-all ${
-                  selectedFormat === format.id
-                    ? `border-${format.color}-500 bg-${format.color}-50`
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className={`flex justify-center mb-1 ${selectedFormat === format.id ? `text-${format.color}-600` : 'text-gray-400'}`}>
-                  {format.icon}
-                </div>
-                <span className={`text-xs font-medium ${selectedFormat === format.id ? `text-${format.color}-700` : 'text-gray-700'}`}>
-                  {format.label}
-                </span>
-                <p className="text-[9px] text-gray-500 mt-0.5">{format.description}</p>
-              </button>
-            ))}
+          <label className="block text-xs font-semibold text-gray-700 mb-2">3. Destination Format</label>
+          <div className="grid grid-cols-3 gap-2.5">
+            {exportFormats.map((format) => {
+              const isSelected = selectedFormat === format.id
+              return (
+                <button
+                  key={format.id}
+                  onClick={() => setSelectedFormat(format.id)}
+                  className={`p-3 rounded-xl border text-center transition-all ${
+                    isSelected
+                      ? 'border-primary-500 bg-primary-50/60 shadow-xs'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className={`flex justify-center mb-1 ${isSelected ? 'text-primary-600' : 'text-gray-400'}`}>
+                    {format.icon}
+                  </div>
+                  <span className={`text-xs font-bold block ${isSelected ? 'text-primary-950' : 'text-gray-800'}`}>
+                    {format.label}
+                  </span>
+                  <p className="text-[9px] text-gray-400 mt-0.5">{format.description}</p>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Export Button */}
+        {/* Download Action Button */}
         <button
           onClick={handleExport}
           disabled={isExporting || isLoading}
-          className={`w-full py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            isExporting || isLoading ? 'bg-gray-300 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600'
-          }`}
+          className="w-full py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 bg-primary-500 text-white hover:bg-primary-600 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting || isLoading ? (
             <>
-              <RefreshCw size={16} className="animate-spin" />
-              <span>Exporting...</span>
+              <RefreshCw size={14} className="animate-spin" />
+              <span>Generating Report...</span>
             </>
           ) : (
             <>
-              <Download size={16} />
-              <span>Export Report</span>
+              <Download size={14} />
+              <span>Download / Send Report Now</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Scheduled Reports Section */}
-      <div className="border-t border-gray-100 p-4 bg-gray-50 rounded-b-xl">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-semibold text-gray-700">Scheduled Reports</h4>
+      {/* Scheduled Subscriptions Ribbon */}
+      <div className="border-t border-gray-100 p-4 bg-gray-50/60">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Scheduled Subscriptions</span>
+          <span className="text-[10px] text-gray-400">{scheduledReports.length} automated jobs</span>
         </div>
         {scheduledReports.length === 0 ? (
-          <div className="text-center py-4">
-            <p className="text-xs text-gray-500">No scheduled reports</p>
-            <p className="text-[10px] text-gray-400 mt-1">Click "Add Schedule" to create one</p>
-          </div>
+          <p className="text-xs text-gray-400 text-center py-2">No active automated delivery schedules.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5 max-h-24 overflow-y-auto">
             {scheduledReports.map((schedule) => (
-              <div key={schedule.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
-                <div>
-                  <p className="text-xs font-medium text-gray-900">{schedule.name}</p>
-                  <p className="text-[10px] text-gray-500">
-                    {getFrequencyLabel(schedule.frequency)} • {getReportTypeLabel(schedule.report_type)}
-                  </p>
-                  <p className="text-[9px] text-gray-400 truncate max-w-[150px]">{schedule.recipients}</p>
+              <div key={schedule.id} className="p-2 bg-white rounded-xl border border-gray-100 flex items-center justify-between gap-2 text-xs">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-800 truncate">{schedule.name}</p>
+                  <p className="text-[10px] text-gray-400 truncate">{schedule.frequency} • {schedule.recipients}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${schedule.is_active ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button onClick={() => handleEditSchedule(schedule)} className="p-1 text-gray-400 hover:text-primary-600">
-                    <Edit size={12} />
+                    <Edit size={13} />
                   </button>
-                  <button onClick={() => handleDeleteSchedule(schedule.id)} className="p-1 text-gray-400 hover:text-red-600">
-                    <Trash2 size={12} />
+                  <button onClick={() => handleDeleteSchedule(schedule.id)} className="p-1 text-gray-400 hover:text-rose-600">
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
@@ -386,45 +365,37 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
 
       {/* Email Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Mail size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Send Report via Email</h3>
+              <div className="flex items-center gap-2 text-primary-600">
+                <Mail size={18} />
+                <h3 className="text-sm font-bold text-gray-900">Email Report Dispatch</h3>
               </div>
-              <button onClick={() => setShowEmailModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
               </button>
             </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input
-                type="email"
-                placeholder="recipient@example.com"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">Report will be sent as {selectedFormat.toUpperCase()} attachment</p>
-            </div>
-
+            <input
+              type="email"
+              placeholder="store-director@example.com"
+              value={emailAddress}
+              onChange={(e) => setEmailAddress(e.target.value)}
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 mb-4"
+            />
             <div className="flex gap-2">
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="flex-1 py-2 text-xs text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendEmail}
                 disabled={!emailAddress}
-                className={`flex-1 px-4 py-2 text-sm rounded-lg transition-all ${
-                  emailAddress ? 'bg-primary-500 text-white hover:bg-primary-600' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                }`}
+                className="flex-1 py-2 text-xs font-bold bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50"
               >
-                Send Report
+                Send Now
               </button>
             </div>
           </div>
@@ -433,108 +404,70 @@ export default function ExportOptions({ onRefresh, dateRange: propDateRange, sch
 
       {/* Schedule Modal */}
       {showScheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingSchedule ? 'Edit Schedule' : 'Add Schedule'}
-                </h3>
-              </div>
-              <button onClick={() => setShowScheduleModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl border border-gray-100 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900">
+                {editingSchedule ? 'Edit Schedule' : 'Create Automated Delivery'}
+              </h3>
+              <button onClick={() => setShowScheduleModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
               </button>
             </div>
-
-            <div className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-700 mb-1">Schedule Label</label>
+              <input
+                type="text"
+                placeholder="e.g., Weekly Executive Financials"
+                value={scheduleForm.name}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
+                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Weekly Sales Summary"
-                  value={scheduleForm.name}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                />
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">Report</label>
+                <select
+                  value={scheduleForm.report_type}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, report_type: e.target.value })}
+                  className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-xl"
+                >
+                  {reportTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
-                  <select
-                    value={scheduleForm.report_type}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, report_type: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  >
-                    {reportTypes.map(type => (
-                      <option key={type.id} value={type.id}>{type.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
-                  <select
-                    value={scheduleForm.frequency}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  >
-                    {frequencyOptions.map(freq => (
-                      <option key={freq.id} value={freq.id}>{freq.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Format</label>
-                  <select
-                    value={scheduleForm.format_type}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, format_type: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  >
-                    <option value="excel">Excel</option>
-                    <option value="pdf">PDF</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Active</label>
-                  <select
-                    value={scheduleForm.is_active}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, is_active: e.target.value === 'true' })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  >
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                  </select>
-                </div>
-              </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Recipients (comma-separated)</label>
-                <input
-                  type="text"
-                  placeholder="admin@store.com, manager@store.com"
-                  value={scheduleForm.recipients}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                />
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">Interval</label>
+                <select
+                  value={scheduleForm.frequency}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+                  className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-xl"
+                >
+                  {frequencyOptions.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
               </div>
             </div>
-
-            <div className="flex gap-2 mt-5">
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-700 mb-1">Recipients (comma separated)</label>
+              <input
+                type="text"
+                placeholder="auditor@firm.com, owner@shop.com"
+                value={scheduleForm.recipients}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
+                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowScheduleModal(false)}
-                className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                className="flex-1 py-2 text-xs text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateSchedule}
-                className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
+                className="flex-1 py-2 text-xs font-bold bg-primary-500 text-white rounded-xl hover:bg-primary-600"
               >
-                {editingSchedule ? 'Update' : 'Create'} Schedule
+                Save Schedule
               </button>
             </div>
           </div>
