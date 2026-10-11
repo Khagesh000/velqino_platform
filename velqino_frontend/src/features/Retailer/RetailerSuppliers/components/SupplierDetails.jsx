@@ -1,8 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { User, Phone, Mail, MapPin, CreditCard, Clock, Package, Star, Eye, Edit, Save, X, Truck, Calendar, CheckCircle } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerSuppliers/SupplierDetails.scss'
+import { 
+  User, Phone, Mail, MapPin, CreditCard, Clock, Package, Star, 
+  Eye, Edit, Save, X, Truck, Calendar, CheckCircle, ShieldCheck, 
+  ArrowUpRight, Building, Award, RefreshCw
+} from '../../../../utils/icons'
 
 export default function SupplierDetails({ selectedSupplier }) {
   const [mounted, setMounted] = useState(false)
@@ -16,21 +19,25 @@ export default function SupplierDetails({ selectedSupplier }) {
 
   useEffect(() => {
     if (selectedSupplier) {
-      setEditedSupplier(selectedSupplier)
+      setEditedSupplier({ ...selectedSupplier })
       setIsEditing(false)
     }
   }, [selectedSupplier])
 
-  if (!mounted) return null
+  if (!mounted) {
+    return <div className="w-full h-96 bg-gray-100 rounded-2xl animate-pulse" />
+  }
 
   if (!selectedSupplier) {
     return (
-      <div className="supplier-details bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <Truck size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-sm text-gray-500">Select a supplier to view details</p>
-          <p className="text-xs text-gray-400 mt-1">Click on any supplier from the list</p>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/80 p-8 text-center flex flex-col items-center justify-center h-full min-h-[420px]">
+        <div className="w-16 h-16 rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center mb-4">
+          <Truck size={32} />
         </div>
+        <h4 className="text-base font-bold text-gray-800">No Supplier Selected</h4>
+        <p className="text-xs text-gray-400 max-w-xs mt-1.5 leading-relaxed">
+          Select any vendor from the suppliers directory to view their complete dossier, order history, and business terms.
+        </p>
       </div>
     )
   }
@@ -49,157 +56,249 @@ export default function SupplierDetails({ selectedSupplier }) {
 
   const getStatusBadge = (status) => {
     if (status === 'delivered') {
-      return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle size={10} />, label: 'Delivered' }
+      return { 
+        bg: 'bg-emerald-50 border border-emerald-200', 
+        text: 'text-emerald-700', 
+        icon: <CheckCircle size={11} />, 
+        label: 'Delivered' 
+      }
     }
-    return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={10} />, label: 'Pending' }
+    return { 
+      bg: 'bg-amber-50 border border-amber-200', 
+      text: 'text-amber-700', 
+      icon: <Clock size={11} />, 
+      label: 'Pending' 
+    }
   }
 
   const totalSpent = orderHistory.reduce((sum, order) => sum + order.amount, 0)
 
+  const handleSaveEdit = () => {
+    setIsEditing(false)
+  }
+
   return (
-    <div className="supplier-details bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Truck size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Supplier Details</h3>
-          </div>
-          {isEditing ? (
-            <div className="flex gap-1">
-              <button onClick={() => setIsEditing(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X size={14} />
-              </button>
-              <button onClick={() => setIsEditing(false)} className="p-1 text-green-500 hover:bg-green-50 rounded-lg">
-                <Save size={14} />
-              </button>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden flex flex-col h-full">
+      {/* Dossier Header */}
+      <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 via-white to-gray-50/40">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-white font-bold text-xl flex items-center justify-center shadow-sm shadow-primary-500/20 ring-4 ring-primary-100">
+              {editedSupplier?.name ? editedSupplier.name.charAt(0) : 'S'}
             </div>
-          ) : (
-            <button onClick={() => setIsEditing(true)} className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-              <Edit size={14} />
-            </button>
-          )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-gray-900 tracking-tight leading-tight">
+                  {editedSupplier?.name}
+                </h3>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <ShieldCheck size={10} />
+                  Verified
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {editedSupplier?.category || 'Wholesale Supplier'} • {editedSupplier?.location || 'India'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="p-1.5 text-emerald-600 hover:text-emerald-700 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-all"
+                  title="Save"
+                >
+                  <Save size={16} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 transition-all"
+                title="Edit Dossier"
+              >
+                <Edit size={16} />
+              </button>
+            )}
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Complete supplier information</p>
+
+        {/* Quick Contact Bar */}
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+          <a
+            href={`tel:${editedSupplier?.contact}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+          >
+            <Phone size={12} className="text-primary-600" />
+            <span>Call Partner</span>
+          </a>
+          <a
+            href={`mailto:${editedSupplier?.email}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+          >
+            <Mail size={12} className="text-primary-600" />
+            <span>Send Email</span>
+          </a>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100">
+      <div className="flex border-b border-gray-100 bg-gray-50/50 p-1">
         <button
           onClick={() => setActiveTab('info')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'info' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+            activeTab === 'info'
+              ? 'bg-white text-primary-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-900'
+          }`}
         >
-          Information
+          Dossier
         </button>
         <button
           onClick={() => setActiveTab('orders')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'orders' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+            activeTab === 'orders'
+              ? 'bg-white text-primary-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-900'
+          }`}
         >
-          Order History
+          Orders ({orderHistory.length})
         </button>
         <button
           onClick={() => setActiveTab('products')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'products' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+            activeTab === 'products'
+              ? 'bg-white text-primary-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-900'
+          }`}
         >
-          Products
+          Catalog ({editedSupplier?.products?.length || 0})
         </button>
       </div>
 
       {/* Content */}
-      <div className="p-4 max-h-[400px] overflow-y-auto custom-scroll">
+      <div className="p-5 flex-1 overflow-y-auto space-y-4">
         {activeTab === 'info' && (
           <div className="space-y-4">
-            {/* Basic Info */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">{selectedSupplier.name.charAt(0)}</span>
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-gray-900">{selectedSupplier.name}</h4>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {[1,2,3,4,5].map((star) => (
-                      <Star key={star} size={12} className={star <= selectedSupplier.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'} />
-                    ))}
-                    <span className="text-xs text-gray-500 ml-1">({selectedSupplier.totalOrders} orders)</span>
-                  </div>
-                </div>
+            {/* Quick Metrics Cards */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Lifetime Spend</p>
+                <p className="text-base font-bold text-gray-900 mt-0.5">₹{totalSpent.toLocaleString()}</p>
+                <span className="text-[10px] text-emerald-600 font-medium">4 Orders Fulfill</span>
               </div>
-
-              {/* Contact Details */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone size={14} className="text-gray-400" />
-                  <span className="text-gray-700">{selectedSupplier.contact}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail size={14} className="text-gray-400" />
-                  <span className="text-gray-700">{selectedSupplier.email}</span>
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">On-Time Rate</p>
+                <p className="text-base font-bold text-emerald-600 mt-0.5">{editedSupplier?.onTime}</p>
+                <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                  <Star size={10} className="text-amber-400 fill-amber-400" />
+                  <span className="text-[10px] text-gray-500 font-medium">{editedSupplier?.rating} / 5.0</span>
                 </div>
               </div>
             </div>
 
-            {/* Business Terms */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Business Terms</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Lead Time</span>
-                  <span className="font-medium text-gray-900">{selectedSupplier.leadTime}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Minimum Order</span>
-                  <span className="font-medium text-gray-900">{selectedSupplier.minOrder}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Payment Terms</span>
-                  <span className="font-medium text-gray-900">{selectedSupplier.paymentTerms}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">On-Time Delivery</span>
-                  <span className="font-medium text-green-600">{selectedSupplier.onTime}</span>
-                </div>
+            {/* Commercial Terms */}
+            <div className="p-4 rounded-xl bg-gray-50/80 border border-gray-100 space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                <span className="text-xs font-bold text-gray-800 uppercase tracking-wider text-[10px]">Commercial Terms</span>
+                <span className="text-[10px] text-primary-600 font-semibold bg-primary-50 px-2 py-0.5 rounded">Standard Contract</span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-500">Lead Time Window</span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedSupplier.leadTime}
+                    onChange={(e) => setEditedSupplier({ ...editedSupplier, leadTime: e.target.value })}
+                    className="w-28 px-2 py-1 text-xs border rounded focus:border-primary-500"
+                  />
+                ) : (
+                  <span className="font-semibold text-gray-900">{editedSupplier?.leadTime}</span>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-500">Minimum Order Value</span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedSupplier.minOrder}
+                    onChange={(e) => setEditedSupplier({ ...editedSupplier, minOrder: e.target.value })}
+                    className="w-28 px-2 py-1 text-xs border rounded focus:border-primary-500"
+                  />
+                ) : (
+                  <span className="font-semibold text-gray-900">{editedSupplier?.minOrder}</span>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-500">Payment Terms</span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedSupplier.paymentTerms}
+                    onChange={(e) => setEditedSupplier({ ...editedSupplier, paymentTerms: e.target.value })}
+                    className="w-28 px-2 py-1 text-xs border rounded focus:border-primary-500"
+                  />
+                ) : (
+                  <span className="font-semibold text-primary-700 bg-primary-50 px-2 py-0.5 rounded text-[11px]">
+                    {editedSupplier?.paymentTerms}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Performance Metrics */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Performance</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">₹{totalSpent.toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-500">Total Spent</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">{selectedSupplier.onTime}</p>
-                  <p className="text-[10px] text-gray-500">On-Time Delivery</p>
-                </div>
+            {/* Direct Contacts */}
+            <div className="p-4 rounded-xl bg-gray-50/80 border border-gray-100 space-y-2 text-xs">
+              <span className="text-xs font-bold text-gray-800 uppercase tracking-wider text-[10px] block mb-1">
+                Communication Coordinates
+              </span>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Phone size={13} className="text-gray-400" />
+                <span>{editedSupplier?.contact}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Mail size={13} className="text-gray-400" />
+                <span className="truncate">{editedSupplier?.email}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <MapPin size={13} className="text-gray-400" />
+                <span>{editedSupplier?.location || 'Central Logistics Hub, India'}</span>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'orders' && (
-          <div className="space-y-3">
-            <div className="bg-blue-50 rounded-lg p-2 mb-2 text-center">
-              <p className="text-xs text-blue-700">Total Orders: {orderHistory.length} | Total Spent: ₹{totalSpent.toLocaleString()}</p>
+          <div className="space-y-2.5">
+            <div className="p-3 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-between text-xs">
+              <span className="text-primary-800 font-medium">Delivered Volume</span>
+              <span className="font-bold text-primary-900">₹{totalSpent.toLocaleString()}</span>
             </div>
+
             {orderHistory.map((order) => {
               const status = getStatusBadge(order.status)
               return (
-                <div key={order.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{order.id}</p>
-                      <p className="text-xs text-gray-500">{formatDate(order.date)}</p>
-                    </div>
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${status.bg} ${status.text}`}>
+                <div key={order.id} className="p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-all bg-white hover:shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-gray-900">{order.id}</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${status.bg} ${status.text}`}>
                       {status.icon}
                       {status.label}
-                    </div>
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{order.items} items</span>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{formatDate(order.date)} • {order.items} items</span>
                     <span className="font-bold text-gray-900">₹{order.amount.toLocaleString()}</span>
                   </div>
                 </div>
@@ -210,15 +309,20 @@ export default function SupplierDetails({ selectedSupplier }) {
 
         {activeTab === 'products' && (
           <div className="space-y-2">
-            {selectedSupplier.products.map((product, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package size={14} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">{product}</span>
+            {editedSupplier?.products?.map((product, idx) => (
+              <div key={idx} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-primary-600 shadow-xs">
+                    <Package size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900">{product}</p>
+                    <p className="text-[10px] text-gray-400">Regular Wholesale Stock</p>
+                  </div>
                 </div>
-                <button className="p-1 text-gray-400 hover:text-primary-600 rounded-lg">
-                  <Eye size={12} />
-                </button>
+                <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">
+                  Contract Item
+                </span>
               </div>
             ))}
           </div>

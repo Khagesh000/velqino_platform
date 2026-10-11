@@ -1,390 +1,522 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { FileText, Plus, Eye, Edit, Trash2, CheckCircle, Clock, Truck, Package, Calendar, Download, Search, Filter, ChevronLeft, ChevronRight, X, Save } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerSuppliers/PurchaseOrders.scss'
+import React, { useState, useEffect, useMemo } from 'react'
+import { 
+  Package, Plus, Clock, CheckCircle, Truck, Eye, Download, 
+  ChevronLeft, ChevronRight, X, Calendar, DollarSign, Filter,
+  Building, Check, AlertCircle, ShoppingCart
+} from '../../../../utils/icons'
 
 export default function PurchaseOrders({ selectedSupplier }) {
   const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState('list')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [filterStatus, setFilterStatus] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState(null)
-  const [formData, setFormData] = useState({
-    supplier: '',
-    items: [],
-    orderDate: new Date().toISOString().split('T')[0],
+  const [filterBySelected, setFilterBySelected] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const [purchaseOrders, setPurchaseOrders] = useState([
+    { 
+      id: 'PO-2026-001', 
+      supplier: 'Fashion Hub', 
+      date: '2026-04-10', 
+      expectedDate: '2026-04-15', 
+      items: [
+        { name: 'Cotton T-Shirt (M)', qty: 50, price: 350 },
+        { name: 'Slim Jeans (32)', qty: 30, price: 850 }
+      ], 
+      total: 43000, 
+      status: 'shipped', 
+      notes: 'Standard priority replenishment' 
+    },
+    { 
+      id: 'PO-2026-002', 
+      supplier: 'ElectroMart', 
+      date: '2026-04-08', 
+      expectedDate: '2026-04-14', 
+      items: [
+        { name: 'Wireless Earbuds', qty: 25, price: 1200 },
+        { name: 'Type-C Fast Cables', qty: 60, price: 150 }
+      ], 
+      total: 39000, 
+      status: 'pending', 
+      notes: 'Urgent restocking for weekend sale' 
+    },
+    { 
+      id: 'PO-2026-003', 
+      supplier: 'TechGadgets', 
+      date: '2026-04-02', 
+      expectedDate: '2026-04-09', 
+      items: [
+        { name: 'Smart Fitness Band', qty: 20, price: 2100 },
+        { name: 'Power Bank 20000mAh', qty: 15, price: 1400 }
+      ], 
+      total: 63000, 
+      status: 'delivered', 
+      notes: 'Received in full condition' 
+    },
+    { 
+      id: 'PO-2026-004', 
+      supplier: 'LeatherCraft', 
+      date: '2026-03-25', 
+      expectedDate: '2026-03-30', 
+      items: [
+        { name: 'RFID Bifold Wallet', qty: 35, price: 650 },
+        { name: 'Full Grain Leather Belt', qty: 20, price: 550 }
+      ], 
+      total: 33750, 
+      status: 'delivered', 
+      notes: 'Batch inspection passed' 
+    },
+    { 
+      id: 'PO-2026-005', 
+      supplier: 'SportFit', 
+      date: '2026-03-18', 
+      expectedDate: '2026-03-24', 
+      items: [
+        { name: 'Performance Running Shoes', qty: 15, price: 1800 },
+        { name: 'Breathable Ankle Socks', qty: 50, price: 120 }
+      ], 
+      total: 33000, 
+      status: 'delivered', 
+      notes: 'Delivered on schedule' 
+    },
+  ])
+
+  // New PO form state
+  const [newOrder, setNewOrder] = useState({
+    supplier: selectedSupplier?.name || 'Fashion Hub',
     expectedDate: '',
-    notes: ''
+    notes: '',
+    items: [{ name: '', qty: 10, price: 500 }]
   })
-  const [newItem, setNewItem] = useState({ product: '', quantity: 1, price: 0 })
+
+  const itemsPerPage = 4
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted) return null
+  useEffect(() => {
+    if (selectedSupplier) {
+      setNewOrder(prev => ({ ...prev, supplier: selectedSupplier.name }))
+    }
+  }, [selectedSupplier])
 
-  const purchaseOrders = [
-    { id: 'PO-001', supplier: 'Fashion Hub', date: '2026-04-10', expectedDate: '2026-04-15', status: 'delivered', items: 3, total: 45000, receivedDate: '2026-04-14' },
-    { id: 'PO-002', supplier: 'ElectroMart', date: '2026-04-05', expectedDate: '2026-04-12', status: 'shipped', items: 2, total: 28000, tracking: 'TRK123456' },
-    { id: 'PO-003', supplier: 'TechGadgets', date: '2026-03-28', expectedDate: '2026-04-05', status: 'delivered', items: 4, total: 62000, receivedDate: '2026-04-04' },
-    { id: 'PO-004', supplier: 'LeatherCraft', date: '2026-03-20', expectedDate: '2026-03-25', status: 'delivered', items: 2, total: 35000, receivedDate: '2026-03-24' },
-    { id: 'PO-005', supplier: 'SportFit', date: '2026-04-12', expectedDate: '2026-04-18', status: 'pending', items: 3, total: 52000 },
-  ]
+  const filteredOrders = useMemo(() => {
+    return purchaseOrders.filter(order => {
+      const matchesSupplier = (!filterBySelected || !selectedSupplier) || order.supplier === selectedSupplier.name
+      const matchesStatus = filterStatus === 'all' || order.status === filterStatus
+      return matchesSupplier && matchesStatus
+    })
+  }, [purchaseOrders, filterBySelected, selectedSupplier, filterStatus])
 
-  const getStatusConfig = (status) => {
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  const getStatusBadge = (status) => {
     switch(status) {
       case 'delivered':
-        return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle size={12} />, label: 'Delivered' }
+        return { 
+          bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', 
+          icon: <CheckCircle size={11} />, 
+          label: 'Delivered' 
+        }
       case 'shipped':
-        return { bg: 'bg-blue-100', text: 'text-blue-700', icon: <Truck size={12} />, label: 'Shipped' }
+        return { 
+          bg: 'bg-blue-50 text-blue-700 border-blue-200', 
+          icon: <Truck size={11} />, 
+          label: 'In Transit' 
+        }
       case 'pending':
-        return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={12} />, label: 'Pending' }
+        return { 
+          bg: 'bg-amber-50 text-amber-700 border-amber-200', 
+          icon: <Clock size={11} />, 
+          label: 'Pending' 
+        }
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Package size={12} />, label: status }
+        return { 
+          bg: 'bg-gray-50 text-gray-700 border-gray-200', 
+          icon: <Package size={11} />, 
+          label: status 
+        }
     }
   }
 
-  const filteredOrders = purchaseOrders.filter(order =>
-    order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.supplier.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const totalPages = Math.ceil(filteredOrders.length / 5)
-  const paginatedOrders = filteredOrders.slice((currentPage - 1) * 5, currentPage * 5)
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-'
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   }
 
-  const handleAddItem = () => {
-    if (newItem.product && newItem.quantity > 0) {
-      setFormData({
-        ...formData,
-        items: [...formData.items, { ...newItem, total: newItem.quantity * newItem.price }]
-      })
-      setNewItem({ product: '', quantity: 1, price: 0 })
-    }
-  }
-
-  const handleRemoveItem = (index) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index)
+  const handleAddItemRow = () => {
+    setNewOrder({
+      ...newOrder,
+      items: [...newOrder.items, { name: '', qty: 10, price: 500 }]
     })
   }
 
-  const totalAmount = formData.items.reduce((sum, item) => sum + item.total, 0)
-
-  const handleCreatePO = () => {
-    if (formData.items.length === 0) {
-      alert('Please add at least one item')
-      return
-    }
-    setShowCreateModal(false)
-    setFormData({ supplier: '', items: [], orderDate: new Date().toISOString().split('T')[0], expectedDate: '', notes: '' })
-    alert('Purchase Order created successfully!')
+  const handleRemoveItemRow = (index) => {
+    if (newOrder.items.length === 1) return
+    const updated = newOrder.items.filter((_, idx) => idx !== index)
+    setNewOrder({ ...newOrder, items: updated })
   }
 
-  const handleReceiveOrder = (orderId) => {
-    alert(`Order ${orderId} marked as received`)
+  const handleItemChange = (index, field, value) => {
+    const updated = [...newOrder.items]
+    updated[index][field] = field === 'name' ? value : Number(value) || 0
+    setNewOrder({ ...newOrder, items: updated })
+  }
+
+  const calculatedTotal = newOrder.items.reduce((sum, it) => sum + (it.qty * it.price), 0)
+
+  const handleCreateOrderSubmit = (e) => {
+    e.preventDefault()
+    const orderNumber = `PO-2026-00${purchaseOrders.length + 1}`
+    const today = new Date().toISOString().split('T')[0]
+
+    const created = {
+      id: orderNumber,
+      supplier: newOrder.supplier,
+      date: today,
+      expectedDate: newOrder.expectedDate || today,
+      items: newOrder.items.filter(i => i.name.trim()),
+      total: calculatedTotal,
+      status: 'pending',
+      notes: newOrder.notes || 'Replenishment Order'
+    }
+
+    setPurchaseOrders([created, ...purchaseOrders])
+    setShowCreateModal(false)
+    setNewOrder({
+      supplier: selectedSupplier?.name || 'Fashion Hub',
+      expectedDate: '',
+      notes: '',
+      items: [{ name: '', qty: 10, price: 500 }]
+    })
+  }
+
+  const handleMarkReceived = (orderId) => {
+    setPurchaseOrders(prev => prev.map(po => {
+      if (po.id === orderId) {
+        return { ...po, status: 'delivered' }
+      }
+      return po
+    }))
+  }
+
+  if (!mounted) {
+    return <div className="w-full h-96 bg-gray-100 rounded-2xl animate-pulse" />
   }
 
   return (
-    <div className="purchase-orders bg-white rounded-xl shadow-sm border border-gray-100 h-full">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Purchase Orders</h3>
+      <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 via-white to-gray-50/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold shadow-sm ring-1 ring-primary-100">
+              <Package size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-gray-900 tracking-tight">Purchase Orders</h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-100 text-primary-800">
+                  {purchaseOrders.length} Orders
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Track shipments, receipts & procurement batches</p>
+            </div>
           </div>
+
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-3 py-1.5 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all flex items-center gap-1"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 active:scale-95 rounded-lg shadow-sm transition-all self-start sm:self-auto"
           >
-            <Plus size={12} />
-            Create PO
+            <Plus size={14} />
+            Create Purchase Order
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">Create and track purchase orders</p>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-100">
-        <button
-          onClick={() => setActiveTab('list')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'list' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          All Orders
-        </button>
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'pending' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Pending
-        </button>
-        <button
-          onClick={() => setActiveTab('shipped')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'shipped' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Shipped
-        </button>
-        <button
-          onClick={() => setActiveTab('delivered')}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'delivered' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          Delivered
-        </button>
-      </div>
+        {/* Filter Pills and Supplier Toggle */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            {['all', 'pending', 'shipped', 'delivered'].map((status) => (
+              <button
+                key={status}
+                onClick={() => {
+                  setFilterStatus(status)
+                  setCurrentPage(1)
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
+                  filterStatus === status
+                    ? 'bg-primary-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                }`}
+              >
+                {status === 'shipped' ? 'In Transit' : status}
+              </button>
+            ))}
+          </div>
 
-      {/* Search */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by PO number or supplier..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-          />
+          {selectedSupplier && (
+            <button
+              onClick={() => setFilterBySelected(!filterBySelected)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                filterBySelected 
+                  ? 'bg-primary-50 text-primary-700 border border-primary-200' 
+                  : 'bg-gray-100 text-gray-600 border border-transparent'
+              }`}
+            >
+              <span>{filterBySelected ? `Filtered to: ${selectedSupplier.name}` : 'Showing all suppliers'}</span>
+              <X size={12} className={filterBySelected ? 'opacity-100' : 'opacity-0'} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Orders List */}
-      <div className="p-4 max-h-[320px] overflow-y-auto custom-scroll">
-        <div className="space-y-3">
-          {paginatedOrders.map((order) => {
-            const status = getStatusConfig(order.status)
+      {/* Orders List / Cards */}
+      <div className="p-5 flex-1 overflow-y-auto space-y-3">
+        {paginatedOrders.length === 0 ? (
+          <div className="text-center py-12">
+            <Package size={36} className="mx-auto text-gray-300 mb-2" />
+            <p className="text-sm font-semibold text-gray-700">No purchase orders found</p>
+            <p className="text-xs text-gray-400 mt-1">There are no orders matching the current filter</p>
+          </div>
+        ) : (
+          paginatedOrders.map((order) => {
+            const statusConfig = getStatusBadge(order.status)
             return (
-              <div key={order.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between mb-2">
+              <div 
+                key={order.id} 
+                className="p-4 rounded-xl border border-gray-200/80 hover:border-primary-200 hover:shadow-sm transition-all bg-white"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-900 tracking-tight">{order.id}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-xs font-semibold text-gray-700">{order.supplier}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusConfig.bg}`}>
+                      {statusConfig.icon}
+                      {statusConfig.label}
+                    </span>
+                    <span className="text-xs font-bold text-gray-900">₹{order.total.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Items & Schedule Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2.5 text-xs text-gray-600">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{order.id}</p>
-                    <p className="text-xs text-gray-500">{order.supplier}</p>
+                    <span className="text-[10px] uppercase font-semibold text-gray-400 block mb-0.5">Manifest Items</span>
+                    <p className="text-xs font-medium text-gray-800 line-clamp-1">
+                      {order.items.map(i => `${i.name} (${i.qty})`).join(', ')}
+                    </p>
                   </div>
-                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${status.bg} ${status.text}`}>
-                    {status.icon}
-                    {status.label}
+                  <div className="flex items-center justify-between sm:justify-end gap-4 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-gray-400 block mb-0.5">Ordered</span>
+                      <span className="text-xs font-medium text-gray-700">{formatDate(order.date)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-gray-400 block mb-0.5">Expected Delivery</span>
+                      <span className="text-xs font-bold text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
+                        {formatDate(order.expectedDate)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
-                  <div className="flex items-center gap-1">
-                    <Calendar size={10} className="text-gray-400" />
-                    <span>Ordered: {formatDate(order.date)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Package size={10} className="text-gray-400" />
-                    <span>{order.items} items</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-gray-900">₹{order.total.toLocaleString()}</span>
-                  {order.expectedDate && (
-                    <span className="text-[10px] text-gray-500">Expected: {formatDate(order.expectedDate)}</span>
-                  )}
-                </div>
-
-                {order.status === 'shipped' && order.tracking && (
-                  <div className="mb-2 text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded-lg inline-block">
-                    Tracking: {order.tracking}
-                  </div>
-                )}
-
-                <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
-                  <button className="flex-1 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-1">
-                    <Eye size={12} />
-                    View
-                  </button>
-                  {order.status === 'shipped' && (
+                {/* Actions Footer */}
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-400 italic truncate max-w-[200px]">
+                    {order.notes || 'No special notes'}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {order.status !== 'delivered' && (
+                      <button
+                        onClick={() => handleMarkReceived(order.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+                      >
+                        <Check size={12} />
+                        Receive
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleReceiveOrder(order.id)}
-                      className="flex-1 py-1.5 text-xs font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center justify-center gap-1"
+                      onClick={() => alert(`Purchase Order ${order.id} invoice document generated!`)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all"
                     >
-                      <CheckCircle size={12} />
-                      Receive
+                      <Download size={12} />
+                      Invoice
                     </button>
-                  )}
-                  <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg">
-                    <Download size={12} />
-                  </button>
+                  </div>
                 </div>
               </div>
             )
-          })}
-        </div>
+          })
+        )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {filteredOrders.length} orders
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            {filteredOrders.length} purchase orders total
           </p>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-40 transition-all"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
+            <span className="text-xs text-gray-700 px-2">Page {currentPage} of {totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-white disabled:opacity-40 transition-all"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Create PO Modal */}
+      {/* Create Order Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText size={18} className="text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Create Purchase Order</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center">
+                  <ShoppingCart size={16} />
+                </div>
+                <h3 className="text-base font-bold text-gray-900">Issue Purchase Order</h3>
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+              >
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
-              {/* Supplier Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                <select
-                  value={formData.supplier}
-                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                >
-                  <option value="">Select supplier</option>
-                  <option>Fashion Hub</option>
-                  <option>ElectroMart</option>
-                  <option>TechGadgets</option>
-                  <option>LeatherCraft</option>
-                  <option>SportFit</option>
-                </select>
-              </div>
-
-              {/* Order Details */}
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateOrderSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
-                  <input
-                    type="date"
-                    value={formData.orderDate}
-                    onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                  />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Target Vendor *</label>
+                  <select
+                    value={newOrder.supplier}
+                    onChange={(e) => setNewOrder({ ...newOrder, supplier: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  >
+                    <option value="Fashion Hub">Fashion Hub</option>
+                    <option value="ElectroMart">ElectroMart</option>
+                    <option value="TechGadgets">TechGadgets</option>
+                    <option value="LeatherCraft">LeatherCraft</option>
+                    <option value="SportFit">SportFit</option>
+                  </select>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expected Delivery</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Expected Delivery Date</label>
                   <input
                     type="date"
-                    value={formData.expectedDate}
-                    onChange={(e) => setFormData({ ...formData, expectedDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    required
+                    value={newOrder.expectedDate}
+                    onChange={(e) => setNewOrder({ ...newOrder, expectedDate: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   />
                 </div>
               </div>
 
-              {/* Items Section */}
+              {/* Order Items */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Items</label>
-                <div className="space-y-2">
-                  {formData.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{item.product}</p>
-                        <p className="text-xs text-gray-500">{item.quantity} × ₹{item.price}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">₹{item.total}</p>
-                      </div>
-                      <button onClick={() => handleRemoveItem(idx)} className="p-1 text-red-500 hover:bg-red-50 rounded">
-                        <Trash2 size={12} />
-                      </button>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-gray-700">Order Lines</label>
+                  <button
+                    type="button"
+                    onClick={handleAddItemRow}
+                    className="text-xs font-bold text-primary-600 hover:text-primary-700"
+                  >
+                    + Add Product Line
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {newOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Item name (e.g. Cotton T-Shirt)"
+                        required
+                        value={item.name}
+                        onChange={(e) => handleItemChange(idx, 'name', e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Qty"
+                        min="1"
+                        value={item.qty}
+                        onChange={(e) => handleItemChange(idx, 'qty', e.target.value)}
+                        className="w-16 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="₹ Unit Price"
+                        min="1"
+                        value={item.price}
+                        onChange={(e) => handleItemChange(idx, 'price', e.target.value)}
+                        className="w-24 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                      />
+                      {newOrder.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItemRow(idx)}
+                          className="p-1 text-gray-400 hover:text-red-500 rounded"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
-
-                {/* Add Item Row */}
-                <div className="flex gap-2 mt-2">
-                  <input
-                    type="text"
-                    placeholder="Product name"
-                    value={newItem.product}
-                    onChange={(e) => setNewItem({ ...newItem, product: e.target.value })}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Qty"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 0 })}
-                    className="w-20 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Price"
-                    value={newItem.price}
-                    onChange={(e) => setNewItem({ ...newItem, price: parseInt(e.target.value) || 0 })}
-                    className="w-24 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-                  />
-                  <button onClick={handleAddItem} className="px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">
-                    <Plus size={14} />
-                  </button>
-                </div>
               </div>
 
-              {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                <textarea
-                  rows={2}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 resize-none"
-                  placeholder="Any special instructions..."
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Procurement Notes</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Standard wholesale delivery, ground shipping"
+                  value={newOrder.notes}
+                  onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 />
               </div>
 
-              {/* Total */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-semibold text-gray-700">Total Amount</span>
-                  <span className="text-xl font-bold text-primary-600">₹{totalAmount.toLocaleString()}</span>
-                </div>
+              {/* Total Summary */}
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-600">Calculated PO Volume:</span>
+                <span className="text-sm font-bold text-gray-900">₹{calculatedTotal.toLocaleString()}</span>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
                 <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleCreatePO}
-                  className="flex-1 px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
+                  type="submit"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 active:scale-95 rounded-xl shadow-sm transition-all"
                 >
-                  Create PO
+                  Submit Order
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
