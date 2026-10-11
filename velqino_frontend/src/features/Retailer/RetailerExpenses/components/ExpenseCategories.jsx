@@ -114,111 +114,119 @@ export default function ExpenseCategories() {
           </button>
         </div>
 
-        {/* Envelope Stats Banner */}
-        <div className="grid grid-cols-3 gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-100 text-center">
-          <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Cap</p>
-            <p className="text-xs sm:text-sm font-black text-gray-900">₹{totalBudget.toLocaleString('en-IN')}</p>
+        {/* Envelope Stats Banner & Filter */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 flex-1 p-2.5 bg-gray-50/80 rounded-xl border border-gray-100 text-center">
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total Cap</p>
+              <p className="text-xs sm:text-sm font-black text-gray-900">₹{totalBudget.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Spent</p>
+              <p className="text-xs sm:text-sm font-black text-amber-600">₹{totalSpent.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Remaining</p>
+              <p className={`text-xs sm:text-sm font-black ${remainingBudget >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                ₹{remainingBudget.toLocaleString('en-IN')}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Spent</p>
-            <p className="text-xs sm:text-sm font-black text-amber-600">₹{totalSpent.toLocaleString('en-IN')}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Remaining</p>
-            <p className={`text-xs sm:text-sm font-black ${remainingBudget >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              ₹{remainingBudget.toLocaleString('en-IN')}
-            </p>
-          </div>
-        </div>
 
-        {/* Search */}
-        <div className="relative mt-3">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Filter categories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-gray-700"
-          />
+          {/* Search */}
+          <div className="relative sm:w-72">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Filter categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-gray-700"
+            />
+          </div>
         </div>
       </div>
 
       {/* Categories List */}
-      <div className="p-4 flex-1 overflow-y-auto space-y-2.5 max-h-[360px]">
+      <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
         {filteredCategories.length === 0 ? (
           <div className="text-center py-8 text-xs text-gray-400">
             No category matching "{searchQuery}"
           </div>
         ) : (
-          filteredCategories.map((cat) => {
-            const styles = colorTokens[cat.color] || colorTokens.slate
-            const utilization = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0
-            const isOverBudget = cat.spent > cat.budget
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            {filteredCategories.map((cat) => {
+              const styles = colorTokens[cat.color] || colorTokens.slate
+              const utilization = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0
+              const isOverBudget = cat.spent > cat.budget
 
-            return (
-              <div
-                key={cat.id}
-                onMouseEnter={() => setHoveredCategory(cat.id)}
-                onMouseLeave={() => setHoveredCategory(null)}
-                className={`p-3 rounded-xl border transition-all ${styles.border} ${
-                  hoveredCategory === cat.id ? 'bg-gray-50/60 shadow-xs' : 'bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{cat.icon}</span>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-gray-900">{cat.name}</h4>
-                      <p className="text-[10px] text-gray-400">{cat.expenseCount} entries recorded</p>
+              return (
+                <div
+                  key={cat.id}
+                  onMouseEnter={() => setHoveredCategory(cat.id)}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                  className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${styles.border} ${
+                    hoveredCategory === cat.id ? 'bg-gray-50/60 shadow-xs' : 'bg-white'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{cat.icon}</span>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-gray-900">{cat.name}</h4>
+                          <p className="text-[10px] text-gray-400">{cat.expenseCount} entries recorded</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleEditClick(cat)}
+                          className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                          title="Edit category"
+                        >
+                          <Edit size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                          title="Delete category"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Numbers */}
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-gray-500">Cap: ₹{cat.budget.toLocaleString('en-IN')}</span>
+                      <span className={`font-bold ${isOverBudget ? 'text-rose-600' : 'text-gray-800'}`}>
+                        ₹{cat.spent.toLocaleString('en-IN')} ({utilization.toFixed(0)}%)
+                      </span>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isOverBudget ? 'bg-rose-500' : styles.progress
+                        }`}
+                        style={{ width: `${Math.min(utilization, 100)}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleEditClick(cat)}
-                      className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
-                    >
-                      <Edit size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteCategory(cat.id)}
-                      className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
 
-                {/* Numbers */}
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500">Cap: ₹{cat.budget.toLocaleString('en-IN')}</span>
-                  <span className={`font-bold ${isOverBudget ? 'text-rose-600' : 'text-gray-800'}`}>
-                    ₹{cat.spent.toLocaleString('en-IN')} ({utilization.toFixed(0)}%)
-                  </span>
+                  {isOverBudget && (
+                    <div className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-rose-600">
+                      <AlertCircle size={10} />
+                      <span>Over envelope limit by ₹{(cat.spent - cat.budget).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
                 </div>
-
-                {/* Progress bar */}
-                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isOverBudget ? 'bg-rose-500' : styles.progress
-                    }`}
-                    style={{ width: `${Math.min(utilization, 100)}%` }}
-                  />
-                </div>
-
-                {isOverBudget && (
-                  <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-rose-600">
-                    <AlertCircle size={10} />
-                    <span>Over envelope limit by ₹{(cat.spent - cat.budget).toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-              </div>
-            )
-          })
+              )
+            })}
+          </div>
         )}
       </div>
 

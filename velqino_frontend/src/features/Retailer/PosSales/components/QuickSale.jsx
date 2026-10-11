@@ -119,9 +119,9 @@ export default function QuickSale({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-6 shadow-2xs flex flex-col h-full">
+    <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-6 shadow-2xs flex flex-col h-full flex-1 min-h-0">
       {/* Search & Barcode Toolbar */}
-      <div className="space-y-3 mb-4">
+      <div className="space-y-3 mb-4 shrink-0">
         <div className="flex items-center gap-2.5">
           {/* Main Search Bar */}
           <div className="relative flex-1">
@@ -238,7 +238,7 @@ export default function QuickSale({
       </div>
 
       {/* Product Catalog Grid Container */}
-      <div className="flex-1 overflow-y-auto pr-1 min-h-[360px] max-h-[580px] custom-scroll">
+      <div className="flex-1 min-h-[320px] lg:min-h-0 overflow-y-auto pr-1 max-h-[520px] lg:max-h-none custom-scroll">
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {[...Array(8)].map((_, i) => (
@@ -383,7 +383,7 @@ export default function QuickSale({
 
       {/* Catalog Footer Stats */}
       {products.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400 font-medium">
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400 font-medium shrink-0">
           <span>Showing {filteredProducts.length} of {products.length} inventory items</span>
           <span className="flex items-center gap-1.5 text-gray-500">
             <Sparkles size={13} className="text-primary-600" />

@@ -125,34 +125,34 @@ export default function RetailerInventory() {
 
           </div>
 
-          {/* Secondary Operations Grid: Receiving (Col 1) + Audit (Col 2) + Quality & Suppliers (Col 3) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-            
-            {/* Column 1: Inward Stock Receiving */}
-            <div>
-              <Suspense fallback={<CardPlaceholder height="380px" />}>
+          {/* Row 2: Receive Inward Stock + Batch Expiry Control (Side-by-Side) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="400px" />}>
                 <InwardStock onComplete={() => setRefreshTrigger(prev => prev + 1)} />
               </Suspense>
             </div>
-            
-            {/* Column 2: Physical Stock Take & Audit */}
-            <div>
-              <Suspense fallback={<CardPlaceholder height="380px" />}>
+
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="400px" />}>
+                <ExpiryTracking />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* Row 3: Physical Stock Audit + Verified Suppliers (Side-by-Side) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="400px" />}>
                 <StockTake onComplete={() => setRefreshTrigger(prev => prev + 1)} />
               </Suspense>
             </div>
 
-            {/* Column 3: Stacked Expiry Control + Verified Suppliers */}
-            <div className="space-y-6">
-              <Suspense fallback={<CardPlaceholder height="240px" />}>
-                <ExpiryTracking />
-              </Suspense>
-              
-              <Suspense fallback={<CardPlaceholder height="280px" />}>
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="400px" />}>
                 <SupplierInfo />
               </Suspense>
             </div>
-
           </div>
 
         </div>

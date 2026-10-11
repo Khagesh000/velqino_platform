@@ -218,8 +218,8 @@ export default function RetailerExpenses() {
           {/* Tab 1: Overview View */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Primary Workspace Grid: 2/3 Ledger + 1/3 Quick Actions */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Row 1: Expense Ledger (2 Cols) + Record Expense (1 Col) */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 {/* Left: Expense Ledger Table (2 cols) */}
                 <div className="lg:col-span-2">
                   <Suspense fallback={<TablePlaceholder />}>
@@ -227,24 +227,33 @@ export default function RetailerExpenses() {
                   </Suspense>
                 </div>
 
-                {/* Right: Add Expense & Category Allocations (1 col) */}
-                <div className="space-y-6">
+                {/* Right: Record Expense Form (1 col) */}
+                <div>
                   <Suspense fallback={<SidebarPlaceholder />}>
                     <AddExpense onComplete={() => setRefreshTrigger(prev => prev + 1)} />
-                  </Suspense>
-                  <Suspense fallback={<SidebarPlaceholder />}>
-                    <ExpenseCategories />
                   </Suspense>
                 </div>
               </div>
 
-              {/* Bottom Analytics & Budget Tracking: 2 Columns */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Row 2: Expense Analytics + Budget Tracking (2 Columns Side-by-Side) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <div className="flex flex-col h-full min-h-0">
+                  <Suspense fallback={<CardPlaceholder />}>
+                    <ExpenseReport refreshTrigger={refreshTrigger} />
+                  </Suspense>
+                </div>
+
+                <div className="flex flex-col h-full min-h-0">
+                  <Suspense fallback={<CardPlaceholder />}>
+                    <BudgetTracking refreshTrigger={refreshTrigger} />
+                  </Suspense>
+                </div>
+              </div>
+
+              {/* Row 3: Expense Categories & Envelope Allocations (Full Width) */}
+              <div className="w-full">
                 <Suspense fallback={<CardPlaceholder />}>
-                  <ExpenseReport refreshTrigger={refreshTrigger} />
-                </Suspense>
-                <Suspense fallback={<CardPlaceholder />}>
-                  <BudgetTracking refreshTrigger={refreshTrigger} />
+                  <ExpenseCategories />
                 </Suspense>
               </div>
             </div>

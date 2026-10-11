@@ -51,7 +51,7 @@ export default function WalkInTracker({ footfall = {}, customers = [] }) {
   const maxHourly = Math.max(...hourlyData.map(d => d.count || 1), 1);
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between h-full flex-1">
       <div>
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">

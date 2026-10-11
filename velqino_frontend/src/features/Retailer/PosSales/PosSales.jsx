@@ -239,10 +239,10 @@ export default function PosSales() {
           </div>
 
           {/* Main POS 2-Column Split: Catalog on Left, Billing on Right */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start lg:items-stretch">
             
             {/* Left 7 Columns: Product Search, Category Filters & Product Grid */}
-            <div className="lg:col-span-7 xl:col-span-7 space-y-5">
+            <div className="lg:col-span-7 xl:col-span-7 flex flex-col h-full min-h-0">
               <QuickSale
                 cart={cart}
                 onAddToCart={handleAddToCart}

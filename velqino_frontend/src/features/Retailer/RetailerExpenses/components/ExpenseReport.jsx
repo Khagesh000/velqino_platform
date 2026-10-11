@@ -140,7 +140,7 @@ export default function ExpenseReport({ refreshTrigger }) {
   if (!mounted) return null
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-xs h-full flex flex-col overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-xs h-full flex-1 flex flex-col justify-between overflow-hidden">
       {/* Header */}
       <div className="p-5 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">

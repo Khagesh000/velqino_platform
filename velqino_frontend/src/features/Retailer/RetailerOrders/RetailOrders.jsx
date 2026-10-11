@@ -330,36 +330,35 @@ export default function RetailerOrders() {
 
           </div>
 
-          {/* Secondary Workspace: Returns Management (Left 1.5 Col) + Bulk Actions & Customer History (Right 1.5 Col) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
-            
-            {/* Left Column: Returns & Reverse Logistics */}
-            <div>
+          {/* Row 2: Returns & Exchanges (Entire Row Full Width) */}
+          <div className="w-full">
+            <Suspense fallback={<CardPlaceholder height="360px" />}>
+              <ReturnsManagement 
+                selectedOrder={selectedOrder}
+                retailerOrders={orders} 
+              />
+            </Suspense>
+          </div>
+
+          {/* Row 3: Bulk Order Actions & Customer Timeline and Intelligence (Side-by-Side) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div className="flex flex-col h-full min-h-0">
               <Suspense fallback={<CardPlaceholder height="460px" />}>
-                <ReturnsManagement 
-                  selectedOrder={selectedOrder}
-                  retailerOrders={orders} 
-                />
-              </Suspense>
-            </div>
-            
-            {/* Right Column: Bulk Operations & Customer History Stack */}
-            <div className="space-y-6">
-              <Suspense fallback={<CardPlaceholder height="240px" />}>
                 <BulkActions 
                   selectedOrders={selectedOrder ? [selectedOrder] : orders.slice(0, 5)}
                   onComplete={() => setRefreshTrigger(prev => prev + 1)}
                 />
               </Suspense>
-              
-              <Suspense fallback={<CardPlaceholder height="320px" />}>
+            </div>
+            
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="460px" />}>
                 <OrderHistory 
                   selectedOrder={selectedOrder} 
                   orders={orders} 
                 />
               </Suspense>
             </div>
-
           </div>
 
         </div>

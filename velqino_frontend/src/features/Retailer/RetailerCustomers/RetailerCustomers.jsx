@@ -245,12 +245,10 @@ export default function RetailerCustomers() {
 
           </div>
 
-          {/* Secondary Workspace: Loyalty & Rewards + Store Footfall Activity + Milestones & Reviews */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-            
-            {/* Loyalty Program */}
-            <div>
-              <Suspense fallback={<CardPlaceholder height="360px" />}>
+          {/* Row 2: Loyalty & Privileges + Special Milestones (Side-by-Side) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="380px" />}>
                 <LoyaltyProgram 
                   selectedCustomer={selectedCustomer}
                   customerTotalSpent={selectedCustomer?.totalSpent || selectedCustomer?.total_spent || 0}
@@ -258,10 +256,22 @@ export default function RetailerCustomers() {
                 />
               </Suspense>
             </div>
-            
-            {/* Store Footfall Activity */}
-            <div>
-              <Suspense fallback={<CardPlaceholder height="360px" />}>
+
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="380px" />}>
+                <BirthdayAnniversary 
+                  upcomingBirthdays={upcomingBirthdays}
+                  upcomingAnniversaries={upcomingAnniversaries}
+                  onSelectCustomer={handleSelectCustomer}
+                />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* Row 3: Footfall & Store Activity + Customer Feedback & Reviews (Side-by-Side) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="380px" />}>
                 <WalkInTracker 
                   footfall={footfall}
                   customers={customers}
@@ -269,24 +279,14 @@ export default function RetailerCustomers() {
               </Suspense>
             </div>
 
-            {/* Special Milestones & Feedback Stack */}
-            <div className="space-y-6">
-              <Suspense fallback={<CardPlaceholder height="240px" />}>
-                <BirthdayAnniversary 
-                  upcomingBirthdays={upcomingBirthdays}
-                  upcomingAnniversaries={upcomingAnniversaries}
-                  onSelectCustomer={handleSelectCustomer}
-                />
-              </Suspense>
-              
-              <Suspense fallback={<CardPlaceholder height="240px" />}>
+            <div className="flex flex-col h-full min-h-0">
+              <Suspense fallback={<CardPlaceholder height="380px" />}>
                 <FeedbackReviews 
                   reviews={reviews}
                   selectedCustomer={selectedCustomer}
                 />
               </Suspense>
             </div>
-
           </div>
 
         </div>

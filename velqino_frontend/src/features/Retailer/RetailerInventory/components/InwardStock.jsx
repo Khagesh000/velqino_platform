@@ -100,8 +100,8 @@ export default function InwardStock({ onComplete }) {
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
-      <form onSubmit={handleSubmit}>
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between h-full flex-1">
+      <form onSubmit={handleSubmit} className="flex flex-col justify-between h-full flex-1">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
