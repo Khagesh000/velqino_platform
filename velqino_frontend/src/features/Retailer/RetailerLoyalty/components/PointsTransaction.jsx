@@ -1,8 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Clock, Calendar, Gift, Star, CheckCircle, AlertCircle, Search, Filter, ChevronLeft, ChevronRight, Download } from '../../../../utils/icons'
-import '../../../../styles/Retailer/RetailerLoyalty/PointsTransaction.scss'
+import { 
+  TrendingUp, TrendingDown, Clock, Calendar, Gift, Star, 
+  CheckCircle, AlertCircle, Search, Filter, ChevronLeft, ChevronRight, 
+  Download, Users, Sparkles, X
+} from '../../../../utils/icons'
 
 export default function PointsTransaction({ selectedCustomer, pointsTransactions = [], pointsSummary = null, refreshTrigger }) {
   const [mounted, setMounted] = useState(false)
@@ -10,7 +13,7 @@ export default function PointsTransaction({ selectedCustomer, pointsTransactions
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [hoveredRow, setHoveredRow] = useState(null)
-  const itemsPerPage = 6
+  const itemsPerPage = 5
 
   useEffect(() => {
     setMounted(true)
@@ -37,15 +40,50 @@ export default function PointsTransaction({ selectedCustomer, pointsTransactions
   const getTypeConfig = (type) => {
     switch(type) {
       case 'earned':
-        return { bg: 'bg-green-100', text: 'text-green-700', icon: <TrendingUp size={12} />, label: 'Earned', prefix: '+' }
+        return { 
+          bg: 'bg-emerald-50', 
+          border: 'border-emerald-200', 
+          text: 'text-emerald-700', 
+          icon: <TrendingUp size={12} className="text-emerald-600" />, 
+          label: 'Earned', 
+          prefix: '+' 
+        }
       case 'redeemed':
-        return { bg: 'bg-orange-100', text: 'text-orange-700', icon: <Gift size={12} />, label: 'Redeemed', prefix: '-' }
+        return { 
+          bg: 'bg-amber-50', 
+          border: 'border-amber-200', 
+          text: 'text-amber-700', 
+          icon: <Gift size={12} className="text-amber-600" />, 
+          label: 'Redeemed', 
+          prefix: '-' 
+        }
       case 'bonus':
-        return { bg: 'bg-blue-100', text: 'text-blue-700', icon: <Star size={12} />, label: 'Bonus', prefix: '+' }
+        return { 
+          bg: 'bg-purple-50', 
+          border: 'border-purple-200', 
+          text: 'text-purple-700', 
+          icon: <Star size={12} className="text-purple-600" />, 
+          label: 'Bonus', 
+          prefix: '+' 
+        }
       case 'expired':
-        return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertCircle size={12} />, label: 'Expired', prefix: '-' }
+        return { 
+          bg: 'bg-rose-50', 
+          border: 'border-rose-200', 
+          text: 'text-rose-700', 
+          icon: <AlertCircle size={12} className="text-rose-600" />, 
+          label: 'Expired', 
+          prefix: '-' 
+        }
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Clock size={12} />, label: type, prefix: '' }
+        return { 
+          bg: 'bg-gray-100', 
+          border: 'border-gray-200', 
+          text: 'text-gray-700', 
+          icon: <Clock size={12} />, 
+          label: type, 
+          prefix: '' 
+        }
     }
   }
 
@@ -90,157 +128,158 @@ export default function PointsTransaction({ selectedCustomer, pointsTransactions
   // If no customer selected
   if (!selectedCustomer) {
     return (
-      <div className="points-transaction bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-        <div className="p-8 text-center">
-          <TrendingUp size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-sm text-gray-500">Select a customer to view transactions</p>
-          <p className="text-xs text-gray-400 mt-1">Click on any customer from the member list</p>
+      <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs h-full flex flex-col items-center justify-center p-8 text-center min-h-[480px]">
+        <div className="w-16 h-16 rounded-3xl bg-primary-50 text-primary-500 border border-primary-100 flex items-center justify-center mb-4">
+          <TrendingUp size={28} />
         </div>
+        <h3 className="text-base font-extrabold text-gray-900">Member Points Audit</h3>
+        <p className="text-xs text-gray-500 mt-1.5 max-w-xs leading-relaxed">
+          Select any customer from the Member Directory to audit their lifetime points, redemption history, and active balance.
+        </p>
+        <span className="inline-flex items-center gap-1.5 mt-4 px-3 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600">
+          <Sparkles size={11} className="text-primary-500" />
+          Real-Time Points Ledger
+        </span>
       </div>
     )
   }
 
+  const customerName = selectedCustomer.full_name || selectedCustomer.name || 'Selected VIP'
+
   return (
-    <div className="points-transaction bg-white rounded-xl shadow-sm border border-gray-100 h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">Points Transaction</h3>
+    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-2xs h-full flex flex-col justify-between overflow-hidden">
+      <div>
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-primary-600 text-white font-extrabold text-sm flex items-center justify-center shadow-xs shrink-0">
+                {customerName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-gray-900 tracking-tight">{customerName}</h3>
+                <p className="text-xs text-gray-500">Points ledger &amp; audit history</p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl border border-gray-200/80 transition-all shadow-2xs"
+              title="Export ledger"
+            >
+              <Download size={14} />
+            </button>
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg transition-all">
-            <Download size={14} />
-          </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Track points for {selectedCustomer.full_name || selectedCustomer.name}
-        </p>
-      </div>
 
-      {/* Summary Stats */}
-      <div className="p-4 grid grid-cols-4 gap-2 border-b border-gray-100 bg-gray-50">
-        <div className="text-center">
-          <p className="text-lg font-bold text-green-600">+{summary.total_earned.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">Earned</p>
+        {/* 4 Stat Ribbon */}
+        <div className="grid grid-cols-4 gap-2 p-3.5 bg-gray-50/60 border-b border-gray-100 text-center">
+          <div className="bg-white p-2 rounded-xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-emerald-700">Earned</p>
+            <p className="text-sm font-extrabold text-emerald-800 mt-0.5">+{summary.total_earned.toLocaleString()}</p>
+          </div>
+          <div className="bg-white p-2 rounded-xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-amber-600">Redeemed</p>
+            <p className="text-sm font-extrabold text-amber-700 mt-0.5">-{summary.total_redeemed.toLocaleString()}</p>
+          </div>
+          <div className="bg-white p-2 rounded-xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-rose-600">Expired</p>
+            <p className="text-sm font-extrabold text-rose-700 mt-0.5">-{summary.total_expired.toLocaleString()}</p>
+          </div>
+          <div className="bg-white p-2 rounded-xl border border-gray-200/60 shadow-2xs">
+            <p className="text-[10px] font-bold uppercase text-primary-600">Available</p>
+            <p className="text-sm font-extrabold text-primary-700 mt-0.5">{summary.available_points.toLocaleString()}</p>
+          </div>
         </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-orange-600">-{summary.total_redeemed.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">Redeemed</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-red-600">-{summary.total_expired.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">Expired</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-primary-600">{summary.available_points.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">Available</p>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-100">
-        <button
-          onClick={() => { setActiveTab('all'); setCurrentPage(1) }}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'all' ? 'text-primary-600 border-b-2 border-primary-500' : 'text-gray-500'}`}
-        >
-          All
-        </button>
-        <button
-          onClick={() => { setActiveTab('earned'); setCurrentPage(1) }}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'earned' ? 'text-green-600 border-b-2 border-green-500' : 'text-gray-500'}`}
-        >
-          Earned
-        </button>
-        <button
-          onClick={() => { setActiveTab('redeemed'); setCurrentPage(1) }}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'redeemed' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-gray-500'}`}
-        >
-          Redeemed
-        </button>
-        <button
-          onClick={() => { setActiveTab('bonus'); setCurrentPage(1) }}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'bonus' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500'}`}
-        >
-          Bonus
-        </button>
-        <button
-          onClick={() => { setActiveTab('expired'); setCurrentPage(1) }}
-          className={`flex-1 py-2 text-xs font-medium transition-all ${activeTab === 'expired' ? 'text-red-600 border-b-2 border-red-500' : 'text-gray-500'}`}
-        >
-          Expired
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
-          />
+        {/* Filter Tabs */}
+        <div className="flex border-b border-gray-100 px-4 pt-2 gap-1 bg-white overflow-x-auto">
+          {[
+            { id: 'all', label: 'All Events' },
+            { id: 'earned', label: 'Earned' },
+            { id: 'redeemed', label: 'Redeemed' },
+            { id: 'bonus', label: 'Bonus' },
+            { id: 'expired', label: 'Expired' }
+          ].map(tab => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => { setActiveTab(tab.id); setCurrentPage(1) }}
+                className={`px-3 py-2 text-xs font-bold transition-all border-b-2 shrink-0 ${
+                  isActive 
+                    ? 'border-primary-600 text-primary-700' 
+                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
-      </div>
 
-      {/* Transactions List */}
-      <div className="p-4 max-h-[320px] overflow-y-auto custom-scroll">
-        <div className="space-y-3">
+        {/* Search */}
+        <div className="p-3.5 border-b border-gray-100">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search in descriptions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50/50 hover:bg-white focus:bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Transactions List */}
+        <div className="p-4 max-h-[300px] overflow-y-auto space-y-2.5">
           {transactions.length === 0 ? (
             <div className="text-center py-8">
-              <Clock size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No transactions yet</p>
-              <p className="text-xs text-gray-400 mt-1">Points will appear when customer places orders</p>
+              <Clock size={28} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-xs font-bold text-gray-700">No point events recorded</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Points accumulate automatically when orders are finalized.</p>
             </div>
           ) : filteredTransactions.length === 0 ? (
             <div className="text-center py-8">
-              <Search size={32} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500">No matching transactions</p>
+              <Search size={28} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-xs font-bold text-gray-700">No matching point events</p>
             </div>
           ) : (
-            paginatedTransactions.map((transaction, index) => {
+            paginatedTransactions.map((transaction) => {
               const typeConfig = getTypeConfig(transaction.type)
               return (
                 <div
                   key={transaction.id}
-                  className={`transaction-item border rounded-lg p-3 transition-all ${hoveredRow === transaction.id ? 'shadow-md transform -translate-y-0.5' : ''}`}
                   onMouseEnter={() => setHoveredRow(transaction.id)}
                   onMouseLeave={() => setHoveredRow(null)}
-                  style={{ animationDelay: `${index * 0.05}s` }}
+                  className={`p-3 rounded-2xl border transition-all ${typeConfig.border} ${
+                    hoveredRow === transaction.id ? 'bg-gray-50/80 shadow-xs' : 'bg-white'
+                  }`}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeConfig.bg}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${typeConfig.bg}`}>
                         {typeConfig.icon}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{transaction.customer}</p>
-                        <p className="text-xs text-gray-500">{transaction.description}</p>
+                        <p className="text-xs font-bold text-gray-900 leading-snug">{transaction.description || 'Reward transaction'}</p>
+                        <span className="text-[10px] text-gray-400">{formatDate(transaction.date)}</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${typeConfig.text}`}>
-                        {typeConfig.prefix}{transaction.points.toLocaleString()} points
+                    <div className="text-right shrink-0">
+                      <p className={`text-xs font-extrabold ${typeConfig.text}`}>
+                        {typeConfig.prefix}{transaction.points.toLocaleString()} pts
                       </p>
-                      <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${typeConfig.bg} ${typeConfig.text} mt-1`}>
-                        {typeConfig.icon}
+                      <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold border mt-0.5 ${typeConfig.bg} ${typeConfig.border} ${typeConfig.text}`}>
                         {typeConfig.label}
-                      </div>
+                      </span>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={10} className="text-gray-400" />
-                      <span>{formatDate(transaction.date)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <CheckCircle size={10} className="text-green-500" />
-                      <span>Balance: {transaction.balance.toLocaleString()} points</span>
-                    </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-100">
+                    <span>Balance after</span>
+                    <span className="font-bold text-gray-700">{transaction.balance.toLocaleString()} pts</span>
                   </div>
                 </div>
               )
@@ -249,27 +288,29 @@ export default function PointsTransaction({ selectedCustomer, pointsTransactions
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-[10px] text-gray-500">
-            {filteredTransactions.length} transactions
+        <div className="p-3.5 border-t border-gray-100 flex items-center justify-between bg-white">
+          <p className="text-[11px] text-gray-400">
+            {filteredTransactions.length} records
           </p>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded"
             >
-              <ChevronLeft size={12} />
+              <ChevronLeft size={13} />
             </button>
-            <span className="text-xs text-gray-600">{currentPage} / {totalPages}</span>
+            <span className="text-[11px] font-bold text-gray-600">{currentPage} / {totalPages}</span>
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded"
+              className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded"
             >
-              <ChevronRight size={12} />
+              <ChevronRight size={13} />
             </button>
           </div>
         </div>

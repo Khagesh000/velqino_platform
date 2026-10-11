@@ -2,6 +2,7 @@
 
 import React, { useState, lazy, Suspense, useEffect } from 'react'
 import RetailerNavbar from '../RetailerDashboard/components/RetailerNavbar'
+import { Award, Star, Users, TrendingUp, Gift, Sparkles, RefreshCw } from '../../../utils/icons'
 import { 
   useGetCustomersListQuery, 
   useGetRetailerCustomersQuery,
@@ -137,104 +138,197 @@ export default function RetailerLoyalty() {
 }, [refreshTrigger, refetchCustomers, refetchRetailerCustomers, refetchLoyaltySettings, refetchRewards, refetchCampaigns, refetchPointsTransactions, refetchPointsSummary, selectedCustomer?.user?.id])
   const isLoading = customersLoading || retailerCustomersLoading
 
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true)
+    refreshAll()
+    setTimeout(() => setIsRefreshing(false), 800)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#f8fafc] text-gray-900 pb-20 lg:pb-12">
       <RetailerNavbar 
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
       
       <main className={`
-        transition-all duration-300 p-4 lg:p-6
+        transition-all duration-300 p-4 sm:p-6 lg:p-8
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
       `}>
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto space-y-6">
           
-          {/* Page Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Loyalty Program</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage customer rewards and loyalty points</p>
+          {/* Executive Header Ribbon */}
+          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-gray-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-50 text-primary-700 border border-primary-100">
+                  <Award size={12} className="text-primary-600" />
+                  VIP Privileges &amp; Rewards Engine
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
+                  Active Tier Multipliers
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                Loyalty Program &amp; Customer Privileges
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-3xl leading-relaxed">
+                Supervise VIP member tiers, real-time point transactions, redeemable catalog rewards, promotional bonus multipliers, and global loyalty engine rules.
+              </p>
+            </div>
+
+            {/* Quick Actions / Sync */}
+            <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="px-4 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-95 text-xs font-bold transition-all shadow-2xs flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-primary-600' : 'text-gray-500'} />
+                <span>{isRefreshing ? 'Syncing...' : 'Sync Loyalty Data'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Program Settings - Full Width */}
-          <div className="mb-6">
-            <div style={{ minHeight: '200px' }}>
-              <Suspense fallback={<CardPlaceholder />}>
-                <ProgramSettings 
-                  onRefresh={refreshAll}
-                  settings={loyaltySettingsData?.data}
-                  tiers={tiersFromSettings}
-                  summary={{
-                    totalMembers: totalMembers,
-                    pointsEarned: totalPointsEarned,
-                    pointsRedeemed: totalPointsRedeemed,
-                    activeMembers: activeMembers
-                  }}
+          {/* Top KPI Metrics Ribbon (4 Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            {/* Total VIP Members */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">VIP Members</p>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mt-1 tracking-tight">
+                  {totalMembers.toLocaleString()}
+                </h3>
+                <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 inline-flex items-center gap-0.5">
+                  <Users size={10} /> {activeMembers} active shoppers
+                </span>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+                <Users size={20} />
+              </div>
+            </div>
+
+            {/* Points Issued / Circulation */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Points Issued</p>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-emerald-800 mt-1 tracking-tight">
+                  {totalPointsEarned.toLocaleString()}
+                </h3>
+                <span className="text-[10px] text-emerald-700/80 mt-0.5 inline-flex items-center gap-0.5">
+                  <TrendingUp size={10} /> Lifetime circulation
+                </span>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Star size={20} />
+              </div>
+            </div>
+
+            {/* Points Redeemed */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Points Redeemed</p>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-1 tracking-tight">
+                  {totalPointsRedeemed.toLocaleString()}
+                </h3>
+                <span className="text-[10px] text-amber-600/80 mt-0.5 inline-flex items-center gap-0.5">
+                  <Gift size={10} /> Reward conversions
+                </span>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Gift size={20} />
+              </div>
+            </div>
+
+            {/* Active Schemes & Tiers */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">Tiers &amp; Campaigns</p>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-purple-700 mt-1 tracking-tight">
+                  4 Tiers · {(campaignsData?.data?.campaigns || []).length} Campaigns
+                </h3>
+                <span className="text-[10px] text-purple-600/80 mt-0.5 inline-flex items-center gap-0.5">
+                  <Sparkles size={10} /> {(rewardsData?.data?.rewards || []).length} Catalog rewards
+                </span>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <Award size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 1: Member List (2/3 width) + Points Transaction Audit (1/3 width) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* Left: Member Directory (2 cols) */}
+            <div className="lg:col-span-2 flex flex-col min-h-0">
+              <Suspense fallback={<TablePlaceholder />}>
+                <MemberList 
+                  customers={enrichedCustomers}
+                  selectedCustomer={selectedCustomer}
+                  setSelectedCustomer={handleSelectCustomer}
+                  isLoading={isLoading}
+                  refreshTrigger={refreshTrigger}
+                />
+              </Suspense>
+            </div>
+
+            {/* Right: Selected Member's Point Ledger (1 col) */}
+            <div className="flex flex-col min-h-0">
+              <Suspense fallback={<SidebarPlaceholder />}>
+                <PointsTransaction 
+                  selectedCustomer={selectedCustomer}
+                  pointsTransactions={pointsTransactionsData?.data?.transactions || []}
+                  pointsSummary={pointsSummaryData?.data}
+                  refreshTrigger={refreshTrigger}
                 />
               </Suspense>
             </div>
           </div>
 
-          {/* Main Content - 2 Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Row 2: Rewards Catalog & Campaigns (Side-by-Side 2 Columns) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {/* Left: Rewards Catalog */}
+            <div className="flex flex-col min-h-0">
+              <Suspense fallback={<CardPlaceholder />}>
+                <RewardsCatalog 
+                  onRefresh={refreshAll}
+                  rewards={rewardsData?.data?.rewards || []}
+                />
+              </Suspense>
+            </div>
             
-            {/* Left Column - Member List (2/3 width) */}
-            <div className="lg:col-span-2 h-full">
-              <div style={{ minHeight: '450px' }}>
-                <Suspense fallback={<TablePlaceholder />}>
-                  <MemberList 
-                    customers={enrichedCustomers}
-                    selectedCustomer={selectedCustomer}
-                    setSelectedCustomer={handleSelectCustomer}
-                    isLoading={isLoading}
-                    refreshTrigger={refreshTrigger}
-                  />
-                </Suspense>
-              </div>
+            {/* Right: Bonus Campaigns */}
+            <div className="flex flex-col min-h-0">
+              <Suspense fallback={<CardPlaceholder />}>
+                <Campaigns 
+                  onRefresh={refreshAll}
+                  campaigns={campaignsData?.data?.campaigns || []}
+                />
+              </Suspense>
             </div>
-
-            {/* Right Column - Points Transaction (1/3 width) */}
-            <div className="h-full">
-              <div style={{ minHeight: '450px' }}>
-                <Suspense fallback={<SidebarPlaceholder />}>
-                  <PointsTransaction 
-                    selectedCustomer={selectedCustomer}
-                    pointsTransactions={pointsTransactionsData?.data?.transactions || []}
-                    pointsSummary={pointsSummaryData?.data}
-                    refreshTrigger={refreshTrigger}
-                  />
-                </Suspense>
-              </div>
-            </div>
-
           </div>
 
-          {/* Bottom Section - 2 Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div className="h-full">
-              <div style={{ minHeight: '400px' }}>
-                <Suspense fallback={<CardPlaceholder />}>
-                  <RewardsCatalog 
-                    onRefresh={refreshAll}
-                    rewards={rewardsData?.data?.rewards || []}
-                  />
-                </Suspense>
-              </div>
-            </div>
-            
-            <div className="h-full">
-              <div style={{ minHeight: '400px' }}>
-                <Suspense fallback={<CardPlaceholder />}>
-                  <Campaigns 
-                    onRefresh={refreshAll}
-                    campaigns={campaignsData?.data?.campaigns || []}
-                  />
-                </Suspense>
-              </div>
-            </div>
-
+          {/* Row 3: Program Settings & Membership Tiers Matrix (Full Width) */}
+          <div className="w-full">
+            <Suspense fallback={<CardPlaceholder />}>
+              <ProgramSettings 
+                onRefresh={refreshAll}
+                settings={loyaltySettingsData?.data}
+                tiers={tiersFromSettings}
+                summary={{
+                  totalMembers: totalMembers,
+                  pointsEarned: totalPointsEarned,
+                  pointsRedeemed: totalPointsRedeemed,
+                  activeMembers: activeMembers
+                }}
+              />
+            </Suspense>
           </div>
+
         </div>
       </main>
     </div>

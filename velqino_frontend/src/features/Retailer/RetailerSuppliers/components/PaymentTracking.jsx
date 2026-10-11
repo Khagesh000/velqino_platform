@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { 
   Wallet, TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle, 
   Eye, Download, ChevronLeft, ChevronRight, Plus, X, CreditCard, 
-  Building2, QrCode, ArrowUpRight
+  ArrowUpRight
 } from '../../../../utils/icons'
 
 export default function PaymentTracking({ selectedSupplier }) {
