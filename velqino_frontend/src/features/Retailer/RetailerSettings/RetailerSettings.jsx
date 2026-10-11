@@ -71,7 +71,7 @@ export default function RetailerSettings() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-gray-900 pb-20 lg:pb-12">
-      <RetailerNavbar 
+      <RetailerNavbar
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
@@ -81,7 +81,7 @@ export default function RetailerSettings() {
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
       `}>
         <div className="max-w-[1600px] mx-auto space-y-6">
-          
+
           {/* Executive Header Ribbon */}
           <div className="bg-white rounded-3xl p-5 sm:p-7 border border-gray-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -118,8 +118,8 @@ export default function RetailerSettings() {
           </div>
 
           {/* Top KPI Metrics Ribbon (4 Standard Global Cards) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-            {/* Store Profile Status */}
+          {/*   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Store Identity</p>
@@ -135,7 +135,7 @@ export default function RetailerSettings() {
               </div>
             </div>
 
-            {/* Hardware Status */}
+            
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">POS Peripherals</p>
@@ -151,7 +151,7 @@ export default function RetailerSettings() {
               </div>
             </div>
 
-            {/* Security Status */}
+       
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Security Access</p>
@@ -167,7 +167,7 @@ export default function RetailerSettings() {
               </div>
             </div>
 
-            {/* Cloud Backup Status */}
+           
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-gray-200/80 shadow-2xs flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Cloud Recovery</p>
@@ -182,7 +182,7 @@ export default function RetailerSettings() {
                 <Database size={20} />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Navigation Tabs Bar */}
           <div className="bg-white rounded-3xl p-2.5 sm:p-3 border border-gray-200/80 shadow-2xs flex overflow-x-auto gap-2">
@@ -193,11 +193,10 @@ export default function RetailerSettings() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2.5 shrink-0 ${
-                    isActive
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2.5 shrink-0 ${isActive
                       ? 'bg-primary-600 text-white shadow-xs'
                       : 'bg-gray-50/70 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200/60'
-                  }`}
+                    }`}
                 >
                   <span className={isActive ? 'text-white' : 'text-primary-600'}>
                     {tab.icon}
@@ -210,7 +209,7 @@ export default function RetailerSettings() {
 
           {/* Main Settings Console Layout: 2/3 Content + 1/3 Sidebar Info */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            
+
             {/* Left Column - Active Settings Module (2/3 width) */}
             <div className="lg:col-span-2">
               <Suspense fallback={<CardPlaceholder />}>
