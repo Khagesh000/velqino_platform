@@ -71,7 +71,7 @@ export default function RetailerSuppliers() {
             </div>
           </div>
 
-          {/* Top Section - Suppliers Directory (2 Cols) & Supplier Dossier (1 Col) */}
+          {/* Row 1: Suppliers Directory (2/3) & Supplier Dossier (1/3) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             
             {/* Left Column - Suppliers List (2/3 width) */}
@@ -98,25 +98,25 @@ export default function RetailerSuppliers() {
 
           </div>
 
-          {/* Bottom Section - 3 Equal Operational Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+          {/* Row 2: Algorithmic Reorder Signals (Full Width Row) */}
+          <div className="w-full">
+            <Suspense fallback={<CardPlaceholder />}>
+              <ReorderSuggestions />
+            </Suspense>
+          </div>
+
+          {/* Row 3: Purchase Orders Ledger & Payment Tracking (Side-by-Side 2 Columns) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             
-            {/* 1. Purchase Orders Ledger */}
-            <div className="flex flex-col min-h-[420px]">
+            {/* Left Column - Purchase Orders Ledger */}
+            <div className="flex flex-col min-h-[460px]">
               <Suspense fallback={<CardPlaceholder />}>
                 <PurchaseOrders selectedSupplier={selectedSupplier} />
               </Suspense>
             </div>
             
-            {/* 2. Algorithmic Reorder Signals */}
-            <div className="flex flex-col min-h-[420px]">
-              <Suspense fallback={<CardPlaceholder />}>
-                <ReorderSuggestions />
-              </Suspense>
-            </div>
-            
-            {/* 3. Supplier Disbursement & Payment Tracking */}
-            <div className="flex flex-col min-h-[420px]">
+            {/* Right Column - Supplier Disbursement & Payment Tracking */}
+            <div className="flex flex-col min-h-[460px]">
               <Suspense fallback={<CardPlaceholder />}>
                 <PaymentTracking selectedSupplier={selectedSupplier} />
               </Suspense>
