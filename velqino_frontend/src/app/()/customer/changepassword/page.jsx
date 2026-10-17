@@ -1,7 +1,7 @@
 "use client";
 
-import ChangePassword from "@/features/Customer/ChangePassword";
+import ProfileSettings from "@/features/Customer/ProfileSettings";
 
 export default function Page() {
-  return <ChangePassword />;
+  return <ProfileSettings initialTab="security" />;
 }

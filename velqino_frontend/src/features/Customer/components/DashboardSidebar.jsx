@@ -64,8 +64,7 @@ export default function DashboardSidebar({ isMobileMenuOpen, onClose }) {
     { icon: <ShoppingBag size={19} />, label: 'My Orders', href: '/customer/orderslist' },
     { icon: <Heart size={19} />, label: 'Saved Wishlist', href: '/customer/wishlist' },
     { icon: <MapPin size={19} />, label: 'Address Book', href: '/customer/addresses' },
-    { icon: <User size={19} />, label: 'Profile Settings', href: '/customer/profilesettings' },
-    { icon: <Settings size={19} />, label: 'Change Password', href: '/customer/changepassword' },
+    { icon: <User size={19} />, label: 'Profile & Security', href: '/customer/profilesettings' },
   ];
 
   const isActive = (href) => {
