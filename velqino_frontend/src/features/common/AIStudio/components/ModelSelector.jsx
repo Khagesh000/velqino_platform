@@ -108,7 +108,7 @@ export default function ModelSelector({
       <div className="filter-row">
         <div className="filter-label">
           <span>Realistic Skin Undertones</span>
-          <span style={{ fontSize: '11px', textTransform: 'none', color: '#7F6E6E' }}>
+          <span className="text-[11px] normal-case text-gray-500">
             Natural skin preserved across all 6 angles
           </span>
         </div>
@@ -154,11 +154,11 @@ export default function ModelSelector({
       {/* Models Grid */}
       <div className="models-grid">
         {isLoading ? (
-          <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#7F6E6E' }}>
+          <div className="col-span-full p-8 text-center text-gray-500">
             Loading AI Studio human models...
           </div>
         ) : filteredModels.length === 0 ? (
-          <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#7F6E6E' }}>
+          <div className="col-span-full p-8 text-center text-gray-500">
             No models match the selected filter. Try selecting "All Tones".
           </div>
         ) : (
@@ -203,7 +203,7 @@ export default function ModelSelector({
                   </div>
                   <div className="model-stats">
                     <span>{model.height_cm} cm</span>
-                    <span style={{ textTransform: 'uppercase' }}>{model.body_type}</span>
+                    <span className="uppercase">{model.body_type}</span>
                   </div>
                 </div>
               </div>

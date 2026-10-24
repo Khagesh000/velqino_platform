@@ -95,19 +95,7 @@ export default function StudioPreview({
       </div>
 
       {/* Hero Viewer Canvas Box */}
-      <div
-        className="hero-viewer-box relative w-full h-[480px] bg-gradient-to-b from-white to-[#F5F2EF] border border-[#E2BB99]/35 rounded-2xl overflow-hidden"
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: '480px',
-          background: 'radial-gradient(circle, #FFFFFF 0%, #F5F2EF 100%)',
-          border: '1px solid rgba(226, 187, 153, 0.35)',
-          borderRadius: '1rem',
-          overflow: 'hidden',
-          display: 'block',
-        }}
-      >
+      <div className="hero-viewer-box">
         {/* Generating Overlay Animation */}
         {isGenerating && (
           <div className="generating-overlay absolute inset-0 bg-white/90 backdrop-blur-xs flex flex-col items-center justify-center z-20 p-6 text-center">
@@ -127,41 +115,11 @@ export default function StudioPreview({
               src={displayImageUrl}
               alt={activeAngleKey}
               className="hero-image hero-render"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                objectPosition: 'center top',
-                display: 'block',
-              }}
             />
 
             {/* Floating angle tag */}
-            <div
-              className="floating-angle-pill"
-              style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
-                zIndex: 10,
-                background: 'rgba(255, 255, 255, 0.94)',
-                backdropFilter: 'blur(6px)',
-                border: '1px solid rgba(206, 142, 106, 0.35)',
-                borderRadius: '9999px',
-                padding: '4px 12px',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#2D1F2C',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={{ color: '#CE8E6A', fontSize: '9px' }}>●</span>
+            <div className="floating-angle-pill">
+              <span className="live-dot-mini">●</span>
               <span>
                 {selectedModel?.name?.split(' - ')[0] || selectedModel?.name || 'Model'} • {ANGLE_NAMES[activeAngleKey] || activeAngleKey}
               </span>
@@ -171,23 +129,6 @@ export default function StudioPreview({
             <button
               type="button"
               className="zoom-button zoom-inspect-btn"
-              style={{
-                position: 'absolute',
-                bottom: '12px',
-                right: '12px',
-                zIndex: 10,
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.94)',
-                border: '1px solid rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#2D1F2C',
-                cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-              }}
               onClick={() => setIsZoomModalOpen(true)}
               title="Inspect High Resolution"
             >
@@ -208,62 +149,17 @@ export default function StudioPreview({
       </div>
 
       {/* 360° Angle Quick Switcher / Scrubber Strip */}
-      <div
-        className="angle-scrubber-bar"
-        style={{
-          marginTop: '1rem',
-          background: '#FAF8F5',
-          padding: '0.85rem 1rem',
-          borderRadius: '1rem',
-          border: '1px solid rgba(226, 187, 153, 0.35)',
-        }}
-      >
-        <div
-          className="scrubber-header scrubber-label-row"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '0.65rem',
-          }}
-        >
-          <div
-            className="scrubber-label"
-            style={{
-              fontSize: '12px',
-              fontWeight: '700',
-              color: '#2D1F2C',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
+      <div className="angle-scrubber-bar">
+        <div className="scrubber-header scrubber-label-row">
+          <div className="scrubber-label">
             <span>Camera Angle Rotation</span>
           </div>
-          <div
-            className="scrubber-hint"
-            style={{
-              fontSize: '11px',
-              fontWeight: '700',
-              color: '#A25690',
-              background: 'rgba(162, 86, 144, 0.1)',
-              padding: '2px 10px',
-              borderRadius: '9999px',
-              border: '1px solid rgba(162, 86, 144, 0.25)',
-            }}
-          >
+          <div className="scrubber-hint">
             {ANGLE_NAMES[activeAngleKey] || 'Front (0°)'}
           </div>
         </div>
 
-        <div
-          className="scrubber-chips angle-buttons-strip"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-            gap: '0.45rem',
-          }}
-        >
+        <div className="scrubber-chips angle-buttons-strip">
           {ANGLE_KEYS_ORDER.map((key) => {
             const isActive = activeAngleKey === key;
             const hasRenderForAngle = renders.some((r) => r.angle_key === key);
@@ -274,47 +170,10 @@ export default function StudioPreview({
                 key={key}
                 type="button"
                 className={`scrubber-chip angle-strip-btn ${isActive ? 'active' : ''} ${hasRenderForAngle ? 'has-render' : ''}`}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0.55rem 0.25rem',
-                  borderRadius: '0.75rem',
-                  border: isActive
-                    ? '1.5px solid #B17A5B'
-                    : hasRenderForAngle
-                    ? '1.5px solid rgba(34, 197, 94, 0.6)'
-                    : '1px solid rgba(210, 200, 195, 0.7)',
-                  background: isActive
-                    ? '#CE8E6A'
-                    : hasRenderForAngle
-                    ? '#F0FDF4'
-                    : '#FFFFFF',
-                  color: isActive
-                    ? '#FFFFFF'
-                    : hasRenderForAngle
-                    ? '#166534'
-                    : '#374151',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: isActive ? '0 2px 6px rgba(206, 142, 106, 0.35)' : 'none',
-                }}
                 onClick={() => onSelectAngle(key)}
               >
-                <span style={{ fontSize: '11px', fontWeight: '700', lineHeight: 1.2 }}>
-                  {info.label}
-                </span>
-                <span
-                  style={{
-                    fontSize: '9px',
-                    opacity: isActive ? 0.9 : 0.65,
-                    marginTop: '2px',
-                    fontWeight: '500',
-                  }}
-                >
-                  {info.deg}
-                </span>
+                <span className="chip-name">{info.label}</span>
+                <span className="chip-deg">{info.deg}</span>
               </button>
             );
           })}
@@ -374,9 +233,8 @@ export default function StudioPreview({
 
             <button
               type="button"
-              className="btn-action-alt"
+              className="btn-action-alt bg-[#FAF4E5] border-[#B17A5B] text-[#94664C]"
               onClick={onOpenExportModal}
-              style={{ background: '#FAF4E5', borderColor: '#B17A5B', color: '#94664C' }}
             >
               <Package size={14} />
               <span>Save to Product Catalog</span>
@@ -389,8 +247,7 @@ export default function StudioPreview({
       {isZoomModalOpen && displayImageUrl && (
         <div className="modal-backdrop" onClick={() => setIsZoomModalOpen(false)}>
           <div
-            className="modal-card-dialog"
-            style={{ maxWidth: '800px', maxHeight: '90vh' }}
+            className="modal-card-dialog max-w-[800px] max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
@@ -405,11 +262,11 @@ export default function StudioPreview({
                 ✕
               </button>
             </div>
-            <div className="modal-body" style={{ textAlign: 'center', background: '#F8F5F2' }}>
+            <div className="modal-body text-center bg-[#F8F5F2]">
               <img
                 src={displayImageUrl}
                 alt="High Resolution Inspection"
-                style={{ maxHeight: '72vh', maxWidth: '100%', objectFit: 'contain' }}
+                className="max-h-[72vh] max-w-full object-contain mx-auto"
               />
             </div>
           </div>
