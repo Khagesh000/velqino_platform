@@ -1,0 +1,160 @@
+// ==========================================
+// AI Fashion Studio: Main Layout & Header
+// ==========================================
+
+.ai-studio-container {
+  width: 100%;
+  min-height: calc(100vh - 80px);
+  background: linear-gradient(180deg, #FDFBF9 0%, #F8F5F2 100%);
+  padding: 1.5rem 1rem 3rem 1rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem 1.5rem 4rem 1.5rem;
+  }
+
+  @media (min-width: 1280px) {
+    padding: 2.5rem 2.5rem 5rem 2.5rem;
+  }
+
+  // Header Banner
+  .studio-header {
+    background: linear-gradient(135deg, #FFFFFF 0%, #FAF4E5 100%);
+    border: 1px solid rgba(206, 142, 106, 0.25);
+    border-radius: $radius-2xl;
+    padding: 1.75rem 2rem;
+    box-shadow: $shadow-sm;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(162, 86, 144, 0.12) 0%, rgba(206, 142, 106, 0.05) 50%, transparent 70%);
+      pointer-events: none;
+      border-radius: 50%;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.9rem;
+      background: rgba(162, 86, 144, 0.1);
+      color: $secondary-700;
+      border: 1px solid rgba(162, 86, 144, 0.25);
+      border-radius: $radius-full;
+      font-size: $text-xs;
+      font-weight: $font-semibold;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .studio-title {
+      font-size: $text-2xl;
+      font-weight: $font-bold;
+      color: $text-primary;
+      margin-top: 0.6rem;
+      line-height: 1.25;
+
+      @media (min-width: 768px) {
+        font-size: $text-3xl;
+      }
+
+      .highlight-ai {
+        background: linear-gradient(135deg, $primary-600 0%, $secondary-600 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+
+    .studio-subtitle {
+      font-size: $text-sm;
+      color: $text-secondary;
+      margin-top: 0.4rem;
+      max-width: 850px;
+      line-height: 1.5;
+    }
+  }
+
+  // Main 2-Column Responsive Layout
+  .studio-layout-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+
+    @media (min-width: 1200px) {
+      grid-template-columns: 1.05fr 1.15fr;
+      align-items: start;
+    }
+  }
+
+  // Left Configuration Panel
+  .studio-config-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+
+    .studio-card {
+      background: #FFFFFF;
+      border: 1px solid rgba(226, 187, 153, 0.35);
+      border-radius: $radius-xl;
+      padding: 1.5rem;
+      box-shadow: $shadow-sm;
+      transition: all 0.25s ease;
+
+      &:hover {
+        border-color: rgba(206, 142, 106, 0.5);
+        box-shadow: $shadow-md;
+      }
+
+      .card-step-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(240, 235, 230, 0.8);
+
+        .step-label-group {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+
+          .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, $primary-500 0%, $secondary-500 100%);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: $text-xs;
+            font-weight: $font-bold;
+          }
+
+          .step-title {
+            font-size: $text-lg;
+            font-weight: $font-bold;
+            color: $text-primary;
+          }
+        }
+
+        .step-badge {
+          font-size: $text-xs;
+          font-weight: $font-medium;
+          color: $primary-700;
+          background: $primary-50;
+          padding: 0.25rem 0.65rem;
+          border-radius: $radius-full;
+          border: 1px solid rgba(206, 142, 106, 0.3);
+        }
+      }
+    }
+  }
+}

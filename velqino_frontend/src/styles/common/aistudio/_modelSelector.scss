@@ -1,0 +1,206 @@
+// ==========================================
+// Step 1: Model Selection Component Styles
+// ==========================================
+
+.ai-studio-container {
+  // Demographic Tabs (Men / Women / Kids)
+  .demographic-tab-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    background: #F8F5F2;
+    padding: 0.35rem;
+    border-radius: $radius-large;
+    margin-bottom: 1.25rem;
+
+    .demo-tab-btn {
+      padding: 0.65rem 0.5rem;
+      border: none;
+      background: transparent;
+      border-radius: $radius-medium;
+      font-size: $text-xs;
+      font-weight: $font-semibold;
+      color: $text-secondary;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+
+      .tab-count {
+        font-size: 10px;
+        padding: 0.1rem 0.4rem;
+        border-radius: $radius-full;
+        background: rgba(0, 0, 0, 0.06);
+        color: $text-tertiary;
+      }
+
+      &.active {
+        background: #FFFFFF;
+        color: $primary-800;
+        box-shadow: $shadow-sm;
+
+        .tab-count {
+          background: $primary-100;
+          color: $primary-800;
+        }
+      }
+
+      &:hover:not(.active) {
+        color: $text-primary;
+        background: rgba(255, 255, 255, 0.5);
+      }
+    }
+  }
+
+  // Model Cards Grid (Interactive Selection)
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 1280px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .model-card {
+      position: relative;
+      border: 1.5px solid rgba(210, 200, 195, 0.7);
+      border-radius: $radius-large;
+      background: #FFFFFF;
+      overflow: hidden;
+      cursor: pointer;
+      padding: 0.5rem;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+
+      &:hover {
+        border-color: rgba(206, 142, 106, 0.6);
+        transform: translateY(-2px);
+        box-shadow: $shadow-md;
+
+        .model-img-wrapper img {
+          transform: scale(1.04);
+        }
+      }
+
+      &.selected {
+        border-color: $primary-600;
+        box-shadow: 0 0 0 2px rgba(206, 142, 106, 0.25), $shadow-md;
+        background: linear-gradient(180deg, #FFFFFF 0%, #FAF6F2 100%);
+
+        .selected-badge-check {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .selected-badge-check {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: $primary-600;
+        color: #FFFFFF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: scale(0.6);
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        z-index: 2;
+        box-shadow: $shadow-sm;
+      }
+
+      .model-img-wrapper {
+        position: relative;
+        width: 100%;
+        height: 180px;
+        border-radius: $radius-medium;
+        overflow: hidden;
+        background: linear-gradient(180deg, #FFFFFF 0%, #F5F2EF 100%);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center top;
+          transition: transform 0.35s ease;
+        }
+
+        .angles-pill {
+          position: absolute;
+          bottom: 6px;
+          left: 6px;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
+          color: #FFFFFF;
+          font-size: 9px;
+          font-weight: $font-semibold;
+          padding: 0.15rem 0.45rem;
+          border-radius: $radius-full;
+          letter-spacing: 0.02em;
+        }
+      }
+
+      .model-info {
+        padding: 0.5rem 0.25rem 0.2rem 0.25rem;
+
+        .model-name {
+          font-size: $text-xs;
+          font-weight: $font-bold;
+          color: $text-primary;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .model-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          margin-top: 0.25rem;
+
+          .skin-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+          }
+
+          .model-tone-text {
+            font-size: $text-xs;
+            color: $text-secondary;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .model-stats {
+          margin-top: 0.4rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: $text-xxs;
+          color: $text-tertiary;
+          padding-top: 0.35rem;
+          border-top: 1px dashed rgba(220, 210, 200, 0.6);
+        }
+      }
+    }
+  }
+}

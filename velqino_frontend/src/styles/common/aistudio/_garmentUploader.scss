@@ -1,0 +1,232 @@
+// ==========================================
+// Step 2: Garment Uploader Component Styles
+// ==========================================
+
+.ai-studio-container {
+  .garment-upload-container {
+    .mode-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+
+      .mode-btn {
+        flex: 1;
+        padding: 0.6rem 0.75rem;
+        border: 1px solid rgba(206, 142, 106, 0.3);
+        border-radius: $radius-medium;
+        background: #FFFFFF;
+        font-size: $text-xs;
+        font-weight: $font-semibold;
+        color: $text-secondary;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+
+        &.active {
+          border-color: $primary-600;
+          background: $primary-50;
+          color: $primary-800;
+        }
+
+        &:hover:not(.active) {
+          border-color: rgba(206, 142, 106, 0.6);
+          background: #FAF8F5;
+        }
+      }
+    }
+
+    .dropzones-grid,
+    .dual-dropzone-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin: 1rem 0;
+
+      @media (min-width: 640px) {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .dropzone-box {
+        border: 2px dashed rgba(206, 142, 106, 0.45);
+        border-radius: $radius-large;
+        background: #FDFBF8;
+        padding: 1.5rem 1.25rem;
+        text-align: center;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 195px;
+
+        &:last-child {
+          border-color: rgba(162, 86, 144, 0.35);
+        }
+
+        &:hover {
+          border-color: $primary-600;
+          background: #FAF4E5;
+        }
+
+        &.has-image,
+        &.has-file {
+          border-style: solid;
+          border-color: rgba(206, 142, 106, 0.3);
+          background: #FFFFFF;
+          padding: 0.75rem;
+        }
+
+        .dropzone-tag,
+        .dropzone-badge {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          padding: 0.25rem 0.65rem;
+          border-radius: $radius-full;
+          font-size: 10px;
+          font-weight: $font-bold;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          background: $primary-100;
+          color: $primary-800;
+          border: 1px solid rgba(206, 142, 106, 0.3);
+          z-index: 5;
+
+          &.secondary,
+          &.optional-tag {
+            background: rgba(162, 86, 144, 0.1);
+            color: $secondary-800;
+            border-color: rgba(162, 86, 144, 0.25);
+          }
+        }
+
+        .optional-tag {
+          background: rgba(162, 86, 144, 0.1);
+          color: $secondary-800;
+          border-color: rgba(162, 86, 144, 0.25);
+        }
+
+        .preview-pane,
+        .preview-thumb-box {
+          position: relative;
+          width: 100%;
+          height: 140px;
+          border-radius: $radius-medium;
+          overflow: hidden;
+          margin-bottom: 0.5rem;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+
+          .remove-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(220, 38, 38, 0.9);
+            color: #FFFFFF;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+
+            &:hover {
+              transform: scale(1.1);
+            }
+          }
+        }
+
+        .upload-icon {
+          color: $primary-500;
+          margin-bottom: 0.5rem;
+          width: 46px;
+          height: 46px;
+          border-radius: 50%;
+          background: $primary-50;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.2s ease;
+        }
+
+        &:hover .upload-icon {
+          transform: translateY(-2px);
+        }
+
+        &:last-child .upload-icon {
+          color: $secondary-600;
+          background: rgba(162, 86, 144, 0.08);
+        }
+
+        .upload-title {
+          font-size: $text-sm;
+          font-weight: $font-semibold;
+          color: $text-primary;
+        }
+
+        .upload-sub {
+          font-size: $text-xs;
+          color: $text-tertiary;
+          margin-top: 0.25rem;
+        }
+      }
+    }
+
+    // Sample garments for 1-click test
+    .sample-garments-row {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      background: $primary-50;
+      border: 1px solid rgba(206, 142, 106, 0.25);
+      border-radius: $radius-large;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+
+      .sample-label {
+        font-size: $text-xs;
+        font-weight: $font-bold;
+        color: $primary-800;
+      }
+
+      .sample-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+
+        .sample-btn {
+          padding: 0.35rem 0.75rem;
+          border-radius: $radius-full;
+          border: 1px solid rgba(206, 142, 106, 0.4);
+          background: #FFFFFF;
+          font-size: $text-xs;
+          font-weight: $font-semibold;
+          color: $text-primary;
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:hover {
+            border-color: $primary-600;
+            background: $primary-100;
+          }
+        }
+      }
+    }
+  }
+}

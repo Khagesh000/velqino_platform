@@ -19,6 +19,7 @@ import { reviewsApi } from '../customer/slices/reviewsSlice';
 import { wishlistApi } from './slices/wishlistSlice';
 import { statsApi } from './slices/statsSlice';
 import { supportApi } from './slices/supportSlice';
+import { aiStudioApi } from '../common/slices/aiStudioSlice';
 
 export const store = configureStore({
     reducer: {
@@ -40,10 +41,10 @@ export const store = configureStore({
 
         [reviewsApi.reducerPath]:reviewsApi.reducer,
 
-
         [wishlistApi.reducerPath]:wishlistApi.reducer,
         [statsApi.reducerPath]:statsApi.reducer,
         [supportApi.reducerPath]:supportApi.reducer,
+        [aiStudioApi.reducerPath]: aiStudioApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware().concat(
@@ -67,5 +68,6 @@ export const store = configureStore({
             wishlistApi.middleware,
             statsApi.middleware,
             supportApi.middleware,
+            aiStudioApi.middleware,
         ),
 });

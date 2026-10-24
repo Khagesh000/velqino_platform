@@ -228,6 +228,7 @@ export default function WholesaleNavbar({ isSidebarCollapsed, setIsSidebarCollap
     { icon: <Home size={19} />, label: 'Home Dashboard', href: '/wholesaler/wholesalerdashboard', badge: null },
     { icon: <Package size={19} />, label: 'Orders Management', href: '/wholesaler/ordermanagment', badge: pendingOrdersCount > 0 ? pendingOrdersCount.toString() : null },
     { icon: <Grid size={19} />, label: 'Products Catalog', href: '/wholesaler/productcatalog', badge: null },
+    { icon: <Sparkles size={19} />, label: 'AI Model Studio', href: '/wholesaler/aistudio', badge: 'AI' },
     { icon: <BarChart3 size={19} />, label: 'Analytics & Reports', href: '/wholesaler/analyticsreports', badge: null },
     { icon: <Users size={19} />, label: 'Customers', href: '/wholesaler/customers', badge: customersCount > 0 ? customersCount.toString() : null },
     { icon: <Wallet size={19} />, label: 'Payments & Payouts', href: '/wholesaler/paymentsandpayouts', badge: null },

@@ -1,0 +1,103 @@
+// ==========================================
+// Step 3: Studio Controls Component Styles
+// ==========================================
+
+.ai-studio-container {
+  // Shared Filter Row & Option Chips
+  .filter-row {
+    margin-bottom: 1.25rem;
+
+    .filter-label {
+      font-size: $text-xs;
+      font-weight: $font-semibold;
+      color: $text-secondary;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .angle-quick-link {
+        background: none;
+        border: none;
+        color: $text-tertiary;
+        font-weight: $font-semibold;
+        font-size: 11px;
+        cursor: pointer;
+        text-decoration: underline;
+        transition: color 0.15s ease;
+
+        &:hover,
+        &.active {
+          color: $primary-600;
+        }
+      }
+    }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+
+      .skin-chip-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: $radius-full;
+        border: 1px solid rgba(210, 200, 195, 0.7);
+        background: #FFFFFF;
+        font-size: $text-xs;
+        font-weight: $font-medium;
+        color: $text-primary;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        .color-dot {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+        }
+
+        &.active {
+          border-color: $primary-600;
+          background: $primary-50;
+          color: $primary-800;
+          font-weight: $font-semibold;
+          box-shadow: 0 0 0 2px rgba(206, 142, 106, 0.2);
+        }
+
+        &:hover:not(.active) {
+          border-color: rgba(206, 142, 106, 0.6);
+          background: #FAF8F5;
+        }
+      }
+
+      .fit-chip-btn {
+        padding: 0.35rem 0.75rem;
+        border-radius: $radius-medium;
+        border: 1px solid rgba(210, 200, 195, 0.7);
+        background: #FFFFFF;
+        font-size: $text-xs;
+        font-weight: $font-medium;
+        color: $text-primary;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &.active {
+          border-color: $secondary-600;
+          background: rgba(162, 86, 144, 0.08);
+          color: $secondary-800;
+          font-weight: $font-semibold;
+        }
+
+        &:hover:not(.active) {
+          border-color: rgba(162, 86, 144, 0.4);
+          background: #FAF8F5;
+        }
+      }
+    }
+  }
+}

@@ -184,6 +184,7 @@ export default function RetailerNavbar({ isSidebarCollapsed, setIsSidebarCollaps
     { icon: <Home size={19} />, label: 'Dashboard', href: '/retailer/retailerdashboard', badge: null },
     { icon: <ShoppingCart size={19} />, label: 'POS / Sales', href: '/retailer/possales', badge: null },
     { icon: <Package size={19} />, label: 'Products', href: '/retailer/retailerproducts', badge: null },
+    { icon: <Sparkles size={19} />, label: 'AI Model Studio', href: '/retailer/aistudio', badge: 'AI' },
     { icon: <ShoppingBag size={19} />, label: 'Orders', href: '/retailer/retailerorders', badge: '3' },
     { icon: <Users size={19} />, label: 'Customers', href: '/retailer/retailercustomers', badge: null },
     { icon: <Box size={19} />, label: 'Inventory', href: '/retailer/retailerinventory', badge: '5' },

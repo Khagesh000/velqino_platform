@@ -14,6 +14,7 @@ urlpatterns = [
 
     path('api/analytics/', include('analytics_engine.urls')),
     path('api/realtime_hub/', include('realtime_hub.urls')),
+    path('api/intelligence/', include('intelligence.urls')),
 ]
 
 if settings.DEBUG:

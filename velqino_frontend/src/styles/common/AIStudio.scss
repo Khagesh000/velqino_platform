@@ -1,0 +1,28 @@
+// ========================================================
+// Velqino AI Fashion Studio: Main SCSS Entry Point
+// Modular Architecture: Sub-styles partitioned per component
+// ========================================================
+
+@import '../reusables/variables.scss';
+@import '../reusables/colors.scss';
+
+// 1. Component Token Aliases
+@import './aistudio/variables.scss';
+
+// 2. Global AI Studio Layout & Headers
+@import './aistudio/layout.scss';
+
+// 3. Step 1: Model Selection Component
+@import './aistudio/modelSelector.scss';
+
+// 4. Step 2: Garment Uploader Component
+@import './aistudio/garmentUploader.scss';
+
+// 5. Step 3: Studio Controls Component
+@import './aistudio/studioControls.scss';
+
+// 6. Right Panel: Studio Preview & 360 Camera Scrubber
+@import './aistudio/studioPreview.scss';
+
+// 7. Modals: Catalog Apparel Picker & Zoom Inspection
+@import './aistudio/catalogModal.scss';
