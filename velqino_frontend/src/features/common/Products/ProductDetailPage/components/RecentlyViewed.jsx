@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Star, Trash2, Eye, ChevronLeft, ChevronRight, History } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { resolveImageUrl } from '@/utils/apiConfig';
 
 export const addToRecentlyViewed = (product) => {
   if (typeof window === 'undefined' || !product?.id) return;
@@ -54,9 +54,7 @@ export default function RecentlyViewed() {
 
   const resolveImg = (prod) => {
     const raw = prod?.primary_image || prod?.images?.[0]?.image || prod?.image;
-    if (!raw) return 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=300&q=80';
-    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-    return `${BASE_IMAGE_URL}${raw}`;
+    return resolveImageUrl(raw) || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=300&q=80';
   };
 
   if (recentProducts.length === 0) {

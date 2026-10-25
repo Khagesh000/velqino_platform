@@ -10,7 +10,7 @@ import {
   CheckCircle,
   ArrowRight
 } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { resolveImageUrl as apiResolveImageUrl } from '@/utils/apiConfig';
 import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 
 export default function RecommendedProducts() {
@@ -34,11 +34,7 @@ export default function RecommendedProducts() {
   }
   
   const resolveImageUrl = (img) => {
-    if (!img) return '/images/placeholder.jpg';
-    if (typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))) {
-      return img;
-    }
-    return `${BASE_IMAGE_URL}${img}`;
+    return apiResolveImageUrl(img) || '/images/placeholder.jpg';
   };
 
   const scroll = (direction) => {

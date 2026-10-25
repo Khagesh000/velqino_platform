@@ -16,7 +16,7 @@ import {
   CheckCircle,
   Tag
 } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { resolveImageUrl as apiResolveImageUrl } from '@/utils/apiConfig';
 
 export default function CartItemsList({ 
   cartItems, 
@@ -41,11 +41,7 @@ export default function CartItemsList({
   };
 
   const resolveImageUrl = (img) => {
-    if (!img) return '/images/placeholder.jpg';
-    if (typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))) {
-      return img;
-    }
-    return `${BASE_IMAGE_URL}${img}`;
+    return apiResolveImageUrl(img) || '/images/placeholder.jpg';
   };
 
   return (

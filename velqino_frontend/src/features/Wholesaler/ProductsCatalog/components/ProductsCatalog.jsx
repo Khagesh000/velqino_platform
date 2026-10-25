@@ -7,7 +7,7 @@ import {
 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/ProductsCatalog/ProductsCatalog.scss';
 import { useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice';
-import { BASE_IMAGE_URL } from '../../../../utils/apiConfig';
+import { BASE_IMAGE_URL, resolveImageUrl } from '../../../../utils/apiConfig';
 import { toast } from 'react-toastify';
 import BulkEditTool from './BulkEditTool';
 import DeleteConfirmModal from '../Modals/DeleteConfirmModal';
@@ -77,7 +77,7 @@ export default function ProductsCatalog({
 
   const getProductImage = (product) => {
     if (product?.primary_image) {
-      return `${BASE_IMAGE_URL}${product.primary_image}`;
+      return resolveImageUrl(product.primary_image);
     }
     return null;
   };
@@ -497,18 +497,19 @@ console.log('selectedCategory:', selectedCategory); */
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {product.images.map((img, idx) => {
-                      
+                      const resolvedSrc = resolveImageUrl(img.image || img);
                       return (
                         <img 
                           key={idx}
-                          src={`${BASE_IMAGE_URL}${img.image}`}
+                          src={resolvedSrc}
                           alt={product.name}
                           className="w-full h-full object-cover flex-shrink-0 snap-start"
                           onError={(e) => { 
+                            e.target.onerror = null;
                             console.log('❌ IMAGE FAILED TO LOAD:', e.target.src);
                             e.target.src = '/images/placeholder.jpg'; 
                           }}
-                          onLoad={() => console.log('✅ IMAGE LOADED SUCCESSFULLY:', `${BASE_IMAGE_URL}${img.image}`)}
+                          onLoad={() => console.log('✅ IMAGE LOADED SUCCESSFULLY:', resolvedSrc)}
                         />
                       );
                     })}

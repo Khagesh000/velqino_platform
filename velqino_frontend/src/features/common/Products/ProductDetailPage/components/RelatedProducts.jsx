@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Star, ShoppingBag, Sparkles } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { resolveImageUrl } from '@/utils/apiConfig';
 import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 
 export default function RelatedProducts({ currentProductId, categoryId, subcategoryId }) {
@@ -33,9 +33,7 @@ export default function RelatedProducts({ currentProductId, categoryId, subcateg
 
   const resolveImg = (prod) => {
     const raw = prod?.primary_image || prod?.images?.[0]?.image || prod?.image;
-    if (!raw) return 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=400&q=80';
-    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-    return `${BASE_IMAGE_URL}${raw}`;
+    return resolveImageUrl(raw) || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=400&q=80';
   };
 
   const scroll = (direction) => {

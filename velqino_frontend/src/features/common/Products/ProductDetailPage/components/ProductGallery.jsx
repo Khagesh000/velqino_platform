@@ -16,7 +16,7 @@ import {
   RotateCcw,
   Package
 } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { resolveImageUrl as apiResolveImageUrl } from '@/utils/apiConfig';
 
 export default function ProductGallery({ product }) {
   const [selectedImage, setSelectedImage] = useState(0);
@@ -32,9 +32,7 @@ export default function ProductGallery({ product }) {
   const resolveImageUrl = (imgObj) => {
     if (!imgObj) return '/images/placeholder.jpg';
     const rawUrl = typeof imgObj === 'string' ? imgObj : imgObj.image || imgObj.url || '';
-    if (!rawUrl) return '/images/placeholder.jpg';
-    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) return rawUrl;
-    return `${BASE_IMAGE_URL}${rawUrl}`;
+    return apiResolveImageUrl(rawUrl) || '/images/placeholder.jpg';
   };
 
   // Compile full image list

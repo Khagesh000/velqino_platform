@@ -15,7 +15,7 @@ import {
 import '../../../../styles/Wholesaler/ProductsCatalog/ProductsTable.scss';
 import { useDeleteProductMutation } from '@/redux/wholesaler/slices/productsSlice';
 import { toast } from 'react-toastify';
-import { BASE_IMAGE_URL } from '../../../../utils/apiConfig';
+import { BASE_IMAGE_URL, resolveImageUrl } from '../../../../utils/apiConfig';
 import DeleteConfirmModal from '../Modals/DeleteConfirmModal';
 
 export default function ProductsTables({ 
@@ -150,7 +150,7 @@ export default function ProductsTables({
 
   const getProductImage = (product) => {
     if (product.primary_image) {
-      return `${BASE_IMAGE_URL}${product.primary_image}`
+      return resolveImageUrl(product.primary_image)
     }
     return null
   }
@@ -249,10 +249,10 @@ export default function ProductsTables({
     <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden relative">
       {product.images && product.images.length > 0 ? (
         <img 
-          src={`${BASE_IMAGE_URL}${product.images[0].image}`} 
+          src={resolveImageUrl(product.images[0].image || product.images[0])} 
           alt={product.name} 
           className="w-full h-full object-cover"
-          onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+          onError={(e) => { e.target.onerror = null; e.target.src = '/images/placeholder.jpg'; }}
         />
       ) : (
         <span className="text-xl">📦</span>

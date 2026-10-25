@@ -99,12 +99,24 @@ API.interceptors.response.use(
 );
 
 // ✅ Image URL Resolver using centralized BASE_IMAGE_URL
-export const resolveImageUrl = (url) => {
-    if (!url) return '';
+export const resolveImageUrl = (raw) => {
+    if (!raw) return '';
+    let url = typeof raw === 'string' ? raw : (raw?.image || raw?.url || raw?.preview_image_url || '');
+    if (!url || typeof url !== 'string') return '';
+    url = url.trim();
+
+    // Auto-heal double-prefix URLs (e.g. http://localhost:8000https://res.cloudinary.com/...)
+    const doubleHttpMatch = url.match(/https?:\/\/[^/]+(https?:\/\/.+)/i);
+    if (doubleHttpMatch) {
+        url = doubleHttpMatch[1];
+    }
+
     if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
-    return `${BASE_IMAGE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    const cleanBase = (BASE_IMAGE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    return `${cleanBase}${cleanPath}`;
 };
 
 export { BASE_IMAGE_URL };

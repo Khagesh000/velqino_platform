@@ -7,7 +7,7 @@ import { useGetProductsQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { useAddToCartMutation } from '@/redux/wholesaler/slices/cartSlice';
 import { useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/redux/wholesaler/slices/wishlistSlice';
 import '../../../../../styles/Products/ProductsListingPage/ProductGrid.scss';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { BASE_IMAGE_URL, resolveImageUrl } from '@/utils/apiConfig';
 import { toast } from 'react-toastify';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -24,7 +24,7 @@ const ProductCard = ({ product, onWishlistToggle }) => {
   const discount = product.compare_price
     ? Math.round(((product.compare_price - product.price) / product.compare_price) * 100)
     : 0;
-  const imageUrl = imgError ? '/images/placeholder.jpg' : `${BASE_IMAGE_URL}${product.primary_image || product.image}`;
+  const imageUrl = imgError ? '/images/placeholder.jpg' : resolveImageUrl(product.primary_image || product.image);
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -80,10 +80,10 @@ const ProductCard = ({ product, onWishlistToggle }) => {
                 {product.images.map((img, idx) => (
                   <img
                     key={idx}
-                    src={`${BASE_IMAGE_URL}${img.image}`}
+                    src={resolveImageUrl(img.image || img)}
                     alt={product.name}
                     className="w-full h-full object-cover flex-shrink-0 snap-start transition-transform duration-500 group-hover/img:scale-105"
-                    onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = '/images/placeholder.jpg'; }}
                   />
                 ))}
               </div>

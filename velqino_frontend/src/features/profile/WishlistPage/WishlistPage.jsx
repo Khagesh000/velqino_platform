@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useGetWishlistQuery, useRemoveFromWishlistMutation, useGetWishlistStatsQuery } from '../../../redux/wholesaler/slices/wishlistSlice';
 import { useAddToCartMutation } from '../../../redux/wholesaler/slices/cartSlice';
 import { Heart, ShoppingCart, Trash2, Loader2, ChevronLeft, ChevronRight } from '../../../utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { BASE_IMAGE_URL, resolveImageUrl } from '@/utils/apiConfig';
 import { toast } from 'react-toastify';
 
 export default function WishlistPage() {
@@ -127,10 +127,10 @@ export default function WishlistPage() {
                     {item.product_images.map((img, idx) => (
                     <img 
                         key={idx}
-                        src={`${BASE_IMAGE_URL}${img}`}
+                        src={resolveImageUrl(img)}
                         alt={item.product_name}
                         className="w-full h-full object-cover flex-shrink-0 snap-start"
-                        onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                        onError={(e) => { e.target.onerror = null; e.target.src = '/images/placeholder.jpg'; }}
                     />
                     ))}
                 </div>
@@ -158,10 +158,10 @@ export default function WishlistPage() {
                 </div>
             ) : (
                 <img 
-                src={item.product_primary_image ? `${BASE_IMAGE_URL}${item.product_primary_image}` : '/images/placeholder.jpg'}
+                src={item.product_primary_image ? resolveImageUrl(item.product_primary_image) : '/images/placeholder.jpg'}
                 alt={item.product_name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                onError={(e) => { e.target.onerror = null; e.target.src = '/images/placeholder.jpg'; }}
                 />
             )}
             {item.product_stock === 0 && (
