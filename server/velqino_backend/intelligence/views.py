@@ -334,3 +334,103 @@ class ExportToProductAPIView(APIView):
             'product_id': product.id,
             'images': created_images
         }, status=status.HTTP_200_OK)
+
+
+class FitGarmentAPIView(APIView):
+    """
+    Analyzes garment specifications (category, demographic, age, fit silhouette)
+    and fits front & back garment onto the appropriate default AI human model.
+    Preserves 100% of the garment's exact original colors, textures, patterns, and button details.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from .services.garment_analyzer import analyze_garment_and_demographic
+
+        front_image = request.FILES.get('front_image')
+        back_image = request.FILES.get('back_image')
+
+        # Support base64 or raw data
+        front_bytes = None
+        if front_image:
+            front_bytes = front_image.read()
+        elif request.data.get('front_image_base64'):
+            b64_str = request.data.get('front_image_base64')
+            if ',' in b64_str:
+                b64_str = b64_str.split(',', 1)[1]
+            front_bytes = base64.b64decode(b64_str)
+
+        back_bytes = None
+        if back_image:
+            back_bytes = back_image.read()
+        elif request.data.get('back_image_base64'):
+            b64_str = request.data.get('back_image_base64')
+            if ',' in b64_str:
+                b64_str = b64_str.split(',', 1)[1]
+            back_bytes = base64.b64decode(b64_str)
+
+        if not front_bytes:
+            return Response({
+                'success': False,
+                'error': 'Front garment image is required for virtual try-on.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        category_name = request.data.get('category_name', '')
+        if not category_name and request.data.get('category_id'):
+            try:
+                from catalog.models import Category
+                cat = Category.objects.filter(id=request.data.get('category_id')).first()
+                if cat:
+                    category_name = cat.name
+            except Exception:
+                pass
+
+        product_name = request.data.get('product_name', '')
+        description = request.data.get('description', '')
+        sizes = request.data.getlist('sizes') if hasattr(request.data, 'getlist') and request.data.getlist('sizes') else request.data.get('sizes', [])
+
+        user_demographic = request.data.get('demographic')
+        user_garment_type = request.data.get('garment_type')
+        user_fit_silhouette = request.data.get('fit_silhouette')
+        user_model_slug = request.data.get('model_slug')
+
+        analysis = analyze_garment_and_demographic(
+            category_name=category_name,
+            product_name=product_name,
+            sizes=sizes,
+            description=description,
+            user_demographic=user_demographic,
+            user_garment_type=user_garment_type,
+            user_fit_silhouette=user_fit_silhouette
+        )
+
+        model_slug = user_model_slug if user_model_slug else analysis['model']['slug']
+
+        # Produce front and back renders
+        angles = ['front', 'back']
+
+        try:
+            result = execute_virtual_tryon(
+                front_image_file_or_bytes=front_bytes,
+                back_image_file_or_bytes=back_bytes,
+                model_slug=model_slug,
+                angles=angles,
+                garment_type=analysis['garment_type'],
+                fit_silhouette=analysis['fit_silhouette'],
+                tuck_style='untucked',
+                backdrop_style='pure_white'
+            )
+
+            return Response({
+                'success': True,
+                'analysis': analysis,
+                'renders': result['renders'],
+                'model': result['model']
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f"Failed to generate AI model fitting: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

@@ -104,7 +104,7 @@ export default function ImportModal({ onClose, categories = [] }) {
       setProgress(15)
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsHost = process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.host}`
+      const wsHost = process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.hostname}:8000`
       const socket = new WebSocket(`${wsHost}/ws/ai-progress/${taskId}/`)
 
       socket.onopen = () => {

@@ -14,7 +14,7 @@ def clear_product_cache(sender, instance, **kwargs):
     """Clear product cache when product is created, updated, or deleted"""
     cache.delete_pattern('product:list:*')
     cache.delete(f"product:{instance.id}")
-    print(f"✅ Product cache cleared for ID: {instance.id}")
+    print(f"[INFO] Product cache cleared for ID: {instance.id}")
 
 
 @receiver(post_save, sender=Order)

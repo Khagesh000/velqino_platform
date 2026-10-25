@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   Package,
@@ -10,11 +10,19 @@ import {
   Eye,
   Upload,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  RefreshCw,
+  CheckCircle,
+  Check,
+  User,
+  Users,
+  ImageIcon
 } from '../../../../utils/icons';
 import '../../../../styles/Wholesaler/ProductsCatalog/ProductEditModal.scss';
 import { useCreateProductMutation, useUpdateProductMutation, useGetProductQuery } from '@/redux/wholesaler/slices/productsSlice';
 import { toast } from 'react-toastify';
+import API, { BASE_IMAGE_URL, resolveImageUrl } from '@/utils/apiConfig';
 
 export default function ProductEditModal({ product = null, onClose, onSave, categories = [] }) {
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
@@ -25,6 +33,21 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
   const [errors, setErrors] = useState({});
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '40'];
   
+  // AI Model Virtual Fitting states
+  const [frontGarment, setFrontGarment] = useState(null);
+  const [backGarment, setBackGarment] = useState(null);
+  const [frontGarmentPreview, setFrontGarmentPreview] = useState('');
+  const [backGarmentPreview, setBackGarmentPreview] = useState('');
+  const [fitSilhouette, setFitSilhouette] = useState('regular');
+  const [demographicOverride, setDemographicOverride] = useState('auto');
+  const [useAiFit, setUseAiFit] = useState(true);
+  const [isGeneratingFit, setIsGeneratingFit] = useState(false);
+  const [fitPreviewResult, setFitPreviewResult] = useState(null);
+  const [activePreviewAngle, setActivePreviewAngle] = useState('front');
+
+  const frontInputRef = useRef(null);
+  const backInputRef = useRef(null);
+
   const isLoading = isCreating || isUpdating;
   
   const { data: fullProductData } = useGetProductQuery(product?.id, {
@@ -92,8 +115,82 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
     }
   }, [actualProduct]);
 
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (frontGarmentPreview) URL.revokeObjectURL(frontGarmentPreview);
+      if (backGarmentPreview) URL.revokeObjectURL(backGarmentPreview);
+    };
+  }, [frontGarmentPreview, backGarmentPreview]);
+
+  // Real-time Category, Demographic, and Model Analysis
+  const detectedAnalysis = useMemo(() => {
+    const selectedCategory = categories.find(c => String(c.id) === String(formData.category_id));
+    const catName = selectedCategory ? selectedCategory.name.toLowerCase() : '';
+    const nameStr = (formData.name || '').toLowerCase();
+    const descStr = (formData.description || '').toLowerCase();
+    const fullText = `${catName} ${nameStr} ${descStr}`;
+
+    // Garment type analysis (topwear vs bottomwear)
+    const bottomKeywords = ['pant', 'pants', 'trouser', 'trousers', 'jeans', 'denim', 'short', 'shorts', 'cargo', 'jogger', 'trackpant', 'skirt', 'legging'];
+    const isBottom = bottomKeywords.some(kw => fullText.includes(kw));
+    const garmentType = isBottom ? 'bottom' : 'top';
+
+    // Demographic analysis (Kids vs Women vs Men)
+    let demographic = demographicOverride;
+    if (demographicOverride === 'auto') {
+      const kidsSizes = ['2', '3', '4', '6', '8', '10', '12', '14', '16', '6Y', '8Y', '10Y', '12Y', '14Y', '8-10', '10-12', '12-14'];
+      const hasKidsSize = selectedSizes.some(s => kidsSizes.includes(String(s).trim().toUpperCase()));
+      const kidsKeywords = ['kid', 'kids', 'boy', 'boys', 'girl', 'girls', 'child', 'junior', 'baby', 'teen'];
+      const hasKidsKeyword = kidsKeywords.some(kw => fullText.includes(kw));
+
+      if (hasKidsSize || hasKidsKeyword) {
+        demographic = 'kids';
+      } else {
+        const womenKeywords = ['women', 'woman', 'womens', 'ladies', 'female', 'girl', 'saree', 'kurti', 'dress', 'blouse', 'skirt', 'gown'];
+        if (womenKeywords.some(kw => fullText.includes(kw))) {
+          demographic = 'women';
+        } else {
+          demographic = 'men';
+        }
+      }
+    }
+
+    const modelNames = {
+      men: 'Ares - Athletic Male',
+      women: 'Sienna - Athletic Fit Female',
+      kids: 'Kai - Junior Boy (8-10 yrs)'
+    };
+
+    return {
+      garmentType,
+      garmentTypeLabel: garmentType === 'top' ? 'Topwear' : 'Bottomwear',
+      demographic,
+      demographicLabel: demographic === 'kids' ? 'Junior / Kids (Boy/Girl)' : demographic === 'women' ? "Women's Fashion" : "Men's Apparel",
+      defaultModelName: modelNames[demographic] || 'Ares - Athletic Male'
+    };
+  }, [formData.category_id, formData.name, formData.description, selectedSizes, demographicOverride, categories]);
+
   const toggleSize = (size) => {
     setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+  };
+
+  const handleFrontGarmentChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFrontGarment(file);
+      setFrontGarmentPreview(URL.createObjectURL(file));
+      setFitPreviewResult(null);
+    }
+  };
+
+  const handleBackGarmentChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setBackGarment(file);
+      setBackGarmentPreview(URL.createObjectURL(file));
+      setFitPreviewResult(null);
+    }
   };
 
   const handleImageSelect = (e) => {
@@ -126,6 +223,53 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
     return Object.keys(newErrors).length === 0;
   };
 
+  // Generate live AI virtual photoshoot fitting
+  const handleGenerateFitPreview = async () => {
+    if (!frontGarment && selectedImages.length === 0) {
+      toast.error('Please upload at least the Front Garment image');
+      return;
+    }
+
+    const activeFront = frontGarment || selectedImages[0];
+    const activeBack = backGarment || (selectedImages.length > 1 ? selectedImages[1] : null);
+
+    setIsGeneratingFit(true);
+    const data = new FormData();
+    data.append('front_image', activeFront);
+    if (activeBack) {
+      data.append('back_image', activeBack);
+    }
+    const selectedCategory = categories.find(c => String(c.id) === String(formData.category_id));
+    if (selectedCategory) {
+      data.append('category_name', selectedCategory.name);
+    }
+    data.append('product_name', formData.name || 'Product');
+    data.append('description', formData.description || '');
+    data.append('fit_silhouette', fitSilhouette);
+    if (demographicOverride !== 'auto') {
+      data.append('demographic', demographicOverride);
+    }
+    selectedSizes.forEach(s => data.append('sizes', s));
+
+    try {
+      const res = await API.post('/intelligence/fit-garment/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.success) {
+        setFitPreviewResult(res.data);
+        setActivePreviewAngle('front');
+        toast.success(`✨ Garment fitted onto ${res.data.model?.name || 'AI Model'} with exact colors!`);
+      } else {
+        toast.error(res.data?.error || 'Failed to fit garment on AI model');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || 'AI Try-on service unavailable');
+    } finally {
+      setIsGeneratingFit(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error('Please fill in all required fields marked with *');
@@ -148,6 +292,19 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
     payload.append('pattern', formData.pattern || '');
     payload.append('primary_color', formData.primary_color || '');
     
+    // AI Model Fitting parameters
+    payload.append('ai_fit_enabled', useAiFit ? 'true' : 'false');
+    payload.append('fit_silhouette', fitSilhouette);
+    if (demographicOverride !== 'auto') {
+      payload.append('demographic', demographicOverride);
+    }
+    if (frontGarment) {
+      payload.append('front_image', frontGarment);
+    }
+    if (backGarment) {
+      payload.append('back_image', backGarment);
+    }
+
     if (selectedSizes.length > 0) {
       selectedSizes.forEach(size => payload.append('sizes', size));
     }
@@ -166,7 +323,7 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
         toast.success('Product updated successfully!');
       } else {
         result = await createProduct(payload).unwrap();
-        toast.success('Product created successfully!');
+        toast.success('Product created with AI Model Photoshoot successfully!');
       }
       
       onSave?.(result);
@@ -460,31 +617,318 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
             </div>
           </div>
 
-          {/* Media Upload Area */}
-          <div>
+          {/* AI Model Fitting & Photoshoot Section */}
+          <div className="bg-gradient-to-br from-primary-50/40 via-white to-amber-50/30 border border-primary-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-primary-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary-600 text-white flex items-center justify-center shadow-xs">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-slate-900">AI Model Virtual Photoshoot Fitting</h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      100% Exact Colors
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Fit front & back garment photos onto our hyper-realistic default AI human mannequin</p>
+                </div>
+              </div>
+              
+              <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-white px-3 py-1.5 rounded-xl border border-slate-200 hover:border-primary-300">
+                <input
+                  type="checkbox"
+                  checked={useAiFit}
+                  onChange={(e) => setUseAiFit(e.target.checked)}
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <span>Enable AI Photoshoot</span>
+              </label>
+            </div>
+
+            {useAiFit && (
+              <>
+                {/* Real-time Category & Demographic AI Intelligence Bar */}
+                <div className="bg-white/90 border border-slate-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">AI Auto-Detected:</span>
+                    <span className="px-2.5 py-1 rounded-lg font-bold bg-primary-50 text-primary-700 border border-primary-200/60 flex items-center gap-1">
+                      <span>🏷️</span> {detectedAnalysis.garmentTypeLabel}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg font-bold bg-amber-50 text-amber-800 border border-amber-200/60 flex items-center gap-1">
+                      <span>👤</span> {detectedAnalysis.demographicLabel}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                      <span>✨</span> Model: {detectedAnalysis.defaultModelName}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dropdowns: Fit Silhouette & Demographic Control */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Fit Silhouette <span className="text-primary-600">*</span>
+                    </label>
+                    <select
+                      value={fitSilhouette}
+                      onChange={(e) => setFitSilhouette(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all"
+                    >
+                      <option value="regular">Regular Fit (Standard Drape)</option>
+                      <option value="slim">Slim Fit (Contoured Waist & Sleeves)</option>
+                      <option value="relaxed">Relaxed Fit (Comfort Room)</option>
+                      <option value="oversized">Loose / Oversized Fit (Dropped Shoulders)</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">Adjusts body contouring and shoulder drape</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Demographic & AI Model
+                    </label>
+                    <select
+                      value={demographicOverride}
+                      onChange={(e) => setDemographicOverride(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all"
+                    >
+                      <option value="auto">Auto-Detect from Category & Sizes (Recommended)</option>
+                      <option value="men">Men's Apparel (Ares - Athletic Male)</option>
+                      <option value="women">Women's Apparel (Sienna - Fit Female)</option>
+                      <option value="kids">Junior / Kids (Kai - Junior Boy 8-10 yrs)</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">Automatically assigns default studio mannequin</p>
+                  </div>
+                </div>
+
+                {/* Front & Back Garment Upload Boxes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Front Garment */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Front Side Photo <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="file"
+                      ref={frontInputRef}
+                      accept="image/*"
+                      onChange={handleFrontGarmentChange}
+                      className="hidden"
+                    />
+
+                    {frontGarmentPreview ? (
+                      <div className="relative aspect-4/3 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group">
+                        <img
+                          src={frontGarmentPreview}
+                          alt="Front Garment"
+                          className="w-full h-full object-contain p-2"
+                        />
+                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-900/70 text-white text-[10px] font-bold">
+                          Front Garment
+                        </div>
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => frontInputRef.current?.click()}
+                            className="px-3 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold shadow-md hover:bg-slate-100"
+                          >
+                            Replace
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFrontGarment(null);
+                              setFrontGarmentPreview('');
+                              setFitPreviewResult(null);
+                            }}
+                            className="p-1.5 rounded-lg bg-rose-600 text-white shadow-md hover:bg-rose-700"
+                            title="Remove image"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => frontInputRef.current?.click()}
+                        className="aspect-4/3 border-2 border-dashed border-slate-300 hover:border-primary-500 bg-white hover:bg-primary-50/20 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center mb-2">
+                          <Upload size={18} />
+                        </div>
+                        <p className="text-xs font-bold text-slate-800">Upload Front Garment</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Flat-lay or ghost mannequin</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Back Garment */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Back Side Photo <span className="text-slate-400 text-[10px] font-normal">(Optional for 360°)</span>
+                    </label>
+                    <input
+                      type="file"
+                      ref={backInputRef}
+                      accept="image/*"
+                      onChange={handleBackGarmentChange}
+                      className="hidden"
+                    />
+
+                    {backGarmentPreview ? (
+                      <div className="relative aspect-4/3 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden group">
+                        <img
+                          src={backGarmentPreview}
+                          alt="Back Garment"
+                          className="w-full h-full object-contain p-2"
+                        />
+                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-900/70 text-white text-[10px] font-bold">
+                          Back Garment
+                        </div>
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => backInputRef.current?.click()}
+                            className="px-3 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold shadow-md hover:bg-slate-100"
+                          >
+                            Replace
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBackGarment(null);
+                              setBackGarmentPreview('');
+                              setFitPreviewResult(null);
+                            }}
+                            className="p-1.5 rounded-lg bg-rose-600 text-white shadow-md hover:bg-rose-700"
+                            title="Remove image"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => backInputRef.current?.click()}
+                        className="aspect-4/3 border-2 border-dashed border-slate-300 hover:border-primary-500 bg-white hover:bg-primary-50/20 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mb-2">
+                          <Upload size={18} />
+                        </div>
+                        <p className="text-xs font-bold text-slate-800">Upload Back Garment</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Auto-synthesized if left empty</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Preview on AI Model Trigger Button */}
+                <div className="pt-1 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGenerateFitPreview}
+                    disabled={isGeneratingFit || (!frontGarment && selectedImages.length === 0)}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 active:bg-slate-950 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingFit ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin text-amber-400" />
+                        <span>Fitting Garment onto {detectedAnalysis.defaultModelName}...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} className="text-amber-400" />
+                        <span>Preview on AI Model Photoshoot</span>
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                    <CheckCircle size={13} className="text-emerald-600" />
+                    <span>Colours, patterns, buttons & texture 100% untouched</span>
+                  </p>
+                </div>
+
+                {/* Live Generated AI Photoshoot Preview Canvas */}
+                {fitPreviewResult && (
+                  <div className="bg-white border-2 border-primary-300 rounded-2xl p-4 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-bold text-slate-900">
+                          Photoshoot Preview: {fitPreviewResult.model?.name}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          {fitPreviewResult.analysis?.fit_label}
+                        </span>
+                      </div>
+
+                      {/* View Angle Tabs */}
+                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                        {fitPreviewResult.renders?.map(r => (
+                          <button
+                            key={r.angle_key}
+                            type="button"
+                            onClick={() => setActivePreviewAngle(r.angle_key)}
+                            className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                              activePreviewAngle === r.angle_key
+                                ? 'bg-white text-slate-900 shadow-xs'
+                                : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            {r.angle_key === 'front' ? 'Front (0°)' : 'Back (180°)'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Preview Image Frame */}
+                    <div className="relative aspect-3/4 max-w-[280px] mx-auto rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shadow-xs flex items-center justify-center">
+                      {fitPreviewResult.renders?.find(r => r.angle_key === activePreviewAngle) ? (
+                        <img
+                          src={resolveImageUrl(fitPreviewResult.renders.find(r => r.angle_key === activePreviewAngle).image_url)}
+                          alt="AI Model Photoshoot"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-xs text-slate-400">Loading render...</div>
+                      )}
+                      <div className="absolute bottom-2 left-2 right-2 px-2.5 py-1 rounded-lg bg-slate-900/80 backdrop-blur-xs text-white text-[10px] flex items-center justify-between">
+                        <span>{activePreviewAngle === 'front' ? 'Front View' : 'Back View'}</span>
+                        <span className="text-emerald-400 font-bold">✓ Original Color Preserved</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Optional Additional Product Gallery Images */}
+          <div className="pt-2">
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-              Product Images
+              Additional Catalog Photos (Optional Gallery Images)
             </label>
-            <div className="border-2 border-dashed border-slate-200 hover:border-primary-400 bg-white hover:bg-primary-50/20 rounded-2xl p-6 text-center transition-all cursor-pointer">
+            <div className="border border-slate-200 hover:border-slate-300 bg-white rounded-xl p-4 text-center transition-all cursor-pointer">
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleImageSelect}
                 className="hidden"
-                id="image-upload"
+                id="gallery-image-upload"
               />
-              <label htmlFor="image-upload" className="cursor-pointer block">
-                <div className="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center mx-auto mb-2.5">
-                  <Upload size={22} />
+              <label htmlFor="gallery-image-upload" className="cursor-pointer block">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center mx-auto mb-1.5">
+                  <Upload size={16} />
                 </div>
-                <p className="text-sm font-semibold text-slate-800 mb-0.5">Click to browse or drop images here</p>
-                <p className="text-xs text-slate-400">Supports JPG, PNG, WEBP</p>
+                <p className="text-xs font-semibold text-slate-700">Add extra flat-lay or fabric detail photos</p>
+                <p className="text-[10px] text-slate-400">Appended to product gallery</p>
               </label>
             </div>
 
             {selectedImages.length > 0 && (
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mt-4">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5 mt-3">
                 {selectedImages.map((img, idx) => (
                   <div key={idx} className="relative aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shadow-xs">
                     <img 
@@ -495,10 +939,10 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
                     <button 
                       type="button"
                       onClick={() => setSelectedImages(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-md hover:bg-rose-700 transition-colors"
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-md hover:bg-rose-700 transition-colors"
                       title="Remove image"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={11} />
                     </button>
                   </div>
                 ))}

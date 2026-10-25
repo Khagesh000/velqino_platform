@@ -27,9 +27,9 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
     try:
         from catalog.services.ai_service import AIService
         
-        print(f"🎥 Processing bulk video for seller {seller_id}")
-        print(f"📌 Mode: {upload_mode}")
-        print(f"📊 Detected products: {number_of_products}")
+        print(f"[VIDEO] Processing bulk video for seller {seller_id}")
+        print(f"[INFO] Mode: {upload_mode}")
+        print(f"[INFO] Detected products: {number_of_products}")
         
         result = AIService.process_bulk_video(
             seller_id=seller_id,
@@ -51,7 +51,7 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
         from catalog.utils.product_helpers import ProductHelpers
         ProductHelpers.invalidate_product_caches(seller_id)
         
-        print(f"✅ Bulk video processed: {result}")
+        print(f"[SUCCESS] Bulk video processed: {result}")
         return result
         
     except Exception as e:
@@ -62,22 +62,16 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
 @shared_task(bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
 def process_bulk_images_task(self, seller_id, images_data, common_price, common_cost,
                              category_id, common_name_prefix, brand, description, 
-                             upload_mode='bulk_single_product', sizes=None, task_id=None):
-    """Process bulk images - creates ONE product with all images by default"""
+                             upload_mode='bulk_single_product', sizes=None, task_id=None,
+                             ai_fit_enabled=True, fit_silhouette='regular', demographic=None):
+    """Process bulk images - supports bulk_single_product, front_back, and front_only with AI model fitting"""
     try:
         from catalog.services.ai_service import AIService
 
-        # ✅ ADD THIS DEBUG LINE
-        print(f"\n🔴🔴🔴 TASK - upload_mode value: '{upload_mode}'")
-        print(f"🔴🔴🔴 TASK - upload_mode type: {type(upload_mode)}")
-        print(f"🔴🔴🔴 TASK - Force to bulk_single_product for testing")
-        
-        # ✅ FORCE THE MODE HERE (TEMPORARY FIX)
-        upload_mode = 'bulk_single_product'  # ← ADD THIS LINE
-
-        print(f"🖼️ Processing bulk images for seller {seller_id}")
-        print(f"📌 Mode: {upload_mode}")
-        print(f"📸 Images count: {len(images_data)}")
+        print(f"[IMAGES] Processing bulk images for seller {seller_id}")
+        print(f"[INFO] Mode: {upload_mode}")
+        print(f"[INFO] Images count: {len(images_data)}")
+        print(f"[INFO] AI Fit: {ai_fit_enabled}, Silhouette: {fit_silhouette}, Demographic: {demographic}")
 
         result = AIService.process_bulk_images(
             seller_id=seller_id,
@@ -88,15 +82,18 @@ def process_bulk_images_task(self, seller_id, images_data, common_price, common_
             name_prefix=common_name_prefix,
             brand=brand,
             description=description,
-            upload_mode=upload_mode,  # ← This will now be 'bulk_single_product'
+            upload_mode=upload_mode,
             sizes=sizes or [],
-            task_id=self.request.id
+            task_id=self.request.id,
+            ai_fit_enabled=ai_fit_enabled,
+            fit_silhouette=fit_silhouette,
+            demographic=demographic
         )
 
         from catalog.utils.product_helpers import ProductHelpers
         ProductHelpers.invalidate_product_caches(seller_id)
         
-        print(f"✅ Bulk images processed: {result}")
+        print(f"[SUCCESS] Bulk images processed: {result}")
         return result
 
     except Exception as e:
@@ -159,7 +156,7 @@ def update_product_stock_task(self, product_id, quantity, deduct=True):
             if product.is_low_stock():
                 check_low_stock_alert.delay(product_id)
             
-            logger.info(f"Stock updated for {product.name}: {old_stock} → {product.stock}")
+            logger.info(f"Stock updated for {product.name}: {old_stock} -> {product.stock}")
             
             return True
             

@@ -12,9 +12,17 @@ from .base_model_service import hex_to_rgb, generate_studio_model_image
 def remove_garment_background(pil_image, tolerance=25):
     """
     Intelligently extracts the garment from flat-lay or hanger backgrounds using
-    Otsu thresholding, GrabCut refinement, and edge smoothing.
+    Otsu thresholding, color distance, and edge smoothing.
     Returns RGBA Image with clean transparent background.
+    Guarantees 100% preservation of original fabric colors, textures, patterns, and stitching.
     """
+    if pil_image.mode == 'RGBA':
+        # Check if already transparent cutout
+        alpha_band = pil_image.split()[3]
+        min_alpha, max_alpha = alpha_band.getextrema()
+        if min_alpha < 180:
+            return pil_image
+
     if pil_image.mode != 'RGB':
         pil_image = pil_image.convert('RGB')
 
@@ -55,7 +63,7 @@ def remove_garment_background(pil_image, tolerance=25):
     # Feather alpha edge for seamless blending
     mask_blurred = cv2.GaussianBlur(mask, (7, 7), 2.5)
 
-    # Build RGBA result
+    # Build RGBA result - RGB channels remain 100% UNTOUCHED
     rgba = cv2.cvtColor(cv_img, cv2.COLOR_RGB2RGBA)
     rgba[:, :, 3] = mask_blurred
 
@@ -85,7 +93,8 @@ def warp_garment_to_model(
     target_width=800,
     target_height=1200,
     is_female=False,
-    is_kid=False
+    is_kid=False,
+    is_real_back=False
 ):
     """
     Warps and positions the cut-out garment onto the model body for the specific camera angle.
@@ -121,10 +130,14 @@ def warp_garment_to_model(
             canvas.alpha_composite(resized, (x_pos, y_pos))
 
         elif angle_key == 'back':
-            # Back drape: Mirror slightly, raise collar slightly, wider shoulder drape
-            mirrored = garment_clean.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-            resized = mirrored.resize((int(base_w * 1.04), desired_h), Image.Resampling.LANCZOS)
-            # Mask or smooth out any front chest print/neck scooped opening for authentic back fabric
+            # Back drape
+            if is_real_back:
+                # Authentic back garment provided by user - do not flip
+                resized = garment_clean.resize((int(base_w * 1.04), desired_h), Image.Resampling.LANCZOS)
+            else:
+                # Synthesize back drape from front image
+                mirrored = garment_clean.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                resized = mirrored.resize((int(base_w * 1.04), desired_h), Image.Resampling.LANCZOS)
             x_pos = cx - (resized.width // 2)
             y_pos = base_top_y - 6  # Back collar sits higher
             canvas.alpha_composite(resized, (x_pos, y_pos))
@@ -218,39 +231,25 @@ def warp_garment_to_model(
 
 def harmonize_lighting_and_shading(model_base_pil, garment_canvas_pil):
     """
-    Extracts anatomical ambient occlusion, chest shading, and studio lighting
-    from the base model image and projects them onto the fitted garment for realistic folds.
+    Blends the fitted garment onto the studio model.
+    CRITICAL: Preserves 100% of the original garment fabric colors, textures,
+    patterns, stitching, and button details without any color shifting or washing out.
+    Realistic 3D depth is created through ambient occlusion drop-shadow cast behind
+    the garment contours onto the model body.
     """
-    # Convert model base to grayscale luminance map
-    gray_model = model_base_pil.convert('L')
-    np_gray = np.array(gray_model).astype(np.float32) / 255.0
-
-    # Extract soft shading gradient (normalized around 1.0 for multiply)
-    # Bright studio lights stay bright (~1.1), muscle hollows/creases become (~0.75 - 0.90)
-    shading_map = 0.72 + (np_gray * 0.40)
-    shading_map = np.clip(shading_map, 0.65, 1.15)
-
-    np_garment = np.array(garment_canvas_pil).astype(np.float32)
-    alpha = np_garment[:, :, 3] / 255.0
-
-    # Apply lighting map to R, G, B channels where alpha > 0
-    for c in range(3):
-        np_garment[:, :, c] = np.clip(np_garment[:, :, c] * shading_map, 0, 255)
+    np_garment = np.array(garment_canvas_pil)
+    alpha = np_garment[:, :, 3].astype(np.float32) / 255.0
 
     # Ambient drop shadow under garment edges (collar, sleeves, hem)
     garment_mask = Image.fromarray((alpha * 255).astype(np.uint8), mode='L')
     edge_shadow = garment_mask.filter(ImageFilter.GaussianBlur(6))
     np_shadow = np.array(edge_shadow).astype(np.float32) / 255.0 * 0.35
 
-    lit_garment = Image.fromarray(np_garment.astype(np.uint8), mode='RGBA')
-
-    # Composite: Model Base -> Drop Shadow -> Lit Garment
+    # Composite: Model Base -> Drop Shadow -> 100% Exact Untouched Garment
     final_composite = Image.new('RGBA', model_base_pil.size, (0, 0, 0, 0))
     final_composite.alpha_composite(model_base_pil)
 
     # Soft ambient occlusion behind garment
-    shadow_layer = Image.new('RGBA', model_base_pil.size, (0, 0, 0, 0))
-    s_draw = ImageDraw.Draw(shadow_layer)
     shadow_np = np.zeros((model_base_pil.height, model_base_pil.width, 4), dtype=np.uint8)
     shadow_np[:, :, 0] = 20
     shadow_np[:, :, 1] = 18
@@ -258,8 +257,8 @@ def harmonize_lighting_and_shading(model_base_pil, garment_canvas_pil):
     shadow_np[:, :, 3] = (np_shadow * 120).astype(np.uint8)
     final_composite.alpha_composite(Image.fromarray(shadow_np, mode='RGBA'))
 
-    # Place lit garment on top
-    final_composite.alpha_composite(lit_garment)
+    # Place garment with 100% authentic untouched color and texture on top
+    final_composite.alpha_composite(garment_canvas_pil)
 
     return final_composite
 
@@ -403,6 +402,7 @@ def execute_virtual_tryon(
         active_garment = back_rgba if (angle_key == 'back' and back_rgba) else front_rgba
 
         # 3. Warp garment onto model body for this angle
+        is_real_back_angle = (angle_key == 'back' and back_rgba is not None)
         warped_garment = warp_garment_to_model(
             garment_rgba=active_garment,
             angle_key=angle_key,
@@ -410,7 +410,8 @@ def execute_virtual_tryon(
             fit_silhouette=fit_silhouette,
             tuck_style=tuck_style,
             is_female=is_female,
-            is_kid=is_kid
+            is_kid=is_kid,
+            is_real_back=is_real_back_angle
         )
 
         # 4. Harmonize lighting & anatomical folds

@@ -8,10 +8,12 @@ import tempfile
 import logging
 import cv2
 import numpy as np
+import importlib
 try:
-    import torch
+    torch = importlib.import_module('torch')
     TORCH_AVAILABLE = True
-except ImportError:
+except (ImportError, ModuleNotFoundError):
+    torch = None
     TORCH_AVAILABLE = False
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
@@ -22,11 +24,12 @@ from channels.layers import get_channel_layer
 
 from catalog.models import Product, ProductVariant, ProductImage
 
-from PIL import ImageFilter
 try:
-    from realesrgan import RealESRGANer
-    REALESRGAN_AVAILABLE = True
-except ImportError:
+    realesrgan = importlib.import_module('realesrgan')
+    RealESRGANer = getattr(realesrgan, 'RealESRGANer', None)
+    REALESRGAN_AVAILABLE = bool(RealESRGANer)
+except (ImportError, ModuleNotFoundError):
+    RealESRGANer = None
     REALESRGAN_AVAILABLE = False
 
 import cloudinary.uploader
@@ -41,7 +44,7 @@ class AIService:
     
 
     # =========================
-    # 🚀 MAIN ENTRY FOR VIDEO PROCESSING
+    # [START] MAIN ENTRY FOR VIDEO PROCESSING
     # =========================
     @staticmethod
     def process_bulk_video(seller_id, video_data, product_count, common_price, common_cost, 
@@ -52,8 +55,8 @@ class AIService:
         - bulk_single_product: ONE product with ALL detected items
         - front_back: Separate product per detected item
         """
-        print(f"\n🚀 Processing video with {product_count} products in {grid_rows}x{grid_columns} grid")
-        print(f"📌 Upload mode: {upload_mode}")
+        print(f"\n[START] Processing video with {product_count} products in {grid_rows}x{grid_columns} grid")
+        print(f"[PIN] Upload mode: {upload_mode}")
         
         from ..models import Category
         if not Category.objects.filter(id=category_id).exists():
@@ -69,7 +72,7 @@ class AIService:
         frames = AIService._extract_frames_from_video(video_data, grid_rows, grid_columns)
         
         if not frames.get('front'):
-            print("❌ No frames extracted from video")
+            print("[FAIL] No frames extracted from video")
             return None
         
         AIService._send_progress(channel_layer, room_group_name, 30, f"Extracted {len(frames)} frames")
@@ -81,7 +84,7 @@ class AIService:
         
         created_products = []
         
-        # ✅ BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL ITEMS
+        # [OK] BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL ITEMS
         if upload_mode == 'bulk_single_product':
             AIService._send_progress(channel_layer, room_group_name, 50, "Creating one bulk product with all items...")
             
@@ -130,7 +133,7 @@ class AIService:
                 
                 # Save front image
                 if front_cleaned:
-                    front_bytes = BytesIO(front_cleaned)  # ✅ USE front_cleaned
+                    front_bytes = BytesIO(front_cleaned)  # [OK] USE front_cleaned
                     front_result = cloudinary.uploader.upload(
                         front_bytes,
                         public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
@@ -183,11 +186,11 @@ class AIService:
                         stock=0,
                         price=common_price
                     )
-                print(f"✅ Created {len(sizes)} size variants for bulk product")
+                print(f"[OK] Created {len(sizes)} size variants for bulk product")
             
-            print(f"✅ Created BULK product with {len(products_data)} items")
+            print(f"[OK] Created BULK product with {len(products_data)} items")
         
-        # ✅ FRONT_BACK MODE - Separate product per detected item
+        # [OK] FRONT_BACK MODE - Separate product per detected item
         else:
             for idx, product_frames in enumerate(products_data[:product_count]):
                 progress = 50 + int((idx / product_count) * 40)
@@ -281,7 +284,7 @@ class AIService:
                             stock=0,
                             price=common_price
                         )
-                    print(f"✅ Created {len(sizes)} size variants for {product_name}")
+                    print(f"[OK] Created {len(sizes)} size variants for {product_name}")
         
         AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
         
@@ -292,25 +295,20 @@ class AIService:
         }
     
     # =========================
-    # 🚀 MAIN ENTRY FOR BULK IMAGES PROCESSING
+    # [START] MAIN ENTRY FOR BULK IMAGES PROCESSING
     # =========================
     @staticmethod
     def process_bulk_images(seller_id, images_data, common_price, common_cost,
                             category_id, name_prefix, brand, description,
-                            upload_mode='bulk_single_product', sizes=None, task_id=None):
+                            upload_mode='bulk_single_product', sizes=None, task_id=None,
+                            ai_fit_enabled=True, fit_silhouette='regular', demographic=None):
         """
         Process multiple images — supports:
         - bulk_single_product: ONE product with ALL images
-        - front_back: Create products with front+back pairs
+        - front_back: Create products with front+back pairs and fit on AI human model
         - front_only: Create separate product per image
         """
-        print(f"\n🚀 Processing {len(images_data)} images (mode: {upload_mode})")
-        print(f"\n🔴🔴🔴 AI_SERVICE - upload_mode: '{upload_mode}'")
-        print(f"🔴🔴🔴 AI_SERVICE - Force to bulk_single_product")
-
-        upload_mode = 'bulk_single_product'  # ← ADD THIS LINE
-    
-        print(f"\n🚀 Processing {len(images_data)} images (mode: {upload_mode})")
+        print(f"\n[START] Processing {len(images_data)} images (mode: {upload_mode}, ai_fit: {ai_fit_enabled}, fit: {fit_silhouette})")
 
 
         from ..models import Category
@@ -324,7 +322,7 @@ class AIService:
 
         created_products = []
 
-        # ✅ BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL IMAGES
+        # [OK] BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL IMAGES
         if upload_mode == 'bulk_single_product':
             AIService._send_progress(channel_layer, room_group_name, 20, "Creating one bulk product with all images...")
             
@@ -384,7 +382,7 @@ class AIService:
                         is_front=True,
                         order=idx
                     )
-                    print(f"✅ Saved image {idx+1} for bulk product")
+                    print(f"[OK] Saved image {idx+1} for bulk product")
             
             created_products.append(product.id)
             
@@ -399,14 +397,14 @@ class AIService:
                         stock=0,
                         price=common_price
                     )
-                print(f"✅ Created {len(sizes)} size variants for bulk product")
+                print(f"[OK] Created {len(sizes)} size variants for bulk product")
             
-            print(f"✅ Created BULK product with {len(images_data)} images")
+            print(f"[OK] Created BULK product with {len(images_data)} images")
         
-        # ✅ FRONT_BACK MODE - Separate product per front+back pair
+        # [OK] FRONT_BACK MODE - Separate product per front+back pair
         elif upload_mode == 'front_back':
             products_to_create = len(images_data) // 2
-            print(f"📦 Front+Back mode: Creating {products_to_create} products")
+            print(f"[BOX] Front+Back mode: Creating {products_to_create} products")
             
             for idx in range(products_to_create):
                 front_img_data = images_data[idx * 2]
@@ -449,44 +447,162 @@ class AIService:
                     status='active'
                 )
 
-                # Save images
-                if front_cleaned:
-                    front_bytes = BytesIO(front_cleaned)
-                    front_result = cloudinary.uploader.upload(
-                        front_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
-                        use_filename=True,
-                        unique_filename=False,
-                        overwrite=True,
-                        invalidate=True
-                    )
-                    
-                    ProductImage.objects.create(
-                        product=product,
-                        image=front_result['secure_url'],
-                        is_primary=True,
-                        is_front=True,
-                        order=0
-                    )
+                # Save images with AI Model Fitting
+                if ai_fit_enabled:
+                    try:
+                        from intelligence.services.garment_analyzer import analyze_garment_and_demographic
+                        from intelligence.services.tryon_engine import execute_virtual_tryon
 
-                if back_cleaned:
-                    back_bytes = BytesIO(back_cleaned)
-                    back_result = cloudinary.uploader.upload(
-                        back_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
-                        use_filename=True,
-                        unique_filename=False,
-                        overwrite=True,
-                        invalidate=True
-                    )
-                    
-                    ProductImage.objects.create(
-                        product=product,
-                        image=back_result['secure_url'],
-                        is_primary=False,
-                        is_front=False,
-                        order=1
-                    )
+                        cat_obj = Category.objects.filter(id=category_id).first()
+                        cat_name = cat_obj.name if cat_obj else ''
+
+                        analysis = analyze_garment_and_demographic(
+                            category_name=cat_name,
+                            product_name=product.name,
+                            sizes=sizes,
+                            description=description,
+                            user_demographic=demographic,
+                            user_fit_silhouette=fit_silhouette
+                        )
+
+                        try_on_res = execute_virtual_tryon(
+                            front_image_file_or_bytes=front_img_data,
+                            back_image_file_or_bytes=back_img_data,
+                            model_slug=analysis['model']['slug'],
+                            angles=['front', 'back'],
+                            garment_type=analysis['garment_type'],
+                            fit_silhouette=analysis['fit_silhouette'],
+                            tuck_style='untucked',
+                            backdrop_style='pure_white'
+                        )
+
+                        for render_data in try_on_res.get('renders', []):
+                            angle_key = render_data['angle_key']
+                            is_front_view = (angle_key == 'front')
+                            render_rel_path = render_data.get('image_url')
+                            full_render_path = os.path.join(settings.BASE_DIR, render_rel_path.lstrip('/'))
+
+                            uploaded_url = None
+                            if os.path.exists(full_render_path):
+                                with open(full_render_path, 'rb') as rf:
+                                    try:
+                                        cloud_res = cloudinary.uploader.upload(
+                                            rf,
+                                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_ai_model_{angle_key}",
+                                            overwrite=True,
+                                            invalidate=True
+                                        )
+                                        uploaded_url = cloud_res.get('secure_url')
+                                    except Exception as ce:
+                                        print(f"Cloudinary upload fallback: {ce}")
+
+                            img_to_save = uploaded_url or render_rel_path
+                            ProductImage.objects.create(
+                                product=product,
+                                image=img_to_save,
+                                is_primary=is_front_view,
+                                is_front=is_front_view,
+                                order=0 if is_front_view else 1
+                            )
+
+                        # Also save raw front and back images as secondary reference
+                        if front_cleaned:
+                            front_bytes = BytesIO(front_cleaned)
+                            front_result = cloudinary.uploader.upload(
+                                front_bytes,
+                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front_raw",
+                                overwrite=True,
+                                invalidate=True
+                            )
+                            ProductImage.objects.create(
+                                product=product,
+                                image=front_result['secure_url'],
+                                is_primary=False,
+                                is_front=True,
+                                order=2
+                            )
+
+                        if back_cleaned:
+                            back_bytes = BytesIO(back_cleaned)
+                            back_result = cloudinary.uploader.upload(
+                                back_bytes,
+                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back_raw",
+                                overwrite=True,
+                                invalidate=True
+                            )
+                            ProductImage.objects.create(
+                                product=product,
+                                image=back_result['secure_url'],
+                                is_primary=False,
+                                is_front=False,
+                                order=3
+                            )
+
+                    except Exception as e:
+                        print(f"Virtual try-on error in bulk front_back mode: {e}")
+                        # Fallback to standard clean image upload
+                        if front_cleaned:
+                            front_bytes = BytesIO(front_cleaned)
+                            front_result = cloudinary.uploader.upload(
+                                front_bytes,
+                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
+                                overwrite=True,
+                                invalidate=True
+                            )
+                            ProductImage.objects.create(
+                                product=product,
+                                image=front_result['secure_url'],
+                                is_primary=True,
+                                is_front=True,
+                                order=0
+                            )
+                        if back_cleaned:
+                            back_bytes = BytesIO(back_cleaned)
+                            back_result = cloudinary.uploader.upload(
+                                back_bytes,
+                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                                overwrite=True,
+                                invalidate=True
+                            )
+                            ProductImage.objects.create(
+                                product=product,
+                                image=back_result['secure_url'],
+                                is_primary=False,
+                                is_front=False,
+                                order=1
+                            )
+                else:
+                    # Non-AI fit: standard images
+                    if front_cleaned:
+                        front_bytes = BytesIO(front_cleaned)
+                        front_result = cloudinary.uploader.upload(
+                            front_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
+                            overwrite=True,
+                            invalidate=True
+                        )
+                        ProductImage.objects.create(
+                            product=product,
+                            image=front_result['secure_url'],
+                            is_primary=True,
+                            is_front=True,
+                            order=0
+                        )
+                    if back_cleaned:
+                        back_bytes = BytesIO(back_cleaned)
+                        back_result = cloudinary.uploader.upload(
+                            back_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                            overwrite=True,
+                            invalidate=True
+                        )
+                        ProductImage.objects.create(
+                            product=product,
+                            image=back_result['secure_url'],
+                            is_primary=False,
+                            is_front=False,
+                            order=1
+                        )
 
                 created_products.append(product.id)
                 
@@ -500,12 +616,12 @@ class AIService:
                             stock=0,
                             price=common_price
                         )
-                    print(f"✅ Created {len(sizes)} size variants for {product_name}")
+                    print(f"[OK] Created {len(sizes)} size variants for {product_name}")
         
-        # ✅ FRONT_ONLY MODE - Separate product per image
+        # [OK] FRONT_ONLY MODE - Separate product per image
         else:  # 'front_only' mode
             products_to_create = len(images_data)
-            print(f"📦 Front Only mode: Creating {products_to_create} products")
+            print(f"[BOX] Front Only mode: Creating {products_to_create} products")
             
             for idx, img_data in enumerate(images_data):
                 progress = 10 + int((idx / products_to_create) * 80)
@@ -576,7 +692,7 @@ class AIService:
                             stock=0,
                             price=common_price
                         )
-                    print(f"✅ Created {len(sizes)} size variants for {product_name}")
+                    print(f"[OK] Created {len(sizes)} size variants for {product_name}")
 
         AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
 
@@ -595,7 +711,7 @@ class AIService:
     @staticmethod
     def _load_sr_model():
         if not REALESRGAN_AVAILABLE:
-            print("⚠️ RealESRGAN not available")
+            print("[WARN] RealESRGAN not available")
             return None
         if not hasattr(AIService, "_sr_model") or AIService._sr_model is None:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -616,26 +732,26 @@ class AIService:
                 return Image.open(io.BytesIO(image)).convert("RGB")
             return image.convert("RGB")
         except Exception as e:
-            print(f"❌ HD conversion failed: {e}")
+            print(f"[FAIL] HD conversion failed: {e}")
             return image
     
     # =========================
-    # 🔧 HELPER METHODS
+    # [TOOL] HELPER METHODS
     # =========================
     
     @staticmethod
     def _send_progress(channel_layer, room_group_name, progress, message):
-        print(f"🔔 _send_progress called: {progress}% - {room_group_name}")
+        print(f"[ALERT] _send_progress called: {progress}% - {room_group_name}")
         
         if not room_group_name or not channel_layer:
-            print("⚠️ Skipping — no room_group_name or channel_layer")
+            print("[WARN] Skipping — no room_group_name or channel_layer")
             return
 
         try:
             import asyncio
 
             group_name = f'ai_task_{room_group_name}'
-            print(f"📤 Sending to group: {group_name}")
+            print(f"[OUTBOX] Sending to group: {group_name}")
 
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -654,10 +770,10 @@ class AIService:
 
             loop.run_until_complete(send())
             loop.close()
-            print(f"📡 Progress sent to {group_name}: {progress}% - {message}")
+            print(f"[SIGNAL] Progress sent to {group_name}: {progress}% - {message}")
 
         except Exception as e:
-            print(f"❌ Progress send failed: {e}")
+            print(f"[FAIL] Progress send failed: {e}")
             import traceback
             traceback.print_exc()
 
@@ -713,10 +829,10 @@ class AIService:
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
             if total_frames == 0:
-                print("❌ No frames found in video")
+                print("[FAIL] No frames found in video")
                 return frames
 
-            # ── Step 1: Find transition point (front → back) ──────────────────
+            # -- Step 1: Find transition point (front -> back) ------------------
             # Compare each frame to first frame — big diff = transition happened
             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ret, ref = cap.read()
@@ -735,7 +851,7 @@ class AIService:
                     diff = float(np.mean(np.abs(gray - ref_gray)))
                     diffs.append((i, diff))
 
-            # Find where diff jumps significantly (front→back transition)
+            # Find where diff jumps significantly (front->back transition)
             transition_frame = total_frames // 2  # default = midpoint
             if len(diffs) > 4:
                 diff_values = [d for _, d in diffs]
@@ -748,9 +864,9 @@ class AIService:
                         transition_frame = frame_idx
                         break
 
-            print(f"📍 Transition detected at frame {transition_frame}/{total_frames}")
+            print(f"[PIN] Transition detected at frame {transition_frame}/{total_frames}")
 
-            # ── Step 2: Pick best (sharpest) front frame ──────────────────────
+            # -- Step 2: Pick best (sharpest) front frame ----------------------
             front_search_end = max(1, transition_frame - 2)
             front_candidates = []
 
@@ -762,7 +878,7 @@ class AIService:
                     sharpness = cv2.Laplacian(gray, cv2.CV_64F).var()
                     front_candidates.append((sharpness, frame))
 
-            # ── Step 3: Pick best (sharpest) back frame ───────────────────────
+            # -- Step 3: Pick best (sharpest) back frame -----------------------
             back_start = min(transition_frame + 2, total_frames - 1)
             back_candidates = []
 
@@ -780,17 +896,17 @@ class AIService:
             if front_candidates:
                 best_front = max(front_candidates, key=lambda x: x[0])[1]
                 frames['front'] = Image.fromarray(cv2.cvtColor(best_front, cv2.COLOR_BGR2RGB))
-                print(f"✅ Best front frame selected (sharpness: {max(front_candidates, key=lambda x: x[0])[0]:.1f})")
+                print(f"[OK] Best front frame selected (sharpness: {max(front_candidates, key=lambda x: x[0])[0]:.1f})")
 
             if back_candidates:
                 best_back = max(back_candidates, key=lambda x: x[0])[1]
                 frames['back'] = Image.fromarray(cv2.cvtColor(best_back, cv2.COLOR_BGR2RGB))
-                print(f"✅ Best back frame selected (sharpness: {max(back_candidates, key=lambda x: x[0])[0]:.1f})")
+                print(f"[OK] Best back frame selected (sharpness: {max(back_candidates, key=lambda x: x[0])[0]:.1f})")
             else:
-                print("⚠️ No back view found — using front only")
+                print("[WARN] No back view found — using front only")
 
         except Exception as e:
-            print(f"❌ Frame extraction failed: {e}")
+            print(f"[FAIL] Frame extraction failed: {e}")
         finally:
             os.unlink(tmp_path)
 
@@ -801,14 +917,14 @@ class AIService:
         import cv2
         import numpy as np
         from PIL import Image
-        import io  # ✅ ADD THIS IMPORT
+        import io  # [OK] ADD THIS IMPORT
 
         products = []
         front_frame = frames.get('front')
         back_frame = frames.get('back')
 
         if front_frame is None:
-            print("❌ No front frame available")
+            print("[FAIL] No front frame available")
             return products
 
         def detect_shirts_yolo(pil_img, expected_count):
@@ -817,7 +933,10 @@ class AIService:
             Falls back to equal grid if YOLO finds wrong count.
             """
             try:
-                from ultralytics import YOLO
+                ultralytics_mod = importlib.import_module('ultralytics')
+                YOLO = getattr(ultralytics_mod, 'YOLO', None)
+                if YOLO is None:
+                    raise ImportError("YOLO not found in ultralytics")
                 import numpy as np
 
                 # Load YOLOv8 nano — detects 'person' class which covers clothing
@@ -838,12 +957,12 @@ class AIService:
                         cls  = int(box.cls[0])
                         boxes.append((x1, y1, x2, y2, conf, cls))
 
-                # Sort left→right, top→bottom (grid order)
+                # Sort left->right, top->bottom (grid order)
                 boxes.sort(key=lambda b: (b[1] // (pil_img.height // 3), b[0]))
 
-                print(f"🎯 YOLO detected {len(boxes)} objects (expected {expected_count})")
+                print(f"[TARGET] YOLO detected {len(boxes)} objects (expected {expected_count})")
 
-                # If YOLO found correct count → use YOLO boxes
+                # If YOLO found correct count -> use YOLO boxes
                 if abs(len(boxes) - expected_count) <= 2 and len(boxes) > 0:
                     crops = []
                     for (x1, y1, x2, y2, conf, cls) in boxes[:expected_count]:
@@ -865,16 +984,16 @@ class AIService:
                                 Image.LANCZOS
                             )
                         crops.append(crop)
-                        print(f"  ✅ YOLO shirt: {x1},{y1}->{x2},{y2} conf={conf:.2f}")
+                        print(f"  [OK] YOLO shirt: {x1},{y1}->{x2},{y2} conf={conf:.2f}")
 
                     return crops, 'yolo'
 
                 else:
-                    print(f"⚠️ YOLO count mismatch → falling back to equal grid")
+                    print(f"[WARN] YOLO count mismatch -> falling back to equal grid")
                     return None, 'fallback'
 
             except Exception as e:
-                print(f"⚠️ YOLO failed: {e} → falling back to equal grid")
+                print(f"[WARN] YOLO failed: {e} -> falling back to equal grid")
                 return None, 'fallback'
 
         def equal_grid_crop(pil_img, rows, cols, product_count):
@@ -921,16 +1040,16 @@ class AIService:
                             Image.LANCZOS
                         )
                     crops.append(crop)
-                    print(f"  ✅ Grid shirt_{r}_{c}: {x2-x1}x{y2-y1}px")
+                    print(f"  [OK] Grid shirt_{r}_{c}: {x2-x1}x{y2-y1}px")
 
             return crops
 
-        # ── Main: try YOLO first, fallback to equal grid ──────────────────────
-        print(f"\n🔍 Detecting {product_count} shirts using YOLOv8...")
+        # -- Main: try YOLO first, fallback to equal grid ----------------------
+        print(f"\n[SEARCH] Detecting {product_count} shirts using YOLOv8...")
         front_crops, method = detect_shirts_yolo(front_frame, product_count)
 
         if front_crops is None:
-            print("📐 Using equal grid fallback...")
+            print("[MEASURE] Using equal grid fallback...")
             front_crops = equal_grid_crop(front_frame, grid_rows, grid_columns, product_count)
 
         # Same method for back
@@ -941,7 +1060,7 @@ class AIService:
         else:
             back_crops = []
 
-        print(f"✅ Final: {len(front_crops)} front / {len(back_crops)} back ({method})")
+        print(f"[OK] Final: {len(front_crops)} front / {len(back_crops)} back ({method})")
 
         for idx, front_crop in enumerate(front_crops):
             back_crop = back_crops[idx] if idx < len(back_crops) else None
@@ -952,7 +1071,7 @@ class AIService:
                 'col':   idx %  grid_columns,
             })
 
-        # ✅ ✅ ✅ ADD THIS CONVERSION - Convert PIL Images to Bytes ✅ ✅ ✅
+        # [OK] [OK] [OK] ADD THIS CONVERSION - Convert PIL Images to Bytes [OK] [OK] [OK]
         for product in products:
             if product.get('front') and hasattr(product['front'], 'save'):
                 img_byte_arr = io.BytesIO()
@@ -979,12 +1098,12 @@ class AIService:
                 image_data.save(img_bytes, format='PNG')
                 image_data = img_bytes.getvalue()
 
-            # ✅ Check size — remove.bg rejects tiny images (<100px)
+            # [OK] Check size — remove.bg rejects tiny images (<100px)
             img_check = Image.open(io.BytesIO(image_data))
-            print(f"🔍 Sending to remove.bg: {img_check.width}x{img_check.height}px")
+            print(f"[SEARCH] Sending to remove.bg: {img_check.width}x{img_check.height}px")
 
             if img_check.width < 100 or img_check.height < 100:
-                print("⚠️ Image too small — upscaling before remove.bg")
+                print("[WARN] Image too small — upscaling before remove.bg")
                 scale = max(200 / img_check.width, 200 / img_check.height)
                 img_check = img_check.resize(
                     (int(img_check.width * scale), int(img_check.height * scale)),
@@ -995,7 +1114,7 @@ class AIService:
                 image_data = buf.getvalue()
 
             if not api_key:
-                print("⚠️ No remove.bg API key — using fallback")
+                print("[WARN] No remove.bg API key — using fallback")
                 return AIService._simple_background_removal(image_data)
 
             response = requests.post(
@@ -1007,14 +1126,14 @@ class AIService:
             )
 
             if response.status_code == 200:
-                print("✅ remove.bg success")
+                print("[OK] remove.bg success")
                 return response.content
 
-            print(f"⚠️ remove.bg failed: {response.status_code} — using fallback")
+            print(f"[WARN] remove.bg failed: {response.status_code} — using fallback")
             return AIService._simple_background_removal(image_data)
 
         except Exception as e:
-            print(f"❌ Background removal failed: {e}")
+            print(f"[FAIL] Background removal failed: {e}")
             return AIService._simple_background_removal(image_data)
     
     @staticmethod
@@ -1028,16 +1147,16 @@ class AIService:
             img = img.convert("RGBA")
             arr = np.array(img)
 
-            # ✅ Only remove near-pure white (>250) — old 240 was too aggressive
+            # [OK] Only remove near-pure white (>250) — old 240 was too aggressive
             r, g, b = arr[:,:,0], arr[:,:,1], arr[:,:,2]
             white_mask = (r > 250) & (g > 250) & (b > 250)
             arr[white_mask, 3] = 0
             img = Image.fromarray(arr)
 
-            # ✅ Validate — if too much removed revert to original
+            # [OK] Validate — if too much removed revert to original
             visible = np.sum(arr[:,:,3] > 30)
             if visible / arr[:,:,3].size < 0.05:
-                print("⚠️ Simple BG removal too aggressive — returning original")
+                print("[WARN] Simple BG removal too aggressive — returning original")
                 if isinstance(image_data, bytes):
                     return image_data
                 output = io.BytesIO()
@@ -1053,7 +1172,7 @@ class AIService:
             return output.getvalue()
 
         except Exception as e:
-            print(f"❌ Simple removal failed: {e}")
+            print(f"[FAIL] Simple removal failed: {e}")
             return None
     
     @staticmethod
@@ -1175,24 +1294,24 @@ class AIService:
             bg_removed = AIService._remove_background(img_bytes.getvalue())
 
             if bg_removed is None:
-                print("⚠️ BG removal returned None — using original")
+                print("[WARN] BG removal returned None — using original")
                 img_bytes.seek(0)
                 bg_removed = img_bytes.getvalue()
 
             img = Image.open(io.BytesIO(bg_removed)).convert("RGBA")
 
-            # ✅ Validate shirt not blank after bg removal
+            # [OK] Validate shirt not blank after bg removal
             arr = np.array(img)
             alpha = arr[:, :, 3]
             visible_pixels = np.sum(alpha > 30)
             if visible_pixels / alpha.size < 0.05:
-                print("⚠️ BG removal made shirt blank — reverting to original")
+                print("[WARN] BG removal made shirt blank — reverting to original")
                 if isinstance(image, bytes):
                     img = Image.open(io.BytesIO(image)).convert("RGBA")
                 else:
                     img = image.convert("RGBA")
 
-            # ✅ TIGHT CROP — remove all transparent padding first
+            # [OK] TIGHT CROP — remove all transparent padding first
             # So 85% fill is based on actual shirt pixels not empty space
             arr = np.array(img)
             alpha = arr[:, :, 3]
@@ -1204,12 +1323,12 @@ class AIService:
                 x2 = min(img.width,  int(cols_ok[-1]) + 5)
                 y2 = min(img.height, int(rows_ok[-1]) + 5)
                 img = img.crop((x1, y1, x2, y2))
-                print(f"✂️ Tight crop: {img.width}x{img.height}px")
+                print(f"[CROP] Tight crop: {img.width}x{img.height}px")
 
             # 5. Add shadow
             img = AIService._add_shadow(img)
 
-            # ✅ Scale shirt to fill 85% of canvas
+            # [OK] Scale shirt to fill 85% of canvas
             canvas_size = 1200
             target_size = int(canvas_size * 0.85)
             ratio = min(target_size / img.width, target_size / img.height)
@@ -1217,7 +1336,7 @@ class AIService:
             new_h = int(img.height * ratio)
             img = img.resize((new_w, new_h), Image.LANCZOS)
 
-            # ✅ Perfect center on white canvas
+            # [OK] Perfect center on white canvas
             bg = Image.new("RGBA", (canvas_size, canvas_size), (255, 255, 255, 255))
             x = (canvas_size - new_w) // 2
             y = (canvas_size - new_h) // 2
@@ -1228,9 +1347,9 @@ class AIService:
             output = io.BytesIO()
             final.save(output, format='PNG', compress_level=0)
 
-            print(f"✅ Final image: shirt {new_w}x{new_h}px on {canvas_size}x{canvas_size} ({new_w/canvas_size*100:.0f}% fill)")
+            print(f"[OK] Final image: shirt {new_w}x{new_h}px on {canvas_size}x{canvas_size} ({new_w/canvas_size*100:.0f}% fill)")
             return output.getvalue()
 
         except Exception as e:
-            print(f"❌ Final processing failed: {e}")
+            print(f"[FAIL] Final processing failed: {e}")
             return None

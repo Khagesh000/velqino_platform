@@ -61,7 +61,7 @@ class ProductService:
     def get_products_with_filters(user, filters, page=1, per_page=20):
         """Get products with filtering, pagination, and indexing based on user role"""
         
-        # ✅ Determine queryset based on user role
+        # [OK] Determine queryset based on user role
         if not user or not user.is_authenticated:
             # GUEST - see all products
             cache_key = f"product:list:guest:{hash(str(filters))}:{page}:{per_page}"
@@ -157,14 +157,14 @@ class ProductService:
             return {'updated': count}
         
         elif operation == 'update_price':
-            print(f"🔍 DEBUG: update_price called")
+            print(f"[SEARCH] DEBUG: update_price called")
             print(f"   percentage: {percentage}, type: {type(percentage)}")
             print(f"   value: {value}, type: {type(value)}")
             print(f"   products count: {products.count()}")
             
             with transaction.atomic():
                 if percentage:
-                    print(f"📊 Processing percentage: {percentage}")
+                    print(f"[STATS] Processing percentage: {percentage}")
                     percentage = float(percentage)
                     multiplier = 1 + (percentage / 100)
                     print(f"   multiplier: {multiplier}")
@@ -173,7 +173,7 @@ class ProductService:
                         old_price = product.price
                         product.price = float(product.price) * multiplier
                         product.save()
-                        print(f"   Product {product.id}: price {old_price} → {product.price}")
+                        print(f"   Product {product.id}: price {old_price} -> {product.price}")
                         
                         variant_count = product.variants.count()
                         print(f"   Variants count: {variant_count}")
@@ -182,27 +182,27 @@ class ProductService:
                             old_variant_price = variant.price
                             variant.price = float(variant.price) * multiplier
                             variant.save()
-                            print(f"      Variant {variant.id}: price {old_variant_price} → {variant.price}")
+                            print(f"      Variant {variant.id}: price {old_variant_price} -> {variant.price}")
                     
                     count = products.count()
-                    print(f"✅ Updated {count} products and their variants")
+                    print(f"[OK] Updated {count} products and their variants")
                     
                 else:
-                    print(f"📊 Processing set value: {value}")
+                    print(f"[STATS] Processing set value: {value}")
                     for product in products:
                         old_price = product.price
                         product.price = float(value)
                         product.save()
-                        print(f"   Product {product.id}: price {old_price} → {product.price}")
+                        print(f"   Product {product.id}: price {old_price} -> {product.price}")
                         
                         for variant in product.variants.all():
                             old_variant_price = variant.price
                             variant.price = float(value)
                             variant.save()
-                            print(f"      Variant {variant.id}: price {old_variant_price} → {variant.price}")
+                            print(f"      Variant {variant.id}: price {old_variant_price} -> {variant.price}")
                     
                     count = products.count()
-                    print(f"✅ Updated {count} products and their variants")
+                    print(f"[OK] Updated {count} products and their variants")
             
             ProductHelpers.invalidate_product_caches(seller_id)
             return {'updated': count}
@@ -264,6 +264,9 @@ class ProductService:
             description=common_data.get('description', ''),
             upload_mode=common_data.get('upload_mode', 'bulk_single_product'),
             sizes=common_data.get('sizes', []),
+            ai_fit_enabled=common_data.get('ai_fit_enabled', True),
+            fit_silhouette=common_data.get('fit_silhouette', 'regular'),
+            demographic=common_data.get('demographic', None),
         )
         return {'task_id': task.id, 'status': 'queued'}
     
@@ -378,7 +381,7 @@ class ProductService:
             weight=data.get('weight')
         )
         
-        # ✅ Create variants from sizes parameter (FormData)
+        # [OK] Create variants from sizes parameter (FormData)
         if sizes:
             for size in sizes:
                 ProductVariant.objects.create(
@@ -389,7 +392,7 @@ class ProductService:
                     price=product.price
                 )
         
-        # ✅ Create images from FILES
+        # [OK] Create images from FILES
         if images:
             for idx, img in enumerate(images):
                 ProductImage.objects.create(

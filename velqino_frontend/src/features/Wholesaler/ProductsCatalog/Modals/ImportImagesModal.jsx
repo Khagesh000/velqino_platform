@@ -17,6 +17,11 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
 
+  // AI Model Virtual Fitting states
+  const [fitSilhouette, setFitSilhouette] = useState('regular')
+  const [demographicOverride, setDemographicOverride] = useState('auto')
+  const [aiFitEnabled, setAiFitEnabled] = useState(true)
+
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 
   const [formData, setFormData] = useState({
@@ -130,6 +135,11 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
     })
 
     data.append('upload_mode', mode)
+    data.append('ai_fit_enabled', aiFitEnabled ? 'true' : 'false')
+    data.append('fit_silhouette', fitSilhouette)
+    if (demographicOverride !== 'auto') {
+      data.append('demographic', demographicOverride)
+    }
     selectedSizes.forEach(size => data.append('sizes', size))
 
     try {
@@ -147,7 +157,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
       setProgressMessage('Uploading images to vision pipeline...')
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsHost = process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.host}`
+      const wsHost = process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.hostname}:8000`
       const socket = new WebSocket(`${wsHost}/ws/ai-progress/${taskId}/`)
 
       socket.onopen = () => {
@@ -313,6 +323,67 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
                     {mode === 'front_back' && <Check size={12} />}
                   </div>
                 </div>
+
+                {/* AI Model Fitting Settings for Front+Back Pairs */}
+                {mode === 'front_back' && (
+                  <div className="p-3.5 rounded-xl border border-primary-200 bg-primary-50/40 space-y-3 mt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={15} className="text-primary-600" />
+                        <span className="text-xs font-bold text-slate-900">AI Model Photoshoot Fitting</span>
+                      </div>
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:border-primary-300">
+                        <input
+                          type="checkbox"
+                          checked={aiFitEnabled}
+                          onChange={(e) => setAiFitEnabled(e.target.checked)}
+                          className="rounded text-primary-600 focus:ring-primary-500"
+                        />
+                        <span>Fit onto AI Model</span>
+                      </label>
+                    </div>
+
+                    {aiFitEnabled && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Fit Silhouette
+                          </label>
+                          <select
+                            value={fitSilhouette}
+                            onChange={(e) => setFitSilhouette(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary-500"
+                          >
+                            <option value="regular">Regular Fit (Standard)</option>
+                            <option value="slim">Slim Fit (Contoured)</option>
+                            <option value="relaxed">Relaxed Fit (Easy Comfort)</option>
+                            <option value="oversized">Loose / Oversized Fit</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Demographic / Mannequin
+                          </label>
+                          <select
+                            value={demographicOverride}
+                            onChange={(e) => setDemographicOverride(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary-500"
+                          >
+                            <option value="auto">Auto-Detect Category & Sizes</option>
+                            <option value="men">Men (Ares - Athletic Male)</option>
+                            <option value="women">Women (Sienna - Fit Female)</option>
+                            <option value="kids">Junior / Kids (Kai - Junior Boy)</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span>100% exact fabric colors, patterns, and button details preserved</span>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

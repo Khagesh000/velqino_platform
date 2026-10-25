@@ -1,9 +1,12 @@
+import os
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
-from django.utils import timezone  # ✅ ADD THIS LINE
+from django.conf import settings
+from django.utils import timezone
+import cloudinary.uploader
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q, Count
@@ -294,7 +297,7 @@ def product_list(request):
         if cached_data:
             return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
         
-        # ✅ GET QUERY PARAMETERS
+        # [OK] GET QUERY PARAMETERS
         sort_by = request.query_params.get('sort')
         discount = request.query_params.get('discount')
         limit = request.query_params.get('limit')
@@ -314,11 +317,11 @@ def product_list(request):
         page = int(request.query_params.get('page', 1))
         per_page = int(request.query_params.get('per_page', 20))
         
-        # ✅ OVERRIDE per_page if limit is provided
+        # [OK] OVERRIDE per_page if limit is provided
         if limit:
             per_page = int(limit)
         
-        # ✅ START WITH BASE QUERYSET (NOT paginated yet)
+        # [OK] START WITH BASE QUERYSET (NOT paginated yet)
         # Role-based filtering with performance optimization
         base_queryset = Product.objects.select_related('category', 'seller').prefetch_related('images')
 
@@ -333,17 +336,17 @@ def product_list(request):
         else:
             queryset = base_queryset.all()
         
-        # ✅ APPLY DISCOUNT FILTER
+        # [OK] APPLY DISCOUNT FILTER
         if discount == 'true':
             queryset = queryset.filter(
                 Q(retail_price__gt=F('price')) | Q(compare_price__gt=F('price'))
             )
         
-        # ✅ APPLY CATEGORY FILTER
+        # [OK] APPLY CATEGORY FILTER
         if category_id:
             queryset = queryset.filter(category_id=category_id)
         
-        # ✅ APPLY SEASON FILTER (based on created_at months)
+        # [OK] APPLY SEASON FILTER (based on created_at months)
         if season:
             if season == 'summer':
                 queryset = queryset.filter(created_at__month__in=[3, 4, 5, 6])
@@ -352,7 +355,7 @@ def product_list(request):
             elif season == 'festive':
                 queryset = queryset.filter(created_at__month__in=[8, 9, 10])
         
-        # ✅ APPLY SORTING
+        # [OK] APPLY SORTING
         if sort_by == '-total_sold':
             queryset = queryset.order_by('-total_sold')
         elif sort_by == '-created_at':
@@ -362,7 +365,7 @@ def product_list(request):
         elif sort_by == 'price':
             queryset = queryset.order_by('price')
         
-        # ✅ NOW APPLY PAGINATION
+        # [OK] NOW APPLY PAGINATION
         paginator = Paginator(queryset, per_page)
         products_page = paginator.get_page(page)
         
@@ -382,7 +385,7 @@ def product_list(request):
         return Response({'status': 'success', 'data': response_data})
     
     elif request.method == 'POST':
-        # ✅ PRIVATE - Only authenticated users can create products
+        # [OK] PRIVATE - Only authenticated users can create products
         if not request.user.is_authenticated:
             return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
         
@@ -391,7 +394,7 @@ def product_list(request):
         # Rest of your POST code remains EXACTLY THE SAME...
         try:
             print("=" * 60)
-            print("🔍 PRODUCT CREATION DEBUG - START")
+            print("[INFO] PRODUCT CREATION DEBUG - START")
             print(f"Request method: {request.method}")
             print(f"All POST data: {dict(request.POST)}")
             print(f"Stock from request POST: '{request.POST.get('stock')}'")
@@ -425,8 +428,8 @@ def product_list(request):
                 status=request.POST.get('status', 'draft')
             )
             
-            print(f"✅ Product created with ID: {product.id}")
-            print(f"✅ Product stock after save: {product.stock}")
+            print(f"[INFO] Product created with ID: {product.id}")
+            print(f"[INFO] Product stock after save: {product.stock}")
             print("=" * 60)
             
             # Process sizes
@@ -442,26 +445,115 @@ def product_list(request):
                         stock=product.stock,
                         price=product.price
                     )
-                    print(f"✅ Variant created: {variant.size} with stock: {variant.stock}")
+                    print(f"[INFO] Variant created: {variant.size} with stock: {variant.stock}")
             
-            # Process images
+            # Process images & AI Model fitting
             images = request.FILES.getlist('images')
-            print(f"Images count: {len(images)}")
-            
-            for idx, img in enumerate(images):
-                product_image = ProductImage.objects.create(
-                    product=product,
-                    image=img,
-                    is_primary=(idx == 0),
-                    order=idx,
-                    is_front=(idx == 0)
+            ai_fit_enabled = request.POST.get('ai_fit_enabled') in ['true', 'True', '1', True]
+            front_garment = request.FILES.get('front_image')
+            back_garment = request.FILES.get('back_image')
+
+            if not front_garment and len(images) > 0:
+                front_garment = images[0]
+            if not back_garment and len(images) > 1:
+                back_garment = images[1]
+
+            print(f"Images count: {len(images)}, ai_fit_enabled: {ai_fit_enabled}")
+
+            if ai_fit_enabled and front_garment:
+                import os
+                from django.conf import settings
+                from intelligence.services.garment_analyzer import analyze_garment_and_demographic
+                from intelligence.services.tryon_engine import execute_virtual_tryon
+                import cloudinary.uploader
+                from datetime import datetime
+
+                cat_name = product.category.name if product.category else ''
+                analysis = analyze_garment_and_demographic(
+                    category_name=cat_name,
+                    product_name=product.name,
+                    sizes=sizes,
+                    description=product.description,
+                    user_demographic=request.POST.get('demographic'),
+                    user_garment_type=request.POST.get('garment_type'),
+                    user_fit_silhouette=request.POST.get('fit_silhouette')
                 )
-                print(f"✅ Image {idx+1} saved: {product_image.image.url if product_image.image else 'No URL'}")
-            
+
+                model_slug = request.POST.get('model_slug') or analysis['model']['slug']
+
+                front_bytes = front_garment.read()
+                back_bytes = back_garment.read() if back_garment else None
+                angles = ['front', 'back'] if back_bytes else ['front']
+
+                try_on_res = execute_virtual_tryon(
+                    front_image_file_or_bytes=front_bytes,
+                    back_image_file_or_bytes=back_bytes,
+                    model_slug=model_slug,
+                    angles=angles,
+                    garment_type=analysis['garment_type'],
+                    fit_silhouette=analysis['fit_silhouette'],
+                    tuck_style='untucked',
+                    backdrop_style='pure_white'
+                )
+
+                # Save AI Model Fitted Renders
+                for render_data in try_on_res.get('renders', []):
+                    angle_key = render_data['angle_key']
+                    is_front_view = (angle_key == 'front')
+                    render_rel_path = render_data.get('image_url')
+
+                    full_render_path = os.path.join(settings.BASE_DIR, render_rel_path.lstrip('/'))
+                    uploaded_url = None
+                    if os.path.exists(full_render_path):
+                        with open(full_render_path, 'rb') as rf:
+                            try:
+                                cloud_res = cloudinary.uploader.upload(
+                                    rf,
+                                    public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_ai_model_{angle_key}",
+                                    overwrite=True,
+                                    invalidate=True
+                                )
+                                uploaded_url = cloud_res.get('secure_url')
+                            except Exception as ce:
+                                print(f"Cloudinary upload fallback: {ce}")
+
+                    img_to_save = uploaded_url or render_rel_path
+                    ProductImage.objects.create(
+                        product=product,
+                        image=img_to_save,
+                        is_primary=is_front_view,
+                        order=0 if is_front_view else 1,
+                        is_front=is_front_view
+                    )
+                    print(f"[INFO] AI Model {angle_key} view attached as {'primary' if is_front_view else 'secondary'} image!")
+
+                # Also save original uploaded garment images (as secondary reference)
+                order_idx = 2
+                for idx, img in enumerate(images):
+                    ProductImage.objects.create(
+                        product=product,
+                        image=img,
+                        is_primary=False,
+                        order=order_idx,
+                        is_front=(idx == 0)
+                    )
+                    order_idx += 1
+            else:
+                for idx, img in enumerate(images):
+                    product_image = ProductImage.objects.create(
+                        product=product,
+                        image=img,
+                        is_primary=(idx == 0),
+                        order=idx,
+                        is_front=(idx == 0)
+                    )
+                    print(f"[INFO] Image {idx+1} saved: {product_image.image.url if product_image.image else 'No URL'}")
+
             # Invalidate cache
+            cache.delete_pattern("product:*")
             cache.delete_pattern(f"product:list:{seller_id}:*")
             
-            print("🎉 PRODUCT CREATION COMPLETED SUCCESSFULLY!")
+            print("[INFO] PRODUCT CREATION COMPLETED SUCCESSFULLY!")
             print("=" * 60)
             
             # Return full product data
@@ -471,7 +563,7 @@ def product_list(request):
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            print(f"❌ ERROR in product creation: {str(e)}")
+            print(f"[ERROR] in product creation: {str(e)}")
             import traceback
             traceback.print_exc()
             print("=" * 60)
@@ -522,7 +614,7 @@ def product_detail(request, product_id):
                 if 'price' in request.data or (hasattr(request.data, 'get') and request.data.get('price')):
                     new_price = updated_product.price
                     updated_product.variants.update(price=new_price)
-                    print(f"✅ Updated {updated_product.variants.count()} variants to price {new_price}")
+                    print(f"[OK] Updated {updated_product.variants.count()} variants to price {new_price}")
                 
                 if sizes_data:
                     existing_sizes = list(updated_product.variants.values_list('size', flat=True))
@@ -541,7 +633,7 @@ def product_detail(request, product_id):
                                 stock=updated_product.stock,
                                 price=updated_product.price
                             )
-                    print(f"✅ Updated sizes: {sizes_data}")
+                    print(f"[OK] Updated sizes: {sizes_data}")
                 
                 cache.delete(f"product:{product_id}")
                 cache.delete_pattern(f"product:list:{seller_id}:*")
@@ -574,10 +666,10 @@ def bulk_image_upload(request):
     images = data['images']
     product_count = 0
 
-    # ✅ Default mode is 'bulk_single_product' (one product with all images)
+    # [OK] Default mode is 'bulk_single_product' (one product with all images)
     upload_mode = request.data.get('upload_mode', 'bulk_single_product')
 
-    # ✅ Validate based on mode
+    # [OK] Validate based on mode
     if upload_mode == 'front_back' and len(images) % 2 != 0:
         return Response({
             'status': 'error',
@@ -587,7 +679,7 @@ def bulk_image_upload(request):
     if upload_mode == 'bulk_single_product':
         # All images go to ONE product
         product_count = 1
-        print(f"📦 Bulk Single Product Mode: {len(images)} images → 1 product")
+        print(f"[BOX] Bulk Single Product Mode: {len(images)} images -> 1 product")
 
     sizes = request.data.getlist('sizes', [])
 
@@ -604,6 +696,9 @@ def bulk_image_upload(request):
             'description': data.get('description', ''),
             'upload_mode': upload_mode,
             'sizes': sizes,
+            'ai_fit_enabled': request.data.get('ai_fit_enabled', 'true') in ['true', 'True', '1', True],
+            'fit_silhouette': request.data.get('fit_silhouette', 'regular'),
+            'demographic': request.data.get('demographic', None),
         }
     )
 
@@ -683,18 +778,18 @@ def bulk_product_action(request):
     category_id = request.POST.get('category_id')
     images = request.FILES.getlist('images')
     
-    # ✅ Convert percentage to float if exists
+    # [OK] Convert percentage to float if exists
     if percentage:
         percentage = float(percentage)
     
-    # ✅ Convert value to float if exists
+    # [OK] Convert value to float if exists
     if value:
         try:
             value = float(value)
         except ValueError:
             pass
     
-    # ✅ Map frontend operation names to backend operation names
+    # [OK] Map frontend operation names to backend operation names
     operation_map = {
         'price': 'update_price',
         'category': 'update_category',
@@ -724,14 +819,14 @@ def bulk_product_action(request):
 def category_list(request):
     """List all categories or create new"""
     if request.method == 'GET':
-        # ✅ No authentication required for GET
+        # [OK] No authentication required for GET
         cache_key = "categories:all"
         cached_data = cache.get(cache_key)
         
         if cached_data:
             return Response({'status': 'success', 'data': cached_data, 'source': 'cache'})
         
-        # ✅ Only fetch root categories (parent=None) - this prevents recursion
+        # [OK] Only fetch root categories (parent=None) - this prevents recursion
         categories = Category.objects.filter(parent=None, is_active=True)
         serializer = CategorySerializer(categories, many=True)
         cache.set(cache_key, serializer.data, timeout=86400)
@@ -739,7 +834,7 @@ def category_list(request):
         return Response({'status': 'success', 'data': serializer.data})
     
     elif request.method == 'POST':
-        # ✅ Only POST requires authentication
+        # [OK] Only POST requires authentication
         if not request.user.is_authenticated:
             return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
         
@@ -972,13 +1067,13 @@ def retailer_product_list(request):
         try:
             from catalog.serializers import RetailerProductCreateSerializer, ProductDetailSerializer
             
-            # ✅ Debug: Print received data
+            # [OK] Debug: Print received data
             print("=== POST DATA ===")
             print("POST:", request.POST)
             print("FILES:", request.FILES)
             print("Content-Type:", request.content_type)
             
-            # ✅ Get data safely
+            # [OK] Get data safely
             name = request.POST.get('name') or request.data.get('name')
             price = request.POST.get('price') or request.data.get('price')
             
@@ -1029,7 +1124,7 @@ def retailer_product_detail(request, product_id):
     """Get, update or delete a single retailer product"""
     
     if request.method == 'GET':
-        # ✅ PUBLIC - Anyone can view
+        # [OK] PUBLIC - Anyone can view
         try:
             product = Product.objects.get(id=product_id, seller_type='retailer', status='active')
             from catalog.serializers import ProductDetailSerializer
@@ -1039,7 +1134,7 @@ def retailer_product_detail(request, product_id):
             return Response({'status': 'error', 'message': 'Product not found'}, status=404)
     
     elif request.method == 'PUT':
-        # ✅ PRIVATE - Only owner
+        # [OK] PRIVATE - Only owner
         if not request.user.is_authenticated:
             return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
         
@@ -1048,7 +1143,7 @@ def retailer_product_detail(request, product_id):
         return Response(response, status=status_code)
     
     elif request.method == 'DELETE':
-        # ✅ PRIVATE - Only owner
+        # [OK] PRIVATE - Only owner
         if not request.user.is_authenticated:
             return Response({'status': 'error', 'message': 'Authentication required'}, status=401)
         
