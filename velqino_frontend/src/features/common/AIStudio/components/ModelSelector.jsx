@@ -2,7 +2,8 @@
 
 import React, { useMemo } from 'react';
 import { Check, User, Users, Sparkles } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { Loader2 } from 'lucide-react';
+import { BASE_IMAGE_URL, resolveImageUrl } from '@/utils/apiConfig';
 
 const SKIN_TONES = [
   { key: 'all', label: 'All Tones', color: null },
@@ -21,15 +22,6 @@ const BODY_FITS = [
   { key: 'curvy', label: 'Curvy / Fit' },
 ];
 
-export const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  const base = BASE_IMAGE_URL || 'http://localhost:8000';
-  return `${base}${url}`;
-};
-
 export default function ModelSelector({
   models = [],
   selectedModel,
@@ -40,7 +32,9 @@ export default function ModelSelector({
   onChangeSkinTone,
   activeBodyType,
   onChangeBodyType,
-  isLoading = false
+  isLoading = false,
+  onUpdateDefaultModel,
+  isUpdatingModel = false,
 }) {
   const filteredModels = useMemo(() => {
     return models.filter((m) => {
@@ -151,6 +145,47 @@ export default function ModelSelector({
         </div>
       </div>
 
+      {/* Selected Model Action & Set Default Bar */}
+      {selectedModel && (
+        <div className="selected-model-action-bar">
+          <div className="model-summary-info">
+            <span className="summary-dot" />
+            <span className="summary-label">Selected:</span>
+            <span className="summary-title">{selectedModel.name}</span>
+            {selectedModel.is_default && (
+              <span className="summary-default-tag">
+                Default for {selectedModel.demographic?.toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className={`update-default-btn ${selectedModel.is_default ? 'is-default' : 'can-update'}`}
+            onClick={() => onUpdateDefaultModel && onUpdateDefaultModel(selectedModel)}
+            disabled={isUpdatingModel}
+            title={selectedModel.is_default ? 'Update or sync default model in backend' : 'Set as default model in backend'}
+          >
+            {isUpdatingModel ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Updating Default...</span>
+              </>
+            ) : selectedModel.is_default ? (
+              <>
+                <Check size={13} strokeWidth={2.5} />
+                <span>Default Model (Update)</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={13} />
+                <span>Set as Default</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Models Grid */}
       <div className="models-grid">
         {isLoading ? (
@@ -172,6 +207,13 @@ export default function ModelSelector({
                 className={`model-card ${isSelected ? 'selected' : ''}`}
                 onClick={() => onSelectModel(model)}
               >
+                {model.is_default && (
+                  <div className="default-model-badge">
+                    <Sparkles size={9} />
+                    <span>DEFAULT</span>
+                  </div>
+                )}
+
                 {isSelected && (
                   <div className="select-check">
                     <Check size={13} strokeWidth={3} />

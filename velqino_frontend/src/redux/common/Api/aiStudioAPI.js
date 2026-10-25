@@ -7,6 +7,9 @@ const aiStudioAPI = {
   // Fetch single model detail
   getModel: (slug) => API.get(`intelligence/models/${slug}/`),
 
+  // Update model attributes or set default (PATCH)
+  updateModel: (slug, data) => API.patch(`intelligence/models/${slug}/`, data),
+
   // Generate virtual photoshoot across multi-angles
   generateTryOn: (data) => {
     const config = data instanceof FormData
@@ -25,12 +28,7 @@ const aiStudioAPI = {
   exportToProduct: (data) => API.post('intelligence/export-product/', data),
 
   // Fetch seller inventory products for 1-click garment testing
-  getCatalogProducts: (sellerType = 'retailer') => {
-    const endpoint = sellerType === 'wholesaler'
-      ? 'catalog/wholesaler/products/'
-      : 'catalog/retailer/products/';
-    return API.get(endpoint).catch(() => API.get('catalog/products/'));
-  },
+  getCatalogProducts: () => API.get('catalog/products/'),
 };
 
 export default aiStudioAPI;

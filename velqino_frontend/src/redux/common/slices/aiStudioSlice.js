@@ -32,6 +32,19 @@ export const aiStudioApi = createApi({
       },
     }),
 
+    // ========== UPDATE MODEL (PATCH) ==========
+    updateAIModel: builder.mutation({
+      async queryFn({ slug, data }) {
+        try {
+          const response = await aiStudioAPI.updateModel(slug, data);
+          return { data: response.data };
+        } catch (error) {
+          return { error: error.response?.data || error };
+        }
+      },
+      invalidatesTags: ['AIModels'],
+    }),
+
     // ========== GENERATE VIRTUAL TRY-ON ==========
     generateTryOn: builder.mutation({
       async queryFn(formData) {
@@ -101,6 +114,7 @@ export const aiStudioApi = createApi({
 export const {
   useGetAIModelsQuery,
   useGetAIModelQuery,
+  useUpdateAIModelMutation,
   useGenerateTryOnMutation,
   useGetTryOnSessionQuery,
   useGetTryOnHistoryQuery,

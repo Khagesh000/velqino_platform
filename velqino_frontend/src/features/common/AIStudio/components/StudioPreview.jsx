@@ -10,7 +10,7 @@ import {
   RefreshCw,
   X
 } from '@/utils/icons';
-import { BASE_IMAGE_URL } from '@/utils/apiConfig';
+import { BASE_IMAGE_URL, resolveImageUrl } from '@/utils/apiConfig';
 
 const ANGLE_KEYS_ORDER = [
   'front',
@@ -39,14 +39,7 @@ const ANGLE_DISPLAY_MAP = {
   right_three_quarter: { label: 'Right ¾', deg: '+45°' },
 };
 
-export const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  const base = BASE_IMAGE_URL || 'http://localhost:8000';
-  return `${base}${url}`;
-};
+export { resolveImageUrl };
 
 export default function StudioPreview({
   selectedModel,

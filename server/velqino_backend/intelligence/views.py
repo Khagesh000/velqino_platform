@@ -56,16 +56,54 @@ class AIModelListAPIView(APIView):
 class AIModelDetailAPIView(APIView):
     """
     Returns single AI Model Profile with all 6 angles and landmarks.
+    Supports PATCH method to update model attributes and default demographic assignment.
     """
     permission_classes = [permissions.AllowAny]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
+
+    def _get_object(self, identifier):
+        if str(identifier).isdigit():
+            return get_object_or_404(AIModelProfile.objects.prefetch_related('angles'), id=int(identifier))
+        return get_object_or_404(AIModelProfile.objects.prefetch_related('angles'), slug=identifier)
 
     def get(self, request, slug):
-        model_profile = get_object_or_404(AIModelProfile.objects.prefetch_related('angles'), slug=slug)
+        model_profile = self._get_object(slug)
         serializer = AIModelProfileSerializer(model_profile)
         return Response({
             'success': True,
             'model': serializer.data
         }, status=status.HTTP_200_OK)
+
+    def patch(self, request, slug):
+        model_profile = self._get_object(slug)
+
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        
+        # Handle setting is_default
+        is_default = data.get('is_default')
+        if is_default in [True, 'true', 'True', 1, '1']:
+            # Reset all other models in the same demographic
+            AIModelProfile.objects.filter(
+                demographic=model_profile.demographic
+            ).exclude(id=model_profile.id).update(is_default=False)
+            data['is_default'] = True
+        elif is_default in [False, 'false', 'False', 0, '0']:
+            data['is_default'] = False
+
+        serializer = AIModelProfileSerializer(model_profile, data=data, partial=True)
+        if serializer.is_valid():
+            updated_profile = serializer.save()
+            return Response({
+                'success': True,
+                'message': f"Model '{updated_profile.name}' updated successfully.",
+                'model': serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            'success': False,
+            'message': 'Failed to update AI model.',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 def decode_base64_image(base64_str):

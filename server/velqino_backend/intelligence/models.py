@@ -44,6 +44,7 @@ class AIModelProfile(models.Model):
     description = models.TextField(blank=True)
     preview_image_url = models.TextField(blank=True, help_text="Primary thumbnail image")
     is_faceless = models.BooleanField(default=True, help_text="Cropped at chin/neck to highlight garment fit")
+    is_default = models.BooleanField(default=False, db_index=True, help_text="Default model for this demographic")
     is_active = models.BooleanField(default=True, db_index=True)
     display_order = models.IntegerField(default=0, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -52,6 +53,7 @@ class AIModelProfile(models.Model):
         ordering = ['display_order', 'demographic', 'name']
         indexes = [
             models.Index(fields=['demographic', 'is_active']),
+            models.Index(fields=['demographic', 'is_default']),
             models.Index(fields=['skin_tone', 'body_type']),
         ]
 

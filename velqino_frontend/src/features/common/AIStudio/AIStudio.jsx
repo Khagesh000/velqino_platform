@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Sparkles, Package, X } from '@/utils/icons';
 import {
   useGetAIModelsQuery,
+  useUpdateAIModelMutation,
   useGenerateTryOnMutation,
   useExportToProductMutation,
   useGetCatalogProductsQuery
@@ -12,7 +13,8 @@ import {
 import ModelSelector from './components/ModelSelector';
 import GarmentUploader from './components/GarmentUploader';
 import StudioControls from './components/StudioControls';
-import StudioPreview, { resolveImageUrl } from './components/StudioPreview';
+import StudioPreview from './components/StudioPreview';
+import { resolveImageUrl } from '@/utils/apiConfig';
 import '@/styles/common/AIStudio.scss';
 
 export default function AIStudio({ sellerRole = 'retailer' }) {
@@ -56,6 +58,7 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
   // RTK Query Mutations
+  const [updateAIModelMutation, { isLoading: isUpdatingModel }] = useUpdateAIModelMutation();
   const [generateTryOnMutation, { isLoading: isGenerating }] = useGenerateTryOnMutation();
   const [exportToProductMutation, { isLoading: isExporting }] = useExportToProductMutation();
 
@@ -65,21 +68,57 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportTargetProductId, setExportTargetProductId] = useState(null);
 
-  // Default first model when models load
+  // Default model when models load (respecting backend is_default)
   useEffect(() => {
-    if (models.length > 0 && !selectedModel) {
-      setSelectedModel(models[0]);
+    if (models.length > 0) {
+      if (!selectedModel) {
+        // Backend default for current demographic
+        const backendDefault = models.find((m) => m.demographic === activeDemographic && m.is_default)
+          || models.find((m) => m.demographic === activeDemographic)
+          || models[0];
+        setSelectedModel(backendDefault);
+      } else {
+        // Sync selected model if its is_default flag updated on backend
+        const latestVersion = models.find((m) => m.slug === selectedModel.slug);
+        if (latestVersion && latestVersion.is_default !== selectedModel.is_default) {
+          setSelectedModel(latestVersion);
+        }
+      }
     }
-  }, [models, selectedModel]);
+  }, [models, selectedModel, activeDemographic]);
 
   // Handle demographic tab change
   const handleDemographicChange = useCallback((demo) => {
     setActiveDemographic(demo);
-    const firstInDemo = models.find((m) => m.demographic === demo);
-    if (firstInDemo) {
-      setSelectedModel(firstInDemo);
+    const defaultForDemo = models.find((m) => m.demographic === demo && m.is_default)
+      || models.find((m) => m.demographic === demo);
+    if (defaultForDemo) {
+      setSelectedModel(defaultForDemo);
     }
   }, [models]);
+
+  // Handle setting/updating model default on backend (PATCH)
+  const handleUpdateDefaultModel = useCallback(async (modelToUpdate) => {
+    if (!modelToUpdate?.slug) return;
+    try {
+      const response = await updateAIModelMutation({
+        slug: modelToUpdate.slug,
+        data: { is_default: true }
+      }).unwrap();
+
+      if (response?.success) {
+        toast.success(response.message || 'Model updated successfully');
+        if (response.model) {
+          setSelectedModel(response.model);
+        }
+      } else {
+        toast.error(response?.message || 'Failed to update model');
+      }
+    } catch (err) {
+      const errorMsg = err?.data?.message || err?.message || 'Failed to update model';
+      toast.error(errorMsg);
+    }
+  }, [updateAIModelMutation]);
 
   // Angle toggle handlers
   const handleToggleAngle = (angleKey) => {
@@ -285,6 +324,8 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
             activeBodyType={activeBodyType}
             onChangeBodyType={setActiveBodyType}
             isLoading={isLoadingModels}
+            onUpdateDefaultModel={handleUpdateDefaultModel}
+            isUpdatingModel={isUpdatingModel}
           />
 
           {/* Step 2: Garment Uploader */}
@@ -363,11 +404,11 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
             </div>
             <div className="modal-body">
               {isLoadingCatalog ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#7F6E6E' }}>
+                <div className="p-8 text-center text-gray-500">
                   Loading inventory products...
                 </div>
               ) : catalogProducts.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#7F6E6E' }}>
+                <div className="p-8 text-center text-gray-500">
                   No products found in inventory. You can directly upload custom garment photos using the dropzone.
                 </div>
               ) : (
@@ -414,7 +455,7 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
               </button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: '13px', color: '#7F6E6E', marginBottom: '1rem' }}>
+              <p className="text-[13px] text-gray-500 mb-4">
                 Select which product to attach these generated multi-angle photos to. Front views will be marked as Front Cover, and Back views as Back Angle in the customer store.
               </p>
 
@@ -425,8 +466,7 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
                   return (
                     <div
                       key={prod.id}
-                      className="pick-item"
-                      style={isChosen ? { borderColor: '#CE8E6A', background: '#FAF4E5' } : {}}
+                      className={`pick-item ${isChosen ? 'border-[#CE8E6A] bg-[#FAF4E5]' : ''}`}
                       onClick={() => setExportTargetProductId(prod.id)}
                     >
                       <img
@@ -439,7 +479,7 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
                       </div>
                       <div className="pick-sku">SKU: {prod.sku || 'N/A'}</div>
                       {isChosen && (
-                        <div style={{ color: '#94664C', fontSize: '11px', fontWeight: 600, marginTop: '4px' }}>
+                        <div className="text-[#94664C] text-[11px] font-semibold mt-1">
                           ✓ Selected
                         </div>
                       )}
@@ -448,7 +488,7 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
                 })}
               </div>
 
-              <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   className="btn-action-alt"
@@ -458,8 +498,7 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
                 </button>
                 <button
                   type="button"
-                  className="btn-generate-primary"
-                  style={{ width: 'auto', padding: '0.65rem 1.25rem' }}
+                  className="btn-generate-primary !w-auto px-5 py-2.5"
                   disabled={!exportTargetProductId || isExporting}
                   onClick={handleExportToProduct}
                 >

@@ -98,5 +98,14 @@ API.interceptors.response.use(
     }
 );
 
+// ✅ Image URL Resolver using centralized BASE_IMAGE_URL
+export const resolveImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+    return `${BASE_IMAGE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 export { BASE_IMAGE_URL };
 export default API;

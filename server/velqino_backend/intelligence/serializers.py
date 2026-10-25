@@ -39,6 +39,7 @@ class AIModelProfileSerializer(serializers.ModelSerializer):
             'description',
             'preview_image_url',
             'is_faceless',
+            'is_default',
             'display_order',
             'angles'
         ]
