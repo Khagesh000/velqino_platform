@@ -160,6 +160,60 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
       const wsHost = process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.hostname}:8000`
       const socket = new WebSocket(`${wsHost}/ws/ai-progress/${taskId}/`)
 
+      let isDone = false
+      let pollTimer = null
+
+      const handleComplete = () => {
+        if (isDone) return
+        isDone = true
+        clearInterval(pingTimer)
+        if (pollTimer) clearInterval(pollTimer)
+        setProgress(100)
+        setProgressMessage('Completed successfully!')
+        toast.success('Products cataloged and published successfully!')
+        setTimeout(() => {
+          setUploading(false)
+          try { socket.close() } catch (e) {}
+          onClose()
+          window.location.reload()
+        }, 1200)
+      }
+
+      const startPollingFallback = () => {
+        if (pollTimer || isDone) return
+        console.log('🔄 Starting polling fallback for task:', taskId)
+        pollTimer = setInterval(async () => {
+          try {
+            const statusRes = await productsAPI.getTaskStatus(taskId)
+            if (statusRes && statusRes.data) {
+              const taskInfo = statusRes.data
+              if (taskInfo.progress) {
+                setProgress((prev) => Math.max(prev, taskInfo.progress))
+              }
+              if (taskInfo.state === 'SUCCESS' || taskInfo.progress === 100) {
+                handleComplete()
+              } else if (taskInfo.state === 'FAILURE') {
+                clearInterval(pollTimer)
+                clearInterval(pingTimer)
+                setUploading(false)
+                toast.error('Processing failed. Please check images and retry.')
+              }
+            }
+          } catch (e) {
+            console.warn('Status poll warning:', e)
+          }
+        }, 2500)
+      }
+
+      // Heartbeat ping to keep WebSocket connection healthy
+      const pingTimer = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          try {
+            socket.send(JSON.stringify({ type: 'ping' }))
+          } catch (e) {}
+        }
+      }, 5000)
+
       socket.onopen = () => {
         console.log('🟢 WebSocket Connected to vision task:', taskId)
       }
@@ -167,21 +221,16 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
       socket.onmessage = (event) => {
         try {
           const wsData = JSON.parse(event.data)
-          if (wsData.type === 'send_progress') {
-            setProgress(wsData.progress || 0)
-            setProgressMessage(wsData.message || 'Processing catalog images...')
+          if (wsData.type === 'send_progress' || wsData.type === 'ai_progress') {
+            const p = wsData.progress || 0
+            setProgress((prev) => Math.max(prev, p))
+            if (wsData.message) {
+              setProgressMessage(wsData.message)
+            }
           }
 
-          if (wsData.progress === 100) {
-            setProgress(100)
-            setProgressMessage('Completed successfully!')
-            toast.success('Products cataloged and published successfully!')
-            setTimeout(() => {
-              setUploading(false)
-              socket.close()
-              onClose()
-              window.location.reload()
-            }, 1200)
+          if (wsData.progress === 100 || wsData.type === 'ai_complete') {
+            handleComplete()
           }
         } catch (err) {
           console.error('Error parsing progress update', err)
@@ -189,19 +238,15 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
       }
 
       socket.onerror = (error) => {
-        console.warn('WebSocket notification issue:', error)
-        setTimeout(() => {
-          setProgress(100)
-          setProgressMessage('Completed!')
-          setUploading(false)
-          toast.success('Products processed successfully!')
-          onClose()
-          window.location.reload()
-        }, 3000)
+        console.warn('WebSocket connection note:', error)
+        startPollingFallback()
       }
 
       socket.onclose = () => {
-        console.log('🔴 WebSocket Closed')
+        console.log('🔴 WebSocket Closed — checking task completion status')
+        if (!isDone) {
+          startPollingFallback()
+        }
       }
 
     } catch (error) {

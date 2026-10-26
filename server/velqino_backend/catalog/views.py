@@ -1561,3 +1561,20 @@ def retailer_export_products(request):
         ])
     
     return response
+
+
+@api_view(['GET'])
+def bulk_task_status(request, task_id):
+    """Check status and progress of any bulk upload / AI photoshoot task"""
+    from celery.result import AsyncResult
+    task = AsyncResult(task_id)
+
+    if task.state == 'PENDING':
+        return Response({'status': 'pending', 'progress': 10, 'state': 'PENDING'})
+    elif task.state == 'PROGRESS':
+        return Response({'status': 'processing', 'progress': task.info.get('progress', 50), 'state': 'PROGRESS'})
+    elif task.state == 'SUCCESS':
+        return Response({'status': 'success', 'progress': 100, 'state': 'SUCCESS', 'data': task.result})
+    elif task.state == 'FAILURE':
+        return Response({'status': 'error', 'progress': 0, 'state': 'FAILURE', 'error': str(task.info)})
+    return Response({'status': 'unknown', 'progress': 0, 'state': task.state})

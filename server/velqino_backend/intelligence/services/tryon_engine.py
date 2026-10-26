@@ -389,14 +389,26 @@ def execute_virtual_tryon(
     }
 
     for angle_key in angles:
-        # 1. Generate or load base model image
-        base_model_img = generate_studio_model_image(
-            demographic=model_profile.demographic,
-            gender=model_profile.gender,
-            skin_hex=model_profile.skin_hex,
-            angle_key=angle_key,
-            body_type=model_profile.body_type
-        )
+        # 1. Load photorealistic base model image from media if available
+        model_img_filename = f"{model_profile.slug}_{angle_key}.png"
+        model_img_path = os.path.join(settings.BASE_DIR, 'media', 'intelligence', 'models', model_img_filename)
+        is_photorealistic_base = False
+
+        if os.path.exists(model_img_path):
+            base_model_img = Image.open(model_img_path).convert('RGBA')
+            target_width, target_height = base_model_img.size
+            is_photorealistic_base = True
+        else:
+            target_width, target_height = 800, 1200
+            base_model_img = generate_studio_model_image(
+                demographic=model_profile.demographic,
+                gender=model_profile.gender,
+                skin_hex=model_profile.skin_hex,
+                angle_key=angle_key,
+                body_type=model_profile.body_type,
+                width=target_width,
+                height=target_height
+            )
 
         # 2. Select appropriate garment input (back image for back angle, front for front/3/4)
         active_garment = back_rgba if (angle_key == 'back' and back_rgba) else front_rgba
@@ -409,25 +421,32 @@ def execute_virtual_tryon(
             garment_type=garment_type,
             fit_silhouette=fit_silhouette,
             tuck_style=tuck_style,
+            target_width=target_width,
+            target_height=target_height,
             is_female=is_female,
             is_kid=is_kid,
             is_real_back=is_real_back_angle
         )
 
         # 4. Harmonize lighting & anatomical folds
-        composite = harmonize_lighting_and_shading(base_model_img, warped_garment)
+        if is_photorealistic_base:
+            # If the user uploaded garment is the reference shirt or if draped onto photorealistic model:
+            composite = harmonize_lighting_and_shading(base_model_img, warped_garment)
+            final_render = composite
+        else:
+            composite = harmonize_lighting_and_shading(base_model_img, warped_garment)
+            final_render = apply_studio_backdrop(composite, backdrop_style)
 
-        # 5. Place on chosen studio backdrop
-        final_render = apply_studio_backdrop(composite, backdrop_style)
-
-        # 6. Save image to media
+        # 5. Save image to media (ensuring RGB for JPEG)
         session_id_str = str(session.id) if session else 'preview'
         filename = f"tryon_{session_id_str}_{model_profile.slug}_{angle_key}.jpg"
         filepath = os.path.join(renders_dir, filename)
-        final_render.save(filepath, format='JPEG', quality=92, optimize=True)
+        
+        save_img = final_render.convert('RGB') if final_render.mode == 'RGBA' else final_render
+        save_img.save(filepath, format='JPEG', quality=95, optimize=True)
 
         rel_url = f"{settings.MEDIA_URL}tryon/renders/{filename}"
-        base64_data = pil_to_base64(final_render, format='JPEG', quality=90)
+        base64_data = pil_to_base64(save_img, format='JPEG', quality=92)
 
         # Save to database if session exists
         if session:

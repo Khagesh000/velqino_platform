@@ -21,21 +21,40 @@ class AIProgressConsumer(AsyncWebsocketConsumer):
             # * Accept connection
             await self.accept()
 
+            # Send connection ack
+            await self.send(text_data=json.dumps({
+                'type': 'connected',
+                'task_id': self.task_id,
+                'status': 'listening'
+            }))
+
         except Exception as e:
             print("[ERR] CONNECT ERROR:", str(e))
 
     async def disconnect(self, close_code):
         try:
-            print(f"[ERR] WebSocket DISCONNECT: {self.group_name}")
+            group_name = getattr(self, 'group_name', None)
+            print(f"[WS] WebSocket DISCONNECT: {group_name} (code: {close_code})")
 
             # * Leave group
-            await self.channel_layer.group_discard(
-                self.group_name,
-                self.channel_name
-            )
+            if group_name:
+                await self.channel_layer.group_discard(
+                    group_name,
+                    self.channel_name
+                )
 
         except Exception as e:
             print("[ERR] DISCONNECT ERROR:", str(e))
+
+    async def receive(self, text_data=None, bytes_data=None):
+        """Handle client keep-alive pings"""
+        try:
+            if text_data:
+                data = json.loads(text_data)
+                if data.get('type') == 'ping':
+                    await self.send(text_data=json.dumps({'type': 'pong'}))
+        except Exception:
+            pass
 
     # [OK] THIS IS YOUR OLD METHOD (KEEP IT)
     async def send_progress(self, event):

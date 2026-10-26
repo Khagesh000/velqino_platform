@@ -47,5 +47,7 @@ urlpatterns = [
 
     path('retailer/products/import/', views.retailer_import_products, name='retailer-import-products'),
     path('retailer/products/export/', views.retailer_export_products, name='retailer-export-products'),
-   
+
+    # Task status check endpoint
+    path('tasks/<str:task_id>/status/', views.bulk_task_status, name='bulk-task-status'),
 ]

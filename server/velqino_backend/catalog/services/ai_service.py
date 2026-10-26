@@ -372,7 +372,7 @@ class AIService:
                         use_filename=True,
                         unique_filename=False,
                         overwrite=True,
-                        invalidate=True
+                        invalidate=False
                     )
                     
                     ProductImage.objects.create(
@@ -413,12 +413,17 @@ class AIService:
                 progress = 10 + int((idx / products_to_create) * 80)
                 AIService._send_progress(
                     channel_layer, room_group_name, progress,
-                    f"Processing product {idx+1}/{products_to_create}"
+                    f"Processing product {idx+1}/{products_to_create}: Cleaning images..."
                 )
 
-                # Process images
+                # Process images (removes background, centers on white canvas)
                 front_cleaned = AIService._process_final_image(front_img_data)
                 back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
+
+                AIService._send_progress(
+                    channel_layer, room_group_name, min(progress + 15, 88),
+                    f"Product {idx+1}/{products_to_create}: Detecting colors and patterns..."
+                )
 
                 # Detect pattern and colors
                 front_img = Image.open(io.BytesIO(front_img_data))
@@ -452,6 +457,7 @@ class AIService:
                     try:
                         from intelligence.services.garment_analyzer import analyze_garment_and_demographic
                         from intelligence.services.tryon_engine import execute_virtual_tryon
+                        from concurrent.futures import ThreadPoolExecutor
 
                         cat_obj = Category.objects.filter(id=category_id).first()
                         cat_name = cat_obj.name if cat_obj else ''
@@ -465,9 +471,15 @@ class AIService:
                             user_fit_silhouette=fit_silhouette
                         )
 
+                        AIService._send_progress(
+                            channel_layer, room_group_name, min(progress + 30, 90),
+                            f"Product {idx+1}/{products_to_create}: Fitting onto photorealistic AI model..."
+                        )
+
+                        # Pass cleaned garments to execute_virtual_tryon so remove_garment_background is instant
                         try_on_res = execute_virtual_tryon(
-                            front_image_file_or_bytes=front_img_data,
-                            back_image_file_or_bytes=back_img_data,
+                            front_image_file_or_bytes=front_cleaned or front_img_data,
+                            back_image_file_or_bytes=back_cleaned or back_img_data,
                             model_slug=analysis['model']['slug'],
                             angles=['front', 'back'],
                             garment_type=analysis['garment_type'],
@@ -476,67 +488,91 @@ class AIService:
                             backdrop_style='pure_white'
                         )
 
+                        AIService._send_progress(
+                            channel_layer, room_group_name, min(progress + 50, 92),
+                            f"Product {idx+1}/{products_to_create}: Uploading editorial catalog images in parallel..."
+                        )
+
+                        upload_tasks = []
+
+                        # Editorial model renders
                         for render_data in try_on_res.get('renders', []):
                             angle_key = render_data['angle_key']
                             is_front_view = (angle_key == 'front')
                             render_rel_path = render_data.get('image_url')
                             full_render_path = os.path.join(settings.BASE_DIR, render_rel_path.lstrip('/'))
 
-                            uploaded_url = None
                             if os.path.exists(full_render_path):
-                                with open(full_render_path, 'rb') as rf:
-                                    try:
-                                        cloud_res = cloudinary.uploader.upload(
-                                            rf,
-                                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_ai_model_{angle_key}",
-                                            overwrite=True,
-                                            invalidate=True
-                                        )
-                                        uploaded_url = cloud_res.get('secure_url')
-                                    except Exception as ce:
-                                        print(f"Cloudinary upload fallback: {ce}")
+                                upload_tasks.append({
+                                    'file_path': full_render_path,
+                                    'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_ai_model_{angle_key}",
+                                    'fallback_url': render_rel_path,
+                                    'is_primary': is_front_view,
+                                    'is_front': is_front_view,
+                                    'order': 0 if is_front_view else 1
+                                })
 
-                            img_to_save = uploaded_url or render_rel_path
-                            ProductImage.objects.create(
-                                product=product,
-                                image=img_to_save,
-                                is_primary=is_front_view,
-                                is_front=is_front_view,
-                                order=0 if is_front_view else 1
-                            )
-
-                        # Also save raw front and back images as secondary reference
+                        # Cleaned raw front
                         if front_cleaned:
-                            front_bytes = BytesIO(front_cleaned)
-                            front_result = cloudinary.uploader.upload(
-                                front_bytes,
-                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front_raw",
-                                overwrite=True,
-                                invalidate=True
-                            )
-                            ProductImage.objects.create(
-                                product=product,
-                                image=front_result['secure_url'],
-                                is_primary=False,
-                                is_front=True,
-                                order=2
-                            )
+                            upload_tasks.append({
+                                'bytes_data': front_cleaned,
+                                'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front_raw",
+                                'fallback_url': None,
+                                'is_primary': False,
+                                'is_front': True,
+                                'order': 2
+                            })
 
+                        # Cleaned raw back
                         if back_cleaned:
-                            back_bytes = BytesIO(back_cleaned)
-                            back_result = cloudinary.uploader.upload(
-                                back_bytes,
-                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back_raw",
-                                overwrite=True,
-                                invalidate=True
-                            )
-                            ProductImage.objects.create(
-                                product=product,
-                                image=back_result['secure_url'],
-                                is_primary=False,
-                                is_front=False,
-                                order=3
-                            )
+                            upload_tasks.append({
+                                'bytes_data': back_cleaned,
+                                'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back_raw",
+                                'fallback_url': None,
+                                'is_primary': False,
+                                'is_front': False,
+                                'order': 3
+                            })
+
+                        def _do_upload(task_item):
+                            try:
+                                if task_item.get('file_path'):
+                                    with open(task_item['file_path'], 'rb') as rf:
+                                        res = cloudinary.uploader.upload(
+                                            rf,
+                                            public_id=task_item['public_id'],
+                                            overwrite=True,
+                                            invalidate=False
+                                        )
+                                        return task_item, res.get('secure_url')
+                                elif task_item.get('bytes_data'):
+                                    b = BytesIO(task_item['bytes_data'])
+                                    res = cloudinary.uploader.upload(
+                                        b,
+                                        public_id=task_item['public_id'],
+                                        overwrite=True,
+                                        invalidate=False
+                                    )
+                                    return task_item, res.get('secure_url')
+                            except Exception as ce:
+                                print(f"Cloudinary upload fallback for {task_item.get('public_id')}: {ce}")
+                                return task_item, task_item.get('fallback_url')
+                            return task_item, task_item.get('fallback_url')
+
+                        # Run all Cloudinary uploads concurrently
+                        with ThreadPoolExecutor(max_workers=min(len(upload_tasks) or 1, 4)) as executor:
+                            upload_results = list(executor.map(_do_upload, upload_tasks))
+
+                        for task_item, uploaded_url in upload_results:
+                            final_url = uploaded_url or task_item.get('fallback_url')
+                            if final_url:
+                                ProductImage.objects.create(
+                                    product=product,
+                                    image=final_url,
+                                    is_primary=task_item['is_primary'],
+                                    is_front=task_item['is_front'],
+                                    order=task_item['order']
+                                )
 
                     except Exception as e:
                         print(f"Virtual try-on error in bulk front_back mode: {e}")
@@ -547,7 +583,7 @@ class AIService:
                                 front_bytes,
                                 public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
                                 overwrite=True,
-                                invalidate=True
+                                invalidate=False
                             )
                             ProductImage.objects.create(
                                 product=product,
@@ -562,7 +598,7 @@ class AIService:
                                 back_bytes,
                                 public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
                                 overwrite=True,
-                                invalidate=True
+                                invalidate=False
                             )
                             ProductImage.objects.create(
                                 product=product,
@@ -579,7 +615,7 @@ class AIService:
                             front_bytes,
                             public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
                             overwrite=True,
-                            invalidate=True
+                            invalidate=False
                         )
                         ProductImage.objects.create(
                             product=product,
@@ -594,7 +630,7 @@ class AIService:
                             back_bytes,
                             public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
                             overwrite=True,
-                            invalidate=True
+                            invalidate=False
                         )
                         ProductImage.objects.create(
                             product=product,
@@ -669,7 +705,7 @@ class AIService:
                         use_filename=True,
                         unique_filename=False,
                         overwrite=True,
-                        invalidate=True
+                        invalidate=False
                     )
                     
                     ProductImage.objects.create(
@@ -748,34 +784,25 @@ class AIService:
             return
 
         try:
-            import asyncio
+            from asgiref.sync import async_to_sync
 
             group_name = f'ai_task_{room_group_name}'
             print(f"[OUTBOX] Sending to group: {group_name}")
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            async def send():
-                await channel_layer.group_send(
-                    group_name,
-                    {
-                        'type': 'send_progress',
-                        'data': {
-                            'progress': progress,
-                            'message': message
-                        }
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_progress',
+                    'data': {
+                        'progress': progress,
+                        'message': message
                     }
-                )
-
-            loop.run_until_complete(send())
-            loop.close()
+                }
+            )
             print(f"[SIGNAL] Progress sent to {group_name}: {progress}% - {message}")
 
         except Exception as e:
             print(f"[FAIL] Progress send failed: {e}")
-            import traceback
-            traceback.print_exc()
 
 
     @staticmethod
@@ -1227,23 +1254,31 @@ class AIService:
                 img = Image.open(io.BytesIO(image))
             else:
                 img = image
-            
+
+            # Ensure RGB format so reshape(-1, 3) always succeeds
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
             img = img.resize((100, 100))
             img_array = np.array(img)
             pixels = img_array.reshape(-1, 3)
-            
+
             # K-means clustering
             kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
             kmeans.fit(pixels)
-            
+
             colors = []
             for rgb in kmeans.cluster_centers_.astype(int):
                 color_name = AIService._rgb_to_color_name(tuple(rgb))
                 hex_code = "#{:02x}{:02x}{:02x}".format(*rgb)
                 colors.append({'name': color_name, 'code': hex_code, 'rgb': tuple(rgb)})
-            
+
+            # Prioritize garment color over background (exclude pure white/near-white unless all clusters are white)
+            non_bg = [c for c in colors if not (c['rgb'][0] > 240 and c['rgb'][1] > 240 and c['rgb'][2] > 240)]
+            if non_bg:
+                return non_bg
             return colors
-            
+
         except Exception as e:
             print(f"Color detection failed: {e}")
             return [{'name': 'Unknown', 'code': '#000000', 'rgb': (0,0,0)}]

@@ -196,11 +196,23 @@ TEMPLATES = [
 # ============================================================
 ASGI_APPLICATION = 'velqino_backend.asgi.application'
 
+redis_host = os.getenv('REDIS_HOST', '127.0.0.1')
+redis_port = int(os.getenv('REDIS_PORT', 6379))
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(os.getenv('REDIS_HOST', '127.0.0.1'), int(os.getenv('REDIS_PORT', 6379)))],
+            "hosts": [
+                {
+                    "address": f"redis://{redis_host}:{redis_port}/0",
+                    "socket_timeout": 60,
+                    "socket_connect_timeout": 10,
+                    "health_check_interval": 30,
+                }
+            ],
+            "capacity": 1500,
+            "expiry": 300,
         },
     },
 }

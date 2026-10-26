@@ -74,6 +74,8 @@ const productsAPI = {
   deleteAddress: (addressId) =>
       API.delete(`identity/addresses/${addressId}/`),
 
+  getTaskStatus: (taskId) =>
+      API.get(`catalog/tasks/${taskId}/status/`),
 };
 
 export default productsAPI;
