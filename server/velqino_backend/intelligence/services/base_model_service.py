@@ -181,7 +181,7 @@ MODEL_CATALOG = [
         'skin_hex': '#C68B59',
         'height_cm': 134,
         'chest_waist': '26" / 23"',
-        'description': 'Bright orange polo collar t-shirt and classic denim jeans with white sneakers.',
+        'description': 'Sky-blue button-down shirt and beige chino shorts with brown leather loafers.',
         'display_order': 11,
     },
     {
@@ -211,7 +211,7 @@ MODEL_CATALOG = [
         'skin_hex': '#DDB892',
         'height_cm': 150,
         'chest_waist': '29" / 25"',
-        'description': 'Active graphic hoodie and street jogger pants for junior boys.',
+        'description': 'Color-blocked forest green, black & white sports hoodie with dark grey joggers and sneakers.',
         'display_order': 13,
     },
     {
@@ -241,7 +241,7 @@ MODEL_CATALOG = [
         'skin_hex': '#F0D5BE',
         'height_cm': 115,
         'chest_waist': '23" / 21"',
-        'description': 'Royal blue festive boy Kurta with churidar pajama for junior festive occasions.',
+        'description': 'Royal blue festive boy Kurta with subtle gold embroidery, white churidar pajama, and golden mojaris.',
         'display_order': 15,
     },
     {
@@ -256,7 +256,7 @@ MODEL_CATALOG = [
         'skin_hex': '#8D5B4C',
         'height_cm': 148,
         'chest_waist': '28" / 24"',
-        'description': 'Traditional royal blue and golden embroidered lehenga choli with dupatta.',
+        'description': 'Traditional royal blue and golden embroidered lehenga choli with sheer gold-bordered dupatta.',
         'display_order': 16,
     },
 ]

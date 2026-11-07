@@ -16,6 +16,7 @@ from intelligence.models import AIModelProfile, AIModelAnglePose
 MEDIA_DIR = os.path.join('media', 'intelligence', 'models')
 os.makedirs(MEDIA_DIR, exist_ok=True)
 BRAIN_DIR = r'C:\Users\ymani\.gemini\antigravity-ide\brain\df671b22-4875-454e-90bd-d671f5ba77ff'
+KIDS_RAW_DIR = os.path.join('media', 'intelligence', 'raw_kids')
 
 def generate_angles_clean(front_path, back_path, slug, custom_l34_path=None):
     """
@@ -311,7 +312,7 @@ PROFILES = [
         'skin_hex': '#C68B59',
         'height_cm': 134,
         'chest_waist': '26" / 23"',
-        'description': 'Bright orange polo collar t-shirt and classic denim jeans with white sneakers.',
+        'description': 'Sky-blue button-down shirt and beige chino shorts with brown leather loafers.',
         'display_order': 11,
         'is_default': True,
         'front': os.path.join(BRAIN_DIR, 'kids_boy_front_1792931100470.jpg'),
@@ -347,12 +348,11 @@ PROFILES = [
         'skin_hex': '#DDB892',
         'height_cm': 150,
         'chest_waist': '29" / 25"',
-        'description': 'Active graphic hoodie and street jogger pants for junior boys.',
+        'description': 'Color-blocked forest green, black & white sports hoodie with dark grey joggers and sneakers.',
         'display_order': 13,
         'is_default': False,
-        # High-res junior scaled from boy base
-        'front': os.path.join(BRAIN_DIR, 'kids_boy_front_1792931100470.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'kids_boy_back_1792931352663.jpg'),
+        'front': os.path.join(KIDS_RAW_DIR, 'rohan_hoodie_front_1793116819339.jpg'),
+        'back': os.path.join(KIDS_RAW_DIR, 'rohan_hoodie_back_1793116954654.jpg'),
     },
     {
         'slug': 'diya-girl-jeans',
@@ -384,11 +384,11 @@ PROFILES = [
         'skin_hex': '#F0D5BE',
         'height_cm': 115,
         'chest_waist': '23" / 21"',
-        'description': 'Royal blue festive boy Kurta with churidar pajama for junior festive occasions.',
+        'description': 'Royal blue festive boy Kurta with subtle gold embroidery, white churidar pajama, and golden mojaris.',
         'display_order': 15,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'kids_boy_front_1792931100470.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'kids_boy_back_1792931352663.jpg'),
+        'front': os.path.join(KIDS_RAW_DIR, 'vivaan_kurta_front_1793117218259.jpg'),
+        'back': os.path.join(KIDS_RAW_DIR, 'vivaan_kurta_back_1793117392934.jpg'),
     },
     {
         'slug': 'ananya-girl-ethnic',
@@ -402,11 +402,11 @@ PROFILES = [
         'skin_hex': '#8D5B4C',
         'height_cm': 148,
         'chest_waist': '28" / 24"',
-        'description': 'Traditional royal blue and golden embroidered lehenga choli with dupatta.',
+        'description': 'Traditional royal blue and golden embroidered lehenga choli with sheer gold-bordered dupatta.',
         'display_order': 16,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'girl_jeans_front_1793035470369.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'girl_jeans_back_1793035526388.jpg'),
+        'front': os.path.join(KIDS_RAW_DIR, 'ananya_lehenga_front_1793117505264.jpg'),
+        'back': os.path.join(KIDS_RAW_DIR, 'ananya_lehenga_back_1793117706806.jpg'),
     },
 ]
 
