@@ -57,7 +57,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug', 'sku', 'price', 'retail_price', 'display_price', 
                   'stock', 'status', 'primary_image', 'category_name', 'pattern', 'images',
                   'primary_color', 'min_order_qty', 'display_min_order', 'is_wishlisted', 'category_id',
-                  'seller_type'
+                  'seller_type', 'garment_type'
                   ]
         
     def get_images(self, obj):
@@ -193,6 +193,11 @@ class BulkImageUploadSerializer(serializers.Serializer):
     common_name_prefix = serializers.CharField(max_length=255, required=False, allow_blank=True)
     brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
+    garment_type = serializers.ChoiceField(
+        choices=['top', 'bottom', 'full'],
+        required=True,
+        error_messages={'required': 'Garment type is mandatory. Please select top, bottom, or full.'}
+    )
     sizes = serializers.ListField(
     child=serializers.CharField(max_length=10),
     required=False,
@@ -217,6 +222,11 @@ class BulkVideoUploadSerializer(serializers.Serializer):
     common_name_prefix = serializers.CharField(max_length=255, required=False, allow_blank=True)
     brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
+    garment_type = serializers.ChoiceField(
+        choices=['top', 'bottom', 'full'],
+        required=True,
+        error_messages={'required': 'Garment type is mandatory. Please select top, bottom, or full.'}
+    )
     sizes = serializers.ListField(
     child=serializers.CharField(max_length=10),
     required=False,
@@ -241,11 +251,16 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     weight = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     status = serializers.ChoiceField(choices=['active', 'draft', 'archived'], default='draft')
     sku = serializers.CharField(required=False, allow_blank=True, allow_null=True)  # ✅ ADD THIS LINE
+    garment_type = serializers.ChoiceField(
+        choices=['top', 'bottom', 'full'],
+        required=True,
+        error_messages={'required': 'Garment type is mandatory. Please select top, bottom, or full.'}
+    )
     
     class Meta:
         model = Product
         fields = ['name', 'sku', 'price', 'compare_price', 'cost', 'category_id', 
-                  'brand', 'description', 'stock', 'threshold', 'weight', 'status']
+                  'brand', 'description', 'stock', 'threshold', 'weight', 'status', 'garment_type']
 
 
 class ProductUpdateSerializer(serializers.ModelSerializer):
@@ -255,12 +270,13 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
     weight = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     pattern = serializers.CharField(required=False, allow_blank=True)
     primary_color = serializers.CharField(required=False, allow_blank=True)
+    garment_type = serializers.ChoiceField(choices=['top', 'bottom', 'full'], required=False)
     
     class Meta:
         model = Product
         fields = ['name', 'price', 'cost', 'stock', 'status', 'description', 
                   'brand', 'category_id', 'compare_price', 'threshold', 'weight',
-                  'pattern', 'primary_color', 'min_order_qty']
+                  'pattern', 'primary_color', 'min_order_qty', 'garment_type']
 
 
 # ADD this to existing serializers.py
@@ -272,6 +288,11 @@ class SingleProductCreateSerializer(serializers.Serializer):
     category_id = serializers.IntegerField(required=False, allow_null=True)
     brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
+    garment_type = serializers.ChoiceField(
+        choices=['top', 'bottom', 'full'],
+        required=True,
+        error_messages={'required': 'Garment type is mandatory. Please select top, bottom, or full.'}
+    )
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     compare_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
@@ -323,7 +344,7 @@ class RetailerProductListSerializer(serializers.ModelSerializer):
                   'display_price', 'stock', 'status', 'primary_image', 
                   'category_name', 'pattern', 'images', 'primary_color',
                   'min_order_qty', 'display_min_order', 'is_wishlisted',
-                  'variants', 'created_at', 'seller_type']
+                  'variants', 'created_at', 'seller_type', 'garment_type']
     
     def get_display_price(self, obj):
         return float(obj.price)
@@ -339,12 +360,17 @@ class RetailerProductListSerializer(serializers.ModelSerializer):
 class RetailerProductCreateSerializer(serializers.ModelSerializer):
     sizes = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
     images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False, allow_empty=True)
+    garment_type = serializers.ChoiceField(
+        choices=['top', 'bottom', 'full'],
+        required=True,
+        error_messages={'required': 'Garment type is mandatory. Please select top, bottom, or full.'}
+    )
     
     class Meta:
         model = Product
         fields = ['id', 'name', 'sku', 'price', 'cost', 'category_id', 'brand', 
                   'description', 'stock', 'threshold', 'status', 'sizes', 'images',
-                  'primary_color', 'pattern', 'seller_type']
+                  'primary_color', 'pattern', 'seller_type', 'garment_type']
     
     def create(self, validated_data):
         sizes = validated_data.pop('sizes', [])

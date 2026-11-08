@@ -83,6 +83,19 @@ class Product(models.Model):
         ('winter', 'Winter'),
         ('festive', 'Festive'),
     ], null=True, blank=True, db_index=True)
+    
+    GARMENT_TYPE_CHOICES = (
+        ('top', 'Topwear'),
+        ('bottom', 'Bottomwear'),
+        ('full', 'Full Set / Ethnic'),
+    )
+    garment_type = models.CharField(
+        max_length=20,
+        choices=GARMENT_TYPE_CHOICES,
+        default='top',
+        db_index=True,
+        help_text="Garment classification: top (shirts, tops, kurtas), bottom (pants, jeans, shorts), full (sarees, dresses, full sets)"
+    )
 
     class Meta:
         indexes = [

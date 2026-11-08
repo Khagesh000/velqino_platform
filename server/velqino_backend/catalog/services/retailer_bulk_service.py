@@ -21,7 +21,7 @@ class RetailerBulkService:
     def process_bulk_same_details(
         seller_id, images, common_name_prefix, common_price, common_cost,
         category_id, brand, description, stock, threshold, sizes, 
-        primary_color, pattern, task_id=None
+        primary_color, pattern, garment_type='top', task_id=None
     ):
         """Option 1: Same details for all images - creates separate product per image"""
         
@@ -82,7 +82,8 @@ class RetailerBulkService:
                 threshold=int(threshold),               # ← wrap
                 pattern=pattern or '',
                 primary_color=primary_color or '',
-                status='active'
+                status='active',
+                garment_type=garment_type or 'top'
             )
             
             # ✅ Get image data correctly
@@ -190,7 +191,8 @@ class RetailerBulkService:
                 threshold=int(product_data.get('threshold', 10)),
                 pattern=product_data.get('pattern', ''),
                 primary_color=product_data.get('primary_color', ''),
-                status='active'
+                status='active',
+                garment_type=product_data.get('garment_type') or 'top'
             )
             
             # Upload image

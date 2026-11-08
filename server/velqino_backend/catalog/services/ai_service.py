@@ -49,7 +49,7 @@ class AIService:
     @staticmethod
     def process_bulk_video(seller_id, video_data, product_count, common_price, common_cost, 
                         category_id, name_prefix, brand, description, grid_rows, grid_columns, 
-                        upload_mode='bulk_single_product', sizes=None, task_id=None):
+                        upload_mode='bulk_single_product', sizes=None, garment_type='top', task_id=None):
         """
         Process one video containing multiple products in grid layout
         - bulk_single_product: ONE product with ALL detected items
@@ -116,7 +116,8 @@ class AIService:
                 primary_color=primary_color,
                 stock=len(products_data),  # Stock = number of detected items
                 min_order_qty=len(products_data),  # Min order = number of items
-                status='active'
+                status='active',
+                garment_type=garment_type or 'top'
             )
             
             # Save ALL detected items as images to the same product
@@ -234,7 +235,8 @@ class AIService:
                     description=description,
                     pattern=pattern,
                     primary_color=primary_color,
-                    status='active'
+                    status='active',
+                    garment_type=garment_type or 'top'
                 )
                 
                 # Save images
@@ -301,7 +303,8 @@ class AIService:
     def process_bulk_images(seller_id, images_data, common_price, common_cost,
                             category_id, name_prefix, brand, description,
                             upload_mode='bulk_single_product', sizes=None, task_id=None,
-                            ai_fit_enabled=True, fit_silhouette='regular', demographic=None):
+                            ai_fit_enabled=True, fit_silhouette='regular', demographic=None,
+                            garment_type='top'):
         """
         Process multiple images — supports:
         - bulk_single_product: ONE product with ALL images
@@ -353,7 +356,8 @@ class AIService:
                 primary_color=primary_color,
                 stock=len(images_data),  # Stock = number of images
                 min_order_qty=len(images_data),  # Min order = number of images
-                status='active'
+                status='active',
+                garment_type=garment_type or 'top'
             )
             
             # Save ALL images to the same product
@@ -449,7 +453,8 @@ class AIService:
                     description=description,
                     pattern=pattern,
                     primary_color=primary_color,
-                    status='active'
+                    status='active',
+                    garment_type=garment_type or 'top'
                 )
 
                 # Save images with AI Model Fitting
@@ -693,7 +698,8 @@ class AIService:
                     description=description,
                     pattern=pattern,
                     primary_color=primary_color,
-                    status='active'
+                    status='active',
+                    garment_type=garment_type or 'top'
                 )
 
                 # Save image

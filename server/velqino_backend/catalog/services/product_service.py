@@ -267,6 +267,7 @@ class ProductService:
             ai_fit_enabled=common_data.get('ai_fit_enabled', True),
             fit_silhouette=common_data.get('fit_silhouette', 'regular'),
             demographic=common_data.get('demographic', None),
+            garment_type=common_data.get('garment_type', 'top'),
         )
         return {'task_id': task.id, 'status': 'queued'}
     
@@ -286,7 +287,8 @@ class ProductService:
             upload_mode=common_data.get('upload_mode', 'bulk_single_product'),
             sizes=common_data.get('sizes', []),
             grid_rows=common_data.get('grid_rows', 2),
-            grid_columns=common_data.get('grid_columns', 5)
+            grid_columns=common_data.get('grid_columns', 5),
+            garment_type=common_data.get('garment_type', 'top')
         )
         return {'task_id': task.id, 'status': 'queued'}
 
@@ -336,7 +338,8 @@ class ProductService:
             stock=data.get('stock', 0),
             threshold=data.get('threshold', 10),
             status=data.get('status', 'draft'),
-            weight=data.get('weight')
+            weight=data.get('weight'),
+            garment_type=data.get('garment_type') or 'top'
         )
         
         loop.run_until_complete(send_progress(50, "Caching product..."))
@@ -378,7 +381,8 @@ class ProductService:
             stock=data.get('stock', 0),
             threshold=data.get('threshold', 10),
             status=data.get('status', 'draft'),
-            weight=data.get('weight')
+            weight=data.get('weight'),
+            garment_type=data.get('garment_type') or 'top'
         )
         
         # [OK] Create variants from sizes parameter (FormData)

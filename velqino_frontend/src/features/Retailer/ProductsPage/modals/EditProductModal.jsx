@@ -33,7 +33,8 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
     description: '',
     stock: '',
     threshold: 10,
-    status: 'active'
+    status: 'active',
+    garment_type: 'top'
   });
 
   const [selectedSizes, setSelectedSizes] = useState([]);
@@ -51,7 +52,8 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
         description: product.description || '',
         stock: product.stock ?? '',
         threshold: product.threshold || 10,
-        status: product.status || 'active'
+        status: product.status || 'active',
+        garment_type: product.garment_type || 'top'
       });
       
       const primaryImg = product.primary_image || product.images?.[0]?.image || product.image;
@@ -129,6 +131,10 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
       toast.error('Please enter selling price');
       return;
     }
+    if (!formData.garment_type) {
+      toast.error('Please select Garment Type (Top, Bottom, or Full Set)');
+      return;
+    }
 
     setUploading(true);
     try {
@@ -137,6 +143,7 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
       submitData.append('price', formData.price);
       submitData.append('cost', formData.cost || 0);
       submitData.append('category_id', formData.category_id || '');
+      submitData.append('garment_type', formData.garment_type);
       submitData.append('brand', formData.brand || '');
       submitData.append('description', formData.description || '');
       submitData.append('stock', formData.stock || 0);
@@ -256,8 +263,8 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
             />
           </div>
 
-          {/* Category & Brand */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category, Garment Type & Brand (3 Cols) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
                 Category
@@ -272,6 +279,24 @@ export default function EditProductModal({ isOpen, onClose, product, onSave, cat
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Garment Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                name="garment_type"
+                value={formData.garment_type}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white font-medium"
+              >
+                <option value="">Select Garment Type...</option>
+                <option value="top">Topwear (Shirt, T-Shirt, Kurta)</option>
+                <option value="bottom">Bottomwear (Pant, Jeans, Shorts)</option>
+                <option value="full">Full Set (Saree, Punjabi Dress, Suit)</option>
               </select>
             </div>
 

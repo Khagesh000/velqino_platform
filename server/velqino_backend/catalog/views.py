@@ -409,6 +409,22 @@ def product_list(request):
             stock_value = int(stock_raw)
             print(f"stock_value after int(): {stock_value}")
             
+            # Validate mandatory garment_type
+            garment_type = request.POST.get('garment_type') or request.data.get('garment_type')
+            if not garment_type:
+                return Response({
+                    'status': 'error',
+                    'message': 'Garment type is mandatory. Please select top, bottom, or full.',
+                    'errors': {'garment_type': ['Garment type is mandatory. Please choose top, bottom, or full.']}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            garment_type = str(garment_type).strip().lower()
+            if garment_type not in ['top', 'bottom', 'full']:
+                return Response({
+                    'status': 'error',
+                    'message': f"Invalid garment type '{garment_type}'. Must be one of: top, bottom, full.",
+                    'errors': {'garment_type': [f"Invalid garment type '{garment_type}'. Must be top, bottom, or full."]}
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             # Create product
             product = Product.objects.create(
                 seller=request.user,
@@ -425,7 +441,8 @@ def product_list(request):
                 stock=stock_value,
                 threshold=int(request.POST.get('threshold', 10)),
                 weight=request.POST.get('weight') or None,
-                status=request.POST.get('status', 'draft')
+                status=request.POST.get('status', 'draft'),
+                garment_type=garment_type
             )
             
             print(f"[INFO] Product created with ID: {product.id}")
@@ -683,6 +700,8 @@ def bulk_image_upload(request):
 
     sizes = request.data.getlist('sizes', [])
 
+    garment_type = data.get('garment_type') or request.data.get('garment_type') or 'top'
+
     # Trigger async task
     result = ProductService.trigger_bulk_image_processing(
         seller_id=request.user.id,
@@ -695,6 +714,7 @@ def bulk_image_upload(request):
             'brand': data.get('brand', ''),
             'description': data.get('description', ''),
             'upload_mode': upload_mode,
+            'garment_type': garment_type,
             'sizes': sizes,
             'ai_fit_enabled': request.data.get('ai_fit_enabled', 'true') in ['true', 'True', '1', True],
             'fit_silhouette': request.data.get('fit_silhouette', 'regular'),
@@ -724,6 +744,7 @@ def bulk_video_upload(request):
     
     data = serializer.validated_data
     upload_mode = request.data.get('upload_mode', 'bulk_single_product')
+    garment_type = data.get('garment_type') or request.data.get('garment_type') or 'top'
     sizes = request.data.getlist('sizes', [])
 
     # Trigger async task
@@ -739,6 +760,7 @@ def bulk_video_upload(request):
             'brand': data.get('brand', ''),
             'description': data.get('description', ''),
             'upload_mode': upload_mode,
+            'garment_type': garment_type,
             'sizes': sizes,
             'grid_rows': data.get('grid_rows', 2),
             'grid_columns': data.get('grid_columns', 5)
@@ -1164,6 +1186,13 @@ def retailer_bulk_images_same(request):
         images = request.FILES.getlist('images')
         if not images:
             return Response({'status': 'error', 'message': 'No images provided'}, status=400)
+
+        garment_type = request.data.get('garment_type')
+        if not garment_type:
+            return Response({'status': 'error', 'message': 'Garment type is mandatory. Please select top, bottom, or full.'}, status=400)
+        garment_type = str(garment_type).strip().lower()
+        if garment_type not in ['top', 'bottom', 'full']:
+            return Response({'status': 'error', 'message': f"Invalid garment type '{garment_type}'. Must be top, bottom, or full."}, status=400)
         
         # Convert images to bytes for Celery
         images_data = []
@@ -1184,6 +1213,7 @@ def retailer_bulk_images_same(request):
             category_id=request.data.get('category_id'),
             brand=request.data.get('brand', ''),
             description=request.data.get('description', ''),
+            garment_type=garment_type,
             stock=int(request.data.get('stock', 1)),
             threshold=int(request.data.get('threshold', 10)),
             sizes=request.data.getlist('sizes'),
@@ -1272,6 +1302,13 @@ def retailer_bulk_video_upload(request):
         if product_count <= 0 or grid_rows <= 0 or grid_columns <= 0:
             return Response({'status': 'error', 'message': 'Invalid grid or product count'}, status=400)
         
+        garment_type = request.data.get('garment_type')
+        if not garment_type:
+            return Response({'status': 'error', 'message': 'Garment type is mandatory. Please select top, bottom, or full.'}, status=400)
+        garment_type = str(garment_type).strip().lower()
+        if garment_type not in ['top', 'bottom', 'full']:
+            return Response({'status': 'error', 'message': f"Invalid garment type '{garment_type}'. Must be top, bottom, or full."}, status=400)
+
         from catalog.tasks import retailer_bulk_video_same_task
         
         # Start Celery task
@@ -1287,6 +1324,7 @@ def retailer_bulk_video_upload(request):
             category_id=request.data.get('category_id'),
             brand=request.data.get('brand', ''),
             description=request.data.get('description', ''),
+            garment_type=garment_type,
             stock=int(request.data.get('stock', 1)),
             threshold=int(request.data.get('threshold', 10)),
             sizes=request.data.getlist('sizes'),
@@ -1459,6 +1497,11 @@ def retailer_import_products(request):
                     sizes_str = row.get('sizes', '').strip()
                     sizes = [s.strip() for s in sizes_str.split(',') if s.strip()] if sizes_str else []
                     
+                    # Parse garment type
+                    garment_type = (row.get('garment_type') or request.data.get('garment_type') or 'top').strip().lower()
+                    if garment_type not in ['top', 'bottom', 'full']:
+                        garment_type = 'top'
+
                     # Create product
                     product = Product.objects.create(
                         seller=request.user,
@@ -1473,7 +1516,8 @@ def retailer_import_products(request):
                         description=row.get('description', ''),
                         stock=int(row.get('stock', 1)),
                         threshold=int(row.get('threshold', 10)),
-                        status='active'
+                        status='active',
+                        garment_type=garment_type
                     )
                     
                     # Create variants for sizes

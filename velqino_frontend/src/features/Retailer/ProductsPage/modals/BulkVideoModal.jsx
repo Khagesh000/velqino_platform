@@ -36,7 +36,8 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
     stock: '10',
     threshold: 5,
     status: 'active',
-    product_count: '6'
+    product_count: '6',
+    garment_type: ''
   });
 
   const [selectedSizes, setSelectedSizes] = useState([]);
@@ -55,7 +56,8 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
         stock: '10',
         threshold: 5,
         status: 'active',
-        product_count: '6'
+        product_count: '6',
+        garment_type: ''
       });
       setVideoFile(null);
       setVideoPreview(null);
@@ -123,6 +125,10 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
       toast.error('Please select a category');
       return;
     }
+    if (!formData.garment_type) {
+      toast.error('Please select Garment Type (Top, Bottom, or Full Set)');
+      return;
+    }
 
     setUploading(true);
     try {
@@ -131,6 +137,7 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
       submitData.append('price', formData.common_price);
       submitData.append('cost', formData.common_cost || 0);
       submitData.append('category_id', formData.category_id);
+      submitData.append('garment_type', formData.garment_type);
       submitData.append('name_prefix', formData.common_name_prefix || 'Video Product');
       submitData.append('brand', formData.brand || '');
       submitData.append('description', formData.description || '');
@@ -280,8 +287,8 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
             </div>
           </div>
 
-          {/* Category & Brand */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category, Garment Type & Brand (3 Cols) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
                 Category <span className="text-rose-500">*</span>
@@ -297,6 +304,24 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Garment Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                name="garment_type"
+                value={formData.garment_type}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white font-medium"
+              >
+                <option value="">Select Garment Type...</option>
+                <option value="top">Topwear (Shirt, T-Shirt, Kurta)</option>
+                <option value="bottom">Bottomwear (Pant, Jeans, Shorts)</option>
+                <option value="full">Full Set (Saree, Punjabi Dress, Suit)</option>
               </select>
             </div>
 

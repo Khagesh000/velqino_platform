@@ -140,6 +140,7 @@ class RetailerBulkVideoService:
         seller_id, video_data, product_count, grid_rows, grid_columns,
         common_name_prefix, common_price, common_cost, category_id,
         brand, description, stock, threshold, sizes, primary_color, pattern,
+        garment_type='top',
         task_id=None
     ):
         """Process video and create separate product per detected item"""
@@ -212,7 +213,8 @@ class RetailerBulkVideoService:
                 threshold=threshold,
                 pattern=pattern or '',
                 primary_color=primary_color or '',
-                status='active'
+                status='active',
+                garment_type=garment_type or 'top'
             )
             
             # Upload image to Cloudinary

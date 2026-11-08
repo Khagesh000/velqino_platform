@@ -20,7 +20,8 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
                             common_price, common_cost, category_id, 
                             common_name_prefix, brand, description, 
                             grid_rows, grid_columns, 
-                            upload_mode='bulk_single_product', sizes=None):
+                            upload_mode='bulk_single_product', sizes=None,
+                            garment_type='top'):
     """
     Process video and create ONE product with all detected items
     """
@@ -45,6 +46,7 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
             sizes=sizes or [],
             grid_rows=grid_rows,
             grid_columns=grid_columns,
+            garment_type=garment_type,
             task_id=self.request.id
         )
         
@@ -63,7 +65,8 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
 def process_bulk_images_task(self, seller_id, images_data, common_price, common_cost,
                              category_id, common_name_prefix, brand, description, 
                              upload_mode='bulk_single_product', sizes=None, task_id=None,
-                             ai_fit_enabled=True, fit_silhouette='regular', demographic=None):
+                             ai_fit_enabled=True, fit_silhouette='regular', demographic=None,
+                             garment_type='top'):
     """Process bulk images - supports bulk_single_product, front_back, and front_only with AI model fitting"""
     try:
         from catalog.services.ai_service import AIService
@@ -87,7 +90,8 @@ def process_bulk_images_task(self, seller_id, images_data, common_price, common_
             task_id=self.request.id,
             ai_fit_enabled=ai_fit_enabled,
             fit_silhouette=fit_silhouette,
-            demographic=demographic
+            demographic=demographic,
+            garment_type=garment_type
         )
 
         from catalog.utils.product_helpers import ProductHelpers
@@ -220,7 +224,7 @@ def monitor_daily_stock():
 def retailer_bulk_same_details_task(self, seller_id, images_data, common_name_prefix, 
                                      common_price, common_cost, category_id, brand, 
                                      description, stock, threshold, sizes, 
-                                     primary_color, pattern):
+                                     primary_color, pattern, garment_type='top'):
     """Celery task for bulk upload with same details for all images"""
     
     from catalog.models import Product, ProductImage, ProductVariant, Category
@@ -281,7 +285,8 @@ def retailer_bulk_same_details_task(self, seller_id, images_data, common_name_pr
                     threshold=threshold,
                     pattern=pattern or '',
                     primary_color=primary_color or '',
-                    status='active'
+                    status='active',
+                    garment_type=garment_type or 'top'
                 )
                 
                 # Upload image to Cloudinary
@@ -398,7 +403,8 @@ def retailer_bulk_different_task(self, seller_id, products_data):
                     threshold=int(product_data.get('threshold', 10)),
                     pattern=product_data.get('pattern', ''),
                     primary_color=product_data.get('primary_color', ''),
-                    status='active'
+                    status='active',
+                    garment_type=product_data.get('garment_type') or 'top'
                 )
                 
                 # Upload image if provided
@@ -501,7 +507,8 @@ def update_product_stock_task(product_id, new_stock):
 @shared_task(bind=True)
 def retailer_bulk_video_same_task(self, seller_id, video_data, product_count, grid_rows, grid_columns,
                                    common_name_prefix, common_price, common_cost, category_id,
-                                   brand, description, stock, threshold, sizes, primary_color, pattern):
+                                   brand, description, stock, threshold, sizes, primary_color, pattern,
+                                   garment_type='top'):
     """Celery task for bulk video upload with same details"""
     
     from catalog.services.retailer_bulk_video_service import RetailerBulkVideoService
@@ -526,6 +533,7 @@ def retailer_bulk_video_same_task(self, seller_id, video_data, product_count, gr
             sizes=sizes,
             primary_color=primary_color,
             pattern=pattern,
+            garment_type=garment_type,
             task_id=task_id
         )
         return result

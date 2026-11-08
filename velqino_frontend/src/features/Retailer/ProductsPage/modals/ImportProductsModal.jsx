@@ -19,6 +19,7 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [defaultGarmentType, setDefaultGarmentType] = useState('top');
   const [importProducts] = useImportProductsMutation();
 
   useEffect(() => {
@@ -49,10 +50,11 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
 
   const downloadTemplate = () => {
     const template = [
-      ['name', 'price', 'cost', 'category', 'brand', 'stock', 'description', 'sizes'],
-      ['Cotton Crewneck T-Shirt', '599', '350', 'Tshirt', 'Velqino', '50', 'Pure combed cotton', 'S,M,L,XL'],
-      ['Slim Fit Denim Jeans', '1499', '850', 'Jeans', 'Velqino', '35', 'Comfort stretch denim', '30,32,34,36'],
-      ['Leather Biker Jacket', '3999', '2400', 'Jacket', 'Velqino', '15', 'Full grain leather', 'M,L,XL']
+      ['name', 'price', 'cost', 'category', 'brand', 'stock', 'description', 'sizes', 'garment_type'],
+      ['Cotton Crewneck T-Shirt', '599', '350', 'Tshirt', 'Velqino', '50', 'Pure combed cotton', 'S,M,L,XL', 'top'],
+      ['Slim Fit Denim Jeans', '1499', '850', 'Jeans', 'Velqino', '35', 'Comfort stretch denim', '30,32,34,36', 'bottom'],
+      ['Anarkali Punjabi Dress Suit', '2499', '1400', 'Ethnic', 'Velqino', '20', 'Chanderi silk embroidered', 'M,L,XL', 'full'],
+      ['Leather Biker Jacket', '3999', '2400', 'Jacket', 'Velqino', '15', 'Full grain leather', 'M,L,XL', 'top']
     ];
     
     const csvContent = template.map(row => row.join(',')).join('\n');
@@ -81,6 +83,7 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('garment_type', defaultGarmentType);
       
       setProgress(60);
       if (onImport) {
@@ -142,6 +145,25 @@ export default function ImportProductsModal({ onClose, onImport, isOpen }) {
               <Download size={13} />
               <span>Download CSV</span>
             </button>
+          </div>
+
+          {/* Default Garment Type Selection */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Default Garment Classification <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={defaultGarmentType}
+              onChange={(e) => setDefaultGarmentType(e.target.value)}
+              className="w-full px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:bg-white font-medium text-gray-800"
+            >
+              <option value="top">Topwear (Shirt, T-Shirt, Kurta, Polo)</option>
+              <option value="bottom">Bottomwear (Pant, Jeans, Trousers, Shorts)</option>
+              <option value="full">Full Set / Ethnic (Saree, Punjabi Dress, Suit)</option>
+            </select>
+            <p className="text-[10px] text-gray-400 mt-1">
+              Applied automatically to rows that do not specify garment_type in CSV
+            </p>
           </div>
 
           {/* File Upload Dropzone */}

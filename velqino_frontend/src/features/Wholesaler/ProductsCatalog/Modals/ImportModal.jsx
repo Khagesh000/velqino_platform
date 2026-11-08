@@ -25,6 +25,7 @@ export default function ImportModal({ onClose, categories = [] }) {
     common_name_prefix: '',
     brand: '',
     description: '',
+    garment_type: '',
     grid_rows: 2,
     grid_columns: 5
   })
@@ -68,6 +69,11 @@ export default function ImportModal({ onClose, categories = [] }) {
 
     if (!formData.common_price || !formData.common_cost) {
       toast.error('Please enter selling price and cost price')
+      return
+    }
+
+    if (!formData.garment_type) {
+      toast.error('Please select Garment Type (Top, Bottom, or Full Set)')
       return
     }
 
@@ -340,6 +346,25 @@ export default function ImportModal({ onClose, categories = [] }) {
                       {cat.name}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              {/* Garment Type Dropdown */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Garment Type <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  name="garment_type"
+                  value={formData.garment_type}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white font-medium text-slate-800"
+                >
+                  <option value="">Select Garment Type (Mandatory)...</option>
+                  <option value="top">Topwear (Shirt, T-Shirt, Kurta, Polo, Hoodie)</option>
+                  <option value="bottom">Bottomwear (Pant, Jeans, Trousers, Shorts)</option>
+                  <option value="full">Full Set / Ethnic (Saree, Punjabi Dress, Suit, Gown)</option>
                 </select>
               </div>
 

@@ -146,7 +146,7 @@ class RetailerProductService:
         # Update fields
         updatable_fields = ['name', 'price', 'cost', 'category_id', 'brand', 
                            'description', 'stock', 'threshold', 'status', 
-                           'primary_color', 'pattern']
+                           'primary_color', 'pattern', 'garment_type']
         
         for field in updatable_fields:
             if field in request.data:
