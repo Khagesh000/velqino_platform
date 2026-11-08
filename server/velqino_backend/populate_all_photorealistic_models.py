@@ -13,39 +13,56 @@ if hasattr(sys.stdout, 'reconfigure'):
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'velqino_backend.settings')
 django.setup()
 
+from django.conf import settings
 from intelligence.models import AIModelProfile, AIModelAnglePose
 from intelligence.services.base_model_service import MODEL_CATALOG, ANGLES_CONFIG
 
-MEDIA_MODELS_DIR = os.path.join('media', 'intelligence', 'models')
+MEDIA_MODELS_DIR = os.path.join(settings.BASE_DIR, 'media', 'intelligence', 'models')
 os.makedirs(MEDIA_MODELS_DIR, exist_ok=True)
 
-ARTIFACTS_DIR = r'C:\Users\ymani\.gemini\antigravity-ide\brain\df671b22-4875-454e-90bd-d671f5ba77ff'
+# Configurable fallback source directory for initial raw generation (defaults to MEDIA_MODELS_DIR)
+ARTIFACTS_DIR = os.environ.get('MODELS_SRC_DIR', MEDIA_MODELS_DIR)
 
-# Known high-resolution base images generated
+def resolve_model_base_path(slug, view, fallback_filename=None):
+    """
+    Dynamically resolves model base image without hardcoding local computer paths.
+    Checks MEDIA_MODELS_DIR first, then custom source directory.
+    """
+    candidate_png = os.path.join(MEDIA_MODELS_DIR, f"{slug}_{view}.png")
+    if os.path.exists(candidate_png):
+        return candidate_png
+    candidate_jpg = os.path.join(MEDIA_MODELS_DIR, f"{slug}_{view}.jpg")
+    if os.path.exists(candidate_jpg):
+        return candidate_jpg
+    if fallback_filename and ARTIFACTS_DIR and os.path.exists(os.path.join(ARTIFACTS_DIR, fallback_filename)):
+        return os.path.join(ARTIFACTS_DIR, fallback_filename)
+    return candidate_png
+
+# Known base images resolved dynamically
 KNOWN_BASES = {
     'ares-athletic-tan': {
-        'front': os.path.join(MEDIA_MODELS_DIR, 'ares-athletic-tan_front.png'),
-        'back': os.path.join(MEDIA_MODELS_DIR, 'ares-athletic-tan_back.png'),
+        'front': resolve_model_base_path('ares-athletic-tan', 'front'),
+        'back': resolve_model_base_path('ares-athletic-tan', 'back'),
     },
     'leo-regular-olive': {
-        'front': os.path.join(ARTIFACTS_DIR, 'leo_kurta_front_1792938274352.jpg'),
-        'back': os.path.join(ARTIFACTS_DIR, 'leo_kurta_back_1792938447725.jpg'),
+        'front': resolve_model_base_path('leo-regular-olive', 'front', 'leo_kurta_front_1792938274352.jpg'),
+        'back': resolve_model_base_path('leo-regular-olive', 'back', 'leo_kurta_back_1792938447725.jpg'),
     },
     'marcus-broad-bronze': {
-        'front': os.path.join(ARTIFACTS_DIR, 'marcus_hoodie_front_1792939021760.jpg'),
-        'back': os.path.join(ARTIFACTS_DIR, 'marcus_hoodie_back_1792939105245.jpg'),
+        'front': resolve_model_base_path('marcus-broad-bronze', 'front', 'marcus_hoodie_front_1792939021760.jpg'),
+        'back': resolve_model_base_path('marcus-broad-bronze', 'back', 'marcus_hoodie_back_1792939105245.jpg'),
     },
     'ethan-slim-fair': {
-        'front': os.path.join(ARTIFACTS_DIR, 'ethan_tshirt_front_1792939292894.jpg'),
-        'back': os.path.join(ARTIFACTS_DIR, 'ethan_tshirt_back_1792939652801.jpg'),
+        'front': resolve_model_base_path('ethan-slim-fair', 'front', 'ethan_tshirt_front_1792939292894.jpg'),
+        'back': resolve_model_base_path('ethan-slim-fair', 'back', 'ethan_tshirt_back_1792939652801.jpg'),
     },
     'sienna-fit-olive': {
-        'front': os.path.join(MEDIA_MODELS_DIR, 'sienna-fit-olive_front.png'),
-        'back': os.path.join(MEDIA_MODELS_DIR, 'sienna-fit-olive_back.png'),
+        'front': resolve_model_base_path('sienna-fit-olive', 'front'),
+        'back': resolve_model_base_path('sienna-fit-olive', 'back'),
     },
     'kai-boy-tan': {
-        'front': os.path.join(MEDIA_MODELS_DIR, 'kai-boy-tan_front.png'),
-        'back': os.path.join(MEDIA_MODELS_DIR, 'kai-boy-tan_back.png'),
+        'front': resolve_model_base_path('kai-boy-tan', 'front'),
+        'back': resolve_model_base_path('kai-boy-tan', 'back'),
     },
 }
 

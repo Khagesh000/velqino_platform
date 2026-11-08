@@ -84,6 +84,73 @@ def crop_to_content(pil_rgba, padding=10):
     return pil_rgba.crop((x0, y0, x1, y1))
 
 
+def synthesize_clean_garment_back(front_rgba):
+    """
+    Intelligently synthesizes an authentic rear view of the garment when the merchant
+    did not provide a back photo.
+    - Prevents reversed text/logos by inpainting/neutralizing central chest graphics.
+    - Raises the neckline collar so it sits higher than the scooped front collar.
+    - Preserves shoulder, sleeve, hem, and overall fabric texture/color.
+    """
+    np_rgba = np.array(front_rgba).copy()
+    h, w = np_rgba.shape[:2]
+    alpha = np_rgba[:, :, 3]
+
+    # 1. Neutralize chest graphics/prints in the central chest quadrant
+    # Typical chest print region: 25% to 65% height, 25% to 75% width
+    cy1, cy2 = int(h * 0.25), int(h * 0.65)
+    cx1, cx2 = int(w * 0.25), int(w * 0.75)
+
+    chest_alpha = alpha[cy1:cy2, cx1:cx2]
+    if np.sum(chest_alpha > 50) > 100:
+        # Sample clean fabric color from left and right shoulders/ribs
+        left_rib = np_rgba[cy1:cy2, int(w * 0.10):int(w * 0.24)]
+        right_rib = np_rgba[cy1:cy2, int(w * 0.76):int(w * 0.90)]
+        
+        valid_rib_list = []
+        if np.any(left_rib[:, :, 3] > 180):
+            valid_rib_list.append(left_rib[left_rib[:, :, 3] > 180][:, :3])
+        if np.any(right_rib[:, :, 3] > 180):
+            valid_rib_list.append(right_rib[right_rib[:, :, 3] > 180][:, :3])
+
+        if valid_rib_list:
+            valid_rib = np.concatenate(valid_rib_list, axis=0)
+            if len(valid_rib) > 20:
+                base_fabric_color = np.median(valid_rib, axis=0).astype(np.uint8)
+                chest_rgb = np_rgba[cy1:cy2, cx1:cx2, :3]
+                chest_dist = np.linalg.norm(chest_rgb.astype(np.float32) - base_fabric_color.astype(np.float32), axis=2)
+                graphic_mask = (chest_dist > 25) & (chest_alpha > 120)
+                if np.sum(graphic_mask) > (chest_alpha.size * 0.05):
+                    for c in range(3):
+                        chest_c = chest_rgb[:, :, c]
+                        chest_c[graphic_mask] = base_fabric_color[c]
+                        np_rgba[cy1:cy2, cx1:cx2, c] = chest_c
+
+    # 2. Raise neckline: rear collar sits higher than scooped front neck
+    top_region = np.where(alpha > 100)
+    if len(top_region[0]) > 0:
+        min_y = np.min(top_region[0])
+        collar_raise_px = max(6, int(h * 0.03))
+        neck_y1 = max(0, min_y - collar_raise_px)
+        neck_y2 = min_y + collar_raise_px * 2
+        neck_x1 = int(w * 0.35)
+        neck_x2 = int(w * 0.65)
+
+        shoulder_samples = np_rgba[min_y:min_y + 15, int(w * 0.20):int(w * 0.35)]
+        valid_shoulder = shoulder_samples[shoulder_samples[:, :, 3] > 200]
+        if len(valid_shoulder) > 0:
+            sh_color = np.median(valid_shoulder[:, :3], axis=0).astype(np.uint8)
+            for y in range(neck_y1, neck_y2):
+                for x in range(neck_x1, neck_x2):
+                    if np_rgba[y, x, 3] < 120:
+                        np_rgba[y, x, 0] = sh_color[0]
+                        np_rgba[y, x, 1] = sh_color[1]
+                        np_rgba[y, x, 2] = sh_color[2]
+                        np_rgba[y, x, 3] = 255
+
+    return Image.fromarray(np_rgba)
+
+
 def warp_garment_to_model(
     garment_rgba,
     angle_key,
@@ -130,16 +197,10 @@ def warp_garment_to_model(
             canvas.alpha_composite(resized, (x_pos, y_pos))
 
         elif angle_key == 'back':
-            # Back drape
-            if is_real_back:
-                # Authentic back garment provided by user - do not flip
-                resized = garment_clean.resize((int(base_w * 1.04), desired_h), Image.Resampling.LANCZOS)
-            else:
-                # Synthesize back drape from front image
-                mirrored = garment_clean.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-                resized = mirrored.resize((int(base_w * 1.04), desired_h), Image.Resampling.LANCZOS)
+            # Back drape (cleanly prepared as authentic back or graphic-neutralized rear fabric)
+            resized = garment_clean.resize((int(base_w * 1.04), desired_h), Image.Resampling.LANCZOS)
             x_pos = cx - (resized.width // 2)
-            y_pos = base_top_y - 6  # Back collar sits higher
+            y_pos = base_top_y - 10  # Rear collar sits higher naturally
             canvas.alpha_composite(resized, (x_pos, y_pos))
 
         elif angle_key in ['left_three_quarter', 'right_three_quarter']:
@@ -363,8 +424,8 @@ def execute_virtual_tryon(
             back_pil = Image.open(back_image_file_or_bytes)
         back_rgba = remove_garment_background(back_pil)
     else:
-        # Intelligently synthesize back garment from front
-        back_rgba = front_rgba.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        # Intelligently synthesize realistic rear view without flipping logos or printed text backwards
+        back_rgba = synthesize_clean_garment_back(front_rgba)
 
     renders_dir = os.path.join(settings.BASE_DIR, 'media', 'tryon', 'renders')
     os.makedirs(renders_dir, exist_ok=True)

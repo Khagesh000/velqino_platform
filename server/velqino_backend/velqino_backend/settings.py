@@ -243,16 +243,21 @@ WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 # ============================================================
 DATABASE_URL = config('DATABASE_URL', default=None)
 
+# Connection reuse optimization (in seconds): 600s default for high performance.
+# Set DB_CONN_MAX_AGE=0 or CLOSE_DB_CONNECTIONS_EACH_REQUEST=True in .env if using low-limit free tier databases.
+DB_CONN_MAX_AGE = int(os.getenv('DB_CONN_MAX_AGE', '600'))
+CLOSE_DB_CONNECTIONS_EACH_REQUEST = os.getenv('CLOSE_DB_CONNECTIONS_EACH_REQUEST', 'False').lower() in ('true', '1')
+
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=0,
+            conn_max_age=DB_CONN_MAX_AGE,
             conn_health_checks=True,
             engine='django.db.backends.mysql',
         )
     }
-    DATABASES['default']['CONN_MAX_AGE'] = 0
+    DATABASES['default']['CONN_MAX_AGE'] = DB_CONN_MAX_AGE
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     DATABASES['default']['OPTIONS'] = {
         'ssl': {'ssl_mode': 'REQUIRED'},
@@ -268,7 +273,7 @@ else:
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST', default='127.0.0.1'),
             'PORT': config('DB_PORT', default='3306'),
-            'CONN_MAX_AGE': 0,
+            'CONN_MAX_AGE': DB_CONN_MAX_AGE,
             'CONN_HEALTH_CHECKS': True,
             'OPTIONS': {
                 'init_command': "SET SESSION wait_timeout=30, interactive_timeout=30, sql_mode='STRICT_TRANS_TABLES'",

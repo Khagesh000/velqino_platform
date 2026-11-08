@@ -10,6 +10,7 @@ import {
   useExportToProductMutation,
   useGetCatalogProductsQuery
 } from '@/redux/common/slices/aiStudioSlice';
+import aiStudioAPI from '@/redux/common/Api/aiStudioAPI';
 import ModelSelector from './components/ModelSelector';
 import GarmentUploader from './components/GarmentUploader';
 import StudioControls from './components/StudioControls';
@@ -213,11 +214,43 @@ export default function AIStudio({ sellerRole = 'retailer' }) {
       const response = await generateTryOnMutation(formData).unwrap();
 
       if (response?.success) {
-        const renderData = response.data?.renders || [];
-        setRenders(renderData);
-        setCurrentSessionId(response.session_id);
-        setActiveAngleKey(renderData[0]?.angle_key || 'front');
-        toast.success(`Generated ${renderData.length} multi-angle studio photos!`);
+        if (response.data?.renders && response.data.renders.length > 0) {
+          const renderData = response.data.renders;
+          setRenders(renderData);
+          setCurrentSessionId(response.session_id);
+          setActiveAngleKey(renderData[0]?.angle_key || 'front');
+          toast.success(`Generated ${renderData.length} multi-angle studio photos!`);
+        } else if (response.status === 'processing' && response.session_id) {
+          // Asynchronous Celery background processing - poll session
+          setGenerationPhase('Processing multi-angle photoshoot in background worker...');
+          let attempts = 0;
+          const maxAttempts = 25;
+          const pollInterval = setInterval(async () => {
+            attempts += 1;
+            try {
+              const pollRes = await aiStudioAPI.getSession(response.session_id);
+              const sessionData = pollRes.data?.session;
+              if (sessionData?.status === 'completed' && sessionData.renders?.length > 0) {
+                clearInterval(pollInterval);
+                setRenders(sessionData.renders);
+                setCurrentSessionId(sessionData.id);
+                setActiveAngleKey(sessionData.renders[0]?.angle_key || 'front');
+                setGenerationPhase('');
+                toast.success(`Generated ${sessionData.renders.length} multi-angle studio photos!`);
+              } else if (sessionData?.status === 'failed' || attempts >= maxAttempts) {
+                clearInterval(pollInterval);
+                setGenerationPhase('');
+                toast.error(sessionData?.error_message || 'Background photoshoot generation timed out.');
+              }
+            } catch (pollErr) {
+              if (attempts >= maxAttempts) {
+                clearInterval(pollInterval);
+                setGenerationPhase('');
+              }
+            }
+          }, 1500);
+          return;
+        }
       } else {
         toast.error(response?.error || 'Generation failed. Please try again.');
       }

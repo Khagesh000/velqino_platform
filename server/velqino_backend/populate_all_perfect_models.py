@@ -11,12 +11,28 @@ if hasattr(sys.stdout, 'reconfigure'):
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'velqino_backend.settings')
 django.setup()
 
+from django.conf import settings
 from intelligence.models import AIModelProfile, AIModelAnglePose
 
-MEDIA_DIR = os.path.join('media', 'intelligence', 'models')
+MEDIA_DIR = os.path.join(settings.BASE_DIR, 'media', 'intelligence', 'models')
 os.makedirs(MEDIA_DIR, exist_ok=True)
-BRAIN_DIR = r'C:\Users\ymani\.gemini\antigravity-ide\brain\df671b22-4875-454e-90bd-d671f5ba77ff'
-KIDS_RAW_DIR = os.path.join('media', 'intelligence', 'raw_kids')
+BRAIN_DIR = os.environ.get('MODELS_SRC_DIR', MEDIA_DIR)
+KIDS_RAW_DIR = os.path.join(settings.BASE_DIR, 'media', 'intelligence', 'raw_kids')
+
+def resolve_asset_path(slug, view, fallback_filename=None):
+    """
+    Dynamically resolves asset path without hardcoded user directories.
+    Checks MEDIA_DIR, BRAIN_DIR (or MODELS_SRC_DIR), and KIDS_RAW_DIR.
+    """
+    target_media = os.path.join(MEDIA_DIR, f"{slug}_{view}.png")
+    if os.path.exists(target_media):
+        return target_media
+    if fallback_filename:
+        if BRAIN_DIR and os.path.exists(os.path.join(BRAIN_DIR, fallback_filename)):
+            return os.path.join(BRAIN_DIR, fallback_filename)
+        if os.path.exists(os.path.join(KIDS_RAW_DIR, fallback_filename)):
+            return os.path.join(KIDS_RAW_DIR, fallback_filename)
+    return target_media
 
 def generate_angles_clean(front_path, back_path, slug, custom_l34_path=None):
     """
@@ -27,11 +43,37 @@ def generate_angles_clean(front_path, back_path, slug, custom_l34_path=None):
     - right_three_quarter (+45 deg)
     - left_side (-90 deg)
     - right_side (+90 deg)
+    Reuses existing pre-rendered assets if already generated on disk.
     """
+    target_angles = ['front', 'back', 'left_three_quarter', 'right_three_quarter', 'left_side', 'right_side']
+    existing_paths = {}
+    all_exist = True
+    for a in target_angles:
+        f_name = f"{slug}_{a}.png"
+        f_disk = os.path.join(MEDIA_DIR, f_name)
+        if os.path.exists(f_disk):
+            existing_paths[a] = f"/media/intelligence/models/{f_name}"
+        else:
+            all_exist = False
+
+    if all_exist:
+        return existing_paths
+
     target_w, target_h = 896, 1200
 
+    if not front_path or not os.path.exists(front_path):
+        front_path = os.path.join(MEDIA_DIR, f"{slug}_front.png")
+    if not back_path or not os.path.exists(back_path):
+        back_path = os.path.join(MEDIA_DIR, f"{slug}_back.png")
+
+    if not os.path.exists(front_path):
+        raise FileNotFoundError(f"Base front image for {slug} not found at {front_path}")
+
     f_img = Image.open(front_path).resize((target_w, target_h), Image.Resampling.LANCZOS).convert('RGB')
-    b_img = Image.open(back_path).resize((target_w, target_h), Image.Resampling.LANCZOS).convert('RGB')
+    if os.path.exists(back_path):
+        b_img = Image.open(back_path).resize((target_w, target_h), Image.Resampling.LANCZOS).convert('RGB')
+    else:
+        b_img = ImageOps.mirror(f_img)
     f_np = np.array(f_img)
     b_np = np.array(b_img)
     w, h = target_w, target_h
@@ -126,8 +168,8 @@ PROFILES = [
         'description': 'Light blue button-down shirt & white trousers in outdoor villa setting.',
         'display_order': 1,
         'is_default': True,
-        'front': os.path.join(BRAIN_DIR, 'mens_model_front_1792930853669.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'mens_model_back_1792930911661.jpg'),
+        'front': resolve_asset_path('ares-athletic-tan', 'front', 'mens_model_front_1792930853669.jpg'),
+        'back': resolve_asset_path('ares-athletic-tan', 'back', 'mens_model_back_1792930911661.jpg'),
     },
     {
         'slug': 'leo-regular-olive',
@@ -144,8 +186,8 @@ PROFILES = [
         'description': 'Embroidered festive olive-gold Kurta & white pajama in heritage courtyard.',
         'display_order': 2,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'leo_kurta_front_1792938274352.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'leo_kurta_back_1792938447725.jpg'),
+        'front': resolve_asset_path('leo-regular-olive', 'front', 'leo_kurta_front_1792938274352.jpg'),
+        'back': resolve_asset_path('leo-regular-olive', 'back', 'leo_kurta_back_1792938447725.jpg'),
     },
     {
         'slug': 'marcus-broad-bronze',
@@ -162,8 +204,8 @@ PROFILES = [
         'description': 'Charcoal heather hoodie and dark denim jeans in industrial studio.',
         'display_order': 3,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'marcus_hoodie_front_1792939021760.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'marcus_hoodie_back_1792939105245.jpg'),
+        'front': resolve_asset_path('marcus-broad-bronze', 'front', 'marcus_hoodie_front_1792939021760.jpg'),
+        'back': resolve_asset_path('marcus-broad-bronze', 'back', 'marcus_hoodie_back_1792939105245.jpg'),
     },
     {
         'slug': 'ethan-slim-fair',
@@ -180,8 +222,8 @@ PROFILES = [
         'description': 'Navy blue crewneck t-shirt & beige chinos in modern art gallery.',
         'display_order': 4,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'ethan_tshirt_front_1792939292894.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'ethan_tshirt_back_1792939652801.jpg'),
+        'front': resolve_asset_path('ethan-slim-fair', 'front', 'ethan_tshirt_front_1792939292894.jpg'),
+        'back': resolve_asset_path('ethan-slim-fair', 'back', 'ethan_tshirt_back_1792939652801.jpg'),
     },
     {
         'slug': 'kofi-sculpted-dark',
@@ -220,8 +262,8 @@ PROFILES = [
         'description': 'Mustard yellow & emerald green embroidered Punjabi salwar suit with sheer dupatta.',
         'display_order': 6,
         'is_default': True,
-        'front': os.path.join(BRAIN_DIR, 'women_punjabi_front_1793033637068.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'women_punjabi_back_1793034090549.jpg'),
+        'front': resolve_asset_path('sienna-fit-olive', 'front', 'women_punjabi_front_1793033637068.jpg'),
+        'back': resolve_asset_path('sienna-fit-olive', 'back', 'women_punjabi_back_1793034090549.jpg'),
     },
     {
         'slug': 'maya-hourglass-bronze',
@@ -238,9 +280,9 @@ PROFILES = [
         'description': 'Deep crimson and gold traditional Banarasi silk saree with ornate zari border.',
         'display_order': 7,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'women_saree_front_1793028804543.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'women_saree_back_1793029362173.jpg'),
-        'custom_l34': os.path.join(BRAIN_DIR, 'saree_left_34_1793031019694.jpg'),
+        'front': resolve_asset_path('maya-hourglass-bronze', 'front', 'women_saree_front_1793028804543.jpg'),
+        'back': resolve_asset_path('maya-hourglass-bronze', 'back', 'women_saree_back_1793029362173.jpg'),
+        'custom_l34': resolve_asset_path('maya-hourglass-bronze', 'left_three_quarter', 'saree_left_34_1793031019694.jpg'),
     },
     {
         'slug': 'chloe-petite-fair',
@@ -257,8 +299,8 @@ PROFILES = [
         'description': 'Fitted white cotton crewneck t-shirt and classic dark blue denim jeans with white sneakers.',
         'display_order': 8,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'women_tshirt_front_1793034206157.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'women_tshirt_back_1793034555200.jpg'),
+        'front': resolve_asset_path('chloe-petite-fair', 'front', 'women_tshirt_front_1793034206157.jpg'),
+        'back': resolve_asset_path('chloe-petite-fair', 'back', 'women_tshirt_back_1793034555200.jpg'),
     },
     {
         'slug': 'amara-tall-dark',
@@ -275,8 +317,8 @@ PROFILES = [
         'description': 'Pastel turquoise blue A-line kurti with white thread embroidery and matching white palazzo pants.',
         'display_order': 9,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'women_kurti_front_1793034705398.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'women_kurti_back_1793034795180.jpg'),
+        'front': resolve_asset_path('amara-tall-dark', 'front', 'women_kurti_front_1793034705398.jpg'),
+        'back': resolve_asset_path('amara-tall-dark', 'back', 'women_kurti_back_1793034795180.jpg'),
     },
     {
         'slug': 'zara-regular-tan',
@@ -293,8 +335,8 @@ PROFILES = [
         'description': 'Sky-blue linen button-down shirt and tailored white trousers in sunlit terrace setting.',
         'display_order': 10,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'womens_model_front_1792930965130.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'womens_model_back_1792931216247.jpg'),
+        'front': resolve_asset_path('zara-regular-tan', 'front', 'womens_model_front_1792930965130.jpg'),
+        'back': resolve_asset_path('zara-regular-tan', 'back', 'womens_model_back_1792931216247.jpg'),
     },
 
     # ==========================
@@ -315,8 +357,8 @@ PROFILES = [
         'description': 'Sky-blue button-down shirt and beige chino shorts with brown leather loafers.',
         'display_order': 11,
         'is_default': True,
-        'front': os.path.join(BRAIN_DIR, 'kids_boy_front_1792931100470.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'kids_boy_back_1792931352663.jpg'),
+        'front': resolve_asset_path('kai-boy-tan', 'front', 'kids_boy_front_1792931100470.jpg'),
+        'back': resolve_asset_path('kai-boy-tan', 'back', 'kids_boy_back_1792931352663.jpg'),
     },
     {
         'slug': 'aria-girl-fair',
@@ -333,8 +375,8 @@ PROFILES = [
         'description': 'Cheerful bright pink and yellow floral cotton summer frock dress with yellow bow.',
         'display_order': 12,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'girl_frock_front_1793034948752.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'girl_frock_back_1793035164142.jpg'),
+        'front': resolve_asset_path('aria-girl-fair', 'front', 'girl_frock_front_1793034948752.jpg'),
+        'back': resolve_asset_path('aria-girl-fair', 'back', 'girl_frock_back_1793035164142.jpg'),
     },
     {
         'slug': 'rohan-boy-olive',
@@ -351,8 +393,8 @@ PROFILES = [
         'description': 'Color-blocked forest green, black & white sports hoodie with dark grey joggers and sneakers.',
         'display_order': 13,
         'is_default': False,
-        'front': os.path.join(KIDS_RAW_DIR, 'rohan_hoodie_front_1793116819339.jpg'),
-        'back': os.path.join(KIDS_RAW_DIR, 'rohan_hoodie_back_1793116954654.jpg'),
+        'front': resolve_asset_path('rohan-boy-olive', 'front', 'rohan_hoodie_front_1793116819339.jpg'),
+        'back': resolve_asset_path('rohan-boy-olive', 'back', 'rohan_hoodie_back_1793116954654.jpg'),
     },
     {
         'slug': 'diya-girl-jeans',
@@ -369,8 +411,8 @@ PROFILES = [
         'description': 'Pastel lavender purple t-shirt and light blue straight-leg denim jeans with sneakers.',
         'display_order': 14,
         'is_default': False,
-        'front': os.path.join(BRAIN_DIR, 'girl_jeans_front_1793035470369.jpg'),
-        'back': os.path.join(BRAIN_DIR, 'girl_jeans_back_1793035526388.jpg'),
+        'front': resolve_asset_path('diya-girl-jeans', 'front', 'girl_jeans_front_1793035470369.jpg'),
+        'back': resolve_asset_path('diya-girl-jeans', 'back', 'girl_jeans_back_1793035526388.jpg'),
     },
     {
         'slug': 'vivaan-boy-fair',

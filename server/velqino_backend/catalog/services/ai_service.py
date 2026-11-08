@@ -954,27 +954,86 @@ class AIService:
             print("[FAIL] No front frame available")
             return products
 
+        def detect_garments_adaptive(pil_img, expected_count):
+            """
+            Computer Vision detector optimized for flat-lay clothing on counters, tables, or floors.
+            Finds distinct garment bounding boxes based on contrast, color saliency, and morphology.
+            """
+            try:
+                cv_img = cv2.cvtColor(np.array(pil_img.convert('RGB')), cv2.COLOR_RGB2BGR)
+                gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+                blur = cv2.GaussianBlur(gray, (7, 7), 0)
+
+                # Otsu + adaptive threshold
+                _, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+                cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+
+                contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                img_area = pil_img.width * pil_img.height
+                min_area = img_area * 0.02
+                max_area = img_area * 0.85
+
+                garment_boxes = []
+                for cnt in contours:
+                    area = cv2.contourArea(cnt)
+                    if min_area <= area <= max_area:
+                        x, y, w, h = cv2.boundingRect(cnt)
+                        aspect = w / float(h)
+                        if 0.4 <= aspect <= 2.5:
+                            garment_boxes.append((x, y, x + w, y + h, area))
+
+                if abs(len(garment_boxes) - expected_count) <= 2 and len(garment_boxes) > 0:
+                    row_height = max(50, pil_img.height // 4)
+                    garment_boxes.sort(key=lambda b: (b[1] // row_height, b[0]))
+                    crops = []
+                    for (x1, y1, x2, y2, _) in garment_boxes[:expected_count]:
+                        pw = int((x2 - x1) * 0.04)
+                        ph = int((y2 - y1) * 0.04)
+                        x1 = max(0, x1 - pw)
+                        y1 = max(0, y1 - ph)
+                        x2 = min(pil_img.width, x2 + pw)
+                        y2 = min(pil_img.height, y2 + ph)
+                        crop = pil_img.crop((x1, y1, x2, y2))
+                        if crop.width < 512:
+                            scale = 512 / crop.width
+                            crop = crop.resize((int(crop.width * scale), int(crop.height * scale)), Image.LANCZOS)
+                        crops.append(crop)
+                    return crops, 'adaptive_contour'
+                return None, 'fallback'
+            except Exception as e:
+                print(f"[WARN] Adaptive contour detection failed: {e}")
+                return None, 'fallback'
+
         def detect_shirts_yolo(pil_img, expected_count):
             """
-            Use YOLOv8 to detect each shirt as individual bounding box.
-            Falls back to equal grid if YOLO finds wrong count.
+            Detects shirts and clothing items on flat counter/table.
+            Uses custom YOLO model if configured, checks fashion classes,
+            and validates bounding box count with adaptive contour fallback.
             """
             try:
                 ultralytics_mod = importlib.import_module('ultralytics')
                 YOLO = getattr(ultralytics_mod, 'YOLO', None)
                 if YOLO is None:
                     raise ImportError("YOLO not found in ultralytics")
-                import numpy as np
 
-                # Load YOLOv8 nano — detects 'person' class which covers clothing
-                # We use it to find distinct objects in the image
-                model = YOLO('yolov8n.pt')  # auto-downloads on first run
+                # Dynamic model path (supports custom fine-tuned weights via environment)
+                model_name = os.environ.get('YOLO_GARMENT_MODEL', 'yolov8n.pt')
+                model = YOLO(model_name)
 
                 img_array = np.array(pil_img.convert('RGB'))
 
-                # Run detection — classes 0=person, 26=handbag, 27=tie
-                # For clothing/shirts use class agnostic detection
-                results = model(img_array, verbose=False, conf=0.1, iou=0.3)
+                # Determine if model has dedicated fashion/clothing classes
+                class_names = getattr(model, 'names', {})
+                clothing_class_ids = [
+                    cid for cid, name in class_names.items()
+                    if any(term in str(name).lower() for term in ['shirt', 'dress', 'clothing', 'top', 'pant'])
+                ]
+
+                if clothing_class_ids:
+                    results = model(img_array, verbose=False, conf=0.25, classes=clothing_class_ids)
+                else:
+                    results = model(img_array, verbose=False, conf=0.15, iou=0.35)
 
                 boxes = []
                 for result in results:
@@ -985,15 +1044,14 @@ class AIService:
                         boxes.append((x1, y1, x2, y2, conf, cls))
 
                 # Sort left->right, top->bottom (grid order)
-                boxes.sort(key=lambda b: (b[1] // (pil_img.height // 3), b[0]))
+                row_h = max(50, pil_img.height // 3)
+                boxes.sort(key=lambda b: (b[1] // row_h, b[0]))
 
                 print(f"[TARGET] YOLO detected {len(boxes)} objects (expected {expected_count})")
 
-                # If YOLO found correct count -> use YOLO boxes
                 if abs(len(boxes) - expected_count) <= 2 and len(boxes) > 0:
                     crops = []
                     for (x1, y1, x2, y2, conf, cls) in boxes[:expected_count]:
-                        # Add 5% padding around each detected shirt
                         pw = int((x2 - x1) * 0.05)
                         ph = int((y2 - y1) * 0.05)
                         x1 = max(0, x1 - pw)
@@ -1002,8 +1060,6 @@ class AIService:
                         y2 = min(pil_img.height, y2 + ph)
 
                         crop = pil_img.crop((x1, y1, x2, y2))
-
-                        # Upscale to min 512px
                         if crop.width < 512:
                             scale = 512 / crop.width
                             crop = crop.resize(
@@ -1014,13 +1070,12 @@ class AIService:
                         print(f"  [OK] YOLO shirt: {x1},{y1}->{x2},{y2} conf={conf:.2f}")
 
                     return crops, 'yolo'
-
                 else:
-                    print(f"[WARN] YOLO count mismatch -> falling back to equal grid")
+                    print(f"[WARN] YOLO count mismatch ({len(boxes)} vs {expected_count}) -> checking adaptive contour detector")
                     return None, 'fallback'
 
             except Exception as e:
-                print(f"[WARN] YOLO failed: {e} -> falling back to equal grid")
+                print(f"[WARN] YOLO detection skipped: {e} -> checking adaptive contour detector")
                 return None, 'fallback'
 
         def equal_grid_crop(pil_img, rows, cols, product_count):
@@ -1071,23 +1126,30 @@ class AIService:
 
             return crops
 
-        # -- Main: try YOLO first, fallback to equal grid ----------------------
-        print(f"\n[SEARCH] Detecting {product_count} shirts using YOLOv8...")
+        # -- Main detection pipeline: YOLO -> Adaptive Counter Contours -> Grid Slicing --
+        print(f"\n[SEARCH] Detecting {product_count} shirts using intelligent garment detector...")
         front_crops, method = detect_shirts_yolo(front_frame, product_count)
+
+        if front_crops is None:
+            print("[SEARCH] Trying adaptive flat-lay contour detector...")
+            front_crops, method = detect_garments_adaptive(front_frame, product_count)
 
         if front_crops is None:
             print("[MEASURE] Using equal grid fallback...")
             front_crops = equal_grid_crop(front_frame, grid_rows, grid_columns, product_count)
+            method = 'grid'
 
-        # Same method for back
+        # Same method for back view
         if back_frame:
-            back_crops, _ = detect_shirts_yolo(back_frame, product_count)
+            back_crops, b_method = detect_shirts_yolo(back_frame, product_count)
+            if back_crops is None:
+                back_crops, b_method = detect_garments_adaptive(back_frame, product_count)
             if back_crops is None:
                 back_crops = equal_grid_crop(back_frame, grid_rows, grid_columns, product_count)
         else:
             back_crops = []
 
-        print(f"[OK] Final: {len(front_crops)} front / {len(back_crops)} back ({method})")
+        print(f"[OK] Final: {len(front_crops)} front / {len(back_crops)} back (Method: {method})")
 
         for idx, front_crop in enumerate(front_crops):
             back_crop = back_crops[idx] if idx < len(back_crops) else None
@@ -1117,6 +1179,32 @@ class AIService:
     
     @staticmethod
     def _remove_background(image_data):
+        """
+        Intelligent multi-tier background removal:
+        1. Local rembg (ONNX model, zero API cost, self-hosted)
+        2. Official remove.bg API (if REMOVE_BG_API_KEY configured with quota)
+        3. Adaptive CV Fallback (corner-sampled color distance + morphological contour extraction)
+        """
+        # Tier 1: Local rembg (if package installed in environment)
+        try:
+            rembg_module = importlib.import_module('rembg')
+            if hasattr(rembg_module, 'remove'):
+                if isinstance(image_data, Image.Image):
+                    pil_input = image_data
+                else:
+                    pil_input = Image.open(io.BytesIO(image_data))
+
+                cutout = rembg_module.remove(pil_input)
+                buf = io.BytesIO()
+                cutout.save(buf, format='PNG')
+                print("[OK] rembg local AI background removal succeeded")
+                return buf.getvalue()
+        except (ImportError, ModuleNotFoundError):
+            pass
+        except Exception as e:
+            print(f"[WARN] rembg failed: {e} -> trying remove.bg API")
+
+        # Tier 2: remove.bg cloud API
         try:
             api_key = getattr(settings, 'REMOVE_BG_API_KEY', None)
 
@@ -1125,12 +1213,8 @@ class AIService:
                 image_data.save(img_bytes, format='PNG')
                 image_data = img_bytes.getvalue()
 
-            # [OK] Check size — remove.bg rejects tiny images (<100px)
             img_check = Image.open(io.BytesIO(image_data))
-            print(f"[SEARCH] Sending to remove.bg: {img_check.width}x{img_check.height}px")
-
             if img_check.width < 100 or img_check.height < 100:
-                print("[WARN] Image too small — upscaling before remove.bg")
                 scale = max(200 / img_check.width, 200 / img_check.height)
                 img_check = img_check.resize(
                     (int(img_check.width * scale), int(img_check.height * scale)),
@@ -1140,67 +1224,106 @@ class AIService:
                 img_check.save(buf, format='PNG')
                 image_data = buf.getvalue()
 
-            if not api_key:
-                print("[WARN] No remove.bg API key — using fallback")
-                return AIService._simple_background_removal(image_data)
+            if api_key:
+                response = requests.post(
+                    'https://api.remove.bg/v1.0/removebg',
+                    files={'image_file': image_data},
+                    data={'size': 'auto'},
+                    headers={'X-Api-Key': api_key},
+                    timeout=15
+                )
 
-            response = requests.post(
-                'https://api.remove.bg/v1.0/removebg',
-                files={'image_file': image_data},
-                data={'size': 'auto'},
-                headers={'X-Api-Key': api_key},
-                timeout=30
-            )
+                if response.status_code == 200:
+                    print("[OK] remove.bg API success")
+                    return response.content
 
-            if response.status_code == 200:
-                print("[OK] remove.bg success")
-                return response.content
+                print(f"[WARN] remove.bg API returned {response.status_code} — using adaptive local CV fallback")
 
-            print(f"[WARN] remove.bg failed: {response.status_code} — using fallback")
             return AIService._simple_background_removal(image_data)
 
         except Exception as e:
-            print(f"[FAIL] Background removal failed: {e}")
+            print(f"[FAIL] Background removal API error: {e} — using adaptive local CV fallback")
             return AIService._simple_background_removal(image_data)
     
     @staticmethod
     def _simple_background_removal(image_data):
+        """
+        Adaptive local CV background removal:
+        Samples outer boundary / corners to detect background surface (wood, tile, cloth, cardboard)
+        and extracts the garment contour using Euclidean color distance and Otsu morphological filtering.
+        Guarantees non-white tables do not corrupt the garment crop.
+        """
         try:
             if isinstance(image_data, bytes):
-                img = Image.open(io.BytesIO(image_data))
+                img = Image.open(io.BytesIO(image_data)).convert("RGB")
             else:
-                img = image_data
+                img = image_data.convert("RGB")
 
-            img = img.convert("RGBA")
-            arr = np.array(img)
+            cv_img = np.array(img)
+            h, w = cv_img.shape[:2]
 
-            # [OK] Only remove near-pure white (>250) — old 240 was too aggressive
-            r, g, b = arr[:,:,0], arr[:,:,1], arr[:,:,2]
-            white_mask = (r > 250) & (g > 250) & (b > 250)
-            arr[white_mask, 3] = 0
-            img = Image.fromarray(arr)
+            # Sample corners and edge margins to estimate table/counter background
+            sample_size = max(5, min(25, h // 20, w // 20))
+            corners = [
+                cv_img[0:sample_size, 0:sample_size],
+                cv_img[0:sample_size, max(0, w - sample_size):w],
+                cv_img[max(0, h - sample_size):h, 0:sample_size],
+                cv_img[max(0, h - sample_size):h, max(0, w - sample_size):w]
+            ]
+            bg_color = np.median(np.concatenate([c.reshape(-1, 3) for c in corners]), axis=0)
 
-            # [OK] Validate — if too much removed revert to original
-            visible = np.sum(arr[:,:,3] > 30)
-            if visible / arr[:,:,3].size < 0.05:
-                print("[WARN] Simple BG removal too aggressive — returning original")
-                if isinstance(image_data, bytes):
-                    return image_data
-                output = io.BytesIO()
-                image_data.convert("RGB").save(output, format='JPEG', quality=90)
-                return output.getvalue()
+            # Compute color distance from background
+            diff = np.linalg.norm(cv_img.astype(np.float32) - bg_color.astype(np.float32), axis=2)
 
-            white_bg = Image.new('RGBA', img.size, (255, 255, 255, 255))
-            white_bg.paste(img, (0, 0), img)
+            # Normalized Otsu thresholding
+            diff_norm = np.clip((diff / (np.max(diff) + 1e-5)) * 255, 0, 255).astype(np.uint8)
+            _, mask = cv2.threshold(diff_norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+            # Clean morphological noise (fill fabric weave holes, remove table specks)
+            kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
+            kernel_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
+
+            # Retain primary garment contour
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                largest_cnt = max(contours, key=cv2.contourArea)
+                clean_mask = np.zeros_like(mask)
+                cv2.drawContours(clean_mask, [largest_cnt], -1, 255, -1)
+                mask = clean_mask
+
+            # Edge feathering
+            mask_blurred = cv2.GaussianBlur(mask, (7, 7), 2.0)
+
+            # Build RGBA result: exact garment pixels preserved
+            rgba = cv2.cvtColor(cv_img, cv2.COLOR_RGB2RGBA)
+            rgba[:, :, 3] = mask_blurred
+
+            # Validate that garment wasn't completely masked out
+            visible = np.sum(mask > 30)
+            if visible / mask.size < 0.05:
+                print("[WARN] Local adaptive background removal was too aggressive — keeping original")
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG', quality=92)
+                return buf.getvalue()
+
+            res_pil = Image.fromarray(rgba)
+            white_bg = Image.new('RGBA', res_pil.size, (255, 255, 255, 255))
+            white_bg.paste(res_pil, (0, 0), res_pil)
             final = white_bg.convert('RGB')
 
             output = io.BytesIO()
-            final.save(output, format='JPEG', quality=90)
+            final.save(output, format='JPEG', quality=92)
             return output.getvalue()
 
         except Exception as e:
-            print(f"[FAIL] Simple removal failed: {e}")
-            return None
+            print(f"[FAIL] Adaptive local background removal failed: {e}")
+            if isinstance(image_data, bytes):
+                return image_data
+            output = io.BytesIO()
+            image_data.convert("RGB").save(output, format='JPEG', quality=90)
+            return output.getvalue()
     
     @staticmethod
     def _detect_pattern(image):

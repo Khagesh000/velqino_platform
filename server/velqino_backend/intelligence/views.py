@@ -1,9 +1,11 @@
+import os
 import time
 import base64
 import requests
 from io import BytesIO
 from PIL import Image
 from django.conf import settings
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -17,6 +19,7 @@ from .serializers import (
     VirtualTryOnSubmitSerializer
 )
 from .services.tryon_engine import execute_virtual_tryon
+from .tasks import generate_vton_session_task
 from catalog.models import Product, ProductImage
 
 
@@ -58,8 +61,12 @@ class AIModelDetailAPIView(APIView):
     Returns single AI Model Profile with all 6 angles and landmarks.
     Supports PATCH method to update model attributes and default demographic assignment.
     """
-    permission_classes = [permissions.AllowAny]
     parser_classes = [JSONParser, FormParser, MultiPartParser]
+
+    def get_permissions(self):
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
     def _get_object(self, identifier):
         if str(identifier).isdigit():
@@ -75,6 +82,12 @@ class AIModelDetailAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
     def patch(self, request, slug):
+        if not (request.user.is_staff or getattr(request.user, 'role', '') in ['wholesaler', 'retailer', 'admin', 'support']):
+            return Response({
+                'success': False,
+                'message': 'Permission denied: Only registered merchants and staff can update AI model defaults.'
+            }, status=status.HTTP_403_FORBIDDEN)
+
         model_profile = self._get_object(slug)
 
         data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
@@ -117,11 +130,30 @@ class VirtualTryOnGenerateAPIView(APIView):
     """
     Generates realistic photoshoot of the uploaded or catalog garment fitted onto
     the chosen faceless AI model for both Front and Back sides and all 6 camera angles.
+    Supports asynchronous Celery worker processing and synchronous execution.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
+        allowed_roles = ['wholesaler', 'retailer', 'admin', 'support', 'customer']
+        if getattr(request.user, 'role', '') not in allowed_roles and not request.user.is_staff:
+            return Response({
+                'success': False,
+                'error': 'Permission denied: Only registered merchants and users can generate photoshoots.'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Rate limiting: max 15 studio generations per minute
+        user_id = request.user.id
+        cache_key = f"ratelimit_vton_{user_id}"
+        req_count = cache.get(cache_key, 0)
+        if req_count >= 15:
+            return Response({
+                'success': False,
+                'error': 'Rate limit exceeded: Maximum 15 studio generations per minute. Please wait a moment.'
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        cache.set(cache_key, req_count + 1, timeout=60)
+
         start_time = time.time()
         serializer = VirtualTryOnSubmitSerializer(data=request.data)
         if not serializer.is_valid():
@@ -138,7 +170,7 @@ class VirtualTryOnGenerateAPIView(APIView):
         tuck_style = data.get('tuck_style', 'untucked')
         backdrop_style = data.get('backdrop_style', 'pure_white')
         selected_angles = data.get('angles', ['front', 'back', 'left_three_quarter', 'right_three_quarter', 'left_side', 'right_side'])
-        seller_type = data.get('seller_type', 'retailer')
+        seller_type = data.get('seller_type', getattr(request.user, 'role', 'retailer'))
 
         # Retrieve AI Model
         try:
@@ -173,7 +205,6 @@ class VirtualTryOnGenerateAPIView(APIView):
             try:
                 product_obj = Product.objects.prefetch_related('images').get(id=product_id)
                 garment_title = product_obj.name
-                # Pull front and back images from ProductImage
                 front_prod_img = product_obj.images.filter(is_front=True).first() or product_obj.images.first()
                 if front_prod_img and front_prod_img.image:
                     img_url = front_prod_img.image.url
@@ -212,8 +243,36 @@ class VirtualTryOnGenerateAPIView(APIView):
             status='processing'
         )
 
+        # Determine execution mode: Async Celery worker vs Synchronous runner
+        is_async = (
+            request.data.get('async') in [True, 'true', '1'] or
+            request.query_params.get('async') in ['true', '1'] or
+            os.getenv('ASYNC_VTON_ENABLED', 'False').lower() in ('true', '1')
+        )
+
+        if is_async:
+            tmp_dir = os.path.join(settings.BASE_DIR, 'media', 'tryon', 'tmp_inputs')
+            os.makedirs(tmp_dir, exist_ok=True)
+            front_tmp_path = os.path.join(tmp_dir, f"sess_{session.id}_front.png")
+            with open(front_tmp_path, 'wb') as f:
+                f.write(front_image_bytes)
+
+            back_tmp_path = None
+            if back_image_bytes:
+                back_tmp_path = os.path.join(tmp_dir, f"sess_{session.id}_back.png")
+                with open(back_tmp_path, 'wb') as f:
+                    f.write(back_image_bytes)
+
+            generate_vton_session_task.delay(session.id, front_tmp_path, back_tmp_path)
+            return Response({
+                'success': True,
+                'session_id': session.id,
+                'status': 'processing',
+                'message': 'Virtual Try-On generation started in background.'
+            }, status=status.HTTP_202_ACCEPTED)
+
+        # Synchronous execution
         try:
-            # Run Virtual Try-On Engine
             result = execute_virtual_tryon(
                 front_image_file_or_bytes=front_image_bytes,
                 back_image_file_or_bytes=back_image_bytes,
@@ -290,8 +349,9 @@ class ExportToProductAPIView(APIView):
     """
     Attaches the generated photoshoot angles directly into the catalog Product's gallery.
     Assigns Front Angle with is_front=True and Back Angle with is_front=False.
+    Enforces authentication and seller ownership verification.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         session_id = request.data.get('session_id')
@@ -306,6 +366,13 @@ class ExportToProductAPIView(APIView):
 
         session = get_object_or_404(TryOnGenerationSession.objects.prefetch_related('renders'), id=session_id)
         product = get_object_or_404(Product, id=product_id)
+
+        # Ownership authorization check: only product owner or staff/admin can modify catalog images
+        if product.seller != request.user and not request.user.is_staff and getattr(request.user, 'role', '') != 'admin':
+            return Response({
+                'success': False,
+                'error': 'Permission denied: You can only export studio renders to products in your own catalog.'
+            }, status=status.HTTP_403_FORBIDDEN)
 
         renders_to_attach = session.renders.all()
         if selected_angles:
@@ -342,10 +409,21 @@ class FitGarmentAPIView(APIView):
     and fits front & back garment onto the appropriate default AI human model.
     Preserves 100% of the garment's exact original colors, textures, patterns, and button details.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         from .services.garment_analyzer import analyze_garment_and_demographic
+
+        # Rate limiting check: max 20 calls per minute
+        user_id = request.user.id
+        cache_key = f"ratelimit_fit_{user_id}"
+        req_count = cache.get(cache_key, 0)
+        if req_count >= 20:
+            return Response({
+                'success': False,
+                'error': 'Rate limit exceeded: Maximum 20 fit garment operations per minute.'
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        cache.set(cache_key, req_count + 1, timeout=60)
 
         front_image = request.FILES.get('front_image')
         back_image = request.FILES.get('back_image')
