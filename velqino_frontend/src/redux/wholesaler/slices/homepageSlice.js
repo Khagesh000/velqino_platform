@@ -13,7 +13,12 @@ export const homepageApi = createApi({
                     const response = await homepageAPI.getHomepageData();
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return {
+                        error: {
+                            status: error?.response?.status || 500,
+                            data: error?.response?.data || error?.message || 'Failed to load homepage data'
+                        }
+                    };
                 }
             },
             providesTags: ['Homepage']

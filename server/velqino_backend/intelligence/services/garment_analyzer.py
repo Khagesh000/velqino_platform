@@ -22,11 +22,16 @@ def analyze_garment_and_demographic(
     full_text = f"{cat_str} {name_str} {desc_str}"
 
     # -------------------------------------------------------------
-    # 1. Garment Type Analysis (Topwear vs Bottomwear)
+    # 1. Garment Type Analysis (Topwear vs Bottomwear vs Full Set / Ethnic)
     # -------------------------------------------------------------
-    if user_garment_type in ['top', 'bottom']:
+    if user_garment_type in ['top', 'bottom', 'full']:
         garment_type = user_garment_type
     else:
+        full_set_keywords = [
+            'saree', 'sari', 'dress', 'dresses', 'salwar', 'churidar',
+            'lehenga', 'punjabi', 'anarkali', 'sherwani', 'co-ord', 'coord',
+            'suit set', 'gown', 'jumpsuit', 'dungaree', 'kurti set'
+        ]
         bottomwear_keywords = [
             'pant', 'pants', 'trouser', 'trousers', 'jeans', 'denim',
             'short', 'shorts', 'cargo', 'cargos', 'jogger', 'joggers',
@@ -39,14 +44,21 @@ def analyze_garment_and_demographic(
             'sweatshirt', 'coat', 'vest', 'tank', 'tunic', 'cardigan'
         ]
 
-        # Check for bottomwear
-        if any(re.search(r'\b' + re.escape(kw) + r'\b', full_text) for kw in bottomwear_keywords):
+        # Check for full set / ethnic first
+        if any(re.search(r'\b' + re.escape(kw) + r'\b', full_text) for kw in full_set_keywords):
+            garment_type = 'full'
+        elif any(re.search(r'\b' + re.escape(kw) + r'\b', full_text) for kw in bottomwear_keywords):
             garment_type = 'bottom'
         else:
             # Default to topwear for apparel catalog
             garment_type = 'top'
 
-    garment_type_label = 'Topwear' if garment_type == 'top' else 'Bottomwear'
+    garment_type_labels = {
+        'top': 'Topwear',
+        'bottom': 'Bottomwear',
+        'full': 'Full Set / Ethnic'
+    }
+    garment_type_label = garment_type_labels.get(garment_type, 'Topwear')
 
     # -------------------------------------------------------------
     # 2. Demographic & Age Group Analysis (Kids / Boy / Girl vs Women vs Men)

@@ -22,7 +22,10 @@ from django.conf import settings
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from catalog.models import Product, ProductVariant, ProductImage
+from django.db import connection, close_old_connections
+from django.db.utils import OperationalError
+from django.contrib.auth import get_user_model
+from catalog.models import Product, ProductVariant, ProductImage, Category
 
 try:
     realesrgan = importlib.import_module('realesrgan')
@@ -41,6 +44,36 @@ logger = logging.getLogger(__name__)
 
 class AIService:
     _sr_model = None
+
+    @staticmethod
+    def _safe_db_call(fn, max_retries=3):
+        """
+        Executes database write/read operations safely.
+        Proactively purges dead or timed-out sockets, reconnects if dropped by
+        Clever Cloud MySQL, and guards against max_user_connections saturation.
+        """
+        last_err = None
+        for attempt in range(max_retries):
+            try:
+                close_old_connections()
+                return fn()
+            except OperationalError as oe:
+                last_err = oe
+                logger.warning(f"[DB RETRY] PyMySQL OperationalError (attempt {attempt+1}/{max_retries}): {oe}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(0.4 * (attempt + 1))
+                    close_old_connections()
+            except Exception as e:
+                last_err = e
+                close_old_connections()
+                if attempt == 0:
+                    import time
+                    time.sleep(0.3)
+                else:
+                    raise e
+        if last_err:
+            raise last_err
     
 
     # =========================
@@ -59,7 +92,8 @@ class AIService:
         print(f"[PIN] Upload mode: {upload_mode}")
         
         from ..models import Category
-        if not Category.objects.filter(id=category_id).exists():
+        cat_exists = AIService._safe_db_call(lambda: Category.objects.filter(id=category_id).exists())
+        if not cat_exists:
             raise ValueError(f"category_id {category_id} does not exist. Cannot create products.")
         
         channel_layer = get_channel_layer()
@@ -68,233 +102,248 @@ class AIService:
         # Send progress
         AIService._send_progress(channel_layer, room_group_name, 10, "Extracting frames from video...")
         
-        # Step 1: Extract frames from video
-        frames = AIService._extract_frames_from_video(video_data, grid_rows, grid_columns)
-        
-        if not frames.get('front'):
-            print("[FAIL] No frames extracted from video")
-            return None
-        
-        AIService._send_progress(channel_layer, room_group_name, 30, f"Extracted {len(frames)} frames")
-        
-        # Step 2: Detect grid and crop individual products
-        products_data = AIService._detect_and_crop_products(frames, grid_rows, grid_columns, product_count)
-        
-        AIService._send_progress(channel_layer, room_group_name, 30, "Extracted front and back frames")
-        
         created_products = []
-        
-        # [OK] BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL ITEMS
-        if upload_mode == 'bulk_single_product':
-            AIService._send_progress(channel_layer, room_group_name, 50, "Creating one bulk product with all items...")
+        try:
+            # Step 1: Extract frames from video
+            frames = AIService._extract_frames_from_video(video_data, grid_rows, grid_columns)
             
-            # Generate product name
-            product_name = f"{name_prefix} (Bulk Pack)"
+            if not frames.get('front'):
+                print("[FAIL] No frames extracted from video")
+                return None
             
-            # Detect pattern and colors from first item
-            first_item = products_data[0] if products_data else {}
-            front_img_data = first_item.get('front')
-            if front_img_data:
-                front_img = Image.open(io.BytesIO(front_img_data))
-                pattern = AIService._detect_pattern(front_img)
-                colors = AIService._detect_colors(front_img)
-                primary_color = colors[0]['name'] if colors else ''
-            else:
-                pattern = ''
-                primary_color = ''
+            AIService._send_progress(channel_layer, room_group_name, 30, f"Extracted {len(frames)} frames")
             
-            # Create ONE product
-            product = Product.objects.create(
-                seller_id=seller_id,
-                name=product_name,
-                price=common_price,
-                cost=common_cost,
-                category_id=category_id,
-                brand=brand,
-                description=description,
-                pattern=pattern,
-                primary_color=primary_color,
-                stock=len(products_data),  # Stock = number of detected items
-                min_order_qty=len(products_data),  # Min order = number of items
-                status='active',
-                garment_type=garment_type or 'top'
-            )
+            # Step 2: Detect grid and crop individual products
+            products_data = AIService._detect_and_crop_products(frames, grid_rows, grid_columns, product_count)
             
-            # Save ALL detected items as images to the same product
-            for idx, product_frames in enumerate(products_data[:product_count]):
-                front_img_data = product_frames.get('front')
-                back_img_data = product_frames.get('back')
-                
-                if not front_img_data:
-                    continue
-                
-                # Process images
-                front_cleaned = AIService._process_final_image(front_img_data)
-                back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
-                
-                # Save front image
-                if front_cleaned:
-                    front_bytes = BytesIO(front_cleaned)  # [OK] USE front_cleaned
-                    front_result = cloudinary.uploader.upload(
-                        front_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
-                        overwrite=True,
-                        invalidate=True
-                    )
-                    
-                    ProductImage.objects.create(
-                        product=product,
-                        image=front_result['secure_url'],
-                        is_primary=(idx == 0),
-                        is_front=True,
-                        order=idx * 2
-                    )
-                
-                # Save back image
-                if back_cleaned:
-                    back_bytes = BytesIO(back_cleaned)
-                    back_result = cloudinary.uploader.upload(
-                        back_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
-                        use_filename=True,
-                        unique_filename=False,
-                        overwrite=True,
-                        invalidate=True
-                    )
-                    
-                    ProductImage.objects.create(
-                        product=product,
-                        image=back_result['secure_url'],
-                        is_primary=False,
-                        is_front=False,
-                        order=idx * 2 + 1
-                    )
-                
-                # Update progress
-                progress = 50 + int((idx / product_count) * 40)
-                AIService._send_progress(channel_layer, room_group_name, progress, f"Processing item {idx+1}/{product_count}")
+            AIService._send_progress(channel_layer, room_group_name, 35, "Extracted front and back frames")
             
-            created_products.append(product.id)
-            
-            # Add size variants if provided
-            if sizes:
-                for size in sizes:
-                    ProductVariant.objects.create(
-                        product=product,
-                        size=size,
-                        color=primary_color or '',
-                        sku=f"{product.sku}-{size}",
-                        stock=0,
-                        price=common_price
-                    )
-                print(f"[OK] Created {len(sizes)} size variants for bulk product")
-            
-            print(f"[OK] Created BULK product with {len(products_data)} items")
-        
-        # [OK] FRONT_BACK MODE - Separate product per detected item
-        else:
-            for idx, product_frames in enumerate(products_data[:product_count]):
-                progress = 50 + int((idx / product_count) * 40)
-                AIService._send_progress(
-                    channel_layer, room_group_name, progress, 
-                    f"Processing product {idx+1}/{product_count}"
-                )
-                
-                # Get front and back images
-                front_img_data = product_frames.get('front')
-                back_img_data = product_frames.get('back')
-                
-                if not front_img_data:
-                    continue
-                
-                # Remove background
-                front_cleaned = AIService._process_final_image(front_img_data)
-                back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
-
-                # Detect pattern and colors
-                front_img = Image.open(io.BytesIO(front_img_data))
-                pattern = AIService._detect_pattern(front_img)
-                colors = AIService._detect_colors(front_img)
-                primary_color = colors[0]['name'] if colors else ''
+            # [OK] BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL ITEMS
+            if upload_mode == 'bulk_single_product':
+                AIService._send_progress(channel_layer, room_group_name, 50, "Creating one bulk product with all items...")
                 
                 # Generate product name
-                product_name = f"{name_prefix} {idx+1}"
-                if pattern and pattern != 'solid':
-                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
-                elif primary_color:
-                    product_name = f"{primary_color} {name_prefix}"
+                product_name = f"{name_prefix} (Bulk Pack)"
                 
-                # Create product
-                product = Product.objects.create(
-                    seller_id=seller_id,
-                    name=product_name,
-                    price=common_price,
-                    cost=common_cost,
-                    category_id=category_id,
-                    brand=brand,
-                    description=description,
-                    pattern=pattern,
-                    primary_color=primary_color,
-                    status='active',
-                    garment_type=garment_type or 'top'
-                )
+                # Detect pattern and colors from first item
+                first_item = products_data[0] if products_data else {}
+                front_img_data = first_item.get('front')
+                if front_img_data:
+                    from intelligence.services.garment_isolator import isolate_garment_clutter_free
+                    first_rgba = isolate_garment_clutter_free(front_img_data)
+                    pattern = AIService._detect_pattern(first_rgba)
+                    colors = AIService._detect_colors(first_rgba)
+                    primary_color = colors[0]['name'] if colors else ''
+                else:
+                    pattern = ''
+                    primary_color = ''
                 
-                # Save images
-                if front_cleaned:
-                    front_bytes = BytesIO(front_cleaned)
-                    front_result = cloudinary.uploader.upload(
-                        front_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_front",
-                        overwrite=True,
-                        invalidate=True
+                def _create_v_bulk_prod():
+                    u_obj = get_user_model().objects.filter(id=seller_id).first()
+                    s_type = getattr(u_obj, 'role', 'wholesaler') if u_obj else 'wholesaler'
+                    w_val = u_obj if s_type == 'wholesaler' else None
+                    r_val = u_obj if s_type == 'retailer' else None
+                    return Product.objects.create(
+                        seller_id=seller_id,
+                        seller_type=s_type,
+                        wholesaler=w_val,
+                        retailer=r_val,
+                        name=product_name,
+                        price=common_price,
+                        cost=common_cost,
+                        category_id=category_id,
+                        brand=brand,
+                        description=description,
+                        pattern=pattern,
+                        primary_color=primary_color,
+                        stock=len(products_data),
+                        min_order_qty=len(products_data),
+                        status='active',
+                        garment_type=garment_type or 'top'
                     )
+                product = AIService._safe_db_call(_create_v_bulk_prod)
+                
+                for idx, product_frames in enumerate(products_data[:product_count]):
+                    front_img_data = product_frames.get('front')
+                    back_img_data = product_frames.get('back')
                     
-                    ProductImage.objects.create(
-                        product=product,
-                        image=front_result['secure_url'],
-                        is_primary=True,
-                        is_front=True,
-                        order=0
-                    )
-                
-                if back_cleaned:
-                    back_bytes = BytesIO(back_cleaned)
-                    back_result = cloudinary.uploader.upload(
-                        back_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_back",
-                        overwrite=True,
-                        invalidate=True
-                    )
+                    if not front_img_data:
+                        continue
                     
-                    ProductImage.objects.create(
-                        product=product,
-                        image=back_result['secure_url'],
-                        is_primary=False,
-                        is_front=False,
-                        order=1
-                    )
+                    front_cleaned = AIService._process_final_image(front_img_data)
+                    back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
+                    
+                    if front_cleaned:
+                        front_bytes = BytesIO(front_cleaned)
+                        front_result = cloudinary.uploader.upload(
+                            front_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
+                            overwrite=True,
+                            invalidate=True
+                        )
+                        def _save_v_front(u_url=front_result['secure_url'], i_idx=idx):
+                            ProductImage.objects.create(
+                                product=product,
+                                image=u_url,
+                                is_primary=(i_idx == 0),
+                                is_front=True,
+                                order=i_idx * 2
+                            )
+                        AIService._safe_db_call(_save_v_front)
+                    
+                    if back_cleaned:
+                        back_bytes = BytesIO(back_cleaned)
+                        back_result = cloudinary.uploader.upload(
+                            back_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                            use_filename=True,
+                            unique_filename=False,
+                            overwrite=True,
+                            invalidate=True
+                        )
+                        def _save_v_back(u_url=back_result['secure_url'], i_idx=idx):
+                            ProductImage.objects.create(
+                                product=product,
+                                image=u_url,
+                                is_primary=False,
+                                is_front=False,
+                                order=i_idx * 2 + 1
+                            )
+                        AIService._safe_db_call(_save_v_back)
+                    
+                    progress = 50 + int((idx / product_count) * 40)
+                    AIService._send_progress(channel_layer, room_group_name, progress, f"Processing item {idx+1}/{product_count}")
                 
                 created_products.append(product.id)
                 
                 if sizes:
-                    for size in sizes:
-                        ProductVariant.objects.create(
-                            product=product,
-                            size=size,
-                            color=primary_color or '',
-                            sku=f"{product.sku}-{size}",
-                            stock=0,
-                            price=common_price
+                    def _save_v_bulk_sizes():
+                        for size in sizes:
+                            ProductVariant.objects.create(
+                                product=product,
+                                size=size,
+                                color=primary_color or '',
+                                sku=f"{product.sku}-{size}",
+                                stock=0,
+                                price=common_price
+                            )
+                    AIService._safe_db_call(_save_v_bulk_sizes)
+            
+            # [OK] FRONT_BACK MODE - Separate product per detected item
+            else:
+                for idx, product_frames in enumerate(products_data[:product_count]):
+                    progress = 40 + int((idx / product_count) * 50)
+                    AIService._send_progress(
+                        channel_layer, room_group_name, progress, 
+                        f"Processing product {idx+1}/{product_count}"
+                    )
+                    
+                    front_img_data = product_frames.get('front')
+                    back_img_data = product_frames.get('back')
+                    
+                    if not front_img_data:
+                        continue
+                    
+                    from intelligence.services.garment_isolator import isolate_garment_clutter_free
+                    front_rgba = isolate_garment_clutter_free(front_img_data)
+                    back_rgba = isolate_garment_clutter_free(back_img_data) if back_img_data else None
+
+                    front_cleaned = AIService._process_final_image(front_rgba, view='front', garment_type=garment_type, seller_id=seller_id)
+                    back_cleaned = AIService._process_final_image(back_rgba, view='back', garment_type=garment_type, seller_id=seller_id) if back_rgba else None
+
+                    pattern = AIService._detect_pattern(front_rgba)
+                    colors = AIService._detect_colors(front_rgba)
+                    primary_color = colors[0]['name'] if colors else ''
+                    
+                    product_name = f"{name_prefix} {idx+1}"
+                    if pattern and pattern != 'solid':
+                        product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                    elif primary_color:
+                        product_name = f"{primary_color} {name_prefix}"
+                    
+                    def _create_v_fb_prod():
+                        u_obj = get_user_model().objects.filter(id=seller_id).first()
+                        s_type = getattr(u_obj, 'role', 'wholesaler') if u_obj else 'wholesaler'
+                        w_val = u_obj if s_type == 'wholesaler' else None
+                        r_val = u_obj if s_type == 'retailer' else None
+                        return Product.objects.create(
+                            seller_id=seller_id,
+                            seller_type=s_type,
+                            wholesaler=w_val,
+                            retailer=r_val,
+                            name=product_name,
+                            price=common_price,
+                            cost=common_cost,
+                            category_id=category_id,
+                            brand=brand,
+                            description=description,
+                            pattern=pattern,
+                            primary_color=primary_color,
+                            status='active',
+                            garment_type=garment_type or 'top'
                         )
-                    print(f"[OK] Created {len(sizes)} size variants for {product_name}")
-        
-        AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
-        
-        return {
-            'products_created': len(created_products),
-            'product_ids': created_products,
-            'mode': upload_mode
-        }
+                    product = AIService._safe_db_call(_create_v_fb_prod)
+                    
+                    if front_cleaned:
+                        front_bytes = BytesIO(front_cleaned)
+                        front_result = cloudinary.uploader.upload(
+                            front_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_front",
+                            overwrite=True,
+                            invalidate=True
+                        )
+                        def _save_v_fb_front():
+                            ProductImage.objects.create(
+                                product=product,
+                                image=front_result['secure_url'],
+                                is_primary=True,
+                                is_front=True,
+                                order=0
+                            )
+                        AIService._safe_db_call(_save_v_fb_front)
+                    
+                    if back_cleaned:
+                        back_bytes = BytesIO(back_cleaned)
+                        back_result = cloudinary.uploader.upload(
+                            back_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_back",
+                            overwrite=True,
+                            invalidate=True
+                        )
+                        def _save_v_fb_back():
+                            ProductImage.objects.create(
+                                product=product,
+                                image=back_result['secure_url'],
+                                is_primary=False,
+                                is_front=False,
+                                order=1
+                            )
+                        AIService._safe_db_call(_save_v_fb_back)
+                    
+                    created_products.append(product.id)
+                    
+                    if sizes:
+                        def _save_v_fb_sizes():
+                            for size in sizes:
+                                ProductVariant.objects.create(
+                                    product=product,
+                                    size=size,
+                                    color=primary_color or '',
+                                    sku=f"{product.sku}-{size}",
+                                    stock=0,
+                                    price=common_price
+                                )
+                        AIService._safe_db_call(_save_v_fb_sizes)
+            
+            AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
+            
+            return {
+                'products_created': len(created_products),
+                'product_ids': created_products,
+                'mode': upload_mode
+            }
+        finally:
+            close_old_connections()
     
     # =========================
     # [START] MAIN ENTRY FOR BULK IMAGES PROCESSING
@@ -315,259 +364,236 @@ class AIService:
 
 
         from ..models import Category
-        if not Category.objects.filter(id=category_id).exists():
+        cat_exists = AIService._safe_db_call(lambda: Category.objects.filter(id=category_id).exists())
+        if not cat_exists:
             raise ValueError(f"category_id {category_id} does not exist. Cannot create products.")
 
         channel_layer = get_channel_layer()
         room_group_name = task_id
 
-        AIService._send_progress(channel_layer, room_group_name, 10, "Processing images...")
+        AIService._send_progress(channel_layer, room_group_name, 10, "Initializing AI vision pipeline...")
 
         created_products = []
 
-        # [OK] BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL IMAGES
-        if upload_mode == 'bulk_single_product':
-            AIService._send_progress(channel_layer, room_group_name, 20, "Creating one bulk product with all images...")
-            
-            # Detect pattern and colors from first image
-            first_img_data = images_data[0]
-            first_img = Image.open(io.BytesIO(first_img_data))
-            pattern = AIService._detect_pattern(first_img)
-            colors = AIService._detect_colors(first_img)
-            primary_color = colors[0]['name'] if colors else ''
-            
-            # Generate product name
-            product_name = f"{name_prefix} (Bulk Pack)"
-            if pattern and pattern != 'solid':
-                product_name = f"{pattern.capitalize()} {primary_color} {name_prefix} (Bulk)"
-            elif primary_color:
-                product_name = f"{primary_color} {name_prefix} (Bulk)"
-            
-            # Create ONE product
-            product = Product.objects.create(
-                seller_id=seller_id,
-                name=product_name,
-                price=common_price,
-                cost=common_cost,
-                category_id=category_id,
-                brand=brand,
-                description=description,
-                pattern=pattern,
-                primary_color=primary_color,
-                stock=len(images_data),  # Stock = number of images
-                min_order_qty=len(images_data),  # Min order = number of images
-                status='active',
-                garment_type=garment_type or 'top'
-            )
-            
-            # Save ALL images to the same product
-            for idx, img_data in enumerate(images_data):
-                progress = 20 + int((idx / len(images_data)) * 70)
-                AIService._send_progress(channel_layer, room_group_name, progress, f"Saving image {idx+1}/{len(images_data)}")
+        try:
+            # [OK] BULK SINGLE PRODUCT MODE - ONE PRODUCT WITH ALL IMAGES
+            if upload_mode == 'bulk_single_product':
+                AIService._send_progress(channel_layer, room_group_name, 20, "Creating bulk pack product...")
                 
-                # Process image
-                cleaned_img = AIService._process_final_image(img_data)
-                
-                if cleaned_img:
-                    img_bytes = BytesIO(cleaned_img)
-                    upload_result = cloudinary.uploader.upload(
-                        img_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image_{idx+1}",
-                        use_filename=True,
-                        unique_filename=False,
-                        overwrite=True,
-                        invalidate=False
-                    )
-                    
-                    ProductImage.objects.create(
-                        product=product,
-                        image=upload_result['secure_url'],
-                        is_primary=(idx == 0),
-                        is_front=True,
-                        order=idx
-                    )
-                    print(f"[OK] Saved image {idx+1} for bulk product")
-            
-            created_products.append(product.id)
-            
-            # Add size variants if provided
-            if sizes:
-                for size in sizes:
-                    ProductVariant.objects.create(
-                        product=product,
-                        size=size,
-                        color=primary_color or '',
-                        sku=f"{product.sku}-{size}",
-                        stock=0,
-                        price=common_price
-                    )
-                print(f"[OK] Created {len(sizes)} size variants for bulk product")
-            
-            print(f"[OK] Created BULK product with {len(images_data)} images")
-        
-        # [OK] FRONT_BACK MODE - Separate product per front+back pair
-        elif upload_mode == 'front_back':
-            products_to_create = len(images_data) // 2
-            print(f"[BOX] Front+Back mode: Creating {products_to_create} products")
-            
-            for idx in range(products_to_create):
-                front_img_data = images_data[idx * 2]
-                back_img_data = images_data[idx * 2 + 1] if (idx * 2 + 1) < len(images_data) else None
-
-                progress = 10 + int((idx / products_to_create) * 80)
-                AIService._send_progress(
-                    channel_layer, room_group_name, progress,
-                    f"Processing product {idx+1}/{products_to_create}: Cleaning images..."
-                )
-
-                # Process images (removes background, centers on white canvas)
-                front_cleaned = AIService._process_final_image(front_img_data)
-                back_cleaned = AIService._process_final_image(back_img_data) if back_img_data else None
-
-                AIService._send_progress(
-                    channel_layer, room_group_name, min(progress + 15, 88),
-                    f"Product {idx+1}/{products_to_create}: Detecting colors and patterns..."
-                )
-
-                # Detect pattern and colors
-                front_img = Image.open(io.BytesIO(front_img_data))
-                pattern = AIService._detect_pattern(front_img)
-                colors = AIService._detect_colors(front_img)
+                first_img_data = images_data[0]
+                from intelligence.services.garment_isolator import isolate_garment_clutter_free
+                first_rgba = isolate_garment_clutter_free(first_img_data)
+                pattern = AIService._detect_pattern(first_rgba)
+                colors = AIService._detect_colors(first_rgba)
                 primary_color = colors[0]['name'] if colors else ''
-
-                # Generate product name
-                product_name = f"{name_prefix} {idx+1}"
+                
+                product_name = f"{name_prefix} (Bulk Pack)"
                 if pattern and pattern != 'solid':
-                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix} (Bulk)"
                 elif primary_color:
-                    product_name = f"{primary_color} {name_prefix}"
+                    product_name = f"{primary_color} {name_prefix} (Bulk)"
+                
+                def _create_bulk_prod():
+                    u_obj = get_user_model().objects.filter(id=seller_id).first()
+                    s_type = getattr(u_obj, 'role', 'wholesaler') if u_obj else 'wholesaler'
+                    w_val = u_obj if s_type == 'wholesaler' else None
+                    r_val = u_obj if s_type == 'retailer' else None
+                    return Product.objects.create(
+                        seller_id=seller_id,
+                        seller_type=s_type,
+                        wholesaler=w_val,
+                        retailer=r_val,
+                        name=product_name,
+                        price=common_price,
+                        cost=common_cost,
+                        category_id=category_id,
+                        brand=brand,
+                        description=description,
+                        pattern=pattern,
+                        primary_color=primary_color,
+                        stock=len(images_data),
+                        min_order_qty=len(images_data),
+                        status='active',
+                        garment_type=garment_type or 'top'
+                    )
+                product = AIService._safe_db_call(_create_bulk_prod)
+                
+                for idx, img_data in enumerate(images_data):
+                    progress = 20 + int((idx / len(images_data)) * 70)
+                    AIService._send_progress(channel_layer, room_group_name, progress, f"Saving image {idx+1}/{len(images_data)}")
+                    
+                    cleaned_img = AIService._process_final_image(img_data)
+                    if cleaned_img:
+                        img_bytes = BytesIO(cleaned_img)
+                        upload_result = cloudinary.uploader.upload(
+                            img_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image_{idx+1}",
+                            use_filename=True,
+                            unique_filename=False,
+                            overwrite=True,
+                            invalidate=False
+                        )
+                        def _save_bulk_img(u_url=upload_result['secure_url'], i_idx=idx):
+                            ProductImage.objects.create(
+                                product=product,
+                                image=u_url,
+                                is_primary=(i_idx == 0),
+                                is_front=True,
+                                order=i_idx
+                            )
+                        AIService._safe_db_call(_save_bulk_img)
+                
+                created_products.append(product.id)
+                
+                if sizes:
+                    def _save_bulk_variants():
+                        for size in sizes:
+                            ProductVariant.objects.create(
+                                product=product,
+                                size=size,
+                                color=primary_color or '',
+                                sku=f"{product.sku}-{size}",
+                                stock=0,
+                                price=common_price
+                            )
+                    AIService._safe_db_call(_save_bulk_variants)
+            
+            # [OK] FRONT_BACK MODE - Separate product per front+back pair
+            elif upload_mode == 'front_back':
+                products_to_create = len(images_data) // 2
+                print(f"[BOX] Front+Back mode: Creating {products_to_create} products")
+                
+                for idx in range(products_to_create):
+                    front_img_data = images_data[idx * 2]
+                    back_img_data = images_data[idx * 2 + 1] if (idx * 2 + 1) < len(images_data) else None
 
-                # Create product
-                product = Product.objects.create(
-                    seller_id=seller_id,
-                    name=product_name,
-                    price=common_price,
-                    cost=common_cost,
-                    category_id=category_id,
-                    brand=brand,
-                    description=description,
-                    pattern=pattern,
-                    primary_color=primary_color,
-                    status='active',
-                    garment_type=garment_type or 'top'
-                )
+                    base_pct = 10 + int((idx / products_to_create) * 85)
 
-                # Save images with AI Model Fitting
-                if ai_fit_enabled:
-                    try:
-                        from intelligence.services.garment_analyzer import analyze_garment_and_demographic
-                        from intelligence.services.tryon_engine import execute_virtual_tryon
-                        from concurrent.futures import ThreadPoolExecutor
+                    # 1. Clean and isolate images
+                    AIService._send_progress(
+                        channel_layer, room_group_name, base_pct + 4,
+                        f"Product {idx+1}/{products_to_create}: Semantic garment isolation & cleaning..."
+                    )
+                    from intelligence.services.garment_isolator import isolate_garment_clutter_free
+                    front_rgba = isolate_garment_clutter_free(front_img_data)
+                    back_rgba = isolate_garment_clutter_free(back_img_data) if back_img_data else None
 
-                        cat_obj = Category.objects.filter(id=category_id).first()
-                        cat_name = cat_obj.name if cat_obj else ''
+                    front_cleaned = AIService._process_final_image(front_rgba, view='front', garment_type=garment_type, seller_id=seller_id)
+                    back_cleaned = AIService._process_final_image(back_rgba, view='back', garment_type=garment_type, seller_id=seller_id) if back_rgba else None
 
-                        analysis = analyze_garment_and_demographic(
-                            category_name=cat_name,
-                            product_name=product.name,
-                            sizes=sizes,
+                    # 2. Fabric analysis
+                    AIService._send_progress(
+                        channel_layer, room_group_name, base_pct + 12,
+                        f"Product {idx+1}/{products_to_create}: Detecting fabric color & pattern..."
+                    )
+                    pattern = AIService._detect_pattern(front_rgba)
+                    colors = AIService._detect_colors(front_rgba)
+                    primary_color = colors[0]['name'] if colors else ''
+
+                    product_name = f"{name_prefix} {idx+1}"
+                    if pattern and pattern != 'solid':
+                        product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                    elif primary_color:
+                        product_name = f"{primary_color} {name_prefix}"
+
+                    # 3. Create Product with resilient DB retry
+                    AIService._send_progress(
+                        channel_layer, room_group_name, base_pct + 20,
+                        f"Product {idx+1}/{products_to_create}: Registering catalog product..."
+                    )
+
+                    def _create_fb_product():
+                        u_obj = get_user_model().objects.filter(id=seller_id).first()
+                        s_type = getattr(u_obj, 'role', 'wholesaler') if u_obj else 'wholesaler'
+                        w_val = u_obj if s_type == 'wholesaler' else None
+                        r_val = u_obj if s_type == 'retailer' else None
+                        return Product.objects.create(
+                            seller_id=seller_id,
+                            seller_type=s_type,
+                            wholesaler=w_val,
+                            retailer=r_val,
+                            name=product_name,
+                            price=common_price,
+                            cost=common_cost,
+                            category_id=category_id,
+                            brand=brand,
                             description=description,
-                            user_demographic=demographic,
-                            user_fit_silhouette=fit_silhouette
+                            pattern=pattern,
+                            primary_color=primary_color,
+                            status='active',
+                            garment_type=garment_type or 'top'
                         )
 
-                        AIService._send_progress(
-                            channel_layer, room_group_name, min(progress + 30, 90),
-                            f"Product {idx+1}/{products_to_create}: Fitting onto photorealistic AI model..."
-                        )
+                    product = AIService._safe_db_call(_create_fb_product)
 
-                        # Pass cleaned garments to execute_virtual_tryon so remove_garment_background is instant
-                        try_on_res = execute_virtual_tryon(
-                            front_image_file_or_bytes=front_cleaned or front_img_data,
-                            back_image_file_or_bytes=back_cleaned or back_img_data,
-                            model_slug=analysis['model']['slug'],
-                            angles=['front', 'back'],
-                            garment_type=analysis['garment_type'],
-                            fit_silhouette=analysis['fit_silhouette'],
-                            tuck_style='untucked',
-                            backdrop_style='pure_white'
-                        )
+                    # 4. Save Clean Studio Catalog Images (Pure white background with soft shadow)
+                    AIService._send_progress(
+                        channel_layer, room_group_name, min(base_pct + 40, 95),
+                        f"Product {idx+1}/{products_to_create}: Generating clean studio catalog images..."
+                    )
 
-                        AIService._send_progress(
-                            channel_layer, room_group_name, min(progress + 50, 92),
-                            f"Product {idx+1}/{products_to_create}: Uploading editorial catalog images in parallel..."
-                        )
+                    prod_media_dir = os.path.join(settings.BASE_DIR, 'media', 'products', datetime.now().strftime('%Y/%m'))
+                    os.makedirs(prod_media_dir, exist_ok=True)
 
-                        upload_tasks = []
+                    upload_tasks = []
 
-                        # Editorial model renders
-                        for render_data in try_on_res.get('renders', []):
-                            angle_key = render_data['angle_key']
-                            is_front_view = (angle_key == 'front')
-                            render_rel_path = render_data.get('image_url')
-                            full_render_path = os.path.join(settings.BASE_DIR, render_rel_path.lstrip('/'))
+                    if front_cleaned:
+                        front_filename = f"{product.sku}_item_{idx+1}_front.jpg"
+                        full_front_path = os.path.join(prod_media_dir, front_filename)
+                        with open(full_front_path, 'wb') as f:
+                            f.write(front_cleaned)
+                        rel_front = f"/media/products/{datetime.now().strftime('%Y/%m')}/{front_filename}"
 
-                            if os.path.exists(full_render_path):
-                                upload_tasks.append({
-                                    'file_path': full_render_path,
-                                    'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_ai_model_{angle_key}",
-                                    'fallback_url': render_rel_path,
-                                    'is_primary': is_front_view,
-                                    'is_front': is_front_view,
-                                    'order': 0 if is_front_view else 1
-                                })
+                        upload_tasks.append({
+                            'file_path': full_front_path,
+                            'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
+                            'fallback_url': rel_front,
+                            'is_primary': True,
+                            'is_front': True,
+                            'order': 0
+                        })
 
-                        # Cleaned raw front
-                        if front_cleaned:
-                            upload_tasks.append({
-                                'bytes_data': front_cleaned,
-                                'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front_raw",
-                                'fallback_url': None,
-                                'is_primary': False,
-                                'is_front': True,
-                                'order': 2
-                            })
+                    if back_cleaned:
+                        back_filename = f"{product.sku}_item_{idx+1}_back.jpg"
+                        full_back_path = os.path.join(prod_media_dir, back_filename)
+                        with open(full_back_path, 'wb') as f:
+                            f.write(back_cleaned)
+                        rel_back = f"/media/products/{datetime.now().strftime('%Y/%m')}/{back_filename}"
 
-                        # Cleaned raw back
-                        if back_cleaned:
-                            upload_tasks.append({
-                                'bytes_data': back_cleaned,
-                                'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back_raw",
-                                'fallback_url': None,
-                                'is_primary': False,
-                                'is_front': False,
-                                'order': 3
-                            })
+                        upload_tasks.append({
+                            'file_path': full_back_path,
+                            'public_id': f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
+                            'fallback_url': rel_back,
+                            'is_primary': False,
+                            'is_front': False,
+                            'order': 1
+                        })
 
-                        def _do_upload(task_item):
+                    def _do_upload(task_item):
+                        f_path = task_item.get('file_path')
+                        if f_path and os.path.exists(f_path):
                             try:
-                                if task_item.get('file_path'):
-                                    with open(task_item['file_path'], 'rb') as rf:
-                                        res = cloudinary.uploader.upload(
-                                            rf,
-                                            public_id=task_item['public_id'],
-                                            overwrite=True,
-                                            invalidate=False
-                                        )
-                                        return task_item, res.get('secure_url')
-                                elif task_item.get('bytes_data'):
-                                    b = BytesIO(task_item['bytes_data'])
+                                with open(f_path, 'rb') as rf:
                                     res = cloudinary.uploader.upload(
-                                        b,
+                                        rf,
                                         public_id=task_item['public_id'],
                                         overwrite=True,
-                                        invalidate=False
+                                        invalidate=False,
+                                        timeout=12
                                     )
-                                    return task_item, res.get('secure_url')
+                                    sec_url = res.get('secure_url')
+                                    if sec_url:
+                                        return task_item, sec_url
                             except Exception as ce:
-                                print(f"Cloudinary upload fallback for {task_item.get('public_id')}: {ce}")
-                                return task_item, task_item.get('fallback_url')
-                            return task_item, task_item.get('fallback_url')
+                                logger.warning(f"Cloudinary upload fallback for {task_item.get('public_id')}: {ce}")
+                        return task_item, task_item.get('fallback_url')
 
-                        # Run all Cloudinary uploads concurrently
-                        with ThreadPoolExecutor(max_workers=min(len(upload_tasks) or 1, 4)) as executor:
-                            upload_results = list(executor.map(_do_upload, upload_tasks))
+                    # Upload sequentially to maintain a single HTTP keep-alive connection without exhausting pool
+                    upload_results = []
+                    for task_item in upload_tasks:
+                        upload_results.append(_do_upload(task_item))
 
+                    def _save_fb_imgs():
                         for task_item, uploaded_url in upload_results:
                             final_url = uploaded_url or task_item.get('fallback_url')
                             if final_url:
@@ -578,165 +604,111 @@ class AIService:
                                     is_front=task_item['is_front'],
                                     order=task_item['order']
                                 )
+                    AIService._safe_db_call(_save_fb_imgs)
 
-                    except Exception as e:
-                        print(f"Virtual try-on error in bulk front_back mode: {e}")
-                        # Fallback to standard clean image upload
-                        if front_cleaned:
-                            front_bytes = BytesIO(front_cleaned)
-                            front_result = cloudinary.uploader.upload(
-                                front_bytes,
-                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
-                                overwrite=True,
-                                invalidate=False
-                            )
+                    created_products.append(product.id)
+                    
+                    if sizes:
+                        def _save_fb_sizes():
+                            for size in sizes:
+                                ProductVariant.objects.create(
+                                    product=product,
+                                    size=size,
+                                    color=primary_color or '',
+                                    sku=f"{product.sku}-{size}",
+                                    stock=0,
+                                    price=common_price
+                                )
+                        AIService._safe_db_call(_save_fb_sizes)
+
+            # [OK] FRONT_ONLY MODE - Separate product per image
+            else:
+                products_to_create = len(images_data)
+                print(f"[BOX] Front Only mode: Creating {products_to_create} products")
+                
+                for idx, img_data in enumerate(images_data):
+                    progress = 10 + int((idx / products_to_create) * 80)
+                    AIService._send_progress(
+                        channel_layer, room_group_name, progress,
+                        f"Processing product {idx+1}/{products_to_create}"
+                    )
+
+                    from intelligence.services.garment_isolator import isolate_garment_clutter_free
+                    img_rgba = isolate_garment_clutter_free(img_data)
+                    cleaned_img = AIService._process_final_image(img_rgba)
+
+                    pattern = AIService._detect_pattern(img_rgba)
+                    colors = AIService._detect_colors(img_rgba)
+                    primary_color = colors[0]['name'] if colors else ''
+
+                    product_name = f"{name_prefix} {idx+1}"
+                    if pattern and pattern != 'solid':
+                        product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
+                    elif primary_color:
+                        product_name = f"{primary_color} {name_prefix}"
+
+                    def _create_fo_product():
+                        u_obj = get_user_model().objects.filter(id=seller_id).first()
+                        s_type = getattr(u_obj, 'role', 'wholesaler') if u_obj else 'wholesaler'
+                        w_val = u_obj if s_type == 'wholesaler' else None
+                        r_val = u_obj if s_type == 'retailer' else None
+                        return Product.objects.create(
+                            seller_id=seller_id,
+                            seller_type=s_type,
+                            wholesaler=w_val,
+                            retailer=r_val,
+                            name=product_name,
+                            price=common_price,
+                            cost=common_cost,
+                            category_id=category_id,
+                            brand=brand,
+                            description=description,
+                            pattern=pattern,
+                            primary_color=primary_color,
+                            status='active',
+                            garment_type=garment_type or 'top'
+                        )
+                    product = AIService._safe_db_call(_create_fo_product)
+
+                    if cleaned_img:
+                        img_bytes = BytesIO(cleaned_img)
+                        upload_result = cloudinary.uploader.upload(
+                            img_bytes,
+                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image",
+                            use_filename=True,
+                            unique_filename=False,
+                            overwrite=True,
+                            invalidate=False
+                        )
+                        def _save_fo_img():
                             ProductImage.objects.create(
                                 product=product,
-                                image=front_result['secure_url'],
+                                image=upload_result['secure_url'],
                                 is_primary=True,
                                 is_front=True,
                                 order=0
                             )
-                        if back_cleaned:
-                            back_bytes = BytesIO(back_cleaned)
-                            back_result = cloudinary.uploader.upload(
-                                back_bytes,
-                                public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
-                                overwrite=True,
-                                invalidate=False
-                            )
-                            ProductImage.objects.create(
-                                product=product,
-                                image=back_result['secure_url'],
-                                is_primary=False,
-                                is_front=False,
-                                order=1
-                            )
-                else:
-                    # Non-AI fit: standard images
-                    if front_cleaned:
-                        front_bytes = BytesIO(front_cleaned)
-                        front_result = cloudinary.uploader.upload(
-                            front_bytes,
-                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_front",
-                            overwrite=True,
-                            invalidate=False
-                        )
-                        ProductImage.objects.create(
-                            product=product,
-                            image=front_result['secure_url'],
-                            is_primary=True,
-                            is_front=True,
-                            order=0
-                        )
-                    if back_cleaned:
-                        back_bytes = BytesIO(back_cleaned)
-                        back_result = cloudinary.uploader.upload(
-                            back_bytes,
-                            public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_item_{idx+1}_back",
-                            overwrite=True,
-                            invalidate=False
-                        )
-                        ProductImage.objects.create(
-                            product=product,
-                            image=back_result['secure_url'],
-                            is_primary=False,
-                            is_front=False,
-                            order=1
-                        )
+                        AIService._safe_db_call(_save_fo_img)
 
-                created_products.append(product.id)
-                
-                if sizes:
-                    for size in sizes:
-                        ProductVariant.objects.create(
-                            product=product,
-                            size=size,
-                            color=primary_color or '',
-                            sku=f"{product.sku}-{size}",
-                            stock=0,
-                            price=common_price
-                        )
-                    print(f"[OK] Created {len(sizes)} size variants for {product_name}")
-        
-        # [OK] FRONT_ONLY MODE - Separate product per image
-        else:  # 'front_only' mode
-            products_to_create = len(images_data)
-            print(f"[BOX] Front Only mode: Creating {products_to_create} products")
-            
-            for idx, img_data in enumerate(images_data):
-                progress = 10 + int((idx / products_to_create) * 80)
-                AIService._send_progress(
-                    channel_layer, room_group_name, progress,
-                    f"Processing product {idx+1}/{products_to_create}"
-                )
-
-                # Process image
-                cleaned_img = AIService._process_final_image(img_data)
-
-                # Detect pattern and colors
-                img = Image.open(io.BytesIO(img_data))
-                pattern = AIService._detect_pattern(img)
-                colors = AIService._detect_colors(img)
-                primary_color = colors[0]['name'] if colors else ''
-
-                # Generate product name
-                product_name = f"{name_prefix} {idx+1}"
-                if pattern and pattern != 'solid':
-                    product_name = f"{pattern.capitalize()} {primary_color} {name_prefix}"
-                elif primary_color:
-                    product_name = f"{primary_color} {name_prefix}"
-
-                # Create product
-                product = Product.objects.create(
-                    seller_id=seller_id,
-                    name=product_name,
-                    price=common_price,
-                    cost=common_cost,
-                    category_id=category_id,
-                    brand=brand,
-                    description=description,
-                    pattern=pattern,
-                    primary_color=primary_color,
-                    status='active',
-                    garment_type=garment_type or 'top'
-                )
-
-                # Save image
-                if cleaned_img:
-                    img_bytes = BytesIO(cleaned_img)
-                    upload_result = cloudinary.uploader.upload(
-                        img_bytes,
-                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_image",
-                        use_filename=True,
-                        unique_filename=False,
-                        overwrite=True,
-                        invalidate=False
-                    )
+                    created_products.append(product.id)
                     
-                    ProductImage.objects.create(
-                        product=product,
-                        image=upload_result['secure_url'],
-                        is_primary=True,
-                        is_front=True,
-                        order=0
-                    )
+                    if sizes:
+                        def _save_fo_sizes():
+                            for size in sizes:
+                                ProductVariant.objects.create(
+                                    product=product,
+                                    size=size,
+                                    color=primary_color or '',
+                                    sku=f"{product.sku}-{size}",
+                                    stock=0,
+                                    price=common_price
+                                )
+                        AIService._safe_db_call(_save_fo_sizes)
 
-                created_products.append(product.id)
-                
-                if sizes:
-                    for size in sizes:
-                        ProductVariant.objects.create(
-                            product=product,
-                            size=size,
-                            color=primary_color or '',
-                            sku=f"{product.sku}-{size}",
-                            stock=0,
-                            price=common_price
-                        )
-                    print(f"[OK] Created {len(sizes)} size variants for {product_name}")
+            AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
 
-        AIService._send_progress(channel_layer, room_group_name, 100, "Completed!")
+        finally:
+            close_old_connections()
 
         return {
             'products_created': len(created_products),
@@ -1186,69 +1158,19 @@ class AIService:
     @staticmethod
     def _remove_background(image_data):
         """
-        Intelligent multi-tier background removal:
-        1. Local rembg (ONNX model, zero API cost, self-hosted)
-        2. Official remove.bg API (if REMOVE_BG_API_KEY configured with quota)
-        3. Adaptive CV Fallback (corner-sampled color distance + morphological contour extraction)
+        High-Performance Semantic Garment Isolation:
+        Uses isolate_garment_clutter_free (MiniBatchKMeans + perimeter border analysis).
+        Runs locally in ~50-80ms on CPU without external API timeouts or network bottlenecks.
+        Rejects feet, mats, rugs, floor tiles, and non-garment clutter.
         """
-        # Tier 1: Local rembg (if package installed in environment)
         try:
-            rembg_module = importlib.import_module('rembg')
-            if hasattr(rembg_module, 'remove'):
-                if isinstance(image_data, Image.Image):
-                    pil_input = image_data
-                else:
-                    pil_input = Image.open(io.BytesIO(image_data))
-
-                cutout = rembg_module.remove(pil_input)
-                buf = io.BytesIO()
-                cutout.save(buf, format='PNG')
-                print("[OK] rembg local AI background removal succeeded")
-                return buf.getvalue()
-        except (ImportError, ModuleNotFoundError):
-            pass
+            from intelligence.services.garment_isolator import isolate_garment_clutter_free
+            isolated_pil = isolate_garment_clutter_free(image_data)
+            buf = io.BytesIO()
+            isolated_pil.save(buf, format='PNG')
+            return buf.getvalue()
         except Exception as e:
-            print(f"[WARN] rembg failed: {e} -> trying remove.bg API")
-
-        # Tier 2: remove.bg cloud API
-        try:
-            api_key = getattr(settings, 'REMOVE_BG_API_KEY', None)
-
-            if isinstance(image_data, Image.Image):
-                img_bytes = io.BytesIO()
-                image_data.save(img_bytes, format='PNG')
-                image_data = img_bytes.getvalue()
-
-            img_check = Image.open(io.BytesIO(image_data))
-            if img_check.width < 100 or img_check.height < 100:
-                scale = max(200 / img_check.width, 200 / img_check.height)
-                img_check = img_check.resize(
-                    (int(img_check.width * scale), int(img_check.height * scale)),
-                    Image.LANCZOS
-                )
-                buf = io.BytesIO()
-                img_check.save(buf, format='PNG')
-                image_data = buf.getvalue()
-
-            if api_key:
-                response = requests.post(
-                    'https://api.remove.bg/v1.0/removebg',
-                    files={'image_file': image_data},
-                    data={'size': 'auto'},
-                    headers={'X-Api-Key': api_key},
-                    timeout=15
-                )
-
-                if response.status_code == 200:
-                    print("[OK] remove.bg API success")
-                    return response.content
-
-                print(f"[WARN] remove.bg API returned {response.status_code} — using adaptive local CV fallback")
-
-            return AIService._simple_background_removal(image_data)
-
-        except Exception as e:
-            print(f"[FAIL] Background removal API error: {e} — using adaptive local CV fallback")
+            logger.warning(f"[WARN] Local clutter-free isolation fallback: {e}")
             return AIService._simple_background_removal(image_data)
     
     @staticmethod
@@ -1375,38 +1297,56 @@ class AIService:
     
     @staticmethod
     def _detect_colors(image):
-        """Detect dominant colors using K-means"""
+        """Detect dominant garment colors using high-speed MiniBatchKMeans on isolated fabric pixels"""
         try:
-            from sklearn.cluster import KMeans
-            
+            from sklearn.cluster import MiniBatchKMeans
+            from intelligence.services.garment_isolator import isolate_garment_clutter_free
+
+            # 1. First priority: Analyze isolated garment fabric pixels (ignoring floor tiles and clutter)
+            if isinstance(image, (bytes, bytearray, Image.Image)):
+                try:
+                    garment_rgba = isolate_garment_clutter_free(image)
+                    np_rgba = np.array(garment_rgba)
+                    garment_pixels = np_rgba[np_rgba[:, :, 3] > 60][:, :3]
+                    if len(garment_pixels) > 100:
+                        step = max(1, len(garment_pixels) // 2500)
+                        sample_pixels = garment_pixels[::step].astype(np.float32)
+
+                        mbk = MiniBatchKMeans(n_clusters=4, random_state=42, batch_size=256, n_init='auto')
+                        mbk.fit(sample_pixels)
+
+                        colors = []
+                        for rgb in mbk.cluster_centers_.astype(int):
+                            color_name = AIService._rgb_to_color_name(tuple(rgb))
+                            hex_code = "#{:02x}{:02x}{:02x}".format(*rgb)
+                            colors.append({'name': color_name, 'code': hex_code, 'rgb': tuple(rgb)})
+                        return colors
+                except Exception as ex:
+                    logger.debug(f"Garment color isolation fallback: {ex}")
+
+            # 2. Fast Fallback
             if isinstance(image, bytes):
                 img = Image.open(io.BytesIO(image))
             else:
                 img = image
 
-            # Ensure RGB format so reshape(-1, 3) always succeeds
             if img.mode != 'RGB':
                 img = img.convert('RGB')
 
             img = img.resize((100, 100))
-            img_array = np.array(img)
-            pixels = img_array.reshape(-1, 3)
+            pixels = np.array(img).reshape(-1, 3).astype(np.float32)
 
-            # K-means clustering
-            kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
-            kmeans.fit(pixels)
+            mbk = MiniBatchKMeans(n_clusters=5, random_state=42, batch_size=256, n_init='auto')
+            mbk.fit(pixels)
 
             colors = []
-            for rgb in kmeans.cluster_centers_.astype(int):
+            for rgb in mbk.cluster_centers_.astype(int):
                 color_name = AIService._rgb_to_color_name(tuple(rgb))
                 hex_code = "#{:02x}{:02x}{:02x}".format(*rgb)
                 colors.append({'name': color_name, 'code': hex_code, 'rgb': tuple(rgb)})
 
-            # Prioritize garment color over background (exclude pure white/near-white unless all clusters are white)
             non_bg = [c for c in colors if not (c['rgb'][0] > 240 and c['rgb'][1] > 240 and c['rgb'][2] > 240)]
-            if non_bg:
-                return non_bg
-            return colors
+            return non_bg if non_bg else colors
 
         except Exception as e:
             print(f"Color detection failed: {e}")
@@ -1436,84 +1376,16 @@ class AIService:
 
 
     @staticmethod
-    def _process_final_image(image):
+    def _process_final_image(image, view='front', garment_type=None, seller_id=None):
         try:
-            if isinstance(image, bytes):
-                img = Image.open(io.BytesIO(image)).convert("RGBA")
-            else:
-                img = image.convert("RGBA")
-
-            # 1. AI HD
-            img = AIService._enhance_ai_hd(img)
-
-            # 2. Auto rotate — disabled (causes wrong rotation)
-            # img = AIService._auto_rotate(img)
-
-            # 3. Wrinkle smooth
-            img = AIService._smooth_wrinkles(img)
-
-            # 4. Remove background
-            img_bytes = io.BytesIO()
-            img.save(img_bytes, format='PNG')
-            bg_removed = AIService._remove_background(img_bytes.getvalue())
-
-            if bg_removed is None:
-                print("[WARN] BG removal returned None — using original")
-                img_bytes.seek(0)
-                bg_removed = img_bytes.getvalue()
-
-            img = Image.open(io.BytesIO(bg_removed)).convert("RGBA")
-
-            # [OK] Validate shirt not blank after bg removal
-            arr = np.array(img)
-            alpha = arr[:, :, 3]
-            visible_pixels = np.sum(alpha > 30)
-            if visible_pixels / alpha.size < 0.05:
-                print("[WARN] BG removal made shirt blank — reverting to original")
-                if isinstance(image, bytes):
-                    img = Image.open(io.BytesIO(image)).convert("RGBA")
-                else:
-                    img = image.convert("RGBA")
-
-            # [OK] TIGHT CROP — remove all transparent padding first
-            # So 85% fill is based on actual shirt pixels not empty space
-            arr = np.array(img)
-            alpha = arr[:, :, 3]
-            rows_ok = np.where(np.sum(alpha > 30, axis=1) > 0)[0]
-            cols_ok = np.where(np.sum(alpha > 30, axis=0) > 0)[0]
-            if len(rows_ok) > 0 and len(cols_ok) > 0:
-                x1 = max(0, int(cols_ok[0]) - 5)
-                y1 = max(0, int(rows_ok[0]) - 5)
-                x2 = min(img.width,  int(cols_ok[-1]) + 5)
-                y2 = min(img.height, int(rows_ok[-1]) + 5)
-                img = img.crop((x1, y1, x2, y2))
-                print(f"[CROP] Tight crop: {img.width}x{img.height}px")
-
-            # 5. Add shadow
-            img = AIService._add_shadow(img)
-
-            # [OK] Scale shirt to fill 85% of canvas
-            canvas_size = 1200
-            target_size = int(canvas_size * 0.85)
-            ratio = min(target_size / img.width, target_size / img.height)
-            new_w = int(img.width * ratio)
-            new_h = int(img.height * ratio)
-            img = img.resize((new_w, new_h), Image.LANCZOS)
-
-            # [OK] Perfect center on white canvas
-            bg = Image.new("RGBA", (canvas_size, canvas_size), (255, 255, 255, 255))
-            x = (canvas_size - new_w) // 2
-            y = (canvas_size - new_h) // 2
-            bg.paste(img, (x, y), img)
-
-            # 7. Final PNG
-            final = bg.convert("RGB")
-            output = io.BytesIO()
-            final.save(output, format='PNG', compress_level=0)
-
-            print(f"[OK] Final image: shirt {new_w}x{new_h}px on {canvas_size}x{canvas_size} ({new_w/canvas_size*100:.0f}% fill)")
-            return output.getvalue()
-
+            from intelligence.services.studio_shape_engine import execute_studio_pipeline
+            final_bytes, mode, telemetry = execute_studio_pipeline(
+                raw_image_input=image,
+                view=view,
+                user_garment_type=garment_type,
+                seller_id=seller_id
+            )
+            return final_bytes
         except Exception as e:
-            print(f"[FAIL] Final processing failed: {e}")
+            logger.error(f"[FAIL] Final processing failed: {e}", exc_info=True)
             return None

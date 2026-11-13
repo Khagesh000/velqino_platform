@@ -25,6 +25,8 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
     """
     Process video and create ONE product with all detected items
     """
+    from django.db import close_old_connections
+    close_old_connections()
     try:
         from catalog.services.ai_service import AIService
         
@@ -57,8 +59,27 @@ def process_bulk_video_task(self, seller_id, video_data, number_of_products,
         return result
         
     except Exception as e:
-        logger.error(f"Bulk video task failed: {e}")
+        logger.error(f"Bulk video task failed: {e}", exc_info=True)
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f'ai_task_{self.request.id}',
+                    {
+                        'type': 'send_progress',
+                        'data': {
+                            'progress': 0,
+                            'message': f"Error: {str(e)}",
+                            'state': 'FAILURE',
+                            'error': str(e)
+                        }
+                    }
+                )
+        except Exception:
+            pass
         raise self.retry(exc=e, countdown=60)
+    finally:
+        close_old_connections()
 
 
 @shared_task(bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
@@ -68,6 +89,8 @@ def process_bulk_images_task(self, seller_id, images_data, common_price, common_
                              ai_fit_enabled=True, fit_silhouette='regular', demographic=None,
                              garment_type='top'):
     """Process bulk images - supports bulk_single_product, front_back, and front_only with AI model fitting"""
+    from django.db import close_old_connections
+    close_old_connections()
     try:
         from catalog.services.ai_service import AIService
 
@@ -101,8 +124,27 @@ def process_bulk_images_task(self, seller_id, images_data, common_price, common_
         return result
 
     except Exception as e:
-        logger.error(f"Bulk images task failed: {e}")
+        logger.error(f"Bulk images task failed: {e}", exc_info=True)
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f'ai_task_{self.request.id}',
+                    {
+                        'type': 'send_progress',
+                        'data': {
+                            'progress': 0,
+                            'message': f"Error: {str(e)}",
+                            'state': 'FAILURE',
+                            'error': str(e)
+                        }
+                    }
+                )
+        except Exception:
+            pass
         raise self.retry(exc=e, countdown=60)
+    finally:
+        close_old_connections()
 
 
 @shared_task

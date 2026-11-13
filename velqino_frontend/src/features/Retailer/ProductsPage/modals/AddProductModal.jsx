@@ -117,8 +117,7 @@ export default function AddProductModal({ onClose, onSave, categories = [], isOp
       return;
     }
     if (!formData.garment_type) {
-      toast.error('Please select Garment Type (Top, Bottom, or Full Set)');
-      return;
+      formData.garment_type = 'top';
     }
 
     setUploading(true);

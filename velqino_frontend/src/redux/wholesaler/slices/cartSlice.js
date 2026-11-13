@@ -1,6 +1,13 @@
 import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
 import cartAPI from '../Api/cartAPI';
 
+const formatError = (error, defaultMsg = 'Request failed') => ({
+    error: {
+        status: error?.response?.status || 500,
+        data: error?.response?.data || error?.message || defaultMsg,
+    }
+});
+
 export const cartApi = createApi({
     reducerPath: 'cartApi',
     baseQuery: fakeBaseQuery(),
@@ -13,7 +20,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.getCart();
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to fetch cart');
                 }
             },
             providesTags: ['Cart']
@@ -26,7 +33,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.addToCart(data);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to add item to cart');
                 }
             },
             invalidatesTags: ['Cart']
@@ -39,7 +46,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.updateCartItem(itemId, { quantity });
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to update cart item');
                 }
             },
             invalidatesTags: ['Cart']
@@ -52,7 +59,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.removeCartItem(itemId);
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to remove cart item');
                 }
             },
             invalidatesTags: ['Cart']
@@ -65,7 +72,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.applyCoupon({ coupon_code: couponCode });
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to apply coupon');
                 }
             },
             invalidatesTags: ['Cart']
@@ -78,7 +85,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.removeCoupon();
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to remove coupon');
                 }
             },
             invalidatesTags: ['Cart']
@@ -91,7 +98,7 @@ export const cartApi = createApi({
                     const response = await cartAPI.clearCart();
                     return { data: response.data };
                 } catch (error) {
-                    return { error };
+                    return formatError(error, 'Failed to clear cart');
                 }
             },
             invalidatesTags: ['Cart']

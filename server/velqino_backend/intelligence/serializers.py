@@ -90,7 +90,7 @@ class TryOnGenerationSessionSerializer(serializers.ModelSerializer):
 
 class VirtualTryOnSubmitSerializer(serializers.Serializer):
     model_slug = serializers.CharField(required=True)
-    garment_type = serializers.ChoiceField(choices=['top', 'bottom', 'outfit'], default='top')
+    garment_type = serializers.ChoiceField(choices=['top', 'bottom', 'full', 'outfit'], default='top')
     garment_title = serializers.CharField(required=False, default='Apparel Garment')
     
     # Image uploads (either multipart file or base64 data string)

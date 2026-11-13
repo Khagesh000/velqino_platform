@@ -223,7 +223,7 @@ export default function ProductEditModal({ product = null, onClose, onSave, cate
       newErrors.price = 'Wholesale price is required (must be > 0)';
     }
     if (!formData.garment_type) {
-      newErrors.garment_type = 'Garment type is mandatory. Please select Top, Bottom, or Full Set';
+      formData.garment_type = 'top';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

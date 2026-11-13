@@ -126,8 +126,7 @@ export default function BulkVideoModal({ onClose, onSave, categories = [], isOpe
       return;
     }
     if (!formData.garment_type) {
-      toast.error('Please select Garment Type (Top, Bottom, or Full Set)');
-      return;
+      formData.garment_type = 'top';
     }
 
     setUploading(true);

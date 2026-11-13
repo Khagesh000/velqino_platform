@@ -99,6 +99,7 @@ class TryOnGenerationSession(models.Model):
     GARMENT_TYPE_CHOICES = (
         ('top', 'Topwear (Shirt / T-Shirt / Polo / Kurta)'),
         ('bottom', 'Bottomwear (Pants / Trousers / Jeans / Shorts)'),
+        ('full', 'Full Set / Ethnic (Saree / Dress / Suit / Co-ord)'),
         ('outfit', 'Full Outfit (Top + Bottom Set)'),
     )
 

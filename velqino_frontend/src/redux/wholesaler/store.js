@@ -47,7 +47,9 @@ export const store = configureStore({
         [aiStudioApi.reducerPath]: aiStudioApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat(
+        getDefaultMiddleware({
+            serializableCheck: false,
+        }).concat(
             wholesalerApi.middleware,
             productsApi.middleware,
             categoriesApi.middleware,

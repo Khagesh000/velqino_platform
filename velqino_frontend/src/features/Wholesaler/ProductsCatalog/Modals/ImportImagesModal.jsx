@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { X, Upload, ImageIcon, Package, Check, Sparkles, AlertCircle } from '../../../../utils/icons'
+import { ArrowLeftRight } from 'lucide-react'
 import { toast } from 'react-toastify'
 import productsAPI from '../../../../redux/wholesaler/Api/productsAPI'
 import '../../../../styles/Wholesaler/ProductsCatalog/CatalogModals.scss'
@@ -31,7 +32,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
     common_name_prefix: '',
     brand: '',
     description: '',
-    garment_type: ''
+    garment_type: 'top'
   })
 
   const handleChange = (e) => {
@@ -106,6 +107,41 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
     setImages(updated)
   }
 
+  // Swap Front and Back images for a specific product pair
+  const swapPair = (pairIndex) => {
+    const i = pairIndex * 2
+    if (i + 1 < images.length) {
+      const updated = [...images]
+      const temp = updated[i]
+      updated[i] = updated[i + 1]
+      updated[i + 1] = temp
+      setImages(updated)
+      toast.success(`Swapped Front ⇄ Back for Product ${pairIndex + 1}`)
+    }
+  }
+
+  // Swap Front and Back for all product pairs
+  const swapAllPairs = () => {
+    if (images.length < 2) return
+    const updated = [...images]
+    for (let i = 0; i < updated.length - 1; i += 2) {
+      const temp = updated[i]
+      updated[i] = updated[i + 1]
+      updated[i + 1] = temp
+    }
+    setImages(updated)
+    toast.success('Swapped Front ⇄ Back for all products')
+  }
+
+  // Move image position
+  const moveImage = (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= images.length) return
+    const updated = [...images]
+    const [item] = updated.splice(fromIdx, 1)
+    updated.splice(toIdx, 0, item)
+    setImages(updated)
+  }
+
   // Handle submit with WebSocket live updates
   const handleSubmit = async () => {
     if (!images.length) {
@@ -119,8 +155,7 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
     }
 
     if (!formData.garment_type) {
-      toast.error('Please select Garment Type (Top, Bottom, or Full Set)')
-      return
+      formData.garment_type = 'top'
     }
 
     setUploading(true)
@@ -227,6 +262,15 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
       socket.onmessage = (event) => {
         try {
           const wsData = JSON.parse(event.data)
+
+          if (wsData.state === 'FAILURE' || wsData.type === 'ai_error') {
+            clearInterval(pingTimer)
+            if (pollTimer) clearInterval(pollTimer)
+            setUploading(false)
+            toast.error(wsData.error || wsData.message || 'Processing failed. Please check images and retry.')
+            return
+          }
+
           if (wsData.type === 'send_progress' || wsData.type === 'ai_progress') {
             const p = wsData.progress || 0
             setProgress((prev) => Math.max(prev, p))
@@ -487,37 +531,166 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
                   <span className="text-xs font-semibold text-slate-800">
                     📸 {images.length} images selected → {expectedProductsCount} {expectedProductsCount === 1 ? 'product' : 'products'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs font-bold text-primary-600 hover:text-primary-700"
-                  >
-                    + Add More
-                  </button>
-                </div>
-
-                {/* Thumbnails */}
-                <div className="grid grid-cols-4 gap-2.5 max-h-40 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                  {images.map((img, i) => (
-                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white">
-                      <img
-                        src={URL.createObjectURL(img)}
-                        alt={img.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute bottom-1 left-1 text-[10px] font-bold bg-slate-900/75 text-white px-1.5 py-0.5 rounded">
-                        {mode === 'front_back' ? (i % 2 === 0 ? `P${Math.floor(i / 2) + 1}F` : `P${Math.floor(i / 2) + 1}B`) : `#${i + 1}`}
-                      </span>
+                  <div className="flex items-center gap-2">
+                    {mode === 'front_back' && images.length >= 2 && (
                       <button
                         type="button"
-                        onClick={() => removeImage(i)}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center shadow transition-colors"
+                        onClick={swapAllPairs}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors shadow-2xs"
+                        title="Swap Front and Back for all products in this batch"
                       >
-                        <X size={11} />
+                        <ArrowLeftRight size={13} />
+                        <span>Swap All Front/Back</span>
                       </button>
-                    </div>
-                  ))}
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs font-bold text-primary-600 hover:text-primary-700"
+                    >
+                      + Add More
+                    </button>
+                  </div>
                 </div>
+
+                {/* Thumbnails Display */}
+                {mode === 'front_back' ? (
+                  <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                    {Array.from({ length: Math.ceil(images.length / 2) }).map((_, pairIdx) => {
+                      const frontImg = images[pairIdx * 2]
+                      const backImg = images[pairIdx * 2 + 1]
+                      const prodNum = pairIdx + 1
+
+                      return (
+                        <div
+                          key={pairIdx}
+                          className="p-3 bg-white border border-slate-200 hover:border-slate-300 rounded-xl shadow-xs transition-all"
+                        >
+                          {/* Pair Header with Swap Action */}
+                          <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-800">
+                                Product {prodNum}
+                              </span>
+                              <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                Front & Back Pair
+                              </span>
+                            </div>
+                            {backImg && (
+                              <button
+                                type="button"
+                                onClick={() => swapPair(pairIdx)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                                title="Click to swap Front and Back images for this product"
+                              >
+                                <ArrowLeftRight size={13} />
+                                <span>Swap Front ⇄ Back</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Side by side photos with visual badges */}
+                          <div className="grid grid-cols-2 gap-3 items-center">
+                            {/* Front Photo */}
+                            <div className="relative aspect-4/3 rounded-lg overflow-hidden border-2 border-emerald-500/40 bg-slate-50 group shadow-xs">
+                              <img
+                                src={URL.createObjectURL(frontImg)}
+                                alt={frontImg.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded shadow">
+                                P{prodNum}F • Front View
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(pairIdx * 2)}
+                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center shadow transition-colors"
+                                title="Remove image"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+
+                            {/* Back Photo */}
+                            {backImg ? (
+                              <div className="relative aspect-4/3 rounded-lg overflow-hidden border-2 border-indigo-500/40 bg-slate-50 group shadow-xs">
+                                <img
+                                  src={URL.createObjectURL(backImg)}
+                                  alt={backImg.name}
+                                  className="w-full h-full object-cover"
+                                />
+                                <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded shadow">
+                                  P{prodNum}B • Back View
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(pairIdx * 2 + 1)}
+                                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center shadow transition-colors"
+                                  title="Remove image"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="aspect-4/3 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50 flex flex-col items-center justify-center p-3 text-center cursor-pointer hover:bg-amber-50"
+                              >
+                                <Upload size={20} className="text-amber-600 mb-1" />
+                                <span className="text-[11px] font-bold text-amber-800">Add Back Photo</span>
+                                <span className="text-[9px] text-amber-600">Needed to complete pair</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2.5 max-h-48 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    {images.map((img, i) => (
+                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white group">
+                        <img
+                          src={URL.createObjectURL(img)}
+                          alt={img.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute bottom-1 left-1 text-[10px] font-bold bg-slate-900/75 text-white px-1.5 py-0.5 rounded">
+                          #{i + 1}
+                        </span>
+                        <div className="absolute top-1 left-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {i > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => moveImage(i, i - 1)}
+                              className="w-5 h-5 rounded-full bg-white/90 text-slate-700 hover:bg-slate-700 hover:text-white flex items-center justify-center shadow text-[10px]"
+                              title="Move left"
+                            >
+                              ◀
+                            </button>
+                          )}
+                          {i < images.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => moveImage(i, i + 1)}
+                              className="w-5 h-5 rounded-full bg-white/90 text-slate-700 hover:bg-slate-700 hover:text-white flex items-center justify-center shadow text-[10px]"
+                              title="Move right"
+                            >
+                              ▶
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(i)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center shadow transition-colors"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -612,16 +785,14 @@ export default function ImportImagesModal({ onClose, categories = [] }) {
               {/* Garment Type Dropdown */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Garment Type <span className="text-rose-500">*</span>
+                  Garment Type <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <select
                   name="garment_type"
                   value={formData.garment_type}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white font-medium text-slate-800"
                 >
-                  <option value="">Select Garment Type (Mandatory)...</option>
                   <option value="top">Topwear (Shirt, T-Shirt, Kurta, Polo, Hoodie)</option>
                   <option value="bottom">Bottomwear (Pant, Jeans, Trousers, Shorts)</option>
                   <option value="full">Full Set / Ethnic (Saree, Punjabi Dress, Suit, Gown)</option>

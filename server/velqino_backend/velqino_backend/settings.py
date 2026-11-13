@@ -243,10 +243,14 @@ WSGI_APPLICATION = 'velqino_backend.wsgi.application'
 # ============================================================
 DATABASE_URL = config('DATABASE_URL', default=None)
 
-# Connection reuse optimization (in seconds): 600s default for high performance.
-# Set DB_CONN_MAX_AGE=0 or CLOSE_DB_CONNECTIONS_EACH_REQUEST=True in .env if using low-limit free tier databases.
-DB_CONN_MAX_AGE = int(os.getenv('DB_CONN_MAX_AGE', '600'))
-CLOSE_DB_CONNECTIONS_EACH_REQUEST = os.getenv('CLOSE_DB_CONNECTIONS_EACH_REQUEST', 'False').lower() in ('true', '1')
+# Connection reuse optimization:
+# Auto-detect Clever Cloud or low-connection databases to prevent OperationalError 1226 (max_user_connections limit)
+_is_clever_cloud = 'clever-cloud' in os.getenv('DATABASE_URL', '').lower()
+_default_conn_age = '0' if _is_clever_cloud else os.getenv('DB_CONN_MAX_AGE', '0')
+_default_close_each = 'True' if _is_clever_cloud else os.getenv('CLOSE_DB_CONNECTIONS_EACH_REQUEST', 'True')
+
+DB_CONN_MAX_AGE = int(os.getenv('DB_CONN_MAX_AGE', _default_conn_age))
+CLOSE_DB_CONNECTIONS_EACH_REQUEST = os.getenv('CLOSE_DB_CONNECTIONS_EACH_REQUEST', _default_close_each).lower() in ('true', '1')
 
 if DATABASE_URL:
     DATABASES = {
@@ -262,7 +266,7 @@ if DATABASE_URL:
     DATABASES['default']['OPTIONS'] = {
         'ssl': {'ssl_mode': 'REQUIRED'},
         'connect_timeout': 10,
-        'init_command': "SET SESSION wait_timeout=30, interactive_timeout=30, sql_mode='STRICT_TRANS_TABLES'",
+        'init_command': "SET SESSION wait_timeout=15, interactive_timeout=15, sql_mode='STRICT_TRANS_TABLES'",
     }
 else:
     DATABASES = {

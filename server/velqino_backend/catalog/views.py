@@ -477,94 +477,70 @@ def product_list(request):
 
             print(f"Images count: {len(images)}, ai_fit_enabled: {ai_fit_enabled}")
 
-            if ai_fit_enabled and front_garment:
-                import os
-                from django.conf import settings
-                from intelligence.services.garment_analyzer import analyze_garment_and_demographic
-                from intelligence.services.tryon_engine import execute_virtual_tryon
-                import cloudinary.uploader
-                from datetime import datetime
+            # Clean and isolate images into professional studio catalog images
+            from catalog.services.ai_service import AIService
+            import cloudinary.uploader
+            from io import BytesIO
+            from datetime import datetime
 
-                cat_name = product.category.name if product.category else ''
-                analysis = analyze_garment_and_demographic(
-                    category_name=cat_name,
-                    product_name=product.name,
-                    sizes=sizes,
-                    description=product.description,
-                    user_demographic=request.POST.get('demographic'),
-                    user_garment_type=request.POST.get('garment_type'),
-                    user_fit_silhouette=request.POST.get('fit_silhouette')
-                )
+            garment_type_val = request.POST.get('garment_type') or request.data.get('garment_type') or 'top'
+            front_cleaned = AIService._process_final_image(front_garment, view='front', garment_type=garment_type_val, seller_id=request.user.id) if front_garment else None
+            back_cleaned = AIService._process_final_image(back_garment, view='back', garment_type=garment_type_val, seller_id=request.user.id) if back_garment else None
 
-                model_slug = request.POST.get('model_slug') or analysis['model']['slug']
-
-                front_bytes = front_garment.read()
-                back_bytes = back_garment.read() if back_garment else None
-                angles = ['front', 'back'] if back_bytes else ['front']
-
-                try_on_res = execute_virtual_tryon(
-                    front_image_file_or_bytes=front_bytes,
-                    back_image_file_or_bytes=back_bytes,
-                    model_slug=model_slug,
-                    angles=angles,
-                    garment_type=analysis['garment_type'],
-                    fit_silhouette=analysis['fit_silhouette'],
-                    tuck_style='untucked',
-                    backdrop_style='pure_white'
-                )
-
-                # Save AI Model Fitted Renders
-                for render_data in try_on_res.get('renders', []):
-                    angle_key = render_data['angle_key']
-                    is_front_view = (angle_key == 'front')
-                    render_rel_path = render_data.get('image_url')
-
-                    full_render_path = os.path.join(settings.BASE_DIR, render_rel_path.lstrip('/'))
-                    uploaded_url = None
-                    if os.path.exists(full_render_path):
-                        with open(full_render_path, 'rb') as rf:
-                            try:
-                                cloud_res = cloudinary.uploader.upload(
-                                    rf,
-                                    public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_ai_model_{angle_key}",
-                                    overwrite=True,
-                                    invalidate=True
-                                )
-                                uploaded_url = cloud_res.get('secure_url')
-                            except Exception as ce:
-                                print(f"Cloudinary upload fallback: {ce}")
-
-                    img_to_save = uploaded_url or render_rel_path
-                    ProductImage.objects.create(
-                        product=product,
-                        image=img_to_save,
-                        is_primary=is_front_view,
-                        order=0 if is_front_view else 1,
-                        is_front=is_front_view
+            if front_cleaned:
+                try:
+                    f_res = cloudinary.uploader.upload(
+                        BytesIO(front_cleaned),
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_front",
+                        overwrite=True,
+                        invalidate=True
                     )
-                    print(f"[INFO] AI Model {angle_key} view attached as {'primary' if is_front_view else 'secondary'} image!")
+                    f_url = f_res.get('secure_url')
+                except Exception as ce:
+                    print(f"Cloudinary upload fallback: {ce}")
+                    f_url = None
 
-                # Also save original uploaded garment images (as secondary reference)
-                order_idx = 2
-                for idx, img in enumerate(images):
+                if f_url:
                     ProductImage.objects.create(
                         product=product,
-                        image=img,
+                        image=f_url,
+                        is_primary=True,
+                        order=0,
+                        is_front=True
+                    )
+
+            if back_cleaned:
+                try:
+                    b_res = cloudinary.uploader.upload(
+                        BytesIO(back_cleaned),
+                        public_id=f"products/{datetime.now().strftime('%Y/%m')}/{product.sku}_back",
+                        overwrite=True,
+                        invalidate=True
+                    )
+                    b_url = b_res.get('secure_url')
+                except Exception as ce:
+                    print(f"Cloudinary upload fallback: {ce}")
+                    b_url = None
+
+                if b_url:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=b_url,
                         is_primary=False,
-                        order=order_idx,
-                        is_front=(idx == 0)
+                        order=1,
+                        is_front=False
                     )
-                    order_idx += 1
-            else:
+
+            # If no processed images, save original uploaded images
+            if not front_cleaned and not back_cleaned:
                 for idx, img in enumerate(images):
-                    product_image = ProductImage.objects.create(
+                    ProductImage.objects.create(
                         product=product,
                         image=img,
                         is_primary=(idx == 0),
                         order=idx,
                         is_front=(idx == 0)
                     )
-                    print(f"[INFO] Image {idx+1} saved: {product_image.image.url if product_image.image else 'No URL'}")
 
             # Invalidate cache
             cache.delete_pattern("product:*")
@@ -1621,4 +1597,6 @@ def bulk_task_status(request, task_id):
         return Response({'status': 'success', 'progress': 100, 'state': 'SUCCESS', 'data': task.result})
     elif task.state == 'FAILURE':
         return Response({'status': 'error', 'progress': 0, 'state': 'FAILURE', 'error': str(task.info)})
+    elif task.state == 'RETRY':
+        return Response({'status': 'retrying', 'progress': 15, 'state': 'RETRY', 'error': str(task.info)})
     return Response({'status': 'unknown', 'progress': 0, 'state': task.state})
